@@ -1,0 +1,906 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 45 15% 97%;
+    --foreground: 150 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 15% 15%;
+
+    /* Updated with new AKOUMA colors */
+    --primary: 142 69% 30%; /* #1E5B37 */
+    --primary-foreground: 0 0% 98%;
+    --primary-glow: 142 65% 40%;
+
+    --secondary: 28 75% 55%; /* #E57D27 */
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 45 15% 94%;
+    --muted-foreground: 150 8% 45%;
+
+    --accent: 200 45% 35%; /* #1F3B4D */
+    --accent-foreground: 0 0% 98%;
+    --accent-glow: 122 39% 49%; /* #4CAF50 */
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 45 15% 88%;
+    --input: 45 15% 88%;
+    --ring: 142 76% 36%;
+
+    /* Custom agritech gradients with new colors */
+    --gradient-hero: linear-gradient(135deg, hsl(142 69% 30%), hsl(28 75% 55%));
+    --gradient-nature: linear-gradient(180deg, hsl(45 15% 97%), hsl(122 39% 96%));
+    --gradient-tech: linear-gradient(135deg, hsl(200 45% 35%), hsl(122 39% 49%));
+    
+    /* Shadows with natural tones */
+    --shadow-natural: 0 10px 30px -10px hsl(142 69% 30% / 0.2);
+    --shadow-glow: 0 0 40px hsl(122 39% 49% / 0.3);
+    --shadow-tech: 0 8px 32px hsl(200 45% 35% / 0.15);
+
+    /* Smooth transitions */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 150 15% 8%;
+    --foreground: 45 15% 95%;
+
+    --card: 150 15% 10%;
+    --card-foreground: 45 15% 95%;
+
+    --popover: 150 15% 10%;
+    --popover-foreground: 45 15% 95%;
+
+    --primary: 142 69% 40%; /* #1E5B37 dark mode variation */
+    --primary-foreground: 150 15% 8%;
+    --primary-glow: 142 65% 50%;
+
+    --secondary: 28 75% 65%; /* #E57D27 dark mode variation */
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 150 12% 12%;
+    --muted-foreground: 150 8% 65%;
+
+    --accent: 200 45% 45%; /* #1F3B4D dark mode variation */
+    --accent-foreground: 0 0% 98%;
+    --accent-glow: 122 39% 59%; /* #4CAF50 dark mode variation */
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 45 15% 95%;
+
+    --border: 150 12% 18%;
+    --input: 150 12% 18%;
+    --ring: 142 65% 45%;
+
+    /* Dark mode gradients with new colors */
+    --gradient-hero: linear-gradient(135deg, hsl(142 69% 40%), hsl(28 75% 65%));
+    --gradient-nature: linear-gradient(180deg, hsl(150 15% 8%), hsl(122 39% 15%));
+    --gradient-tech: linear-gradient(135deg, hsl(200 45% 45%), hsl(122 39% 59%));
+    
+    /* Dark shadows */
+    --shadow-natural: 0 10px 30px -10px hsl(142 69% 40% / 0.4);
+    --shadow-glow: 0 0 40px hsl(122 39% 59% / 0.5);
+    --shadow-tech: 0 8px 32px hsl(200 45% 45% / 0.3);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Animations personnalisées pour une interface plus joviale */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rotate-in {
+  from {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Classes d'animation */
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.6s ease-out forwards;
+}
+
+.animate-fade-in-left {
+  animation: fade-in-left 0.6s ease-out forwards;
+}
+
+.animate-fade-in-right {
+  animation: fade-in-right 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.8s ease-out forwards;
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.6s ease-out forwards;
+}
+
+.animate-slide-in-down {
+  animation: slide-in-down 0.6s ease-out forwards;
+}
+
+.animate-rotate-in {
+  animation: rotate-in 0.8s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Délais d'animation */
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+.animation-delay-500 {
+  animation-delay: 0.5s;
+}
+
+.animation-delay-600 {
+  animation-delay: 0.6s;
+}
+
+.animation-delay-700 {
+  animation-delay: 0.7s;
+}
+
+.animation-delay-800 {
+  animation-delay: 0.8s;
+}
+
+.animation-delay-900 {
+  animation-delay: 0.9s;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+/* Effets de survol améliorés */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-rotate {
+  transition: transform 0.3s ease;
+}
+
+.hover-rotate:hover {
+  transform: rotate(5deg);
+}
+
+/* Effets de focus améliorés */
+.focus-ring {
+  transition: box-shadow 0.2s ease;
+}
+
+.focus-ring:focus {
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
+}
+
+/* Scrollbar personnalisée */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Horizontal scroll styles for homepage sections */
+.horizontal-scroll {
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.horizontal-scroll-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.8);
+}
+
+/* Mobile-optimized horizontal scroll */
+@media (max-width: 768px) {
+  .horizontal-scroll {
+    padding-bottom: 1rem;
+  }
+  
+  .horizontal-scroll-item {
+    width: 280px; /* Fixed width for mobile cards */
+  }
+}
+
+/* Effets de gradient animés */
+.gradient-animate {
+  background: linear-gradient(-45deg, #22c55e, #16a34a, #15803d, #166534);
+  background-size: 400% 400%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Effets de particules flottantes */
+.floating-particles::before,
+.floating-particles::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(34, 197, 94, 0.6);
+  border-radius: 50%;
+  animation: float-particle 6s ease-in-out infinite;
+}
+
+.floating-particles::before {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.floating-particles::after {
+  top: 60%;
+  right: 15%;
+  animation-delay: 3s;
+}
+
+@keyframes float-particle {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Effets de texte animés */
+.text-gradient-animate {
+  background: linear-gradient(45deg, #22c55e, #16a34a, #15803d);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-gradient 3s ease infinite;
+}
+
+@keyframes text-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Effets de carte améliorés */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Effets de bouton améliorés */
+.btn-animate {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-animate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-animate:hover::before {
+  left: 100%;
+}
+
+/* Effets de loading améliorés */
+.loading-dots {
+  display: inline-block;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0%, 20% {
+    content: '';
+  }
+  40% {
+    content: '.';
+  }
+  60% {
+    content: '..';
+  }
+  80%, 100% {
+    content: '...';
+  }
+}
+
+/* Mobile page spacing to account for header height */
+@media (max-width: 768px) {
+  .mobile-page-content {
+    padding-top: 6rem; /* Account for header + mobile nav */
+  }
+}
+
+/* Global spacing for pages with fixed header */
+.page-with-header {
+  padding-top: 4rem; /* 64px to account for fixed header height */
+}
+
+@media (max-width: 768px) {
+  .page-with-header {
+    padding-top: 6rem; /* Account for header + mobile nav */
+  }
+}
+
+/* Responsive Admin Dashboard Utilities */
+.admin-responsive {
+  /* Mobile-first approach */
+  --admin-spacing-xs: 0.5rem;
+  --admin-spacing-sm: 0.75rem;
+  --admin-spacing-md: 1rem;
+  --admin-spacing-lg: 1.5rem;
+  --admin-spacing-xl: 2rem;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 640px) {
+  .admin-responsive {
+    --admin-spacing-xs: 0.25rem;
+    --admin-spacing-sm: 0.5rem;
+    --admin-spacing-md: 0.75rem;
+    --admin-spacing-lg: 1rem;
+    --admin-spacing-xl: 1.5rem;
+  }
+}
+
+/* Mobile-optimized table */
+.admin-table-mobile {
+  @apply text-xs;
+}
+
+.admin-table-mobile th,
+.admin-table-mobile td {
+  @apply px-2 py-1 md:px-3 md:py-2;
+}
+
+/* Responsive form elements */
+.admin-form-responsive input,
+.admin-form-responsive select,
+.admin-form-responsive textarea {
+  @apply text-sm md:text-base;
+}
+
+.admin-form-responsive label {
+  @apply text-sm md:text-base font-medium;
+}
+
+/* Mobile-optimized buttons */
+.admin-btn-mobile {
+  @apply text-xs md:text-sm px-2 md:px-3 py-1 md:py-2;
+}
+
+/* Responsive grid utilities */
+.admin-grid-responsive {
+  @apply grid gap-2 md:gap-4;
+}
+
+.admin-grid-responsive-1 {
+  @apply grid-cols-1;
+}
+
+.admin-grid-responsive-2 {
+  @apply grid-cols-1 sm:grid-cols-2;
+}
+
+.admin-grid-responsive-3 {
+  @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.admin-grid-responsive-6 {
+  @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6;
+}
+
+/* Mobile-optimized cards */
+.admin-card-mobile {
+  @apply p-3 md:p-6;
+}
+
+.admin-card-mobile .card-header {
+  @apply px-0 pt-0 pb-2;
+}
+
+.admin-card-mobile .card-content {
+  @apply px-0 pb-0;
+}
+
+/* Responsive text utilities */
+.admin-text-responsive-xs {
+  @apply text-xs md:text-sm;
+}
+
+.admin-text-responsive-sm {
+  @apply text-sm md:text-base;
+}
+
+.admin-text-responsive-base {
+  @apply text-base md:text-lg;
+}
+
+.admin-text-responsive-lg {
+  @apply text-lg md:text-xl;
+}
+
+.admin-text-responsive-xl {
+  @apply text-xl md:text-2xl;
+}
+
+/* Mobile-optimized spacing */
+.admin-space-responsive-xs {
+  @apply space-y-1 md:space-y-2;
+}
+
+.admin-space-responsive-sm {
+  @apply space-y-2 md:space-y-3;
+}
+
+.admin-space-responsive-md {
+  @apply space-y-3 md:space-y-4;
+}
+
+.admin-space-responsive-lg {
+  @apply space-y-4 md:space-y-6;
+}
+
+/* Responsive icon sizes */
+.admin-icon-responsive-xs {
+  @apply w-3 h-3 md:w-4 md:h-4;
+}
+
+.admin-icon-responsive-sm {
+  @apply w-4 h-4 md:w-5 md:h-5;
+}
+
+.admin-icon-responsive-md {
+  @apply w-5 h-5 md:w-6 md:h-6;
+}
+
+.admin-icon-responsive-lg {
+  @apply w-6 h-6 md:w-8 md:h-8;
+}
+
+/* Mobile-optimized navigation */
+.admin-nav-mobile {
+  @apply flex-col sm:flex-row;
+}
+
+.admin-nav-mobile .nav-item {
+  @apply w-full sm:w-auto;
+}
+
+/* Responsive dialog/modal */
+.admin-dialog-responsive {
+  @apply w-[95vw] max-w-md max-h-[90vh] overflow-y-auto;
+}
+
+/* Mobile-optimized tabs */
+.admin-tabs-mobile {
+  @apply grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-1 md:gap-2 overflow-x-auto;
+}
+
+.admin-tabs-mobile .tab-trigger {
+  @apply flex items-center space-x-1 md:space-x-2 min-w-0 px-2 md:px-3;
+}
+
+/* Responsive header */
+.admin-header-responsive {
+  @apply flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0;
+}
+
+.admin-header-responsive .header-content {
+  @apply flex items-center space-x-2 md:space-x-4;
+}
+
+.admin-header-responsive .header-actions {
+  @apply flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto;
+}
+
+/* Mobile-optimized buttons group */
+.admin-btn-group-mobile {
+  @apply flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2;
+}
+
+.admin-btn-group-mobile .btn {
+  @apply w-full sm:w-auto;
+}
+
+/* Responsive table container */
+.admin-table-container {
+  @apply overflow-x-auto -mx-4 sm:mx-0;
+}
+
+.admin-table-container .table-wrapper {
+  @apply min-w-[800px] sm:min-w-0;
+}
+
+/* Mobile-optimized form grid */
+.admin-form-grid-mobile {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+/* Responsive badge */
+.admin-badge-responsive {
+  @apply text-xs md:text-sm px-2 md:px-3 py-1 md:py-2;
+}
+
+/* Mobile-optimized loading states */
+.admin-loading-mobile {
+  @apply text-center;
+}
+
+.admin-loading-mobile .spinner {
+  @apply w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 md:mb-4;
+}
+
+.admin-loading-mobile .text {
+  @apply text-sm md:text-base text-muted-foreground;
+}
+
+/* ReactQuill editor styling for light and dark modes */
+.ql-container {
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+.ql-toolbar.ql-snow {
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+}
+
+.ql-container.ql-snow {
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+}
+
+.ql-editor {
+  min-height: 120px;
+  color: hsl(var(--foreground));
+}
+
+.ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .ql-toolbar.ql-snow {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-container.ql-snow {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-picker, .dark .ql-stroke {
+  color: hsl(var(--foreground));
+  stroke: hsl(var(--foreground));
+}
+
+.dark .ql-fill {
+  fill: hsl(var(--foreground));
+}
+
+.dark .ql-editor {
+  color: hsl(var(--foreground));
+}
+
+/* Admin Dashboard - Horizontal Scroll Tabs */
+.admin-tabs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground)) hsl(var(--muted));
+}
+
+.admin-tabs-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.admin-tabs-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+.admin-tabs-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+.admin-tabs-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Smooth scroll behavior */
+.admin-tabs-scroll {
+  scroll-behavior: smooth;
+}

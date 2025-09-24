@@ -1,0 +1,328 @@
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Star, Play, Clock, Users, BookOpen, CheckCircle, User } from "lucide-react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { useToast } from "@/hooks/use-toast";
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  longDescription: string;
+  instructor: string;
+  instructorBio: string;
+  duration: string;
+  students: number;
+  rating: number;
+  price: number;
+  level: string;
+  category: string;
+  thumbnail: string;
+  isLive?: boolean;
+  modules: CourseModule[];
+  benefits: string[];
+  requirements: string[];
+}
+
+interface CourseModule {
+  id: string;
+  title: string;
+  duration: string;
+  lessons: string[];
+}
+
+const CourseDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [enrolled, setEnrolled] = useState(false);
+  const { toast } = useToast();
+
+  const fetchCourse = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/courses/${id}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch course');
+      const { data } = await res.json();
+      const normalized: Course = {
+        id: data.id,
+        title: data.title,
+        description: data.description || '',
+        longDescription: data.longDescription || data.description || '',
+        instructor: data.instructor || data.instructorName || 'Instructeur',
+        instructorBio: data.instructorBio || '',
+        duration: data.duration || '—',
+        students: data.students || data.enrollmentsCount || 0,
+        rating: data.rating || 0,
+        price: data.price || 0,
+        level: data.level || 'Tous niveaux',
+        category: data.category || 'Général',
+        thumbnail: data.thumbnailUrl || data.imageUrl || '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png',
+        isLive: !!data.isLive,
+        modules: Array.isArray(data.modules) ? data.modules.map((m: any, idx: number) => ({
+          id: String(m.id ?? idx + 1),
+          title: m.title ?? `Module ${idx + 1}`,
+          duration: m.duration ?? '—',
+          lessons: Array.isArray(m.lessons) ? m.lessons : [],
+        })) : [],
+        benefits: Array.isArray(data.benefits) ? data.benefits : [],
+        requirements: Array.isArray(data.requirements) ? data.requirements : [],
+      };
+      setCourse(normalized);
+    } catch (err) {
+      console.error('Error fetching course:', err);
+      setCourse(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourse();
+  }, [id]);
+
+  const handleEnrollment = (formData: any) => {
+    console.log("Enrollment data:", formData);
+    setEnrolled(true);
+    toast({
+      title: "Inscription réussie !",
+      description: "Vous êtes maintenant inscrit au cours. Vous recevrez un email de confirmation.",
+    });
+  };
+
+  const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(price);
+
+  const getLevelColor = (level: string) => {
+    switch (level.toLowerCase()) {
+      case 'débutant': return 'bg-green-100 text-green-800';
+      case 'intermédiaire': return 'bg-yellow-100 text-yellow-800';
+      case 'avancé': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-6 py-12 text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Cours introuvable</h1>
+          <Link to="/elearning" className="text-primary hover:underline">Retour aux cours</Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto px-6 py-12">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+          <Link to="/" className="hover:text-primary">Accueil</Link>
+          <span>/</span>
+          <Link to="/elearning" className="hover:text-primary">E-Learning</Link>
+          <span>/</span>
+          <span className="text-foreground">{course.title}</span>
+        </div>
+
+        {/* Back button */}
+        <Link to="/elearning" className="inline-flex items-center text-primary hover:text-primary/80 mb-8">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Retour aux cours
+        </Link>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          {/* Course content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Header */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Badge variant="outline">{course.category}</Badge>
+                <Badge className={getLevelColor(course.level)}>{course.level}</Badge>
+                {course.isLive && <Badge variant="destructive">Live</Badge>}
+              </div>
+              <h1 className="text-3xl font-bold text-foreground mb-4">{course.title}</h1>
+              <div className="flex items-center gap-6 mb-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2"><User className="w-4 h-4" />{course.instructor}</div>
+                <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{course.duration}</div>
+                <div className="flex items-center gap-2"><Users className="w-4 h-4" />{course.students} étudiants</div>
+                <div className="flex items-center gap-1"><Star className="w-4 h-4 text-yellow-400 fill-current" />{course.rating}</div>
+              </div>
+              <p className="text-muted-foreground leading-relaxed mb-6" dangerouslySetInnerHTML={{ __html: course.longDescription }} />
+            </div>
+
+            {/* Course modules */}
+            {course.modules.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold mb-6 flex items-center">
+                    <BookOpen className="w-5 h-5 mr-2" />
+                    Contenu du cours
+                  </h3>
+                  <div className="space-y-4">
+                    {course.modules.map((module, index) => (
+                      <div key={module.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold">Module {index + 1}: {module.title}</h4>
+                          <span className="text-sm text-muted-foreground">{module.duration}</span>
+                        </div>
+                        <ul className="space-y-1">
+                          {module.lessons.map((lesson, lessonIndex) => (
+                            <li key={lessonIndex} className="text-sm text-muted-foreground flex items-center">
+                              <Play className="w-3 h-3 mr-2" />
+                              {lesson}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* What you'll learn */}
+            {course.benefits.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold mb-6">Ce que vous apprendrez</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {course.benefits.map((benefit, index) => (
+                      <div key={index} className="flex items-center">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        <span className="text-sm">{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Instructor */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-6">Votre instructeur</h3>
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-lg">{course.instructor}</h4>
+                    <p className="text-muted-foreground text-sm mt-2">{course.instructorBio}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Video/thumbnail preview */}
+            <Card>
+              <CardContent className="p-0">
+                <div className="aspect-video bg-muted rounded-t-lg relative overflow-hidden">
+                  <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <Button variant="ghost" size="icon" className="w-16 h-16 rounded-full bg-white/20">
+                      <Play className="w-8 h-8 text-white" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="text-3xl font-bold text-primary mb-4">{formatPrice(course.price)}</div>
+                  {enrolled ? (
+                    <Button className="w-full" disabled>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Inscrit
+                    </Button>
+                  ) : (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button className="w-full">S'inscrire maintenant</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Inscription au cours</DialogTitle>
+                        </DialogHeader>
+                        <EnrollmentForm onSubmit={handleEnrollment} course={course} />
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Requirements */}
+            {course.requirements.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h4 className="font-semibold mb-4">Prérequis</h4>
+                  <ul className="space-y-2">
+                    {course.requirements.map((req, index) => (
+                      <li key={index} className="text-sm text-muted-foreground flex items-center">
+                        <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
+                        {req}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+// Enrollment form component
+const EnrollmentForm = ({ onSubmit, course }: { onSubmit: (data: any) => void; course: Course }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    experience: "",
+    motivation: ""
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({ ...formData, courseId: course.id });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Input placeholder="Nom complet *" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+      <Input type="email" placeholder="Email *" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+      <Input placeholder="Téléphone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+      <Input placeholder="Votre expérience en agriculture" value={formData.experience} onChange={(e) => setFormData({ ...formData, experience: e.target.value })} />
+      <textarea placeholder="Pourquoi souhaitez-vous suivre ce cours ?" value={formData.motivation} onChange={(e) => setFormData({ ...formData, motivation: e.target.value })} className="w-full p-3 border rounded-lg resize-none h-20" />
+      <Button type="submit" className="w-full">Confirmer l'inscription</Button>
+    </form>
+  );
+};
+
+export default CourseDetail;

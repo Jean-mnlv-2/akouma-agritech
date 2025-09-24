@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+Dockerfile*
+dist
+.git
+.gitignore
+.vscode
+.env
+**/.env
+**/.env.*
+**/coverage
+**/.next
+**/.turbo
+**/.cache
+**/build
+**/uploads
+server/uploads

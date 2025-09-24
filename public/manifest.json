@@ -1,0 +1,28 @@
+{
+  "name": "AKOUMA - L'avenir de l'agriculture intelligente",
+  "short_name": "AKOUMA",
+  "description": "Révolutionnez votre agriculture avec AKOUMA. Solutions IoT, analytics avancées et technologies durables pour optimiser vos rendements en Afrique.",
+  "theme_color": "#22c55e",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business", "education"],
+  "lang": "fr",
+  "dir": "ltr"
+}
