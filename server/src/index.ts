@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -8,6 +8,7 @@ import path from 'path';
 import multer from 'multer';
 import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
+import { env } from './utils/env';
 import { authRouter } from './routes/auth';
 import { countriesRouter } from './routes/countries';
 import { seedsRouter } from './routes/seeds';
@@ -38,19 +39,15 @@ import { statsRouter } from './routes/stats';
 const app = express();
 const prisma = new PrismaClient();
 
-const PORT = Number(process.env.PORT || 4000);
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:8080';
-const API_PUBLIC_URL = process.env.API_PUBLIC_URL || `http://localhost:${PORT}`;
-
 // Configuration d'upload générique
 const uploadDir = path.resolve(process.cwd(), 'uploads');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (_req: any, _file: any, cb: any) => {
+  destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
     cb(null, uploadDir);
   },
-  filename: (_req: any, file: any, cb: any) => {
+  filename: (_req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
@@ -59,12 +56,12 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (_req: any, file: any, cb: any) => {
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     // Accepter seulement les images
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Seules les images sont autorisées'), false);
+      cb(new Error('Seules les images sont autorisées'));
     }
   }
 });
@@ -76,9 +73,11 @@ app.use(helmet({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ 
-  origin: ['http://localhost:8080', 'http://localhost:5173'], 
-  credentials: true 
+app.use(cors({
+  origin: env.FRONTEND_ORIGINS.length > 0
+    ? env.FRONTEND_ORIGINS
+    : ['http://localhost:8080', 'http://localhost:5173'],
+  credentials: true,
 }));
 // Fichiers statiques des uploads (autoriser chargement cross-origin)
 app.use('/uploads', (req, res, next) => {
@@ -98,12 +97,12 @@ app.get('/health', async (req: Request, res: Response) => {
 
 // Route d'upload générique
 app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
-  const file = (req as any).file;
+  const file = req.file;
   if (!file) {
     return res.status(400).json({ error: 'Aucun fichier fourni' });
   }
   const relative = `/uploads/${file.filename}`;
-  const publicUrl = `${API_PUBLIC_URL}${relative}`;
+  const publicUrl = `${env.API_PUBLIC_URL}${relative}`;
   res.json({ url: publicUrl, path: relative });
 });
 
@@ -135,9 +134,33 @@ app.use('/api/events', eventsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api', genericRouter);
 
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`[server] listening on http://localhost:${PORT}`);
+// Middleware de gestion d'erreur centralisée
+const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Fichier trop volumineux (maximum 5MB)' });
+    }
+    return res.status(400).json({ error: err.message });
+  }
+  
+  if (err instanceof Error) {
+    if (env.isProduction()) {
+      // En production, ne pas exposer les détails d'erreur
+      return res.status(500).json({ error: 'Erreur serveur interne' });
+    }
+    return res.status(500).json({ error: err.message, stack: err.stack });
+  }
+  
+  res.status(500).json({ error: 'Erreur serveur inconnue' });
+};
+
+app.use(errorHandler);
+
+app.listen(env.PORT, () => {
+  if (env.isDevelopment()) {
+    // eslint-disable-next-line no-console
+    console.log(`[server] listening on http://localhost:${env.PORT}`);
+  }
 });
 
 

@@ -2,21 +2,25 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { env } from '../utils/env';
 
 const prisma = new PrismaClient();
 export const authRouter = Router();
 
-function signToken(payload: object) {
-  const secret = process.env.JWT_SECRET || 'dev_secret';
-  return jwt.sign(payload as any, secret, { expiresIn: '7d' });
+interface JwtPayload {
+  sub: string;
+  role: string;
 }
 
-function setAuthCookie(res: any, token: string) {
-  const isProd = process.env.NODE_ENV === 'production';
+function signToken(payload: JwtPayload): string {
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: '7d' });
+}
+
+function setAuthCookie(res: Response, token: string): void {
   res.cookie('auth_token', token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: isProd,
+    secure: env.isProduction(),
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });
@@ -30,12 +34,14 @@ authRouter.post('/sign-in', async (req: Request, res: Response) => {
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return res.status(401).json({ error: 'invalid credentials' });
   
-  console.log('[AUTH] Login successful:', { 
-    id: user.id, 
-    email: user.email, 
-    role: user.role, 
-    isActive: user.isActive 
-  });
+  if (env.isDevelopment()) {
+    console.log('[AUTH] Login successful:', { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role, 
+      isActive: user.isActive 
+    });
+  }
   
   const token = signToken({ sub: user.id, role: user.role });
   setAuthCookie(res, token);
@@ -60,11 +66,13 @@ authRouter.post('/sign-up', async (req: Request, res: Response) => {
     } 
   });
   
-  console.log('[AUTH] User created with admin role:', { 
-    id: created.id, 
-    email: created.email, 
-    role: created.role 
-  });
+  if (env.isDevelopment()) {
+    console.log('[AUTH] User created with admin role:', { 
+      id: created.id, 
+      email: created.email, 
+      role: created.role 
+    });
+  }
   
   const token = signToken({ sub: created.id, role: created.role });
   setAuthCookie(res, token);
@@ -80,7 +88,7 @@ authRouter.get('/session', async (req: Request, res: Response) => {
   const token = req.cookies?.auth_token as string | undefined;
   if (!token) return res.json({ user: null });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret') as any;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
     const user = await prisma.user.findUnique({ 
       where: { id: decoded.sub },
       select: { id: true, email: true, fullName: true, role: true, isActive: true }
@@ -88,7 +96,9 @@ authRouter.get('/session', async (req: Request, res: Response) => {
     if (!user || !user.isActive) return res.json({ user: null });
     res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive } });
   } catch (error) {
-    console.error('[AUTH] Session error:', error);
+    if (env.isDevelopment()) {
+      console.error('[AUTH] Session error:', error);
+    }
     return res.json({ user: null });
   }
 });

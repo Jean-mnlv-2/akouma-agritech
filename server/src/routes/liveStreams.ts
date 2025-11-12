@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { env } from '../utils/env';
 
 const prisma = new PrismaClient();
 export const liveStreamsRouter = Router();
@@ -11,7 +12,10 @@ liveStreamsRouter.get('/', async (req: Request, res: Response) => {
     const items = await prisma.liveStream.findMany({ orderBy: { scheduledTime: 'asc' } });
     res.json({ data: items });
   } catch (e) {
-    console.error('Error fetching live streams:', e);
+    if (env.isDevelopment()) {
+      // eslint-disable-next-line no-console
+      console.error('Error fetching live streams:', e);
+    }
     res.status(500).json({ error: 'failed_to_list' });
   }
 });
@@ -19,7 +23,10 @@ liveStreamsRouter.get('/', async (req: Request, res: Response) => {
 // Admin CRUD
 liveStreamsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
-    console.log('Creating live stream with data:', req.body);
+    if (env.isDevelopment()) {
+      // eslint-disable-next-line no-console
+      console.log('Creating live stream with data:', req.body);
+    }
 
     const { title } = req.body as { title?: unknown };
     if (typeof title !== 'string' || title.trim().length === 0) {
@@ -56,14 +63,14 @@ liveStreamsRouter.post('/', authRequired, adminOnly, async (req: Request, res: R
       viewerCount,
     } as const;
 
-    console.log('Processed data:', data);
-
     const created = await prisma.liveStream.create({ data });
-    console.log('Created live stream:', created);
 
     res.json({ data: created });
   } catch (e) {
-    console.error('Error creating live stream:', e instanceof Error ? e.message : e);
+    if (env.isDevelopment()) {
+      // eslint-disable-next-line no-console
+      console.error('Error creating live stream:', e instanceof Error ? e.message : e);
+    }
     res.status(400).json({ error: 'failed_to_create', details: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
@@ -104,7 +111,10 @@ liveStreamsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res:
     const updated = await prisma.liveStream.update({ where: { id }, data });
     res.json({ data: updated });
   } catch (e) {
-    console.error('Error updating live stream:', e instanceof Error ? e.message : e);
+    if (env.isDevelopment()) {
+      // eslint-disable-next-line no-console
+      console.error('Error updating live stream:', e instanceof Error ? e.message : e);
+    }
     res.status(400).json({ error: 'failed_to_update', details: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
