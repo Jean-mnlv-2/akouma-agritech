@@ -5,12 +5,10 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Star, 
   Leaf, 
-  Package, 
   Truck, 
   Shield,
   Clock,
@@ -22,7 +20,6 @@ import {
   Mail
 } from "lucide-react";
 import { useContactSettings } from "@/hooks/use-contact-settings";
-import { useToast } from "@/hooks/use-toast";
 
 interface SeedProduct {
   id: number;
@@ -59,7 +56,6 @@ interface SeedProduct {
 
 const SeedDetail = () => {
   const { id } = useParams();
-  const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -131,13 +127,6 @@ const SeedDetail = () => {
     }).format(price);
   };
 
-  const handleAddToCart = () => {
-    toast({
-      title: "Produit ajouté au panier",
-      description: `${quantity} ${product.unit} de ${product.name} ajouté au panier.`,
-    });
-  };
-
   const incrementQuantity = () => setQuantity(prev => prev + 1);
   const decrementQuantity = () => setQuantity(prev => Math.max(1, prev - 1));
 
@@ -199,7 +188,7 @@ const SeedDetail = () => {
             <div className="flex gap-2">
               {product.images.map((image, index) => (
                 <button
-                  key={index}
+                  key={`${product.id}-img-${index}-${image}`}
                   onClick={() => setSelectedImage(index)}
                   className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
                     selectedImage === index ? "border-primary" : "border-border"
@@ -233,7 +222,7 @@ const SeedDetail = () => {
               {/* Features */}
               <div className="flex flex-wrap gap-2 mb-6">
                 {product.features.map((feature, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
+                  <Badge key={`${product.id}-feature-${index}-${feature.slice(0, 15)}`} variant="outline" className="text-xs">
                     {feature}
                   </Badge>
                 ))}
@@ -454,7 +443,7 @@ const SeedDetail = () => {
                         {Array.isArray(value) ? (
                           <ul className="list-disc list-inside text-muted-foreground space-y-1">
                             {value.map((item, index) => (
-                              <li key={index}>{item}</li>
+                              <li key={`${key}-item-${index}-${String(item).slice(0, 20)}`}>{item}</li>
                             ))}
                           </ul>
                         ) : (
@@ -479,12 +468,12 @@ const SeedDetail = () => {
                   <div className="space-y-4">
                     {/* Mock reviews */}
                     {[1, 2, 3].map((review) => (
-                      <div key={review} className="border-b border-border pb-4 last:border-0">
+                      <div key={`review-${review}`} className="border-b border-border pb-4 last:border-0">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="flex">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <Star
-                                key={star}
+                                key={`review-${review}-star-${star}`}
                                 className="w-4 h-4 fill-yellow-400 text-yellow-400"
                               />
                             ))}

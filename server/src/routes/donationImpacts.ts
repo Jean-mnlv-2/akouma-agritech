@@ -7,8 +7,16 @@ export const donationImpactsRouter = Router();
 
 // Public list
 donationImpactsRouter.get('/', async (_req: Request, res: Response) => {
-  const items = await prisma.donationImpact.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { id: 'desc' }] });
-  res.json({ data: items });
+  try {
+    const items = await prisma.donationImpact.findMany({ where: { isActive: true }, orderBy: [{ order: 'asc' }, { id: 'desc' }] });
+    res.json({ data: items });
+  } catch (error: any) {
+    // Si la table n'existe pas, retourner un tableau vide
+    if (error?.code === 'P2021') {
+      return res.json({ data: [] });
+    }
+    res.status(500).json({ error: error?.message || 'Failed to fetch donation impacts' });
+  }
 });
 
 // Admin list

@@ -163,7 +163,7 @@ const Careers = () => {
               {loadingCareers ? (
                 <div className="space-y-6">
                   {[1, 2, 3].map((i) => (
-                    <Card key={i} className="animate-pulse">
+                    <Card key={`career-skeleton-${i}`} className="animate-pulse">
                       <CardHeader>
                         <div className="h-6 bg-muted rounded w-1/3 mb-2"></div>
                         <div className="flex gap-2">

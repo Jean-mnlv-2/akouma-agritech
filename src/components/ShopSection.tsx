@@ -25,6 +25,7 @@ interface Product {
 const ShopSection = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentIndex, setCurrentIndex] = useState(0);
   const { t } = useI18n();
 
@@ -32,20 +33,23 @@ const ShopSection = () => {
   useContentSync({
     contentType: 'shop_products',
     onUpdate: (data) => {
-      const normalizedProducts = data.map((item: Record<string, unknown>) => ({
-        id: item.id as string,
-        name: item.name as string,
-        description: item.description as string,
-        price: item.price_fcfa as number || 0,
-        originalPrice: item.original_price_fcfa as number || 0,
-        image: item.image_url as string || '/placeholder-product.jpg',
-        category: item.category as string || 'Général',
-        inStock: item.in_stock as boolean || false,
-        isNew: item.is_new as boolean || false,
-        isBestseller: item.is_bestseller as boolean || false,
-        rating: item.rating as number || 0,
-        reviews: item.reviews_count as number || 0,
-      }));
+      const normalizedProducts = (data as unknown[]).map((item) => {
+        const record = item as Record<string, unknown>;
+        return {
+          id: record.id as string,
+          name: record.name as string,
+          description: record.description as string,
+          price: (record.price_fcfa as number) || 0,
+          originalPrice: (record.original_price_fcfa as number) || 0,
+          image: (record.image_url as string) || '/placeholder.svg',
+          category: (record.category as string) || 'Général',
+          inStock: (record.in_stock as boolean) || false,
+          isNew: (record.is_new as boolean) || false,
+          isBestseller: (record.is_bestseller as boolean) || false,
+          rating: (record.rating as number) || 0,
+          reviews: (record.reviews_count as number) || 0,
+        };
+      });
       setProducts(normalizedProducts.slice(0, 8)); // Limiter à 8 produits
       setLoading(false);
     },

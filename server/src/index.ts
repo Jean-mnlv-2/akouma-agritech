@@ -35,6 +35,7 @@ import { userRolesRouter } from './routes/userRoles';
 import { careersRouter } from './routes/careers';
 import { eventsRouter } from './routes/events';
 import { statsRouter } from './routes/stats';
+import { ordersRouter } from './routes/orders';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -128,10 +129,12 @@ app.use('/api/live_streams', liveStreamsRouter);
 app.use('/api/elearning_stats', elearningStatsRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/profiles', profilesRouter);
+app.use('/api/users', profilesRouter);
 app.use('/api/user_roles', userRolesRouter);
 app.use('/api/careers', careersRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/orders', ordersRouter);
 app.use('/api', genericRouter);
 
 // Middleware de gestion d'erreur centralisée

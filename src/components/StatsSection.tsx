@@ -62,8 +62,8 @@ const StatsSection = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index} className="text-center group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-card/80 backdrop-blur-sm border border-border/50">
+          {stats.map((stat) => (
+            <Card key={stat.label} className="text-center group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-card/80 backdrop-blur-sm border border-border/50">
               <CardContent className="p-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                   <stat.icon className="w-6 h-6 text-primary-foreground" />

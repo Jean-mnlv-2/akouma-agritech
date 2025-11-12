@@ -63,7 +63,7 @@ const Contact = () => {
             </h3>
             
             {buildContactInfo(contact || undefined).map((info, index) => (
-              <Card key={index} className="group hover:shadow-natural transition-all duration-300 bg-card/80 backdrop-blur-sm">
+              <Card key={`contact-info-${index}-${info.title}`} className="group hover:shadow-natural transition-all duration-300 bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
                     <div className="w-12 h-12 bg-gradient-tech rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">

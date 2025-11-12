@@ -84,7 +84,7 @@ const Services = () => {
         {/* Services grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {services.map((service, index) => (
-            <Card key={index} className="group hover:shadow-natural transition-all duration-300 hover:-translate-y-2 bg-card/80 backdrop-blur-sm border border-border/50">
+            <Card key={`service-${index}-${service.title}`} className="group hover:shadow-natural transition-all duration-300 hover:-translate-y-2 bg-card/80 backdrop-blur-sm border border-border/50">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-tech rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <service.icon className="w-6 h-6 text-accent-foreground" />

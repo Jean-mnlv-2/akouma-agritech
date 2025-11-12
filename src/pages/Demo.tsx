@@ -102,7 +102,7 @@ const Demo = () => {
                 </div>
                 <div className="space-y-2">
                   {demo.features.map((feature, index) => (
-                    <div key={index} className="flex items-center text-sm text-muted-foreground">
+                    <div key={`demo-${demo.id}-feature-${index}-${feature.slice(0, 15)}`} className="flex items-center text-sm text-muted-foreground">
                       <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
                       {feature}
                     </div>

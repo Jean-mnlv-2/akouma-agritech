@@ -1,35 +1,61 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // API HTTP unique (sans Supabase). Par défaut utilise l'origine (Nginx proxy) pour éviter le CORS
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
+// En production Docker, utiliser window.location.origin pour passer par le proxy Nginx
+// VITE_API_BASE_URL ne doit être défini que pour le développement local
+const API_BASE_URL = (() => {
+	const envUrl = import.meta.env.VITE_API_BASE_URL as string;
+	// Toujours utiliser window.location.origin pour passer par le proxy Nginx
+	// Cela fonctionne en développement (port 5173) et en production Docker (port 8080)
+	// VITE_API_BASE_URL n'est utilisé que si défini explicitement ET différent de l'origine
+	if (envUrl && envUrl !== window.location.origin && !window.location.port) {
+		// Utiliser l'URL d'environnement seulement si on n'est pas sur localhost
+		return envUrl;
+	}
+	return window.location.origin;
+})();
 
 async function http(method: string, path: string, options?: { params?: Record<string, any>; body?: any; headers?: Record<string, string> }) {
-  const url = new URL(path.replace(/^\/+/, "/"), API_BASE_URL);
-  if (options?.params) {
-    for (const [key, value] of Object.entries(options.params)) {
-      if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+  try {
+    const url = new URL(path.replace(/^\/+/, "/"), API_BASE_URL);
+    if (options?.params) {
+      for (const [key, value] of Object.entries(options.params)) {
+        if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+      }
     }
+    const res = await fetch(url.toString(), {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers || {}),
+      },
+      credentials: "include",
+      body: options?.body ? JSON.stringify(options.body) : undefined,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      // Ne pas logger les erreurs 401/403 qui sont normales pour les sessions non authentifiées
+      if (res.status !== 401 && res.status !== 403) {
+        console.error(`[API] ${method} ${path} failed:`, res.status, text);
+      }
+      throw new Error(text || `HTTP ${res.status}`);
+    }
+    const contentType = res.headers.get("content-type") || "";
+    return contentType.includes("application/json") ? res.json() : res.text();
+  } catch (error) {
+    // Gérer les erreurs de connexion réseau gracieusement
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error(`[API] Network error for ${method} ${path}:`, error.message);
+      throw new Error('Erreur de connexion au serveur. Vérifiez que le backend est démarré.');
+    }
+    throw error;
   }
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {}),
-    },
-    credentials: "include",
-    body: options?.body ? JSON.stringify(options.body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `HTTP ${res.status}`);
-  }
-  const contentType = res.headers.get("content-type") || "";
-  return contentType.includes("application/json") ? res.json() : res.text();
 }
 
-// Query builder minimal pour imiter l’API utilisée dans le front existant
+// Query builder minimal pour imiter l'API utilisée dans le front existant
 function createTableQuery(table: string) {
   let pendingOrder: { column: string; ascending: boolean } | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let pendingEq: { column: string; value: any } | null = null;
 
   return {
@@ -89,12 +115,22 @@ function createApiClient() {
   return {
     auth: {
       getSession: async () => {
-        const res = await http('GET', '/auth/session');
-        return { data: { session: res.user ? { user: res.user } : null } };
+        try {
+          const res = await http('GET', '/auth/session');
+          return { data: { session: res.user ? { user: res.user } : null } };
+        } catch (error) {
+          // Retourner une session vide en cas d'erreur réseau
+          return { data: { session: null } };
+        }
       },
       getUser: async () => {
-        const res = await http('GET', '/auth/session');
-        return { data: { user: res.user || null } };
+        try {
+          const res = await http('GET', '/auth/session');
+          return { data: { user: res.user || null } };
+        } catch (error) {
+          // Retourner null en cas d'erreur réseau
+          return { data: { user: null } };
+        }
       },
       onAuthStateChange: (_cb: any) => ({ data: { subscription: { unsubscribe: () => void 0 } } }),
       signInWithPassword: async (args: any) => {

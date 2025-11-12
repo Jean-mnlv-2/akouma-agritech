@@ -437,7 +437,7 @@ const Partnerships = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {partnershipTypes.map((type, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-2 cursor-pointer" onClick={() => setIsPartnershipOpen(true)}>
+              <Card key={`partnership-type-${index}-${type.title}`} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-2 cursor-pointer" onClick={() => setIsPartnershipOpen(true)}>
                 <CardHeader className="text-center pb-4">
                   <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r ${type.color} flex items-center justify-center text-white`}>
                     <type.icon className="w-8 h-8" />
@@ -482,7 +482,7 @@ const Partnerships = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {partners.map((partner, index) => (
-              <Card key={index} className="text-center hover:shadow-md transition-shadow duration-300 group">
+              <Card key={`partner-${index}-${partner.name}`} className="text-center hover:shadow-md transition-shadow duration-300 group">
                 <CardHeader>
                   <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{partner.logo || '🤝'}</div>
                   <CardTitle className="text-lg">{partner.name}</CardTitle>
@@ -528,7 +528,7 @@ const Partnerships = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {partnershipBenefits.map((benefit, index) => (
-              <div key={index} className="text-center group">
+              <div key={`benefit-${index}-${benefit.title}`} className="text-center group">
                 <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-300">
                   <benefit.icon className="w-10 h-10 text-primary" />
                 </div>

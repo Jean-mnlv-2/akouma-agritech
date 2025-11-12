@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Leaf, Star, Package, Truck, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
-import { api } from "@/integrations/api/client";
 import DOMPurify from 'dompurify';
 import TitleManager from "@/components/TitleManager";
 import { useI18n } from "@/i18n/i18n";
@@ -228,7 +227,7 @@ const Seeds = () => {
                       <span className="font-medium text-sm">{t("seeds.features")}:</span>
                       <div className="flex flex-wrap gap-1">
                         {product.features.slice(0, 2).map((feature, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
+                          <Badge key={`${product.id}-feature-${index}-${feature.slice(0, 15)}`} variant="outline" className="text-xs">
                             {feature}
                           </Badge>
                         ))}

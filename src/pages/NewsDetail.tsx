@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, User, Share2, Heart, MessageCircle } from "lucide-react";
+import { ArrowLeft, Calendar, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -33,7 +32,6 @@ const NewsDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
 
   // Fetch article data from backend
   const fetchArticle = async () => {
@@ -181,7 +179,7 @@ const NewsDetail = () => {
               <h4 className="font-semibold mb-4">Tags</h4>
               <div className="flex flex-wrap gap-2">
                 {article.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary">{tag}</Badge>
+                  <Badge key={`tag-${index}-${tag}`} variant="secondary">{tag}</Badge>
                 ))}
               </div>
             </div>

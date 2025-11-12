@@ -22,7 +22,8 @@ import {
   Crown,
   Briefcase,
   Calendar,
-  Radio
+  Radio,
+  Receipt
 } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
 import { AdminCourses } from '@/components/admin/AdminCourses';
@@ -38,6 +39,7 @@ import AdminLiveStreams from '@/pages/AdminLiveStreams';
 import { AdminDonationsContent } from '@/components/admin/AdminDonationsContent';
 import { AdminContactSettings } from '@/components/admin/AdminContactSettings';
 import { AdminUserManagement } from '@/components/admin/AdminUserManagement';
+import { AdminOrders } from '@/components/admin/AdminOrders';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +101,7 @@ function AdminContent() {
   // Configuration des onglets
   const tabs = [
     { value: 'users', label: 'Utilisateurs', icon: Shield },
+    { value: 'orders', label: 'Commandes', icon: Receipt },
     { value: 'courses', label: 'Cours', icon: BookOpen },
     { value: 'news', label: 'Actualités', icon: Newspaper },
     { value: 'seeds', label: 'Semences', icon: Sprout },
@@ -276,6 +279,7 @@ function AdminContent() {
             </TabsList>
 
             <TabsContent value="users" className="admin-space-responsive-md"><AdminUserManagement /></TabsContent>
+            <TabsContent value="orders" className="admin-space-responsive-md"><AdminOrders /></TabsContent>
             <TabsContent value="courses" className="admin-space-responsive-md"><AdminCourses /></TabsContent>
             <TabsContent value="news" className="admin-space-responsive-md"><AdminNews /></TabsContent>
             <TabsContent value="seeds" className="admin-space-responsive-md"><AdminSeeds /></TabsContent>

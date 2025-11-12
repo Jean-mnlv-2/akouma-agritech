@@ -19,8 +19,19 @@ contactMessagesRouter.post('/', async (req: Request, res: Response) => {
 
 contactMessagesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { name, email, subject, message, country } = req.body || {};
-  const updated = await prisma.contactMessage.update({ where: { id }, data: { name, email, subject, message, country } });
+  const { name, email, subject, message, country, phone, company, project_type, status, processedAt } = req.body || {};
+  const updateData: any = {};
+  if (name !== undefined) updateData.name = name;
+  if (email !== undefined) updateData.email = email;
+  if (subject !== undefined) updateData.subject = subject;
+  if (message !== undefined) updateData.message = message;
+  if (country !== undefined) updateData.country = country;
+  if (phone !== undefined) updateData.phone = phone;
+  if (company !== undefined) updateData.company = company;
+  if (project_type !== undefined) updateData.project_type = project_type;
+  if (status !== undefined) updateData.status = status;
+  if (processedAt !== undefined) updateData.processedAt = processedAt ? new Date(processedAt) : null;
+  const updated = await prisma.contactMessage.update({ where: { id }, data: updateData });
   res.json({ data: updated });
 });
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Smartphone, X } from "lucide-react";
+import { Download, Smartphone } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -15,8 +15,10 @@ const PWAInstallButton = () => {
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
+      // Empêcher le prompt natif du navigateur pour le contrôler via notre bouton
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(promptEvent);
     };
 
     const handleAppInstalled = () => {
@@ -32,14 +34,30 @@ const PWAInstallButton = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Register service worker
+    // Register service worker avec gestion d'erreur améliorée
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
+          // Vérifier les mises à jour périodiquement
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // Nouveau service worker disponible
+                  console.log('New service worker available');
+                }
+              });
+            }
+          });
         })
         .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+          // Ne pas afficher d'erreur si c'est juste une erreur de scope ou de réseau
+          if (registrationError instanceof Error && 
+              !registrationError.message.includes('scope') &&
+              !registrationError.message.includes('network')) {
+            console.warn('SW registration failed: ', registrationError);
+          }
         });
     }
 
@@ -51,15 +69,27 @@ const PWAInstallButton = () => {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
+      // Si le prompt n'est pas disponible, afficher les instructions manuelles
       setShowInstallDialog(true);
       return;
     }
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
+    try {
+      // Afficher le prompt d'installation
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        // L'utilisateur a accepté l'installation
+        setDeferredPrompt(null);
+      } else {
+        // L'utilisateur a refusé, on peut réessayer plus tard
+        // Le prompt sera disponible lors du prochain beforeinstallprompt
+      }
+    } catch (error) {
+      // En cas d'erreur, afficher les instructions manuelles
+      console.warn('Install prompt error:', error);
+      setShowInstallDialog(true);
     }
   };
 

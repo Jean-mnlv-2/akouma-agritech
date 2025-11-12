@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Tag, Truck, Shield, ArrowRight } from "lucide-react";
 
 export const CartSummary = () => {
+  const navigate = useNavigate();
   const [promoCode, setPromoCode] = useState("");
   const [isPromoApplied, setIsPromoApplied] = useState(false);
   const [discount, setDiscount] = useState(0);
@@ -25,14 +27,15 @@ export const CartSummary = () => {
 
   const handlePromoCode = () => {
     // Simulation de codes promo
-    const validCodes = {
+    const validCodes: Record<string, number> = {
       'BIENVENUE10': 0.1,
       'AGRICULTEUR15': 0.15,
       'TECH2024': 0.05
     };
 
-    if (validCodes[promoCode.toUpperCase()]) {
-      const discountRate = validCodes[promoCode.toUpperCase()];
+    const code = promoCode.toUpperCase();
+    if (validCodes[code]) {
+      const discountRate = validCodes[code];
       setDiscount(subtotal * discountRate);
       setIsPromoApplied(true);
       toast({
@@ -49,10 +52,8 @@ export const CartSummary = () => {
   };
 
   const handleCheckout = () => {
-    toast({
-      title: "Fonctionnalité en développement",
-      description: "Le système de paiement sera bientôt disponible",
-    });
+    // Redirect to checkout page
+    navigate('/checkout');
   };
 
   if (items.length === 0) {

@@ -47,6 +47,7 @@ import AdminElearningStats from "./pages/AdminElearningStats";
 import Supervisor from "./pages/Supervisor";
 import AgriConsulting from "./pages/AgriConsulting";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import Partnerships from "./pages/Partnerships";
 import Donations from "./pages/Donations";
 import NotFound from "./pages/NotFound";
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="/admin-access" element={<AdminAccess />} />
                 <Route path="/agri-consulting" element={<AgriConsulting />} />
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
                 <Route path="/partners" element={<Partnerships />} />
                 <Route path="/donations" element={<Donations />} />
                 <Route path="/investors" element={<div>Investors - Coming Soon</div>} />

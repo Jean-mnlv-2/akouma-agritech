@@ -133,7 +133,7 @@ const ProductCard = ({
         {features.length > 0 && (
           <div className="space-y-1 mb-4">
             {features.slice(0, 2).map((feature, index) => (
-              <div key={index} className="flex items-center text-xs text-muted-foreground">
+              <div key={`product-feature-${index}-${feature.slice(0, 15)}`} className="flex items-center text-xs text-muted-foreground">
                 <div className="w-1 h-1 bg-primary rounded-full mr-2"></div>
                 {feature}
               </div>

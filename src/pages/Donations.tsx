@@ -328,7 +328,7 @@ const Donations = () => {
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {donationStats.map((stat, index) => (
-              <div key={index} className="text-center">
+              <div key={`donation-stat-${index}-${stat.label}`} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold text-primary mb-2">{stat.value}</div>
                 <div className="text-muted-foreground">{stat.label}</div>
               </div>
@@ -351,7 +351,7 @@ const Donations = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {donationTiers.map((tier, index) => (
-              <Card key={index} className={`relative group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer ${tier.popular ? 'ring-2 ring-primary' : ''}`}>
+              <Card key={`tier-${index}-${tier.id}`} className={`relative group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer ${tier.popular ? 'ring-2 ring-primary' : ''}`}>
                 {tier.popular && (
                   <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-white">
                     Plus Populaire
@@ -398,7 +398,7 @@ const Donations = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {impacts.map((area, index) => (
-              <Card key={index} className="p-6">
+              <Card key={`impact-${index}-${area.title}`} className="p-6">
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="w-6 h-6 text-primary text-lg">{area.icon || '🎯'}</span>
@@ -439,7 +439,7 @@ const Donations = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {stories.map((story, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow duration-300 group">
+              <Card key={`story-${index}-${story.title}`} className="text-center hover:shadow-lg transition-shadow duration-300 group">
                 <CardHeader>
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <span className="text-2xl">{story.imageUrl ? '🖼️' : '🏆'}</span>

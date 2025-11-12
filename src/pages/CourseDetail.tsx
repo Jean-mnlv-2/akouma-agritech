@@ -190,7 +190,7 @@ const CourseDetail = () => {
                         </div>
                         <ul className="space-y-1">
                           {module.lessons.map((lesson, lessonIndex) => (
-                            <li key={lessonIndex} className="text-sm text-muted-foreground flex items-center">
+                            <li key={`${module.id}-lesson-${lessonIndex}-${lesson.slice(0, 20)}`} className="text-sm text-muted-foreground flex items-center">
                               <Play className="w-3 h-3 mr-2" />
                               {lesson}
                             </li>
@@ -210,7 +210,7 @@ const CourseDetail = () => {
                   <h3 className="text-xl font-semibold mb-6">Ce que vous apprendrez</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {course.benefits.map((benefit, index) => (
-                      <div key={index} className="flex items-center">
+                      <div key={`benefit-${index}-${benefit.slice(0, 20)}`} className="flex items-center">
                         <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
                         <span className="text-sm">{benefit}</span>
                       </div>
@@ -281,7 +281,7 @@ const CourseDetail = () => {
                   <h4 className="font-semibold mb-4">Prérequis</h4>
                   <ul className="space-y-2">
                     {course.requirements.map((req, index) => (
-                      <li key={index} className="text-sm text-muted-foreground flex items-center">
+                      <li key={`req-${index}-${req.slice(0, 20)}`} className="text-sm text-muted-foreground flex items-center">
                         <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
                         {req}
                       </li>

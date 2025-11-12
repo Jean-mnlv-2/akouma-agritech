@@ -6,8 +6,16 @@ const prisma = new PrismaClient();
 export const eventsRouter = Router();
 
 eventsRouter.get('/', async (_req: Request, res: Response) => {
-  const items = await prisma.event.findMany({ orderBy: { createdAt: 'desc' } });
-  res.json({ data: items });
+  try {
+    const items = await prisma.event.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json({ data: items });
+  } catch (error: any) {
+    // Si la table n'existe pas, retourner un tableau vide
+    if (error?.code === 'P2021') {
+      return res.json({ data: [] });
+    }
+    res.status(500).json({ error: error?.message || 'Failed to fetch events' });
+  }
 });
 
 eventsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {

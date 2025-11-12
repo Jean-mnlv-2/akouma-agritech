@@ -29,8 +29,12 @@ export function useContentSync({ contentType, onUpdate, enabled = true }: Conten
         .select();
 
       if (error) {
-        console.error(`Error fetching ${contentType}:`, error);
-        onUpdateRef.current?.([]);
+        // Ne pas logger les erreurs réseau normales (backend non démarré)
+        if (!error.message?.includes('connexion') && !error.message?.includes('Failed to fetch')) {
+          console.error(`Error fetching ${contentType}:`, error);
+        }
+        // Ne pas mettre à jour avec un tableau vide si on a déjà des données
+        // pour éviter les re-renders inutiles
         return;
       }
 
@@ -47,9 +51,12 @@ export function useContentSync({ contentType, onUpdate, enabled = true }: Conten
         lastHashRef.current = hash;
         onUpdateRef.current?.(sorted);
       }
-    } catch (error) {
-      console.error(`Error fetching ${contentType}:`, error);
-      onUpdateRef.current?.([]);
+    } catch (error: any) {
+      // Ne pas logger les erreurs réseau normales
+      if (!error?.message?.includes('connexion') && !error?.message?.includes('Failed to fetch')) {
+        console.error(`Error fetching ${contentType}:`, error);
+      }
+      // Ne pas mettre à jour avec un tableau vide pour éviter les re-renders
     }
   }, [contentType, enabled]);
 

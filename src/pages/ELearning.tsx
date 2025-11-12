@@ -327,7 +327,7 @@ const ELearning = () => {
                 const IconComponent = getIcon(stat.icon);
                 
                 return (
-                  <div key={index} className="text-center">
+                  <div key={`stat-${index}-${stat.label}`} className="text-center">
                     <div className="w-16 h-16 bg-gradient-hero rounded-full flex items-center justify-center mx-auto mb-4">
                       <IconComponent className="w-8 h-8 text-primary-foreground" />
                     </div>

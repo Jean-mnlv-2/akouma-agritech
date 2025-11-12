@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, MessageSquare, FileText, Calendar } from 'lucide-react';
+import { MessageSquare, FileText, Calendar } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 
 interface ContactMessage {
@@ -82,8 +81,15 @@ export const AdminSubmissions = () => {
     id: string,
     status: string
   ) => {
+    // Mapper les noms de collection aux routes API correctes
+    const routeMap: Record<string, string> = {
+      contactMessages: 'contact_messages',
+      contentSubmissions: 'content_submissions',
+      demoRequests: 'demo_requests',
+    };
+    const route = routeMap[collection] || collection;
     try {
-      const res = await fetch(`/api/${collection}/${id}`, {
+      const res = await fetch(`/api/${route}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -103,8 +109,16 @@ export const AdminSubmissions = () => {
     id: string
   ) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.')) return;
+    
+    // Mapper les noms de collection aux routes API correctes
+    const routeMap: Record<string, string> = {
+      contactMessages: 'contact_messages',
+      contentSubmissions: 'content_submissions',
+      demoRequests: 'demo_requests',
+    };
+    const route = routeMap[collection] || collection;
     try {
-      const res = await fetch(`/api/${collection}/${id}`, { method: 'DELETE', credentials: 'include' });
+      const res = await fetch(`/api/${route}/${id}`, { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Supprimé', description: 'L’élément a été supprimé avec succès.' });
       fetchAllSubmissions();

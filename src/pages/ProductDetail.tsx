@@ -169,7 +169,7 @@ const ProductDetail = () => {
             <div className="grid grid-cols-4 gap-4">
               {product.gallery.map((image, index) => (
                 <button
-                  key={index}
+                  key={`${product.id}-gallery-${index}-${image}`}
                   onClick={() => setSelectedImage(index)}
                   className={`aspect-square bg-muted rounded-lg overflow-hidden border-2 ${
                     selectedImage === index ? 'border-primary' : 'border-transparent'
@@ -194,12 +194,14 @@ const ProductDetail = () => {
               
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
+                  {[...Array(5)].map((_, i) => {
+                    const starKey = `product-${product.id}-star-${i}`;
+                    return (
                     <Star 
-                      key={i} 
+                      key={starKey} 
                       className={`w-5 h-5 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
                     />
-                  ))}
+                  )})}
                   <span className="text-sm text-muted-foreground ml-2">
                     {product.rating} ({product.reviews} avis)
                   </span>
@@ -291,7 +293,7 @@ const ProductDetail = () => {
               <h3 className="text-xl font-semibold mb-4">Caractéristiques</h3>
               <ul className="space-y-2">
                 {product.features.map((feature, index) => (
-                  <li key={index} className="flex items-center text-sm">
+                  <li key={`${product.id}-feature-${index}-${feature.slice(0, 15)}`} className="flex items-center text-sm">
                     <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
                     {feature}
                   </li>

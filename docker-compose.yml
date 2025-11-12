@@ -23,7 +23,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8080}
-      JWT_SECRET: ${JWT_SECRET:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_min_32_chars_for_docker_1234567890}
       DATABASE_URL: postgresql://${POSTGRES_USER:-akouma}:${POSTGRES_PASSWORD:-akouma}@db:5432/${POSTGRES_DB:-akouma}
     depends_on:
       db:
@@ -37,8 +37,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000}
+      # Ne pas définir VITE_API_BASE_URL pour utiliser le proxy Nginx automatiquement
+      # Le client API détecte le port 8080 et utilise window.location.origin
     depends_on:
       backend:
         condition: service_started

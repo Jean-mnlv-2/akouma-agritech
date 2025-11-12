@@ -10,6 +10,23 @@ seedsRouter.get('/', async (req: Request, res: Response) => {
   res.json({ data: items });
 });
 
+seedsRouter.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+    const item = await prisma.seed.findUnique({ where: { id } });
+    if (!item) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    res.json({ data: item });
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'Bad request';
+    res.status(400).json({ error });
+  }
+});
+
 seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   const { name, description, price, stock } = req.body || {};
   if (!name || !description || price == null) return res.status(400).json({ error: 'missing fields' });

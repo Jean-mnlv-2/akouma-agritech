@@ -37,7 +37,7 @@ const NewsSection = () => {
         excerpt: item.excerpt as string,
         content: item.content as string,
         author: item.author_name as string || 'AKOUMA Team',
-        image: item.image_url as string || '/placeholder-news.jpg',
+        image: item.image_url as string || '/placeholder.svg',
         featured: item.is_featured as boolean || false,
         date: item.created_at as string,
         category: item.category as string || 'Général',

@@ -123,7 +123,7 @@ const About = () => {
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
+              <div key={`about-stat-${index}-${stat.label}`} className="text-center">
                 <div className="text-4xl font-bold text-primary mb-2">{stat.value}</div>
                 <div className="text-muted-foreground">{stat.label}</div>
               </div>
@@ -158,7 +158,7 @@ const About = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {sectors.map((sector, index) => (
-              <Card key={index} className="hover:shadow-elegant transition-all duration-300 hover:-translate-y-1">
+              <Card key={`about-sector-${index}-${sector.title}`} className="hover:shadow-elegant transition-all duration-300 hover:-translate-y-1">
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-hero rounded-lg flex items-center justify-center mb-4">
                     <sector.icon className="w-6 h-6 text-primary-foreground" />
@@ -189,7 +189,7 @@ const About = () => {
             
             <div className="space-y-4">
               {objectives.map((objective, index) => (
-                <div key={index} className="flex items-start space-x-4 p-4 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors">
+                <div key={`objective-${index}-${objective.slice(0, 30)}`} className="flex items-start space-x-4 p-4 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors">
                   <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <span className="text-primary-foreground text-sm font-bold">{index + 1}</span>
                   </div>
@@ -213,7 +213,7 @@ const About = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {solutions.map((solution, index) => (
-              <Card key={index} className="hover:shadow-elegant transition-all duration-300 hover:-translate-y-1">
+              <Card key={`solution-${index}-${solution.title}`} className="hover:shadow-elegant transition-all duration-300 hover:-translate-y-1">
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
                     <solution.icon className="w-6 h-6 text-white" />
