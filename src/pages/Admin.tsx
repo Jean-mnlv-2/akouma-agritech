@@ -3,17 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2, 
   LogOut, 
   User, 
   Lock, 
-  BarChart3, 
   Users, 
   FileText, 
-  ShoppingCart,
   BookOpen,
   Sprout,
   Newspaper,
@@ -23,7 +20,8 @@ import {
   Briefcase,
   Calendar,
   Radio,
-  Receipt
+  Receipt,
+  Tag
 } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
 import { AdminCourses } from '@/components/admin/AdminCourses';
@@ -40,6 +38,7 @@ import { AdminDonationsContent } from '@/components/admin/AdminDonationsContent'
 import { AdminContactSettings } from '@/components/admin/AdminContactSettings';
 import { AdminUserManagement } from '@/components/admin/AdminUserManagement';
 import { AdminOrders } from '@/components/admin/AdminOrders';
+import { AdminPromoCodes } from '@/components/admin/AdminPromoCodes';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
@@ -64,8 +63,8 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, description, color, className }) => {
   return (
-    <Card className={`admin-card-mobile ${className || ''}`}>
-      <CardContent className="admin-space-responsive-sm">
+    <div className={`admin-card-mobile ${className || ''}`}>
+      <div className="admin-space-responsive-sm">
         <div className="flex items-center justify-between">
           <div className="admin-space-responsive-xs">
             <p className="admin-text-responsive-sm text-muted-foreground">{title}</p>
@@ -76,8 +75,8 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, descripti
             <Icon className="admin-icon-responsive-lg" />
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
@@ -102,6 +101,7 @@ function AdminContent() {
   const tabs = [
     { value: 'users', label: 'Utilisateurs', icon: Shield },
     { value: 'orders', label: 'Commandes', icon: Receipt },
+    { value: 'promos', label: 'Codes promo', icon: Tag },
     { value: 'courses', label: 'Cours', icon: BookOpen },
     { value: 'news', label: 'Actualités', icon: Newspaper },
     { value: 'seeds', label: 'Semences', icon: Sprout },
@@ -263,7 +263,7 @@ function AdminContent() {
       <div className="container mx-auto px-4 py-6">
         {/* Dashboard Stats */}
         <div className="admin-grid-responsive admin-grid-responsive-6 mb-8">
-          {statsConfig.map((stat, index) => (<StatCard key={stat.title} {...stat} className="admin-card-mobile" />))}
+          {statsConfig.map((stat) => (<StatCard key={stat.title} {...stat} className="admin-card-mobile" />))}
         </div>
 
         {/* Tabs */}
@@ -280,6 +280,7 @@ function AdminContent() {
 
             <TabsContent value="users" className="admin-space-responsive-md"><AdminUserManagement /></TabsContent>
             <TabsContent value="orders" className="admin-space-responsive-md"><AdminOrders /></TabsContent>
+            <TabsContent value="promos" className="admin-space-responsive-md"><AdminPromoCodes /></TabsContent>
             <TabsContent value="courses" className="admin-space-responsive-md"><AdminCourses /></TabsContent>
             <TabsContent value="news" className="admin-space-responsive-md"><AdminNews /></TabsContent>
             <TabsContent value="seeds" className="admin-space-responsive-md"><AdminSeeds /></TabsContent>

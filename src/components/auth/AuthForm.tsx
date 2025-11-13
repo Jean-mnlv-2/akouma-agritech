@@ -65,11 +65,11 @@ export const AuthForm = () => {
 
       // Redirection basée sur la session côté API (user.role)
       if (authData?.user) {
-        const role = (authData.user as any).role || 'user';
+        const role = (authData.user as any).role || 'customer';
         console.log('User role:', role);
         console.log('Auth data:', authData);
         
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'supervisor') {
           console.log('Redirecting to admin dashboard');
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
           navigate('/admin');
@@ -99,7 +99,7 @@ export const AuthForm = () => {
     
     try {
       const fullName = `${data.firstName} ${data.lastName}`.trim();
-      const { data: authData } = await api.auth.signUp({
+      await api.auth.signUp({
         email: data.email,
         password: data.password,
         options: { data: { full_name: fullName } }
@@ -108,10 +108,10 @@ export const AuthForm = () => {
       // Profile and role creation is now handled by database triggers
       // No need to manually create them here
 
-      toast({ title: "Inscription réussie", description: "Vous pouvez maintenant vous connecter." });
+      toast({ title: "Inscription réussie", description: "Bienvenue dans votre espace client !" });
 
       signupForm.reset();
-      setActiveTab("login");
+      navigate('/');
     } catch (error: unknown) {
       console.error('Signup error:', error);
       const errorMessage = error instanceof Error ? error.message : "Une erreur s'est produite lors de l'inscription";
@@ -131,10 +131,10 @@ export const AuthForm = () => {
         <CardHeader className="px-4 md:px-6 pt-6 pb-4">
           <CardTitle className="text-xl md:text-2xl text-center flex items-center justify-center space-x-2">
             <Shield className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
-            <span>AKOUMA Admin</span>
+            <span>Mon compte AKOUMA</span>
           </CardTitle>
           <CardDescription className="text-center text-sm md:text-base">
-            Accédez au tableau de bord administrateur
+            Connectez-vous pour suivre vos commandes ou administrer la plateforme
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 md:px-6 pb-6">

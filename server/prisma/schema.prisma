@@ -13,7 +13,7 @@ model User {
   passwordHash String
   fullName     String?
   avatarUrl    String?
-  role         String   @default("admin")
+  role         String   @default("customer")
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -341,6 +341,7 @@ model Order {
   status          String    @default("pending") // pending, confirmed, processing, shipped, delivered, cancelled
   paymentStatus   String    @default("pending") // pending, paid, failed, refunded
   paymentMethod   String?   // orange_money, mtn_money, visa, etc.
+  deliveryMethod  DeliveryMethod @default(PICKUP)
   subtotal        Decimal   @db.Decimal(12, 2)
   shipping        Decimal   @db.Decimal(12, 2) @default(0)
   discount        Decimal   @db.Decimal(12, 2) @default(0)
@@ -352,15 +353,21 @@ model Order {
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  promoCodeId     Int?
+  deliveryPartnerId Int?
 
   // Relations
-  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items OrderItem[]
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items      OrderItem[]
+  promoCode  PromoCode?  @relation(fields: [promoCodeId], references: [id])
+  deliveryPartner DeliveryPartner? @relation(fields: [deliveryPartnerId], references: [id])
+  events     OrderEvent[]
 
   @@index([userId])
   @@index([status])
   @@index([orderNumber])
   @@index([createdAt])
+  @@index([deliveryPartnerId])
 }
 
 model OrderItem {
@@ -379,4 +386,71 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+model OrderEvent {
+  id            Int       @id @default(autoincrement())
+  orderId       Int
+  type          String
+  status        String?
+  paymentStatus String?
+  note          String?
+  createdAt     DateTime  @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+enum PromoDiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
+
+model PromoCode {
+  id           Int                @id @default(autoincrement())
+  code         String             @unique
+  description  String?
+  discountType PromoDiscountType  @default(PERCENTAGE)
+  discountValue Decimal           @db.Decimal(12, 2)
+  maxUses      Int?
+  usesCount    Int                @default(0)
+  isActive     Boolean            @default(true)
+  validFrom    DateTime?
+  validUntil   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  orders Order[]
+
+  @@index([isActive])
+  @@index([code])
+  @@index([validFrom])
+  @@index([validUntil])
+}
+
+model DeliveryPartner {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  contactName String?
+  phone       String?
+  email       String?
+  website     String?
+  baseRate    Decimal? @db.Decimal(12, 2)
+  estimatedDelay String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([isActive])
+  @@index([createdAt])
 }

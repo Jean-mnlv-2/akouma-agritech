@@ -23,6 +23,15 @@ interface OrderItem {
   imageUrl?: string;
 }
 
+interface OrderEventDto {
+  id: number;
+  type: string;
+  status?: string | null;
+  paymentStatus?: string | null;
+  note?: string | null;
+  createdAt: string;
+}
+
 interface Order {
   id: number;
   orderNumber: string;
@@ -40,11 +49,18 @@ interface Order {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  promoCode?: {
+    id: number;
+    code: string;
+    discountType: 'PERCENTAGE' | 'FIXED';
+    discountValue: number;
+  } | null;
   items: OrderItem[];
+  events: OrderEventDto[];
   user?: {
     id: string;
     email: string;
-    fullName?: string;
+    fullName?: string | null;
   };
 }
 
@@ -187,7 +203,12 @@ export function AdminOrders() {
                     </TableCell>
                     <TableCell>{formatDate(order.createdAt)}</TableCell>
                     <TableCell className="font-semibold">{formatPrice(Number(order.total))} FCFA</TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
+                    <TableCell className="space-y-1">
+                      {getStatusBadge(order.status)}
+                      {order.promoCode && (
+                        <div className="text-xs text-muted-foreground">Code {order.promoCode.code}</div>
+                      )}
+                    </TableCell>
                     <TableCell>{getPaymentStatusBadge(order.paymentStatus)}</TableCell>
                     <TableCell>
                       <Button
@@ -283,6 +304,27 @@ export function AdminOrders() {
                   </CardContent>
                 </Card>
 
+                {selectedOrder.promoCode && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Code promotionnel</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{selectedOrder.promoCode.code}</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedOrder.promoCode.discountType === 'PERCENTAGE'
+                            ? `${selectedOrder.promoCode.discountValue}%`
+                            : `${formatPrice(Number(selectedOrder.promoCode.discountValue))} FCFA`}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Réduction appliquée : -{formatPrice(Number(selectedOrder.discount))} FCFA
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Order Summary */}
                 <Card>
                   <CardHeader>
@@ -293,16 +335,16 @@ export function AdminOrders() {
                       <span>Sous-total:</span>
                       <span>{formatPrice(Number(selectedOrder.subtotal))} FCFA</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Livraison:</span>
-                      <span>{formatPrice(Number(selectedOrder.shipping))} FCFA</span>
-                    </div>
                     {Number(selectedOrder.discount) > 0 && (
                       <div className="flex justify-between text-green-600">
                         <span>Réduction:</span>
                         <span>-{formatPrice(Number(selectedOrder.discount))} FCFA</span>
                       </div>
                     )}
+                    <div className="flex justify-between">
+                      <span>Livraison:</span>
+                      <span>{formatPrice(Number(selectedOrder.shipping))} FCFA</span>
+                    </div>
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
                       <span>Total:</span>
                       <span>{formatPrice(Number(selectedOrder.total))} FCFA</span>
@@ -323,9 +365,31 @@ export function AdminOrders() {
                 {/* Status Management */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Gestion du statut</CardTitle>
+                    <CardTitle className="text-lg">Historique & statut</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      {selectedOrder.events.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">Aucun événement enregistré pour cette commande.</div>
+                      ) : (
+                        selectedOrder.events
+                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .map((event) => (
+                            <div key={event.id} className="border border-border rounded-lg p-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium">{event.type}</span>
+                                <span className="text-muted-foreground">{formatDate(event.createdAt)}</span>
+                              </div>
+                              <div className="text-sm mt-1 text-muted-foreground space-y-1">
+                                {event.status && <div>Statut: {event.status}</div>}
+                                {event.paymentStatus && <div>Paiement: {event.paymentStatus}</div>}
+                                {event.note && <div>Note: {event.note}</div>}
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
                     <div>
                       <label className="text-sm font-medium mb-2 block">Statut de la commande</label>
                       <div className="flex flex-wrap gap-2">

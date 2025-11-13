@@ -39,7 +39,7 @@ FOR EACH ROW EXECUTE FUNCTION public.profiles_set_id_from_user_id();
 -- user_roles table
 CREATE TABLE IF NOT EXISTS public.user_roles (
   user_id uuid PRIMARY KEY,
-  role text NOT NULL CHECK (role IN ('admin','supervisor','user')),
+  role text NOT NULL CHECK (role IN ('admin','supervisor','customer')),
   assigned_by uuid,
   created_at timestamptz DEFAULT now()
 );

@@ -5,7 +5,7 @@ CREATE TABLE "public"."User" (
     "passwordHash" TEXT NOT NULL,
     "fullName" TEXT,
     "avatarUrl" TEXT,
-    "role" TEXT NOT NULL DEFAULT 'user',
+    "role" TEXT NOT NULL DEFAULT 'customer',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,

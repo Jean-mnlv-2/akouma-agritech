@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { useCart, CartItem } from '@/hooks/useCart';
+import { useCart, CartItem, CartPromo, DeliveryMethodChoice, CartDeliveryPartner } from '@/hooks/useCart';
 
 interface CartContextType {
   items: CartItem[];
@@ -10,6 +10,14 @@ interface CartContextType {
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemsCount: () => number;
+  appliedPromo: CartPromo | null;
+  applyPromo: (promo: CartPromo) => void;
+  clearPromo: () => void;
+  deliveryMethod: DeliveryMethodChoice;
+  deliveryPartner: CartDeliveryPartner | null;
+  setDeliveryMethod: (method: DeliveryMethodChoice) => void;
+  setDeliveryPartner: (partner: CartDeliveryPartner | null) => void;
+  resetDelivery: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);

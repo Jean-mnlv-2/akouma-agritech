@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,18 +10,27 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/integrations/api/client";
-import { CreditCard, Lock, ArrowLeft, User, Mail, Phone, MapPin } from "lucide-react";
+import { CreditCard, Lock, ArrowLeft, MapPin, Truck, Loader2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { computeShippingFee, DeliveryMethodChoice } from "@/hooks/useCart";
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { items, getCartTotal, clearCart } = useCartContext();
+  const { items, getCartTotal, clearCart, appliedPromo, clearPromo, applyPromo } = useCartContext();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [validatedPromo, setValidatedPromo] = useState<{
+    code: string;
+    discountType: 'PERCENTAGE' | 'FIXED';
+    discountValue: number;
+    discountAmount: number;
+    description?: string | null;
+  } | null>(null);
+  const [validatingPromo, setValidatingPromo] = useState(false);
   
   // Form state
   const [shippingAddress, setShippingAddress] = useState("");
@@ -33,7 +42,8 @@ const Checkout = () => {
 
   const subtotal = getCartTotal();
   const shipping = subtotal > 50000 ? 0 : 5000;
-  const total = subtotal + shipping;
+  const discount = useMemo(() => validatedPromo?.discountAmount ?? 0, [validatedPromo]);
+  const total = Math.max(0, subtotal - discount + shipping);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -41,13 +51,7 @@ const Checkout = () => {
         const { data: session } = await api.auth.getSession();
         if (session?.session?.user) {
           setIsAuthenticated(true);
-          setUser(session.session.user);
-          // Pre-fill shipping info if available
-          if (session.session.user.email) {
-            // You can add more user fields here
-          }
         } else {
-          // Redirect to auth page with return URL
           navigate('/auth?redirect=/checkout');
         }
       } catch (error) {
@@ -66,6 +70,58 @@ const Checkout = () => {
     checkAuth();
   }, [items, navigate]);
 
+  useEffect(() => {
+    if (!appliedPromo) {
+      setValidatedPromo(null);
+      return;
+    }
+
+    let cancelled = false;
+    const runValidation = async () => {
+      setValidatingPromo(true);
+      try {
+        const { data } = await api.promoCodes.validate(appliedPromo.code, subtotal);
+        if (!cancelled) {
+          setValidatedPromo({
+            code: data.code,
+            discountType: data.discountType,
+            discountValue: Number(data.discountValue),
+            discountAmount: Number(data.discountAmount),
+            description: data.description,
+          });
+          // Ensure cart promo is up to date with backend values
+          applyPromo({
+            code: data.code,
+            discountType: data.discountType,
+            discountValue: Number(data.discountValue),
+            description: data.description,
+          });
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          console.warn('Promo validation failed:', error);
+          setValidatedPromo(null);
+          clearPromo();
+          toast({
+            title: "Code promo invalide",
+            description: error?.message || error?.error || "La réduction est expirée",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) setValidatingPromo(false);
+      }
+    };
+
+    if (subtotal > 0) {
+      runValidation();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedPromo?.code, subtotal, applyPromo, clearPromo, toast, appliedPromo]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -78,20 +134,29 @@ const Checkout = () => {
       return;
     }
 
+    if (validatingPromo) {
+      toast({ title: "Validation en cours", description: "Veuillez patienter...", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      // Prepare order items
-      const orderItems = items.map(item => ({
-        productId: parseInt(item.id),
-        productType: 'shop_product', // You can determine this based on item type
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        imageUrl: item.image,
-      }));
+      const orderItems = items.map(item => {
+        const productId = Number(item.id);
+        if (!Number.isFinite(productId)) {
+          throw new Error("Identifiant de produit invalide");
+        }
+        return {
+          productId,
+          productType: 'shop_product',
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          imageUrl: item.image,
+        };
+      });
 
-      // Create order
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -100,36 +165,31 @@ const Checkout = () => {
         credentials: 'include',
         body: JSON.stringify({
           items: orderItems,
-          subtotal,
-          shipping,
-          discount: 0,
-          total,
           shippingAddress,
           shippingCity,
           shippingCountry,
           shippingPhone,
           paymentMethod,
           notes,
+          promoCode: validatedPromo?.code || appliedPromo?.code || null,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create order');
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || 'Failed to create order');
       }
 
       const { data: order } = await response.json();
 
-      // Clear cart
       clearCart();
+      clearPromo();
 
-      // Show success message
       toast({
         title: "Commande créée avec succès !",
         description: `Votre commande #${order.orderNumber} a été enregistrée`,
       });
 
-      // Redirect to order confirmation page
       navigate(`/orders/${order.id}`);
     } catch (error: any) {
       console.error('Order creation error:', error);
@@ -143,9 +203,7 @@ const Checkout = () => {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR').format(price);
-  };
+  const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR').format(Math.max(0, Math.round(price)));
 
   if (loading) {
     return (
@@ -327,6 +385,12 @@ const Checkout = () => {
                         <span className="text-muted-foreground">Sous-total</span>
                         <span>{formatPrice(subtotal)} FCFA</span>
                       </div>
+                      {validatedPromo && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Code {validatedPromo.code}</span>
+                          <span>-{formatPrice(discount)} FCFA</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Livraison</span>
                         <span>
@@ -342,6 +406,16 @@ const Checkout = () => {
                         <span className="text-primary">{formatPrice(total)} FCFA</span>
                       </div>
                     </div>
+                    {validatedPromo && validatedPromo.description && (
+                      <div className="text-xs text-muted-foreground">
+                        {validatedPromo.description}
+                      </div>
+                    )}
+                    {validatingPromo && (
+                      <div className="text-xs text-muted-foreground">
+                        Validation du code promo...
+                      </div>
+                    )}
 
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                       <Lock className="w-4 h-4" />

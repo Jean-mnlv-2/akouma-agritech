@@ -1,6 +1,6 @@
 import { useCartContext } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -96,7 +96,10 @@ const Cart = () => {
                         <div className="flex items-center justify-between">
                           <div className="space-y-2">
                             <p className="text-2xl font-bold text-primary">
-                              {formatPrice(item.price)} FCFA
+                              {formatPrice(item.price * item.quantity)} FCFA
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatPrice(item.price)} FCFA / unité
                             </p>
                             {item.inStock ? (
                               <Badge variant="secondary" className="text-green-600">

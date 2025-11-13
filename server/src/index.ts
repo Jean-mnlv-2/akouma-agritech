@@ -8,6 +8,7 @@ import path from 'path';
 import multer from 'multer';
 import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import { env } from './utils/env';
 import { authRouter } from './routes/auth';
 import { countriesRouter } from './routes/countries';
@@ -36,6 +37,8 @@ import { careersRouter } from './routes/careers';
 import { eventsRouter } from './routes/events';
 import { statsRouter } from './routes/stats';
 import { ordersRouter } from './routes/orders';
+import { promoCodesRouter } from './routes/promoCodes';
+import { deliveryPartnersRouter } from './routes/deliveryPartners';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -135,6 +138,8 @@ app.use('/api/careers', careersRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/promo-codes', promoCodesRouter);
+app.use('/api/delivery-partners', deliveryPartnersRouter);
 app.use('/api', genericRouter);
 
 // Middleware de gestion d'erreur centralisée
@@ -159,11 +164,66 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  if (env.isDevelopment()) {
-    // eslint-disable-next-line no-console
-    console.log(`[server] listening on http://localhost:${env.PORT}`);
+async function ensureDefaultAdmin() {
+  if (!env.DEFAULT_ADMIN_EMAIL || !env.DEFAULT_ADMIN_PASSWORD) {
+    if (env.isDevelopment()) {
+      // eslint-disable-next-line no-console
+      console.warn('[auth] Default admin credentials are not fully configured.');
+    }
+    return;
   }
-});
+
+  const email = env.DEFAULT_ADMIN_EMAIL.toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email } });
+
+  if (!existing) {
+    const passwordHash = await bcrypt.hash(env.DEFAULT_ADMIN_PASSWORD, 12);
+    await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        fullName: env.DEFAULT_ADMIN_FULL_NAME,
+        role: 'admin',
+        isActive: true,
+      },
+    });
+    // eslint-disable-next-line no-console
+    console.log(`[auth] Default admin user created (${email}).`);
+    return;
+  }
+
+  if (env.DEFAULT_ADMIN_FORCE_RESET) {
+    const passwordHash = await bcrypt.hash(env.DEFAULT_ADMIN_PASSWORD, 12);
+    await prisma.user.update({
+      where: { email },
+      data: {
+        passwordHash,
+        fullName: env.DEFAULT_ADMIN_FULL_NAME,
+        role: 'admin',
+        isActive: true,
+      },
+    });
+    // eslint-disable-next-line no-console
+    console.log(`[auth] Default admin password updated (${email}).`);
+  }
+}
+
+async function bootstrap() {
+  try {
+    await ensureDefaultAdmin();
+    app.listen(env.PORT, () => {
+      if (env.isDevelopment()) {
+        // eslint-disable-next-line no-console
+        console.log(`[server] listening on http://localhost:${env.PORT}`);
+      }
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[server] Failed to start application:', error);
+    process.exit(1);
+  }
+}
+
+void bootstrap();
 
 

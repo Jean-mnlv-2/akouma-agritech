@@ -1,9 +1,13 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
 const prisma = new PrismaClient();
+const ALLOWED_ROLES = ['admin', 'supervisor', 'customer'] as const;
+const isAllowedRole = (value: unknown): value is (typeof ALLOWED_ROLES)[number] =>
+  typeof value === 'string' && (ALLOWED_ROLES as readonly string[]).includes(value);
 export const profilesRouter = Router();
 
 // List profiles (compat)
@@ -35,6 +39,7 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
 
   const normalizedIsActive = typeof isActive === 'boolean' ? isActive : (is_active !== false);
   const fullName = [first_name ?? firstName, last_name ?? lastName].filter(Boolean).join(' ').trim() || null;
+  const providedRole = isAllowedRole(role) ? role : null;
 
   const targetId = String(user_id || id || '');
 
@@ -47,23 +52,24 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
         email,
         fullName,
         isActive: normalizedIsActive,
-        ...(role ? { role } : {}),
+        ...(providedRole ? { role: providedRole } : {}),
       },
       select: { id: true, email: true, fullName: true, isActive: true, role: true, createdAt: true },
     });
   } else {
     // Create new user (optional provided password)
     const plainPassword: string | undefined = (req.body?.password && String(req.body.password)) || undefined;
-    const passwordHash = plainPassword && plainPassword.length >= 6
-      ? crypto.createHash('sha256').update(plainPassword).digest('hex')
-      : crypto.randomBytes(32).toString('hex');
+    const passwordSource = plainPassword && plainPassword.length >= 6
+      ? plainPassword
+      : crypto.randomBytes(12).toString('hex');
+    const passwordHash = await bcrypt.hash(passwordSource, 12);
 
     result = await prisma.user.create({
       data: {
         email,
         fullName,
         isActive: normalizedIsActive,
-        role: role || 'supervisor',
+        role: providedRole ?? 'customer',
         passwordHash,
       },
       select: { id: true, email: true, fullName: true, isActive: true, role: true, createdAt: true },
@@ -89,7 +95,7 @@ profilesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Re
     const normalizedIsActive = typeof isActive === 'boolean'
       ? isActive
       : (typeof is_active === 'string' ? is_active === 'true' : is_active);
-    const normalizedRole = typeof role === 'string' && (role === 'admin' || role === 'supervisor') ? role : undefined;
+    const normalizedRole = isAllowedRole(role) ? role : undefined;
 
     const updated = await prisma.user.update({
       where: { id },

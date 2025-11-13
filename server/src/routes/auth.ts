@@ -54,26 +54,27 @@ authRouter.post('/sign-up', async (req: Request, res: Response) => {
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return res.status(409).json({ error: 'email already used' });
   const passwordHash = await bcrypt.hash(password, 12);
-  
-  // Créer l'utilisateur avec le rôle admin par défaut
-  const created = await prisma.user.create({ 
-    data: { 
-      email, 
-      passwordHash, 
-      fullName: fullName || null,
-      role: 'admin',  // Rôle admin par défaut
-      isActive: true
-    } 
+
+  const safeFullName = typeof fullName === 'string' && fullName.trim().length > 0 ? fullName.trim() : null;
+
+  const created = await prisma.user.create({
+    data: {
+      email,
+      passwordHash,
+      fullName: safeFullName,
+      role: 'customer',
+      isActive: true,
+    },
   });
-  
+
   if (env.isDevelopment()) {
-    console.log('[AUTH] User created with admin role:', { 
-      id: created.id, 
-      email: created.email, 
-      role: created.role 
+    console.log('[AUTH] User created:', {
+      id: created.id,
+      email: created.email,
+      role: created.role,
     });
   }
-  
+
   const token = signToken({ sub: created.id, role: created.role });
   setAuthCookie(res, token);
   res.status(201).json({ user: { id: created.id, email: created.email, fullName: created.fullName, role: created.role, isActive: created.isActive } });

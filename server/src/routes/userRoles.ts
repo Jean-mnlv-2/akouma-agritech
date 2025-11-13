@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
 const prisma = new PrismaClient();
+const ALLOWED_ROLES = ['admin', 'supervisor', 'customer'] as const;
 export const userRolesRouter = Router();
 
 userRolesRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
@@ -14,6 +15,7 @@ userRolesRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Res
 userRolesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   const { user_id, role } = req.body || {};
   if (!user_id || !role) return res.status(400).json({ error: 'user_id and role required' });
+  if (!ALLOWED_ROLES.includes(role)) return res.status(400).json({ error: 'invalid role' });
   const updated = await prisma.user.update({ where: { id: String(user_id) }, data: { role } });
   res.status(201).json({ data: { user_id: updated.id, role: updated.role, assigned_by: updated.id } });
 });
@@ -22,13 +24,14 @@ userRolesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: R
   const id = String(req.params.id);
   const { role } = req.body || {};
   if (!role) return res.status(400).json({ error: 'role required' });
+  if (!ALLOWED_ROLES.includes(role)) return res.status(400).json({ error: 'invalid role' });
   const updated = await prisma.user.update({ where: { id }, data: { role } });
   res.json({ data: { user_id: updated.id, role: updated.role, assigned_by: updated.id } });
 });
 
 userRolesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = String(req.params.id);
-  // No-op delete in compat; set role to 'user'
-  const updated = await prisma.user.update({ where: { id }, data: { role: 'user' } });
+  // No-op delete in compat; set role to 'customer'
+  const updated = await prisma.user.update({ where: { id }, data: { role: 'customer' } });
   res.json({ data: { user_id: updated.id, role: updated.role, assigned_by: updated.id } });
 });

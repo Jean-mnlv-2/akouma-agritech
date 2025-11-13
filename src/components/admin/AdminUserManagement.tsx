@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,7 +22,8 @@ import {
   XCircle, 
   Crown,
   UserCheck,
-  UserX
+  UserX,
+  ShoppingCart
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -31,7 +31,7 @@ const userSchema = z.object({
   email: z.string().email('Email invalide'),
   firstName: z.string().min(2, 'Prénom minimum 2 caractères'),
   lastName: z.string().min(2, 'Nom minimum 2 caractères'),
-  role: z.enum(['admin', 'supervisor']),
+  role: z.enum(['admin', 'supervisor', 'customer']),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -41,7 +41,7 @@ type User = {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'supervisor' | 'user';
+  role: 'admin' | 'supervisor' | 'customer';
   created_at: string;
   is_active: boolean;
 };
@@ -64,7 +64,7 @@ export function AdminUserManagement() {
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: { email: '', firstName: '', lastName: '', role: 'supervisor' },
+    defaultValues: { email: '', firstName: '', lastName: '', role: 'customer' },
   });
 
   const fetchUsers = useCallback(async () => {
@@ -248,8 +248,8 @@ export function AdminUserManagement() {
       default:
         return (
           <Badge variant="outline" className="flex items-center space-x-1">
-            <UserCheck className="w-3 h-3" />
-            <span>Utilisateur</span>
+            <ShoppingCart className="w-3 h-3" />
+            <span>Client</span>
           </Badge>
         );
     }
@@ -259,7 +259,7 @@ export function AdminUserManagement() {
 
   const openEditDialog = (user: User) => {
     setEditingUser(user);
-    const formRole: 'admin' | 'supervisor' = user.role === 'admin' ? 'admin' : 'supervisor';
+    const formRole: UserFormData['role'] = user.role === 'admin' ? 'admin' : user.role === 'supervisor' ? 'supervisor' : 'customer';
     form.reset({ email: user.email, firstName: user.first_name, lastName: user.last_name, role: formRole });
     setIsDialogOpen(true);
   };
@@ -285,7 +285,7 @@ export function AdminUserManagement() {
             <Shield className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
             <span>Gestion des Utilisateurs</span>
           </h2>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">Créez et gérez les administrateurs et superviseurs de la plateforme</p>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">Créez et gérez les administrateurs, superviseurs et clients de la plateforme</p>
           {selectedCount > 0 && (<p className="text-sm text-primary mt-1">{selectedCount} utilisateur(s) sélectionné(s)</p>)}
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
@@ -319,7 +319,7 @@ export function AdminUserManagement() {
                 <DialogTitle className="flex items-center space-x-2 text-lg md:text-xl">
                   {editingUser ? (<><Edit className="w-4 h-4 md:w-5 md:h-5" /><span>Modifier l'utilisateur</span></>) : (<><UserPlus className="w-4 h-4 md:w-5 md:h-5" /><span>Créer un nouvel utilisateur</span></>)}
                 </DialogTitle>
-                <DialogDescription className="text-sm md:text-base">{editingUser ? "Modifiez les informations de l'utilisateur" : "Créez un administrateur ou un superviseur pour gérer la plateforme"}</DialogDescription>
+                <DialogDescription className="text-sm md:text-base">{editingUser ? "Modifiez les informations de l'utilisateur" : "Créez un compte administrateur, superviseur ou client"}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(editingUser ? updateUser : createUser)} className="space-y-4">
@@ -338,6 +338,7 @@ export function AdminUserManagement() {
                         <SelectContent>
                           <SelectItem value="admin"><div className="flex items-center space-x-2"><Crown className="w-4 h-4 text-red-500" /><span>Administrateur</span></div></SelectItem>
                           <SelectItem value="supervisor"><div className="flex items-center space-x-2"><Shield className="w-4 h-4 text-blue-500" /><span>Superviseur</span></div></SelectItem>
+                          <SelectItem value="customer"><div className="flex items-center space-x-2"><ShoppingCart className="w-4 h-4 text-green-500" /><span>Client</span></div></SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -385,7 +386,13 @@ export function AdminUserManagement() {
                       <TableCell className="py-2 md:py-4">
                         <div className="flex items-center space-x-2 md:space-x-3">
                           <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            {user.role === 'admin' ? (<Crown className="w-3 h-3 md:w-4 md:h-4 text-primary" />) : (<Shield className="w-3 h-3 md:w-4 md:h-4 text-primary" />)}
+                            {user.role === 'admin' ? (
+                              <Crown className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                            ) : user.role === 'supervisor' ? (
+                              <Shield className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                            ) : (
+                              <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="font-medium text-sm md:text-base truncate">{user.first_name} {user.last_name}</div>

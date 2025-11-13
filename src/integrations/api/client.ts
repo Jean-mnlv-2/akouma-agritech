@@ -55,8 +55,6 @@ async function http(method: string, path: string, options?: { params?: Record<st
 // Query builder minimal pour imiter l'API utilisée dans le front existant
 function createTableQuery(table: string) {
   let pendingOrder: { column: string; ascending: boolean } | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let pendingEq: { column: string; value: any } | null = null;
 
   return {
     select: (_columns?: string) => ({
@@ -100,7 +98,6 @@ function createTableQuery(table: string) {
       }
     }),
     eq: (col: string, val: any) => {
-      pendingEq = { column: col, value: val };
       return {
         select: async () => {
           const res = await http('GET', `/api/${table}`, { params: { [col]: val } });
@@ -155,10 +152,58 @@ function createApiClient() {
           return { data: { user: res.user }, error: null } as any;
         },
       },
+      promoCodes: {
+        validate: async (code: string, subtotal: number) => {
+          const res = await http('POST', '/api/promo-codes/validate', { body: { code, subtotal } });
+          return { data: res.data, error: null };
+        },
+        list: async () => {
+          const res = await http('GET', '/api/promo-codes');
+          return { data: res.data, error: null };
+        },
+        create: async (payload: any) => {
+          const res = await http('POST', '/api/promo-codes', { body: payload });
+          return { data: res.data, error: null };
+        },
+        update: async (id: number, payload: any) => {
+          const res = await http('PUT', `/api/promo-codes/${id}`, { body: payload });
+          return { data: res.data, error: null };
+        },
+        toggle: async (id: number, isActive: boolean) => {
+          const res = await http('PATCH', `/api/promo-codes/${id}/toggle`, { body: { isActive } });
+          return { data: res.data, error: null };
+        },
+      },
     },
     from: (table: string) => createTableQuery(table),
     request: async (method: 'GET'|'POST'|'PUT'|'DELETE', path: string, opts?: { params?: any; body?: any; headers?: Record<string,string> }) => {
       return http(method, path, opts);
+    },
+    deliveryPartners: {
+      list: async () => {
+        const res = await http('GET', '/api/delivery-partners');
+        return { data: res.data, error: null };
+      },
+      adminList: async () => {
+        const res = await http('GET', '/api/delivery-partners/admin');
+        return { data: res.data, error: null };
+      },
+      create: async (payload: any) => {
+        const res = await http('POST', '/api/delivery-partners', { body: payload });
+        return { data: res.data, error: null };
+      },
+      update: async (id: number, payload: any) => {
+        const res = await http('PUT', `/api/delivery-partners/${id}`, { body: payload });
+        return { data: res.data, error: null };
+      },
+      toggle: async (id: number) => {
+        const res = await http('PATCH', `/api/delivery-partners/${id}/toggle`);
+        return { data: res.data, error: null };
+      },
+      remove: async (id: number) => {
+        await http('DELETE', `/api/delivery-partners/${id}`);
+        return { error: null };
+      },
     }
   } as any;
 }
