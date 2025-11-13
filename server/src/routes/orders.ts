@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient, DeliveryMethod } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
 const prisma = new PrismaClient();
 const prismaAny = prisma as any;
 type DiscountType = 'PERCENTAGE' | 'FIXED';
-type DeliveryMethod = 'PICKUP' | 'DELIVERY';
 export const ordersRouter = Router();
 
 // Generate unique order number
