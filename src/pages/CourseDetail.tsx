@@ -138,115 +138,154 @@ const CourseDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-6 py-12">
-        {/* Breadcrumb */}
+        {/* Breadcrumb - Enhanced */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-          <Link to="/" className="hover:text-primary">Accueil</Link>
+          <Link to="/" className="hover:text-primary transition-colors">Accueil</Link>
           <span>/</span>
-          <Link to="/elearning" className="hover:text-primary">E-Learning</Link>
+          <Link to="/elearning" className="hover:text-primary transition-colors">E-Learning</Link>
           <span>/</span>
-          <span className="text-foreground">{course.title}</span>
+          <span className="text-foreground font-medium">{course.title}</span>
         </div>
 
-        {/* Back button */}
-        <Link to="/elearning" className="inline-flex items-center text-primary hover:text-primary/80 mb-8">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+        {/* Back button - Enhanced */}
+        <Link to="/elearning" className="inline-flex items-center text-primary hover:text-primary/80 mb-8 group transition-all duration-300 hover:scale-105">
+          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
           Retour aux cours
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Course content */}
+          {/* Course content - Enhanced */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Header */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Badge variant="outline">{course.category}</Badge>
-                <Badge className={getLevelColor(course.level)}>{course.level}</Badge>
-                {course.isLive && <Badge variant="destructive">Live</Badge>}
+            {/* Header - Enhanced */}
+            <div className="bg-gradient-to-br from-primary/5 via-background to-accent/5 rounded-2xl p-8 border-2 border-border">
+              <div className="flex items-center gap-2 mb-6 flex-wrap">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{course.category}</Badge>
+                <Badge className={`${getLevelColor(course.level)} border-2`}>{course.level}</Badge>
+                {course.isLive && <Badge variant="destructive" className="animate-pulse">Live</Badge>}
               </div>
-              <h1 className="text-3xl font-bold text-foreground mb-4">{course.title}</h1>
-              <div className="flex items-center gap-6 mb-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2"><User className="w-4 h-4" />{course.instructor}</div>
-                <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{course.duration}</div>
-                <div className="flex items-center gap-2"><Users className="w-4 h-4" />{course.students} étudiants</div>
-                <div className="flex items-center gap-1"><Star className="w-4 h-4 text-yellow-400 fill-current" />{course.rating}</div>
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                {course.title}
+              </h1>
+              <div className="flex items-center gap-6 mb-6 text-sm text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-2 bg-card/50 px-3 py-1.5 rounded-lg">
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="font-medium">{course.instructor}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-card/50 px-3 py-1.5 rounded-lg">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="font-medium">{course.duration}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-card/50 px-3 py-1.5 rounded-lg">
+                  <Users className="w-4 h-4 text-primary" />
+                  <span className="font-medium">{course.students} étudiants</span>
+                </div>
+                <div className="flex items-center gap-1 bg-card/50 px-3 py-1.5 rounded-lg">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                  <span className="font-medium">{course.rating}</span>
+                </div>
               </div>
-              <p className="text-muted-foreground leading-relaxed mb-6" dangerouslySetInnerHTML={{ __html: course.longDescription }} />
+              <div className="text-muted-foreground leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: course.longDescription }} />
             </div>
 
-            {/* Course modules */}
+            {/* Course modules - Enhanced */}
             {course.modules.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-6 flex items-center">
-                    <BookOpen className="w-5 h-5 mr-2" />
+              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl md:text-3xl font-bold mb-8 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    <BookOpen className="w-6 h-6 mr-3 text-primary" />
                     Contenu du cours
                   </h3>
                   <div className="space-y-4">
-                    {course.modules.map((module, index) => (
-                      <div key={module.id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold">Module {index + 1}: {module.title}</h4>
-                          <span className="text-sm text-muted-foreground">{module.duration}</span>
+                    {course.modules.map((module, index) => {
+                      const delay = index * 100;
+                      return (
+                        <div 
+                          key={module.id} 
+                          className="border-2 border-border rounded-xl p-6 bg-gradient-to-br from-primary/5 via-background to-accent/5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
+                          style={{ transitionDelay: `${delay}ms` }}
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
+                              Module {index + 1}: {module.title}
+                            </h4>
+                            <span className="text-sm text-muted-foreground font-medium bg-card/50 px-3 py-1 rounded-lg">
+                              {module.duration}
+                            </span>
+                          </div>
+                          <ul className="space-y-2">
+                            {module.lessons.map((lesson, lessonIndex) => (
+                              <li 
+                                key={`${module.id}-lesson-${lessonIndex}-${lesson.slice(0, 20)}`} 
+                                className="text-sm text-muted-foreground flex items-center group-hover:text-foreground transition-colors"
+                              >
+                                <Play className="w-4 h-4 mr-3 text-primary flex-shrink-0" />
+                                {lesson}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <ul className="space-y-1">
-                          {module.lessons.map((lesson, lessonIndex) => (
-                            <li key={`${module.id}-lesson-${lessonIndex}-${lesson.slice(0, 20)}`} className="text-sm text-muted-foreground flex items-center">
-                              <Play className="w-3 h-3 mr-2" />
-                              {lesson}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* What you'll learn */}
+            {/* What you'll learn - Enhanced */}
             {course.benefits.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-6">Ce que vous apprendrez</h3>
+              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl md:text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    Ce que vous apprendrez
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {course.benefits.map((benefit, index) => (
-                      <div key={`benefit-${index}-${benefit.slice(0, 20)}`} className="flex items-center">
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span className="text-sm">{benefit}</span>
-                      </div>
-                    ))}
+                    {course.benefits.map((benefit, index) => {
+                      const delay = index * 50;
+                      return (
+                        <div 
+                          key={`benefit-${index}-${benefit.slice(0, 20)}`} 
+                          className="flex items-center group hover:bg-primary/5 p-3 rounded-lg transition-all duration-300"
+                          style={{ transitionDelay: `${delay}ms` }}
+                        >
+                          <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-medium">{benefit}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Instructor */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-6">Votre instructeur</h3>
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User className="w-8 h-8 text-primary" />
+            {/* Instructor - Enhanced */}
+            <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
+              <CardContent className="p-8">
+                <h3 className="text-2xl md:text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Votre instructeur
+                </h3>
+                <div className="flex items-start gap-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-lg">
+                    <User className="w-10 h-10 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-lg">{course.instructor}</h4>
-                    <p className="text-muted-foreground text-sm mt-2">{course.instructorBio}</p>
+                    <h4 className="font-bold text-xl mb-2">{course.instructor}</h4>
+                    <p className="text-muted-foreground leading-relaxed">{course.instructorBio}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Enhanced */}
           <div className="space-y-6">
-            {/* Video/thumbnail preview */}
-            <Card>
+            {/* Video/thumbnail preview - Enhanced */}
+            <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500 sticky top-24">
               <CardContent className="p-0">
-                <div className="aspect-video bg-muted rounded-t-lg relative overflow-hidden">
-                  <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <Button variant="ghost" size="icon" className="w-16 h-16 rounded-full bg-white/20">
-                      <Play className="w-8 h-8 text-white" />
+                <div className="aspect-video bg-muted rounded-t-lg relative overflow-hidden group">
+                  <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent flex items-center justify-center">
+                    <Button variant="ghost" size="icon" className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 hover:scale-110 transition-all duration-300">
+                      <Play className="w-10 h-10 text-white" />
                     </Button>
                   </div>
                 </div>

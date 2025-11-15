@@ -147,57 +147,82 @@ const NewsDetail = () => {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Article content */}
+          {/* Article content - Enhanced */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Header */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Badge variant="outline">{article.category}</Badge>
-                <span className="text-sm text-muted-foreground">{article.readTime} de lecture</span>
+            {/* Header - Enhanced */}
+            <div className="bg-gradient-to-br from-primary/5 via-background to-accent/5 rounded-2xl p-8 border-2 border-border">
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  {article.category}
+                </Badge>
+                <span className="text-sm text-muted-foreground font-medium bg-card/50 px-3 py-1 rounded-lg">
+                  {article.readTime} de lecture
+                </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-6">{article.title}</h1>
-              <div className="flex items-center gap-6 mb-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2"><User className="w-4 h-4" />{article.author}</div>
-                <div className="flex items-center gap-2"><Calendar className="w-4 h-4" />{formatDate(article.date)}</div>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent leading-tight">
+                {article.title}
+              </h1>
+              <div className="flex items-center gap-6 mb-6 text-sm text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-2 bg-card/50 px-4 py-2 rounded-lg">
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="font-medium">{article.author}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-card/50 px-4 py-2 rounded-lg">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  <span className="font-medium">{formatDate(article.date)}</span>
+                </div>
               </div>
-              <p className="text-lg text-muted-foreground leading-relaxed mb-8">{article.excerpt}</p>
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">{article.excerpt}</p>
             </div>
 
-            {/* Featured image */}
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-              <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+            {/* Featured image - Enhanced */}
+            <div className="aspect-video bg-muted rounded-2xl overflow-hidden border-2 border-border group">
+              <img 
+                src={article.image} 
+                alt={article.title} 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             </div>
 
-            {/* Article content */}
+            {/* Article content - Enhanced */}
             <div 
-              className="prose prose-lg max-w-none"
+              className="prose prose-lg max-w-none bg-card/50 rounded-2xl p-8 border-2 border-border"
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
 
-            {/* Tags */}
-            <div className="pt-8 border-t">
-              <h4 className="font-semibold mb-4">Tags</h4>
-              <div className="flex flex-wrap gap-2">
+            {/* Tags - Enhanced */}
+            <div className="pt-8 border-t-2 border-border">
+              <h4 className="font-bold text-xl mb-4 text-foreground">Tags</h4>
+              <div className="flex flex-wrap gap-3">
                 {article.tags.map((tag, index) => (
-                  <Badge key={`tag-${index}-${tag}`} variant="secondary">{tag}</Badge>
+                  <Badge 
+                    key={`tag-${index}-${tag}`} 
+                    variant="secondary" 
+                    className="bg-primary/10 text-primary border border-primary/20 hover:scale-105 transition-transform cursor-pointer"
+                  >
+                    {tag}
+                  </Badge>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Enhanced */}
           <div className="space-y-6">
-            {/* Author info */}
-            <Card>
+            {/* Author info - Enhanced */}
+            <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500 sticky top-24">
               <CardContent className="p-6">
-                <h4 className="font-semibold mb-4">À propos de l'auteur</h4>
+                <h4 className="font-bold text-xl mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  À propos de l'auteur
+                </h4>
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-primary" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-lg">
+                    <User className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h5 className="font-medium">{article.author}</h5>
-                    <p className="text-sm text-muted-foreground mt-2">
+                    <h5 className="font-bold text-lg mb-2">{article.author}</h5>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {article.author === 'AKOUMA Team' ? "Équipe éditoriale AKOUMA." : "Auteur invité - expert en innovation agricole."}
                     </p>
                   </div>
@@ -205,25 +230,37 @@ const NewsDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Related articles */}
+            {/* Related articles - Enhanced */}
             {article.relatedArticles.length > 0 && (
-              <Card>
+              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
                 <CardContent className="p-6">
-                  <h4 className="font-semibold mb-6">Articles connexes</h4>
+                  <h4 className="font-bold text-xl mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    Articles connexes
+                  </h4>
                   <div className="space-y-4">
-                    {article.relatedArticles.map((related) => (
-                      <Link key={related.id} to={`/news/${related.id}`} className="block group">
-                        <div className="flex gap-3">
-                          <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-                            <img src={related.image} alt={related.title} className="w-full h-full object-cover" />
+                    {article.relatedArticles.map((related, index) => {
+                      const delay = index * 50;
+                      return (
+                        <Link 
+                          key={related.id} 
+                          to={`/news/${related.id}`} 
+                          className="block group hover:bg-primary/5 p-3 rounded-lg transition-all duration-300"
+                          style={{ transitionDelay: `${delay}ms` }}
+                        >
+                          <div className="flex gap-3">
+                            <div className="w-20 h-20 bg-muted rounded-xl overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform duration-300 border-2 border-border">
+                              <img src={related.image} alt={related.title} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-semibold text-sm group-hover:text-primary transition-colors line-clamp-2 mb-1">
+                                {related.title}
+                              </h5>
+                              <p className="text-xs text-muted-foreground">{formatDate(related.date)}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2">{related.title}</h5>
-                            <p className="text-xs text-muted-foreground mt-1">{formatDate(related.date)}</p>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>

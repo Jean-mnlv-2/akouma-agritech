@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ interface SeedProduct {
 const SeedsSection = () => {
   const [products, setProducts] = useState<SeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentIndex, setCurrentIndex] = useState(0);
   const { t } = useI18n();
 
@@ -35,22 +36,25 @@ const SeedsSection = () => {
     contentType: 'seeds',
     enabled: true,
     onUpdate: (data) => {
-      const mapped = (data || []).map((item: Record<string, unknown>) => ({
-        id: Number(item.id),
-        name: String(item.name || ''),
-        description: String(item.description || ''),
-        category: String(item.category || ''),
-        variety: String(item.variety || ''),
-        price: Number(item.price_fcfa) || 0,
-        unit: String(item.unit || ''),
-        image: String(item.image_url || ''),
-        rating: Number(item.rating) || 0,
-        reviews: Number(item.total_reviews) || 0,
-        availability: String(item.availability || 'En stock') as 'En stock' | 'Rupture' | 'Pré-commande',
-        harvestTime: String(item.harvest_time || ''),
-        yield: String(item.yield_info || ''),
-        features: Array.isArray(item.features) ? (item.features as string[]) : [],
-      })) as SeedProduct[];
+      const mapped = (data || []).map((item: unknown) => {
+        const record = item as Record<string, unknown>;
+        return {
+        id: Number(record.id),
+        name: String(record.name || ''),
+        description: String(record.description || ''),
+        category: String(record.category || ''),
+        variety: String(record.variety || ''),
+        price: Number(record.price_fcfa) || 0,
+        unit: String(record.unit || ''),
+        image: String(record.image_url || ''),
+        rating: Number(record.rating) || 0,
+        reviews: Number(record.total_reviews) || 0,
+        availability: String(record.availability || 'En stock') as 'En stock' | 'Rupture' | 'Pré-commande',
+        harvestTime: String(record.harvest_time || ''),
+        yield: String(record.yield_info || ''),
+        features: Array.isArray(record.features) ? (record.features as string[]) : [],
+      };
+      }) as SeedProduct[];
       setProducts(mapped.slice(0, 8));
       setLoading(false);
     }
@@ -97,32 +101,36 @@ const SeedsSection = () => {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-br from-green-50 to-background relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-10 right-10 w-32 h-32 bg-green-500/5 rounded-full blur-2xl"></div>
-      <div className="absolute bottom-20 left-10 w-24 h-24 bg-primary/5 rounded-full blur-xl"></div>
+    <section className="py-20 bg-gradient-to-br from-green-50/50 via-background to-primary/5 relative overflow-hidden">
+      {/* Enhanced background decorations */}
+      <div className="absolute top-10 right-10 w-40 h-40 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-green-500/5 rounded-full blur-xl"></div>
       
-      <div className="container mx-auto px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">
             {t('home.seeds.title')}
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed mb-6">
             {t('home.seeds.subtitle')}
           </p>
-          <div className="flex flex-wrap justify-center gap-4 mt-6">
-            <Badge variant="secondary" className="text-sm px-4 py-2">
+          <div className="flex flex-wrap justify-center gap-4 mt-6 mb-6">
+            <Badge variant="secondary" className="text-sm px-4 py-2 bg-green-100 text-green-800 border border-green-300">
               <Leaf className="w-4 h-4 mr-2" />
               {t('seeds.badge.certified')}
             </Badge>
-            <Badge variant="secondary" className="text-sm px-4 py-2">
+            <Badge variant="secondary" className="text-sm px-4 py-2 bg-primary/10 text-primary border border-primary/20">
               <Package className="w-4 h-4 mr-2" />
               {t('seeds.badge.quality')}
             </Badge>
           </div>
-          <div className="mt-4">
-            <Button variant="link" asChild>
-              <Link to="/seeds">Voir plus...</Link>
+          <div className="mt-6">
+            <Button variant="outline" size="lg" asChild className="group hover:bg-primary hover:text-primary-foreground transition-all duration-300">
+              <Link to="/seeds">
+                {t('home.seeds.view_all')}
+                <ArrowRight className="ml-2 transition-transform group-hover:translate-x-1" />
+              </Link>
             </Button>
           </div>
         </div>

@@ -283,39 +283,51 @@ const Donations = () => {
       />
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden">
+      {/* Hero Section - Modern Design */}
+      <section className="relative pt-24 pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img 
             src={heroAgritech} 
             alt="Agriculture intelligente" 
             className="w-full h-full object-cover opacity-20"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background"></div>
+          {/* Animated background decorations */}
+          <div className="absolute top-20 right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
         
-        <div className="relative container mx-auto px-6 text-center">
+        <div className="relative container mx-auto px-6 text-center z-10">
           <div className="max-w-4xl mx-auto">
-            <Badge variant="secondary" className="mb-6 text-sm">
+            <Badge variant="secondary" className="mb-6 text-sm bg-primary/10 text-primary border-2 border-primary/20 hover:scale-105 transition-transform">
               <Heart className="w-4 h-4 mr-2" />
               Soutenez Notre Mission
             </Badge>
             
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight">
               Ensemble, Cultivons l'Avenir
             </h1>
             
-            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
               Votre don contribue directement à révolutionner l'agriculture africaine. 
               Chaque contribution, quelle qu'elle soit, fait une différence réelle dans la vie des agriculteurs.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="group bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90" onClick={() => openDonationModal()}>
+              <Button 
+                size="lg" 
+                className="group bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300 hover:scale-105 hover:shadow-xl" 
+                onClick={() => openDonationModal()}
+              >
                 <Heart className="mr-2 transition-transform group-hover:scale-110" />
                 Faire un Don
               </Button>
-              <Button variant="outline" size="lg" onClick={() => setIsContactOpen(true)}>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                onClick={() => setIsContactOpen(true)}
+              >
                 Découvrir nos Projets
               </Button>
             </div>
@@ -323,16 +335,35 @@ const Donations = () => {
         </div>
       </section>
 
-      {/* Impact Stats */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {donationStats.map((stat, index) => (
-              <div key={`donation-stat-${index}-${stat.label}`} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">{stat.value}</div>
-                <div className="text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
+      {/* Impact Stats - Enhanced */}
+      <section className="py-20 bg-gradient-to-br from-muted/40 via-background to-primary/5 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            {donationStats.map((stat, index) => {
+              const delay = index * 100;
+              const colors = [
+                "from-blue-500 to-cyan-500",
+                "from-green-500 to-emerald-500",
+                "from-yellow-500 to-orange-500",
+                "from-purple-500 to-pink-500"
+              ];
+              return (
+                <div 
+                  key={`donation-stat-${index}-${stat.label}`} 
+                  className="text-center group hover:scale-105 transition-all duration-300"
+                  style={{ transitionDelay: `${delay}ms` }}
+                >
+                  <div className={`text-4xl md:text-5xl font-bold bg-gradient-to-r ${colors[index % colors.length]} bg-clip-text text-transparent mb-2`}>
+                    {stat.value}
+                  </div>
+                  <div className="text-muted-foreground font-medium">{stat.label}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -349,37 +380,49 @@ const Donations = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {donationTiers.map((tier, index) => (
-              <Card key={`tier-${index}-${tier.id}`} className={`relative group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer ${tier.popular ? 'ring-2 ring-primary' : ''}`}>
-                {tier.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-white">
-                    Plus Populaire
-                  </Badge>
-                )}
-                <CardHeader className="text-center pb-4">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r ${tier.color} flex items-center justify-center text-white`}>
-                    <Gift className="w-8 h-8" />
-                  </div>
-                  <CardTitle className="text-xl">{tier.name}</CardTitle>
-                  <div className="text-3xl font-bold text-primary">{tier.amount}€</div>
-                  <p className="text-sm text-muted-foreground">{tier.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3 mb-6">
-                    {tier.benefits.map((benefit, idx) => (
-                      <li key={idx} className="flex items-center text-sm">
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button className="w-full" variant={tier.popular ? "default" : "outline"} onClick={() => openDonationModal(tier.id)}>
-                    Choisir ce Niveau
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {donationTiers.map((tier, index) => {
+              const delay = index * 100;
+              return (
+                <Card 
+                  key={`tier-${index}-${tier.id}`} 
+                  className={`relative group hover:shadow-xl transition-all duration-500 hover:-translate-y-3 cursor-pointer bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden ${tier.popular ? 'ring-2 ring-primary shadow-lg' : ''}`}
+                  onClick={() => openDonationModal(tier.id)}
+                  style={{ transitionDelay: `${delay}ms` }}
+                >
+                  {tier.popular && (
+                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-white shadow-lg z-10">
+                      Plus Populaire
+                    </Badge>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <CardHeader className="text-center pb-4 relative z-10">
+                    <div className={`w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-r ${tier.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                      <Gift className="w-10 h-10" />
+                    </div>
+                    <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">{tier.name}</CardTitle>
+                    <div className={`text-4xl font-bold bg-gradient-to-r ${tier.color} bg-clip-text text-transparent`}>{tier.amount}€</div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{tier.description}</p>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <ul className="space-y-3 mb-6">
+                      {tier.benefits.map((benefit, idx) => (
+                        <li key={idx} className="flex items-center text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                          <span className="group-hover:text-foreground transition-colors">{benefit}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
+                      className="w-full transition-all duration-300 hover:scale-105 hover:shadow-lg" 
+                      variant={tier.popular ? "default" : "outline"}
+                    >
+                      Choisir ce Niveau
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>

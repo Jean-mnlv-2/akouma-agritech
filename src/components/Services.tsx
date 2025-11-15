@@ -81,33 +81,48 @@ const Services = () => {
           </div>
         </div>
 
-        {/* Services grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          {services.map((service, index) => (
-            <Card key={`service-${index}-${service.title}`} className="group hover:shadow-natural transition-all duration-300 hover:-translate-y-2 bg-card/80 backdrop-blur-sm border border-border/50">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-tech rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <service.icon className="w-6 h-6 text-accent-foreground" />
-                </div>
-                <CardTitle className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
-                  {t(service.title)}
-                </CardTitle>
-                <CardDescription className="text-muted-foreground leading-relaxed">
-                  {t(service.description)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {service.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center text-sm text-muted-foreground">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full mr-3 flex-shrink-0"></div>
-                      {t(feature)}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Services grid with staggered animations */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-16">
+          {services.map((service, index) => {
+            const delay = index * 100;
+            return (
+              <Card 
+                key={`service-${index}-${service.title}`} 
+                className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-3 bg-card/90 backdrop-blur-md border border-border/50 overflow-hidden relative"
+                style={{
+                  animationDelay: `${delay}ms`
+                }}
+              >
+                {/* Gradient overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                <CardHeader className="relative z-10">
+                  <div className="w-14 h-14 bg-gradient-tech rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
+                    <service.icon className="w-7 h-7 text-accent-foreground" />
+                  </div>
+                  <CardTitle className="text-xl md:text-2xl font-bold text-foreground group-hover:text-primary transition-colors mb-3">
+                    {t(service.title)}
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground leading-relaxed text-base">
+                    {t(service.description)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  <ul className="space-y-3">
+                    {service.features.map((feature, featureIndex) => (
+                      <li 
+                        key={featureIndex} 
+                        className="flex items-start text-sm md:text-base text-muted-foreground group-hover:text-foreground transition-colors"
+                      >
+                        <div className="w-2 h-2 bg-gradient-to-r from-primary to-accent rounded-full mr-3 mt-2 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
+                        <span>{t(feature)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* CTA */}

@@ -113,28 +113,35 @@ export default function News() {
         image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
       />
       <Header />
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden mobile-page-content">
+      {/* Hero Section - Modern Design */}
+      <section className="relative pt-24 pb-20 overflow-hidden mobile-page-content">
         <div className="absolute inset-0">
           <img 
             src="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
             alt={t('news.hero.alt')}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/50"></div>
+          {/* Animated background decorations */}
+          <div className="absolute top-20 right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
-        <div className="relative container mx-auto px-6">
-          <div className="max-w-3xl">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              <span className="text-green-400">{t('news.hero.title1')}</span> {t('news.hero.title2')}
+        <div className="relative container mx-auto px-6 z-10">
+          <div className="max-w-4xl">
+            <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border-2 border-primary/30 hover:scale-105 transition-transform">
+              <Calendar className="w-4 h-4 mr-2" />
+              Actualités Agricoles
+            </Badge>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">{t('news.hero.title1')}</span> {t('news.hero.title2')}
             </h1>
-            <p className="text-xl text-gray-200 mb-8 leading-relaxed">{t('news.hero.desc')}</p>
+            <p className="text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">{t('news.hero.desc')}</p>
             <div className="flex flex-wrap gap-4">
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+              <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 hover:scale-105 transition-transform">
                 <Calendar className="w-4 h-4 mr-2" />
                 {t('news.badge.daily')}
               </Badge>
-              <Badge variant="secondary" className="bg-green-500/20 text-green-300 border-green-500/30">
+              <Badge variant="secondary" className="bg-green-500/20 backdrop-blur-sm text-green-300 border-2 border-green-500/30 hover:scale-105 transition-transform">
                 <Star className="w-4 h-4 mr-2" />
                 {t('news.badge.premium')}
               </Badge>
@@ -153,64 +160,113 @@ export default function News() {
             ))}
           </div>
 
-          {/* Actualités en vedette */}
+          {/* Actualités en vedette - Enhanced */}
           {featuredNews.length > 0 && (
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center">
-                <Star className="w-6 h-6 mr-2 text-yellow-500" />
+            <div className="mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                <Star className="w-8 h-8 mr-3 text-yellow-500 fill-yellow-500" />
                 {t('news.featured')}
               </h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                {featuredNews.slice(0, 2).map((item) => (
-                  <Card key={item.id} className="group hover:shadow-lg transition-all duration-300 hover:scale-105">
-                    <div className="relative overflow-hidden rounded-t-lg">
-                      <img src={item.image} alt={item.title} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300" />
-                      <Badge className="absolute top-4 left-4 bg-yellow-500 text-white">{t('news.featured')}</Badge>
-                    </div>
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="secondary">{item.category}</Badge>
-                        <div className="flex items-center text-sm text-muted-foreground"><Calendar className="w-4 h-4 mr-1" />{new Date(item.date).toLocaleDateString()}</div>
+              <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+                {featuredNews.slice(0, 2).map((item, index) => {
+                  const delay = index * 100;
+                  return (
+                    <Card 
+                      key={item.id} 
+                      className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative"
+                      style={{ transitionDelay: `${delay}ms` }}
+                    >
+                      <div className="relative overflow-hidden">
+                        <img 
+                          src={item.image} 
+                          alt={item.title} 
+                          className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <Badge className="absolute top-4 left-4 bg-yellow-500 text-white shadow-lg">{t('news.featured')}</Badge>
                       </div>
-                      <CardTitle className="text-xl group-hover:text-primary transition-colors">{item.title}</CardTitle>
-                      <CardDescription className="line-clamp-2">{item.excerpt}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm text-muted-foreground"><User className="w-4 h-4 mr-1" />{item.author}</div>
-                        <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground"><a href={`/news/${item.id}`}>{t('news.read_more')}<ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" /></a></Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <CardHeader className="relative z-10">
+                        <div className="flex items-center justify-between mb-3">
+                          <Badge variant="secondary" className="bg-primary/10 text-primary border border-primary/20">{item.category}</Badge>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {new Date(item.date).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors mb-2">{item.title}</CardTitle>
+                        <CardDescription className="line-clamp-2 text-sm">{item.excerpt}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="relative z-10">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <User className="w-4 h-4 mr-1" />
+                            {item.author}
+                          </div>
+                          <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                            <Link to={`/news/${item.id}`}>
+                              {t('news.read_more')}
+                              <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Actualités régulières */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {regularNews.map((item) => (
-              <Card key={item.id} className="group hover:shadow-lg transition-all duration-300 hover:scale-105">
-                <div className="relative overflow-hidden rounded-t-lg">
-                  <img src={item.image} alt={item.title} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300" />
-                  <Badge className="absolute top-4 left-4">{item.category}</Badge>
-                </div>
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center text-sm text-muted-foreground"><Calendar className="w-4 h-4 mr-1" />{new Date(item.date).toLocaleDateString()}</div>
-                    <span className="text-sm text-muted-foreground">{item.read_time} {t('news.read_time')}</span>
+          {/* Actualités régulières - Enhanced */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {regularNews.map((item, index) => {
+              const delay = index * 50;
+              return (
+                <Card 
+                  key={item.id} 
+                  className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative"
+                  style={{ transitionDelay: `${delay}ms` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative overflow-hidden">
+                    <img 
+                      src={item.image} 
+                      alt={item.title} 
+                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <Badge className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm shadow-lg">{item.category}</Badge>
                   </div>
-                  <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">{item.title}</CardTitle>
-                  <CardDescription className="line-clamp-3"><div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.excerpt) }} /></CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm text-muted-foreground"><User className="w-4 h-4 mr-1" />{item.author}</div>
-                    <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground"><a href={`/news/${item.id}`}>{t('news.read_more')}<ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" /></a></Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  <CardHeader className="relative z-10">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        {new Date(item.date).toLocaleDateString()}
+                      </div>
+                      <span className="text-sm text-muted-foreground">{item.read_time} {t('news.read_time')}</span>
+                    </div>
+                    <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 mb-2">{item.title}</CardTitle>
+                    <CardDescription className="line-clamp-3 text-sm">
+                      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.excerpt) }} />
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <User className="w-4 h-4 mr-1" />
+                        {item.author}
+                      </div>
+                      <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                        <Link to={`/news/${item.id}`}>
+                          {t('news.read_more')}
+                          <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {/* Pagination */}

@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, Filter, BookOpen, Video, Headphones, Radio, PlayCircle, Award, Users, Clock, UserPlus } from "lucide-react";
-import CourseCard from "@/components/CourseCard";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -214,30 +213,37 @@ const ELearning = () => {
       />
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden mobile-page-content">
+      {/* Hero Section - Modern Design */}
+      <section className="relative pt-24 pb-20 overflow-hidden mobile-page-content">
         <div className="absolute inset-0">
           <img 
             src={elearningHero} 
             alt="E-learning AKOUMA"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/50"></div>
+          {/* Animated background decorations */}
+          <div className="absolute top-20 right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
         
-        <div className="relative container mx-auto px-6">
-          <div className="max-w-3xl">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              Plateforme d'<span className="text-green-400">E-Learning</span> Agricole
+        <div className="relative container mx-auto px-6 z-10">
+          <div className="max-w-4xl">
+            <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border border-primary/30 hover:scale-105 transition-transform">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Formation Agricole Professionnelle
+            </Badge>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              Plateforme d'<span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">E-Learning</span> Agricole
             </h1>
-            <p className="text-xl text-gray-200 mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
               Accédez à des formations de qualité, des webinaires en direct et des ressources 
               complètes pour révolutionner vos pratiques agricoles.
             </p>
-            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="lg" variant="nature" className="text-lg px-8 focus-visible:ring-4 focus-visible:ring-primary/40 transition-transform duration-200 hover:scale-105" aria-label="S'inscrire maintenant">
+                  <Button size="lg" variant="nature" className="text-lg px-8 focus-visible:ring-4 focus-visible:ring-primary/40 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/30" aria-label="S'inscrire maintenant">
                     <UserPlus className="w-5 h-5 mr-2" />
                     S'inscrire maintenant
                   </Button>
@@ -266,7 +272,7 @@ const ELearning = () => {
                         onChange={e => setRegisterForm(f => ({ ...f, country: e.target.value }))}
                       >
                         <option value="">Sélectionnez votre pays</option>
-                        {allCountries.map(c => (
+                        {allCountries.map((c) => (
                           <option key={c.value} value={c.label}>{c.label}</option>
                         ))}
                       </select>
@@ -295,7 +301,7 @@ const ELearning = () => {
                   </div>
                 </DialogContent>
               </Dialog>
-              <Button size="lg" variant="outline" className="text-lg px-8 bg-white/10 border-white/30 text-white hover:bg-white/20 focus-visible:ring-4 focus-visible:ring-accent/40 transition-transform duration-200 hover:scale-105" aria-label="Parcourir les cours">
+              <Button size="lg" variant="outline" className="text-lg px-8 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white/20 hover:border-white/50 focus-visible:ring-4 focus-visible:ring-accent/40 transition-all duration-300 hover:scale-105 hover:shadow-lg" aria-label="Parcourir les cours">
                 <PlayCircle className="w-5 h-5 mr-2" />
                 Parcourir les cours
               </Button>
@@ -304,17 +310,20 @@ const ELearning = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container mx-auto px-6">
+      {/* Stats Section - Enhanced */}
+      <section className="py-20 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-10 right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 left-10 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
           {loadingStats ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="large" text="Chargement des statistiques..." />
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
               {stats.map((stat, index) => {
-                // Map icon names to actual components
                 const getIcon = (iconName: string) => {
                   switch (iconName?.toLowerCase()) {
                     case 'bookopen': return BookOpen;
@@ -325,14 +334,25 @@ const ELearning = () => {
                   }
                 };
                 const IconComponent = getIcon(stat.icon);
+                const delay = index * 100;
+                const colors = [
+                  "from-blue-500 to-cyan-500",
+                  "from-green-500 to-emerald-500",
+                  "from-yellow-500 to-orange-500",
+                  "from-purple-500 to-pink-500"
+                ];
                 
                 return (
-                  <div key={`stat-${index}-${stat.label}`} className="text-center">
-                    <div className="w-16 h-16 bg-gradient-hero rounded-full flex items-center justify-center mx-auto mb-4">
-                      <IconComponent className="w-8 h-8 text-primary-foreground" />
+                  <div 
+                    key={`stat-${index}-${stat.label}`} 
+                    className="text-center group hover:scale-105 transition-all duration-300"
+                    style={{ transitionDelay: `${delay}ms` }}
+                  >
+                    <div className={`w-20 h-20 bg-gradient-to-br ${colors[index % colors.length]} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg`}>
+                      <IconComponent className="w-10 h-10 text-white" />
                     </div>
-                    <div className="text-3xl font-bold text-primary mb-2">{stat.value}</div>
-                    <div className="text-muted-foreground">{stat.label}</div>
+                    <div className={`text-4xl font-bold bg-gradient-to-r ${colors[index % colors.length]} bg-clip-text text-transparent mb-2`}>{stat.value}</div>
+                    <div className="text-muted-foreground font-medium">{stat.label}</div>
                   </div>
                 );
               })}
@@ -351,9 +371,13 @@ const ELearning = () => {
         </div>
       </section>
 
-      {/* Content Submission Section */}
-      <section className="py-16 bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="container mx-auto px-6">
+      {/* Content Submission Section - Enhanced */}
+      <section className="py-20 bg-gradient-to-br from-green-50/50 via-blue-50/30 to-background relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
           <ContentSubmission />
         </div>
       </section>
@@ -429,41 +453,51 @@ const ELearning = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {paginatedCourses.map((course) => (
-                      <div key={course.id} className="relative">
-                        <Card className="hover:shadow-elegant transition-shadow">
-                          <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                              <BookOpen className="w-5 h-5 text-primary" />
-                              <span>{course.title}</span>
-                            </CardTitle>
-                            <CardDescription className="text-sm">
-                              <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-muted-foreground mb-4">
-                              Prix: {course.price}
-                            </p>
-                            <Button variant="outline" className="w-full">
-                              Découvrir le cours
-                            </Button>
-                          </CardContent>
-                        </Card>
-                        {course.price === "Gratuit" && (
-                          <div className="absolute top-2 right-2 z-10">
-                            <OfflineButton
-                              id={course.id}
-                              title={course.title}
-                              content={course.description}
-                              type="course"
-                              size="sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    {paginatedCourses.map((course, index) => {
+                      const delay = index * 50;
+                      return (
+                        <div 
+                          key={course.id} 
+                          className="relative group"
+                          style={{ transitionDelay: `${delay}ms` }}
+                        >
+                          <Card className="hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <CardHeader className="relative z-10">
+                              <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
+                                <BookOpen className="w-6 h-6 text-white" />
+                              </div>
+                              <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors mb-3">
+                                {course.title}
+                              </CardTitle>
+                              <CardDescription className="text-sm leading-relaxed">
+                                <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="relative z-10">
+                              <p className="text-lg font-semibold text-primary mb-4">
+                                Prix: {course.price}
+                              </p>
+                              <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                                Découvrir le cours
+                              </Button>
+                            </CardContent>
+                            {course.price === "Gratuit" && (
+                              <div className="absolute top-2 right-2 z-10">
+                                <OfflineButton
+                                  id={course.id}
+                                  title={course.title}
+                                  content={course.description}
+                                  type="course"
+                                  size="sm"
+                                />
+                              </div>
+                            )}
+                          </Card>
+                        </div>
+                      );
+                    })}
                   </div>
                    
                   {totalPages > 1 && (

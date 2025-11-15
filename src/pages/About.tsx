@@ -93,24 +93,30 @@ const About = () => {
     <div className="min-h-screen">
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden mobile-page-content">
+      {/* Hero Section - Modern Design */}
+      <section className="relative pt-24 pb-20 overflow-hidden mobile-page-content">
         <div className="absolute inset-0">
           <img 
             src={heroAgritech} 
             alt="À propos d'AKOUMA"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/50"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/60"></div>
+          {/* Animated background decorations */}
+          <div className="absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
         
-        <div className="relative container mx-auto px-6">
-          <div className="max-w-3xl">
-            <Badge className="mb-4 bg-green-600/80 text-white">À propos d'AKOUMA</Badge>
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              Mettre la <span className="text-green-400">technologie</span> au service de la terre
+        <div className="relative container mx-auto px-6 z-10">
+          <div className="max-w-4xl">
+            <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border-2 border-primary/30 hover:scale-105 transition-transform">
+              <Sprout className="w-4 h-4 mr-2" />
+              À propos d'AKOUMA
+            </Badge>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              Mettre la <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">technologie</span> au service de la terre
             </h1>
-            <p className="text-xl text-gray-200 mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
               AKOUMA accompagne les producteurs, coopératives et territoires dans la transition 
               vers une agriculture moderne, résiliente et connectée.
             </p>
@@ -118,26 +124,51 @@ const About = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={`about-stat-${index}-${stat.label}`} className="text-center">
-                <div className="text-4xl font-bold text-primary mb-2">{stat.value}</div>
-                <div className="text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
+      {/* Stats Section - Enhanced */}
+      <section className="py-20 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            {stats.map((stat, index) => {
+              const delay = index * 100;
+              const colors = [
+                "from-blue-500 to-cyan-500",
+                "from-green-500 to-emerald-500",
+                "from-yellow-500 to-orange-500",
+                "from-purple-500 to-pink-500"
+              ];
+              return (
+                <div 
+                  key={`about-stat-${index}-${stat.label}`} 
+                  className="text-center group hover:scale-105 transition-all duration-300"
+                  style={{ transitionDelay: `${delay}ms` }}
+                >
+                  <div className={`text-4xl md:text-5xl font-bold bg-gradient-to-r ${colors[index % colors.length]} bg-clip-text text-transparent mb-2`}>
+                    {stat.value}
+                  </div>
+                  <div className="text-muted-foreground font-medium">{stat.label}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Mission Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Notre Mission</h2>
-            <p className="text-xl text-muted-foreground leading-relaxed">
+      {/* Mission Section - Enhanced */}
+      <section className="py-20 bg-gradient-to-br from-background via-muted/20 to-background relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl md:text-5xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Notre Mission
+            </h2>
+            <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
               Créer une interface entre le terrain et la technologie, entre tradition et innovation, 
               entre ruralité et modernité. Notre vision : une agriculture africaine productive, 
               verte et connectée.
@@ -156,22 +187,30 @@ const About = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {sectors.map((sector, index) => (
-              <Card key={`about-sector-${index}-${sector.title}`} className="hover:shadow-elegant transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-hero rounded-lg flex items-center justify-center mb-4">
-                    <sector.icon className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="text-xl">{sector.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base leading-relaxed">
-                    {sector.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {sectors.map((sector, index) => {
+              const delay = index * 100;
+              return (
+                <Card 
+                  key={`about-sector-${index}-${sector.title}`} 
+                  className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative"
+                  style={{ transitionDelay: `${delay}ms` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <CardHeader className="relative z-10">
+                    <div className="w-14 h-14 bg-gradient-hero rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
+                      <sector.icon className="w-7 h-7 text-white" />
+                    </div>
+                    <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">{sector.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <CardDescription className="text-base leading-relaxed group-hover:text-foreground transition-colors">
+                      {sector.description}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>

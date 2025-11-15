@@ -94,22 +94,26 @@ const NewsSection = () => {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-br from-muted/30 to-background relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
-      <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
+    <section className="py-20 bg-gradient-to-br from-muted/40 via-background to-muted/20 relative overflow-hidden">
+      {/* Enhanced background decorations */}
+      <div className="absolute top-10 right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 left-10 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-primary/5 rounded-full blur-xl"></div>
       
-      <div className="container mx-auto px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             {t('home.news.title')}
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed mb-6">
             {t('home.news.subtitle')}
           </p>
-          <div className="mt-4">
-            <Button variant="link" asChild>
-              <Link to="/news">Voir plus...</Link>
+          <div className="mt-6">
+            <Button variant="outline" size="lg" asChild className="group hover:bg-primary hover:text-primary-foreground transition-all duration-300">
+              <Link to="/news">
+                {t('home.news.view_all')}
+                <ArrowRight className="ml-2 transition-transform group-hover:translate-x-1" />
+              </Link>
             </Button>
           </div>
         </div>

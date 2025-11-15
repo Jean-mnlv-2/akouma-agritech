@@ -123,18 +123,24 @@ const AgriConsulting = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 bg-gradient-hero relative overflow-hidden">
+      {/* Hero Section - Modern Design */}
+      <section className="pt-28 pb-20 bg-gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="container mx-auto px-6 relative">
+        {/* Animated background decorations */}
+        <div className="absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 bg-white/10 text-white border-white/20">
+            <Badge className="mb-6 bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 hover:scale-105 transition-transform">
+              <Target className="w-4 h-4 mr-2" />
               Services de Conseil Agricole
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white">
-              Agri-Consulting
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight">
+              Agri-<span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Consulting</span>
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
               Expertise et accompagnement stratégique pour transformer votre agriculture 
               et maximiser votre rentabilité
             </p>
@@ -143,33 +149,41 @@ const AgriConsulting = () => {
                 size="lg" 
                 variant="secondary"
                 onClick={() => setShowContactForm(true)}
-                className="group"
+                className="group transition-all duration-300 hover:scale-105 hover:shadow-xl"
               >
                 Consultation gratuite
                 <Calendar className="w-4 h-4 ml-2 transition-transform group-hover:scale-110" />
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="border-2 border-white/30 text-white hover:bg-white hover:text-primary backdrop-blur-sm transition-all duration-300 hover:scale-105"
+              >
                 Nos références
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mission Statement */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-6">
+      {/* Mission Statement - Enhanced */}
+      <section className="py-20 bg-gradient-to-br from-muted/40 via-background to-primary/5 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+            <h2 className="text-4xl md:text-5xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Notre Mission
             </h2>
-            <p className="text-xl text-muted-foreground leading-relaxed">
+            <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
               Fournir des services d'accompagnement, d'expertise et de stratégie aux acteurs du secteur agricole 
-              pour améliorer la <span className="text-primary font-semibold">productivité</span>, 
-              la <span className="text-primary font-semibold">rentabilité</span>, 
-              la <span className="text-primary font-semibold">durabilité</span> et 
-              la <span className="text-primary font-semibold">résilience</span> de leurs activités.
+              pour améliorer la <span className="text-primary font-bold">productivité</span>, 
+              la <span className="text-primary font-bold">rentabilité</span>, 
+              la <span className="text-primary font-bold">durabilité</span> et 
+              la <span className="text-primary font-bold">résilience</span> de leurs activités.
             </p>
           </div>
         </div>
@@ -187,32 +201,40 @@ const AgriConsulting = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <Card key={`service-${index}-${service.title}`} className="group hover:shadow-natural transition-all duration-300 h-full">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-tech rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <service.icon className="w-6 h-6 text-accent-foreground" />
-                  </div>
-                  <CardTitle className="group-hover:text-primary transition-colors">
-                    {service.title}
-                  </CardTitle>
-                  <CardDescription>
-                    {service.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {service.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start space-x-2 text-sm">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {services.map((service, index) => {
+              const delay = index * 100;
+              return (
+                <Card 
+                  key={`service-${index}-${service.title}`} 
+                  className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-3 h-full bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative"
+                  style={{ transitionDelay: `${delay}ms` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <CardHeader className="relative z-10">
+                    <div className="w-14 h-14 bg-gradient-tech rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
+                      <service.icon className="w-7 h-7 text-white" />
+                    </div>
+                    <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors mb-3">
+                      {service.title}
+                    </CardTitle>
+                    <CardDescription className="text-base leading-relaxed">
+                      {service.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <ul className="space-y-3">
+                      {service.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start space-x-3 text-sm">
+                          <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                          <span className="text-muted-foreground group-hover:text-foreground transition-colors">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
