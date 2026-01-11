@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { env } from '../utils/env';
 import { prisma } from '../lib/prisma';
+import { authLimiter, signUpLimiter } from '../middleware/rateLimiter';
+import { validate } from '../middleware/validate';
+import { signInSchema, signUpSchema } from '../schemas/auth.schema';
 
 export const authRouter = Router();
 
@@ -25,7 +28,7 @@ function setAuthCookie(res: Response, token: string): void {
   });
 }
 
-authRouter.post('/sign-in', async (req: Request, res: Response) => {
+authRouter.post('/sign-in', authLimiter, validate(signInSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
   const user = await prisma.user.findUnique({ where: { email } });
@@ -47,7 +50,7 @@ authRouter.post('/sign-in', async (req: Request, res: Response) => {
   res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive } });
 });
 
-authRouter.post('/sign-up', async (req: Request, res: Response) => {
+authRouter.post('/sign-up', signUpLimiter, validate(signUpSchema), async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
   const exists = await prisma.user.findUnique({ where: { email } });
