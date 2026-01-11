@@ -1,0 +1,456 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String?
+  avatarUrl    String?
+  role         String   @default("customer")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  enrollments   ELearningEnrollment[]
+  assignedTasks Task[]                @relation("TaskAssignedTo")
+  createdTasks  Task[]                @relation("TaskCreatedBy")
+  orders        Order[]
+}
+
+model Country {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String
+  phoneCode String
+  createdAt DateTime @default(now())
+}
+
+model Seed {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  price       Decimal  @db.Decimal(12, 2)
+  stock       Int      @default(0)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Course {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String?
+  content      String?
+  price        Decimal  @db.Decimal(12, 2)
+  duration     Int? // en minutes
+  level        String? // beginner, intermediate, advanced
+  thumbnailUrl String?
+  videoUrl     String?
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  enrollments ELearningEnrollment[]
+}
+
+model News {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  excerpt     String?
+  imageUrl    String?
+  author      String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ShopProduct {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(12, 2)
+  stock       Int      @default(0)
+  category    String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LegalPage {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Partnership {
+  id          Int      @id @default(autoincrement())
+  companyName String
+  contactName String
+  email       String
+  phone       String?
+  country     String
+  message     String?
+  status      String   @default("pending") // pending, approved, rejected
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Donation {
+  id        Int      @id @default(autoincrement())
+  donorName String
+  email     String
+  amount    Decimal  @db.Decimal(12, 2)
+  country   String
+  message   String?
+  status    String   @default("pending") // pending, processed, failed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  subject     String?
+  message     String
+  country     String?
+  phone       String?
+  company     String?
+  project_type String?
+  status      String   @default("new") // new, processed, completed
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ContentSubmission {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  author    String
+  email     String
+  status    String   @default("pending") // pending, approved, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DemoRequest {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  company   String?
+  phone     String?
+  country   String
+  message   String?
+  status    String   @default("pending") // pending, scheduled, completed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ELearningEnrollment {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  courseId    Int
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  progress    Int       @default(0) // pourcentage de completion
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model NewsletterSubscription {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Partner {
+  id          Int      @id @default(autoincrement())
+  name        String
+  logo        String?
+  logoUrl     String?
+  imageUrl    String?
+  type        String?
+  description String?
+  year        String?
+  website     String?
+  contact     String?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
+  @@index([createdAt])
+}
+
+model DonationImpact {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  icon        String?
+  progress    Int      @default(0)
+  target      String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
+  @@index([createdAt])
+}
+
+model SuccessStory {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  impact      String
+  year        String?
+  imageUrl    String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
+  @@index([createdAt])
+}
+
+/// Live streaming sessions
+model LiveStream {
+  id              Int       @id @default(autoincrement())
+  title           String
+  description     String?
+  instructorName  String?
+  category        String?
+  scheduledTime   DateTime?
+  durationMinutes Int?
+  streamUrl       String?
+  thumbnailUrl    String?
+  isLive          Boolean   @default(false)
+  viewerCount     Int       @default(0)
+  maxViewers      Int       @default(0)
+  recordingUrl    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+/// Simple key/value stats displayed on e-learning pages
+model ELearningStat {
+  id        Int      @id @default(autoincrement())
+  label     String
+  value     String
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Tasks used in supervisor/admin workflows
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  assignedTo  String?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  assignedToUser User? @relation("TaskAssignedTo", fields: [assignedTo], references: [id])
+  createdByUser  User? @relation("TaskCreatedBy", fields: [createdBy], references: [id])
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  date        DateTime
+  location    String
+  imageUrl    String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Career {
+  id                Int       @id @default(autoincrement())
+  title             String
+  description       String
+  requirements      String?
+  location          String
+  employmentType    String    @default("full-time")
+  department        String?
+  salaryRange       String?
+  isPublished       Boolean   @default(false)
+  applicationDeadline DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+/// Contact and social settings (singleton)
+model ContactSettings {
+  id             Int      @id @default(autoincrement())
+  whatsappNumber String?  @db.VarChar(100) @map("whatsapp_number")
+  phone          String?  @db.VarChar(100)
+  email          String?  @db.VarChar(255)
+  addressLine1   String?  @db.VarChar(255) @map("address_line1")
+  addressLine2   String?  @db.VarChar(255) @map("address_line2")
+  city           String?  @db.VarChar(120)
+  country        String?  @db.VarChar(120)
+  facebookUrl    String?  @db.VarChar(255) @map("facebook_url")
+  instagramUrl   String?  @db.VarChar(255) @map("instagram_url")
+  tiktokUrl      String?  @db.VarChar(255) @map("tiktok_url")
+  youtubeUrl     String?  @db.VarChar(255) @map("youtube_url")
+  linkedinUrl    String?  @db.VarChar(255) @map("linkedin_url")
+  xUrl           String?  @db.VarChar(255) @map("x_url")
+  websiteUrl     String?  @db.VarChar(255) @map("website_url")
+  telegramUrl    String?  @db.VarChar(255) @map("telegram_url")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("contact_settings")
+}
+
+model Order {
+  id              Int       @id @default(autoincrement())
+  userId          String
+  orderNumber     String    @unique
+  status          String    @default("pending") // pending, confirmed, processing, shipped, delivered, cancelled
+  paymentStatus   String    @default("pending") // pending, paid, failed, refunded
+  paymentMethod   String?   // orange_money, mtn_money, visa, etc.
+  deliveryMethod  DeliveryMethod @default(PICKUP)
+  subtotal        Decimal   @db.Decimal(12, 2)
+  shipping        Decimal   @db.Decimal(12, 2) @default(0)
+  discount        Decimal   @db.Decimal(12, 2) @default(0)
+  total           Decimal   @db.Decimal(12, 2)
+  shippingAddress String?
+  shippingCity    String?
+  shippingCountry String?
+  shippingPhone   String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  promoCodeId     Int?
+  deliveryPartnerId Int?
+
+  // Relations
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items      OrderItem[]
+  promoCode  PromoCode?  @relation(fields: [promoCodeId], references: [id])
+  deliveryPartner DeliveryPartner? @relation(fields: [deliveryPartnerId], references: [id])
+  events     OrderEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+  @@index([createdAt])
+  @@index([deliveryPartnerId])
+}
+
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  productType String   // "shop_product" or "seed"
+  name        String
+  price       Decimal  @db.Decimal(12, 2)
+  quantity    Int
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderEvent {
+  id            Int       @id @default(autoincrement())
+  orderId       Int
+  type          String
+  status        String?
+  paymentStatus String?
+  note          String?
+  createdAt     DateTime  @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+enum PromoDiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
+
+model PromoCode {
+  id           Int                @id @default(autoincrement())
+  code         String             @unique
+  description  String?
+  discountType PromoDiscountType  @default(PERCENTAGE)
+  discountValue Decimal           @db.Decimal(12, 2)
+  maxUses      Int?
+  usesCount    Int                @default(0)
+  isActive     Boolean            @default(true)
+  validFrom    DateTime?
+  validUntil   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  orders Order[]
+
+  @@index([isActive])
+  @@index([code])
+  @@index([validFrom])
+  @@index([validUntil])
+}
+
+model DeliveryPartner {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  contactName String?
+  phone       String?
+  email       String?
+  website     String?
+  baseRate    Decimal? @db.Decimal(12, 2)
+  estimatedDelay String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([isActive])
+  @@index([createdAt])
+}

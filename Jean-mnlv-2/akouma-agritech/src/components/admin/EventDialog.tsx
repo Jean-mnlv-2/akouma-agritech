@@ -1,0 +1,177 @@
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import { FileUpload } from './FileUpload';
+
+interface Event {
+  id: number;
+  title: string;
+  description?: string;
+  date: string;
+  location: string;
+  imageUrl?: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface EventDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  event?: Event | null;
+  onSave: (eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => void;
+}
+
+export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogProps) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    date: new Date(),
+    location: '',
+    imageUrl: '',
+    isPublished: false
+  });
+
+  useEffect(() => {
+    if (event) {
+      setFormData({
+        title: event.title,
+        description: event.description || '',
+        date: new Date(event.date),
+        location: event.location,
+        imageUrl: event.imageUrl || '',
+        isPublished: event.isPublished
+      });
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        date: new Date(),
+        location: '',
+        imageUrl: '',
+        isPublished: false
+      });
+    }
+  }, [event, open]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const eventData = {
+      title: formData.title,
+      description: formData.description || undefined,
+      date: formData.date.toISOString(),
+      location: formData.location,
+      imageUrl: formData.imageUrl || undefined,
+      isPublished: formData.isPublished
+    };
+
+    onSave(eventData);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {event ? 'Modifier l\'événement' : 'Nouvel événement'}
+          </DialogTitle>
+          <DialogDescription>
+            {event ? 'Modifiez les informations de l\'événement' : 'Créez un nouvel événement'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Titre *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Lieu *</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Date et heure *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(formData.date, 'PPP HH:mm', { locale: fr })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.date}
+                  onSelect={(date) => date && setFormData({ ...formData, date })}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <ReactQuill
+              id="description"
+              theme="snow"
+              value={formData.description}
+              onChange={(value) => setFormData({ ...formData, description: value })}
+              className="bg-white rounded"
+              style={{ minHeight: 120 }}
+            />
+          </div>
+
+          <FileUpload
+            label="Image de l'événement"
+            accept="image/*"
+            value={formData.imageUrl}
+            onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+          />
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="isPublished"
+              checked={formData.isPublished}
+              onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
+            />
+            <Label htmlFor="isPublished">Publier l'événement</Label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Annuler
+            </Button>
+            <Button type="submit">
+              {event ? 'Modifier' : 'Créer'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};

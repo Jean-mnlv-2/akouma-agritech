@@ -1,0 +1,109 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { CartProvider } from "@/context/CartContext";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Suspense, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import LoadingSpinner from "@/components/LoadingSpinner";
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+import Index from "./pages/Index";
+import ELearning from "./pages/ELearning";
+import CourseDetail from "./pages/CourseDetail";
+import Seeds from "./pages/Seeds";
+import SeedDetail from "./pages/SeedDetail";
+
+import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
+import About from "./pages/About";
+import News from "./pages/News";
+import NewsDetail from "./pages/NewsDetail";
+import Demo from "./pages/Demo";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Legal from "./pages/Legal";
+import Careers from "./pages/Careers";
+import Admin from "./pages/Admin";
+import AdminRoute from "@/components/auth/AdminRoute";
+import SupervisorRoute from "@/components/auth/SupervisorRoute";
+import AdminAccess from "./pages/AdminAccess";
+import Auth from "./pages/Auth";
+import AuthConfirm from "./pages/AuthConfirm";
+import AdminTasks from "./pages/AdminTasks";
+import AdminElearningEnrollments from "./pages/AdminElearningEnrollments";
+import AdminLiveStreams from "./pages/AdminLiveStreams";
+import AdminElearningStats from "./pages/AdminElearningStats";
+import Supervisor from "./pages/Supervisor";
+import AgriConsulting from "./pages/AgriConsulting";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import Partnerships from "./pages/Partnerships";
+import Donations from "./pages/Donations";
+import NotFound from "./pages/NotFound";
+
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider defaultTheme="light" storageKey="akouma-ui-theme">
+      <CartProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ScrollToTop />
+            <Suspense fallback={<LoadingSpinner size="large" text="Chargement..." />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/elearning" element={<ELearning />} />
+                <Route path="/elearning/:id" element={<CourseDetail />} />
+            <Route path="/seeds" element={<Seeds />} />
+            <Route path="/seeds/:id" element={<SeedDetail />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/shop/:id" element={<ProductDetail />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/news" element={<News />} />
+                <Route path="/news/:id" element={<NewsDetail />} />
+                <Route path="/demo" element={<Demo />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/legal" element={<Legal />} />
+                <Route path="/careers" element={<Careers />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/confirm" element={<AuthConfirm />} />
+                <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                <Route path="/admin/tasks" element={<AdminRoute><AdminTasks /></AdminRoute>} />
+                <Route path="/admin/elearning-enrollments" element={<AdminRoute><AdminElearningEnrollments /></AdminRoute>} />
+                <Route path="/admin/live-streams" element={<AdminRoute><AdminLiveStreams /></AdminRoute>} />
+                <Route path="/admin/elearning-stats" element={<AdminRoute><AdminElearningStats /></AdminRoute>} />
+                <Route path="/supervisor" element={<SupervisorRoute><Supervisor /></SupervisorRoute>} />
+                <Route path="/admin-access" element={<AdminAccess />} />
+                <Route path="/agri-consulting" element={<AgriConsulting />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/partners" element={<Partnerships />} />
+                <Route path="/donations" element={<Donations />} />
+                <Route path="/investors" element={<div>Investors - Coming Soon</div>} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </CartProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
+);
+
+export default App;

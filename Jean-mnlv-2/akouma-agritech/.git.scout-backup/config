@@ -1,0 +1,15 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://github.com/Jean-mnlv-2/akouma-agritech.git
+	tagOpt = --no-tags
+	fetch = +refs/heads/main:refs/remotes/origin/main
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[user]
+	name = Jean-mnlv-2
+	email = j.enama@mnlvm.com

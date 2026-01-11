@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-akouma}
+      POSTGRES_USER: ${POSTGRES_USER:-akouma}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-akouma}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8080}
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_min_32_chars_for_docker_1234567890}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-akouma}:${POSTGRES_PASSWORD:-akouma}@db:5432/${POSTGRES_DB:-akouma}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@akouma.test}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-Admin123!}
+      DEFAULT_ADMIN_FULL_NAME: ${DEFAULT_ADMIN_FULL_NAME:-AKOUMA Admin}
+      DEFAULT_ADMIN_FORCE_RESET: ${DEFAULT_ADMIN_FORCE_RESET:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      # Ne pas définir VITE_API_BASE_URL pour utiliser le proxy Nginx automatiquement
+      # Le client API détecte le port 8080 et utilise window.location.origin
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:
+  uploads:
