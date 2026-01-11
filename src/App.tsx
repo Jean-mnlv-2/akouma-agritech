@@ -5,9 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Suspense, useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import AdminRoute from "@/components/auth/AdminRoute";
+import SupervisorRoute from "@/components/auth/SupervisorRoute";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -18,53 +21,52 @@ const ScrollToTop = () => {
 
   return null;
 };
-import Index from "./pages/Index";
-import ELearning from "./pages/ELearning";
-import CourseDetail from "./pages/CourseDetail";
-import Seeds from "./pages/Seeds";
-import SeedDetail from "./pages/SeedDetail";
 
-import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
-import About from "./pages/About";
-import News from "./pages/News";
-import NewsDetail from "./pages/NewsDetail";
-import Demo from "./pages/Demo";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Legal from "./pages/Legal";
-import Careers from "./pages/Careers";
-import Admin from "./pages/Admin";
-import AdminRoute from "@/components/auth/AdminRoute";
-import SupervisorRoute from "@/components/auth/SupervisorRoute";
-import AdminAccess from "./pages/AdminAccess";
-import Auth from "./pages/Auth";
-import AuthConfirm from "./pages/AuthConfirm";
-import AdminTasks from "./pages/AdminTasks";
-import AdminElearningEnrollments from "./pages/AdminElearningEnrollments";
-import AdminLiveStreams from "./pages/AdminLiveStreams";
-import AdminElearningStats from "./pages/AdminElearningStats";
-import Supervisor from "./pages/Supervisor";
-import AgriConsulting from "./pages/AgriConsulting";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Partnerships from "./pages/Partnerships";
-import Donations from "./pages/Donations";
-import NotFound from "./pages/NotFound";
+const Index = lazy(() => import("./pages/Index"));
+const ELearning = lazy(() => import("./pages/ELearning"));
+const CourseDetail = lazy(() => import("./pages/CourseDetail"));
+const Seeds = lazy(() => import("./pages/Seeds"));
+const SeedDetail = lazy(() => import("./pages/SeedDetail"));
+const Shop = lazy(() => import("./pages/Shop"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const About = lazy(() => import("./pages/About"));
+const News = lazy(() => import("./pages/News"));
+const NewsDetail = lazy(() => import("./pages/NewsDetail"));
+const Demo = lazy(() => import("./pages/Demo"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Legal = lazy(() => import("./pages/Legal"));
+const Careers = lazy(() => import("./pages/Careers"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminAccess = lazy(() => import("./pages/AdminAccess"));
+const Auth = lazy(() => import("./pages/Auth"));
+const AuthConfirm = lazy(() => import("./pages/AuthConfirm"));
+const AdminTasks = lazy(() => import("./pages/AdminTasks"));
+const AdminElearningEnrollments = lazy(() => import("./pages/AdminElearningEnrollments"));
+const AdminLiveStreams = lazy(() => import("./pages/AdminLiveStreams"));
+const AdminElearningStats = lazy(() => import("./pages/AdminElearningStats"));
+const Supervisor = lazy(() => import("./pages/Supervisor"));
+const AgriConsulting = lazy(() => import("./pages/AgriConsulting"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const Partnerships = lazy(() => import("./pages/Partnerships"));
+const Donations = lazy(() => import("./pages/Donations"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="akouma-ui-theme">
-      <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <ScrollToTop />
-            <Suspense fallback={<LoadingSpinner size="large" text="Chargement..." />}>
-              <Routes>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="light" storageKey="akouma-ui-theme">
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <ScrollToTop />
+              <Suspense fallback={<LoadingSpinner size="large" text="Chargement..." />}>
+                <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/elearning" element={<ELearning />} />
                 <Route path="/elearning/:id" element={<CourseDetail />} />
@@ -97,13 +99,14 @@ const App = () => (
                 <Route path="/investors" element={<div>Investors - Coming Soon</div>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CartProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </CartProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
 export const statsRouter = Router();
 
 // Public stats endpoint used by admin dashboard to avoid auth issues on list endpoints
@@ -37,5 +36,4 @@ statsRouter.get('/', async (_req: Request, res: Response) => {
     res.status(500).json({ error: 'failed_to_compute_stats' });
   }
 });
-
 

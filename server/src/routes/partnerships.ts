@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 export const partnershipsRouter = Router();
 
 partnershipsRouter.get('/', async (_req: Request, res: Response) => {
@@ -30,6 +30,4 @@ partnershipsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, 
   await prisma.partnership.delete({ where: { id } });
   res.json({ success: true });
 });
-
-
 

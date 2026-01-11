@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 export const countriesRouter = Router();
 
 countriesRouter.get('/', async (req: Request, res: Response) => {
@@ -16,5 +16,4 @@ countriesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Res
   const created = await prisma.country.create({ data: { name, code, phoneCode } });
   res.status(201).json({ data: created });
 });
-
 

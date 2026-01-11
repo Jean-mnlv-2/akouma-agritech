@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const prisma = new PrismaClient();
 export const partnersRouter = Router();
 const uploadDir = path.resolve(process.cwd(), 'uploads', 'partners');
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -58,5 +58,4 @@ partnersRouter.post('/upload', authRequired, adminOnly, upload.single('file'), a
   const publicUrl = `/uploads/partners/${file.filename}`;
   res.json({ url: publicUrl });
 });
-
 

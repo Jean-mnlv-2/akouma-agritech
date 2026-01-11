@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { ApiUser, PromoCode } from './types';
 
 // API HTTP unique (sans Supabase). Par défaut utilise l'origine (Nginx proxy) pour éviter le CORS
 // En production Docker, utiliser window.location.origin pour passer par le proxy Nginx
@@ -111,32 +112,30 @@ function createTableQuery(table: string) {
 function createApiClient() {
   return {
     auth: {
-      getSession: async () => {
+      getSession: async (): Promise<{ data: { session: { user: ApiUser } | null } }> => {
         try {
           const res = await http('GET', '/auth/session');
-          return { data: { session: res.user ? { user: res.user } : null } };
+          return { data: { session: res.user ? { user: res.user as ApiUser } : null } };
         } catch (error) {
-          // Retourner une session vide en cas d'erreur réseau
           return { data: { session: null } };
         }
       },
-      getUser: async () => {
+      getUser: async (): Promise<{ data: { user: ApiUser | null } }> => {
         try {
           const res = await http('GET', '/auth/session');
-          return { data: { user: res.user || null } };
+          return { data: { user: res.user as ApiUser || null } };
         } catch (error) {
-          // Retourner null en cas d'erreur réseau
           return { data: { user: null } };
         }
       },
       onAuthStateChange: (_cb: any) => ({ data: { subscription: { unsubscribe: () => void 0 } } }),
-      signInWithPassword: async (args: any) => {
+      signInWithPassword: async (args: { email: string; password: string }): Promise<{ data: { user: ApiUser }; error: null }> => {
         const res = await http('POST', '/auth/sign-in', { body: { email: args.email, password: args.password } });
-        return { data: { user: res.user }, error: null };
+        return { data: { user: res.user as ApiUser }, error: null };
       },
-      signUp: async (args: any) => {
+      signUp: async (args: { email: string; password: string; options?: { data?: { full_name?: string } } }): Promise<{ data: { user: ApiUser }; error: null }> => {
         const res = await http('POST', '/auth/sign-up', { body: { email: args.email, password: args.password, fullName: args.options?.data?.full_name } });
-        return { data: { user: res.user }, error: null };
+        return { data: { user: res.user as ApiUser }, error: null };
       },
       signOut: async () => {
         await http('POST', '/auth/sign-out');
@@ -153,23 +152,23 @@ function createApiClient() {
         },
       },
       promoCodes: {
-        validate: async (code: string, subtotal: number) => {
+        validate: async (code: string, subtotal: number): Promise<{ data: { discount: number; code: PromoCode }; error: null }> => {
           const res = await http('POST', '/api/promo-codes/validate', { body: { code, subtotal } });
           return { data: res.data, error: null };
         },
-        list: async () => {
+        list: async (): Promise<{ data: PromoCode[]; error: null }> => {
           const res = await http('GET', '/api/promo-codes');
           return { data: res.data, error: null };
         },
-        create: async (payload: any) => {
+        create: async (payload: Partial<PromoCode>): Promise<{ data: PromoCode; error: null }> => {
           const res = await http('POST', '/api/promo-codes', { body: payload });
           return { data: res.data, error: null };
         },
-        update: async (id: number, payload: any) => {
+        update: async (id: number, payload: Partial<PromoCode>): Promise<{ data: PromoCode; error: null }> => {
           const res = await http('PUT', `/api/promo-codes/${id}`, { body: payload });
           return { data: res.data, error: null };
         },
-        toggle: async (id: number, isActive: boolean) => {
+        toggle: async (id: number, isActive: boolean): Promise<{ data: PromoCode; error: null }> => {
           const res = await http('PATCH', `/api/promo-codes/${id}/toggle`, { body: { isActive } });
           return { data: res.data, error: null };
         },

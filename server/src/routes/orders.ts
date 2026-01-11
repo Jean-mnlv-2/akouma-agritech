@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { Prisma, PrismaClient, DeliveryMethod } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { Prisma, , DeliveryMethod } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 const prismaAny = prisma as any;
 type DiscountType = 'PERCENTAGE' | 'FIXED';
 export const ordersRouter = Router();

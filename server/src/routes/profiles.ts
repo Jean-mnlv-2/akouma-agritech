@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
+import { prisma } from '../lib/prisma';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 const ALLOWED_ROLES = ['admin', 'supervisor', 'customer'] as const;
 const isAllowedRole = (value: unknown): value is (typeof ALLOWED_ROLES)[number] =>
   typeof value === 'string' && (ALLOWED_ROLES as readonly string[]).includes(value);
