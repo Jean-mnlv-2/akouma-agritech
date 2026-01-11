@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 const ALLOWED_ROLES = ['admin', 'supervisor', 'customer'] as const;
 export const userRolesRouter = Router();
 

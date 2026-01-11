@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 export const tasksRouter = Router();
 
 // Admin: list all tasks
@@ -46,5 +46,4 @@ tasksRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Re
     res.status(400).json({ error: 'failed_to_delete' });
   }
 });
-
 

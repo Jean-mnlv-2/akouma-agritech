@@ -7,9 +7,9 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import multer from 'multer';
 import fs from 'fs';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { env } from './utils/env';
+import { prisma } from './lib/prisma';
 import { authRouter } from './routes/auth';
 import { countriesRouter } from './routes/countries';
 import { seedsRouter } from './routes/seeds';
@@ -41,7 +41,6 @@ import { promoCodesRouter } from './routes/promoCodes';
 import { deliveryPartnersRouter } from './routes/deliveryPartners';
 
 const app = express();
-const prisma = new PrismaClient();
 
 // Configuration d'upload générique
 const uploadDir = path.resolve(process.cwd(), 'uploads');
@@ -225,5 +224,4 @@ async function bootstrap() {
 }
 
 void bootstrap();
-
 

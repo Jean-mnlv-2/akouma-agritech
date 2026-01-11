@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { env } from '../utils/env';
 
-const prisma = new PrismaClient();
 export const liveStreamsRouter = Router();
 
 // Public list (optionally filter upcoming/published)
@@ -128,5 +128,4 @@ liveStreamsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, r
     res.status(400).json({ error: 'failed_to_delete', details: e instanceof Error ? e.message : 'Unknown error' });
   }
 });
-
 

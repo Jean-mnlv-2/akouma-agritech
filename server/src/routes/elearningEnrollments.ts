@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 export const elearningEnrollmentsRouter = Router();
 
 elearningEnrollmentsRouter.get('/', authRequired, async (_req: Request, res: Response) => {
@@ -16,6 +16,4 @@ elearningEnrollmentsRouter.post('/', authRequired, async (req: Request, res: Res
   const created = await prisma.eLearningEnrollment.create({ data: { userId, courseId } });
   res.status(201).json({ data: created });
 });
-
-
 

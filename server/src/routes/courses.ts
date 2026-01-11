@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 export const coursesRouter = Router();
 
 coursesRouter.get('/', async (_req: Request, res: Response) => {
@@ -34,6 +34,4 @@ coursesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: 
   await prisma.course.delete({ where: { id } });
   res.json({ success: true });
 });
-
-
 

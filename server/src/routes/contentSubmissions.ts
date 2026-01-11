@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+
 import { authRequired, adminOnly } from '../middleware/authRequired';
 
-const prisma = new PrismaClient();
 export const contentSubmissionsRouter = Router();
 
 contentSubmissionsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
@@ -29,6 +29,4 @@ contentSubmissionsRouter.delete('/:id', authRequired, adminOnly, async (req: Req
   await prisma.contentSubmission.delete({ where: { id } });
   res.json({ success: true });
 });
-
-
 
