@@ -149,6 +149,22 @@ const Cart = () => {
                     </div>
                   </Card>
                 ))}
+                
+                <div className="flex justify-end pt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      if (window.confirm("Êtes-vous sûr de vouloir vider votre panier ?")) {
+                        items.forEach((item) => removeFromCart(item.id));
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Vider le panier
+                  </Button>
+                </div>
               </div>
 
               {/* Cart Summary */}

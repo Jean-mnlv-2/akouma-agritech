@@ -43,12 +43,32 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
+  const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
   const { toast } = useToast();
+
+  const checkEnrollment = async () => {
+    try {
+      const res = await fetch('/api/elearning_enrollments', { credentials: 'include' });
+      if (res.ok) {
+        const { data } = await res.json();
+        const enrollment = data.find((e: any) => String(e.courseId) === id);
+        if (enrollment) {
+          setEnrolled(true);
+          setEnrollmentId(enrollment.id);
+          setIsCompleted(!!enrollment.completedAt);
+        }
+      }
+    } catch (e) {
+      console.error('Error checking enrollment:', e);
+    }
+  };
 
   const fetchCourse = async () => {
     if (!id) return;
     try {
       setLoading(true);
+      await checkEnrollment(); // Check enrollment first
       const res = await fetch(`/api/courses/${id}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch course');
       const { data } = await res.json();
@@ -191,10 +211,25 @@ const CourseDetail = () => {
             {course.modules.length > 0 && (
               <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
                 <CardContent className="p-8">
-                  <h3 className="text-2xl md:text-3xl font-bold mb-8 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    <BookOpen className="w-6 h-6 mr-3 text-primary" />
-                    Contenu du cours
-                  </h3>
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-2xl md:text-3xl font-bold flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      <BookOpen className="w-6 h-6 mr-3 text-primary" />
+                      Contenu du cours
+                    </h3>
+                    {enrolled && (
+                      isCompleted ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 px-4 py-2 flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          Cours terminé
+                        </Badge>
+                      ) : (
+                        <Button onClick={handleMarkCompleted} variant="outline" className="border-primary text-primary hover:bg-primary/10">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Marquer comme terminé
+                        </Button>
+                      )
+                    )}
+                  </div>
                   <div className="space-y-4">
                     {course.modules.map((module, index) => {
                       const delay = index * 100;
