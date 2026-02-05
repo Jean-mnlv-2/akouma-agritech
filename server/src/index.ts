@@ -210,19 +210,56 @@ async function ensureDefaultAdmin() {
 
 async function bootstrap() {
   try {
+    // Test de connexion à la base de données
+    await prisma.$connect();
+    // eslint-disable-next-line no-console
+    console.log('[server] Database connection established');
+    
+    // Vérification que les modèles Prisma sont disponibles
+    try {
+      // Test simple pour vérifier que le client Prisma est correctement généré
+      await prisma.$queryRawUnsafe('SELECT 1');
+      // eslint-disable-next-line no-console
+      console.log('[server] Prisma Client verified');
+    } catch (prismaError) {
+      // eslint-disable-next-line no-console
+      console.warn('[server] Prisma Client verification warning:', prismaError instanceof Error ? prismaError.message : 'Unknown error');
+    }
+    
     await ensureDefaultAdmin();
+    
     app.listen(env.PORT, () => {
-      if (env.isDevelopment()) {
-        // eslint-disable-next-line no-console
-        console.log(`[server] listening on http://localhost:${env.PORT}`);
-      }
+      // eslint-disable-next-line no-console
+      console.log(`[server] listening on http://localhost:${env.PORT}`);
     });
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('[server] Failed to start application:', error);
+    if (error instanceof Error) {
+      // eslint-disable-next-line no-console
+      console.error('[server] Error details:', error.message);
+      // eslint-disable-next-line no-console
+      console.error('[server] Stack:', error.stack);
+    }
+    await prisma.$disconnect().catch(() => {});
     process.exit(1);
   }
 }
+
+// Gestion propre de l'arrêt
+process.on('SIGTERM', async () => {
+  // eslint-disable-next-line no-console
+  console.log('[server] SIGTERM received, shutting down gracefully');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  // eslint-disable-next-line no-console
+  console.log('[server] SIGINT received, shutting down gracefully');
+  await prisma.$disconnect();
+  process.exit(0);
+});
 
 void bootstrap();
 

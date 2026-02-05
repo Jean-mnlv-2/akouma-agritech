@@ -1,10 +1,20 @@
 import { Router, Request, Response } from 'express';
-import { Prisma, PrismaClient, DeliveryMethod } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { eventEmitter } from '../services/eventEmitter';
 
 const prisma = new PrismaClient();
-const prismaAny = prisma as any;
+
 type DiscountType = 'PERCENTAGE' | 'FIXED';
+type DeliveryMethod = 'PICKUP' | 'DELIVERY';
+
+const DELIVERY_METHOD = {
+  PICKUP: 'PICKUP' as const,
+  DELIVERY: 'DELIVERY' as const,
+} as const;
+
+const DELIVERY_METHOD_VALUES: DeliveryMethod[] = ['PICKUP', 'DELIVERY'];
+
 export const ordersRouter = Router();
 
 // Generate unique order number
@@ -36,11 +46,10 @@ function calculateDiscountAmount(subtotal: number, promo: { discountType: Discou
 }
 
 async function resolvePromoCode(tx: Prisma.TransactionClient, code: string, subtotal: number) {
-  if (!code) return { promo: null as null, discountAmount: 0 };
+  if (!code) return { promo: null, discountAmount: 0 };
 
   const now = new Date();
-  const txClient = tx as any;
-  const promo = await txClient.promoCode.findFirst({
+  const promo = await tx.promoCode.findFirst({
     where: {
       code: code.toUpperCase(),
       isActive: true,
@@ -59,7 +68,7 @@ async function resolvePromoCode(tx: Prisma.TransactionClient, code: string, subt
         },
       ],
     },
-  }) as any;
+  });
 
   if (!promo) {
     throw new Error('Code promo invalide ou expiré');
@@ -77,8 +86,7 @@ async function resolvePromoCode(tx: Prisma.TransactionClient, code: string, subt
 }
 
 async function createOrderEvent(tx: Prisma.TransactionClient, orderId: number, type: string, status?: string | null, paymentStatus?: string | null, note?: string | null) {
-  const txClient = tx as any;
-  await txClient.orderEvent.create({
+  await tx.orderEvent.create({
     data: {
       orderId,
       type,
@@ -92,9 +100,8 @@ async function createOrderEvent(tx: Prisma.TransactionClient, orderId: number, t
 // GET /api/orders - Get all orders (admin) or user's orders
 ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
   try {
-    const authUser = (req as any).user || {};
-    const userId = (authUser.id ?? (req as any).userId) as string | undefined;
-    const userRole = (authUser.role ?? (req as any).userRole) as string | undefined;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
     if (!userId) {
       return res.status(401).json({ error: 'unauthorized' });
     }
@@ -110,7 +117,7 @@ ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
 
     let orders;
     if (userRole === 'admin' || userRole === 'supervisor') {
-      orders = await prismaAny.order.findMany({
+      orders = await prisma.order.findMany({
         include: {
           ...includeCommon,
           user: {
@@ -124,7 +131,7 @@ ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
         orderBy: { createdAt: 'desc' },
       });
     } else {
-      orders = await prismaAny.order.findMany({
+      orders = await prisma.order.findMany({
         where: { userId },
         include: includeCommon,
         orderBy: { createdAt: 'desc' },
@@ -142,15 +149,14 @@ ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
 ordersRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const authUser = (req as any).user || {};
-    const userId = (authUser.id ?? (req as any).userId) as string | undefined;
-    const userRole = (authUser.role ?? (req as any).userRole) as string | undefined;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
 
     if (isNaN(id)) {
       return res.status(400).json({ error: 'Invalid id' });
     }
 
-    const order = await prismaAny.order.findUnique({
+    const order = await prisma.order.findUnique({
       where: { id },
       include: {
         items: true,
@@ -187,8 +193,7 @@ ordersRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
 // POST /api/orders - Create a new order
 ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
   try {
-    const authUser = (req as any).user || {};
-    const userId = (authUser.id ?? (req as any).userId) as string | undefined;
+    const userId = req.user?.id;
     const {
       items,
       shippingAddress,
@@ -210,7 +215,7 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Items are required' });
     }
 
-    const normalizedItems = items.map((item: any) => {
+    const normalizedItems = items.map((item: Record<string, unknown>) => {
       const price = Number(item.price);
       const quantity = Number(item.quantity);
       if (!item.productId || !Number.isFinite(price) || !Number.isFinite(quantity)) {
@@ -218,7 +223,7 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       }
       return {
         productId: Number(item.productId),
-        productType: item.productType || 'shop_product',
+        productType: (item.productType as string) || 'shop_product',
         name: String(item.name || ''),
         price,
         quantity,
@@ -232,20 +237,19 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
     }
 
     const rawDeliveryMethod = typeof deliveryMethod === 'string' ? deliveryMethod.trim().toUpperCase() : undefined;
-    const allowedDeliveryMethods = Object.values(DeliveryMethod);
-    const selectedDeliveryMethod = allowedDeliveryMethods.includes(rawDeliveryMethod as DeliveryMethod)
+    const selectedDeliveryMethod = DELIVERY_METHOD_VALUES.includes(rawDeliveryMethod as DeliveryMethod)
       ? (rawDeliveryMethod as DeliveryMethod)
-      : DeliveryMethod.PICKUP;
+      : DELIVERY_METHOD.PICKUP;
 
     let deliveryPartnerRecord: { id: number; name: string; baseRate: Prisma.Decimal | null } | null = null;
     let deliveryPartnerNumericId: number | null = null;
 
-    if (selectedDeliveryMethod === DeliveryMethod.DELIVERY) {
+    if (selectedDeliveryMethod === DELIVERY_METHOD.DELIVERY) {
       const numericPartnerId = Number(deliveryPartnerId);
       if (!Number.isFinite(numericPartnerId)) {
         return res.status(400).json({ error: 'Un partenaire de livraison valide est requis.' });
       }
-      deliveryPartnerRecord = await prismaAny.deliveryPartner.findFirst({
+      deliveryPartnerRecord = await prisma.deliveryPartner.findFirst({
         where: { id: numericPartnerId, isActive: true },
       });
       if (!deliveryPartnerRecord) {
@@ -256,15 +260,16 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
 
     const shippingAmount = calculateShipping(computedSubtotal, selectedDeliveryMethod, deliveryPartnerRecord || undefined);
 
-    const result = await prismaAny.$transaction(async (tx: any) => {
-      const txClient = tx as any;
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       let promoRecord: { id: number; code: string } | null = null;
       let discountAmount = 0;
 
       if (promoCode) {
         const { promo, discountAmount: promoDiscount } = await resolvePromoCode(tx, promoCode, computedSubtotal);
-        promoRecord = { id: promo.id, code: promo.code };
-        discountAmount = promoDiscount;
+        if (promo) {
+          promoRecord = { id: promo.id, code: promo.code };
+          discountAmount = promoDiscount;
+        }
       }
 
       const total = Math.max(0, computedSubtotal - discountAmount + shippingAmount);
@@ -274,11 +279,11 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       if (promoRecord) {
         eventNotes.push(`Code promo appliqué: ${promoRecord.code}`);
       }
-      if (selectedDeliveryMethod === DeliveryMethod.DELIVERY && deliveryPartnerRecord) {
+      if (selectedDeliveryMethod === DELIVERY_METHOD.DELIVERY && deliveryPartnerRecord) {
         eventNotes.push(`Livraison: ${deliveryPartnerRecord.name}`);
       }
 
-      const order = await txClient.order.create({
+      const order = await tx.order.create({
         data: {
           userId,
           orderNumber: generateOrderNumber(),
@@ -325,7 +330,7 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       );
 
       if (promoRecord) {
-        await txClient.promoCode.update({
+        await tx.promoCode.update({
           where: { id: promoRecord.id },
           data: {
             usesCount: { increment: 1 },
@@ -353,13 +358,22 @@ ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Resp
       return res.status(400).json({ error: 'Invalid id' });
     }
 
+    // Récupérer l'ordre actuel pour détecter le changement de statut
+    const currentOrder = await prisma.order.findUnique({
+      where: { id },
+      select: { paymentStatus: true },
+    });
+
+    if (!currentOrder) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
     const updateData: Record<string, unknown> = {};
     if (status) updateData.status = status;
     if (paymentStatus) updateData.paymentStatus = paymentStatus;
 
-    const updated = await prismaAny.$transaction(async (tx: any) => {
-      const txClient = tx as any;
-      const order = await txClient.order.update({
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const order = await tx.order.update({
         where: { id },
         data: updateData,
         include: {
@@ -383,10 +397,23 @@ ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Resp
       return order;
     });
 
+    // ✅ ÉMISSION D'ÉVÉNEMENT : ORDER_PAID
+    if (paymentStatus === 'paid' && currentOrder.paymentStatus !== 'paid') {
+      await eventEmitter.emit({
+        type: 'ORDER_PAID',
+        data: {
+          orderId: updated.id,
+          orderNumber: updated.orderNumber,
+          userId: updated.userId,
+          total: Number(updated.total),
+          paymentMethod: updated.paymentMethod || null,
+        },
+      });
+    }
+
     res.json({ data: updated });
   } catch (e) {
     const error = e instanceof Error ? e.message : 'Bad request';
     res.status(400).json({ error });
   }
 });
-

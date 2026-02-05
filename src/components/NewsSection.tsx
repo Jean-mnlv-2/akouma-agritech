@@ -31,7 +31,7 @@ const NewsSection = () => {
   useContentSync({
     contentType: 'news',
     onUpdate: (data) => {
-      const normalizedNews = data.map((item: Record<string, unknown>) => ({
+      const normalizedNews = data.map((item: any) => ({
         id: item.id as string,
         title: item.title as string,
         excerpt: item.excerpt as string,
