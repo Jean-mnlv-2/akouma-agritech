@@ -99,6 +99,23 @@ app.get('/health', async (req: Request, res: Response) => {
   }
 });
 
+// Root and favicon to avoid noisy 404s from browsers and previewers
+app.head('/', (_req: Request, res: Response) => {
+  res.sendStatus(200);
+});
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    name: 'AKOUMA API',
+    status: 'running',
+    health: '/health',
+    time: new Date().toISOString(),
+  });
+});
+app.get('/favicon.ico', (_req: Request, res: Response) => {
+  // No favicon served by the backend; return 204 to stop repeated 404 logs
+  res.status(204).end();
+});
+
 // Route d'upload générique
 app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
   const file = req.file;
