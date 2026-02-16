@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
-import { parsePaginationAndSort } from '../utils/pagination';
 
 const prisma = new PrismaClient();
 export const shopProductsRouter = Router();
@@ -9,17 +8,9 @@ export const shopProductsRouter = Router();
 shopProductsRouter.get('/', async (req: Request, res: Response) => {
   const isActiveParam = req.query.is_active as string | undefined;
   const isActive = typeof isActiveParam === 'string' ? isActiveParam === 'true' : undefined;
-  const { skip, take, orderBy } = parsePaginationAndSort(req, {
-    defaultPageSize: 50,
-    maxPageSize: 200,
-    defaultOrderBy: 'createdAt',
-    defaultOrderDir: 'desc',
-  });
   const items = await prisma.shopProduct.findMany({
     where: typeof isActive === 'boolean' ? { isActive } : undefined,
-    orderBy: orderBy || { createdAt: 'desc' },
-    skip,
-    take,
+    orderBy: { createdAt: 'desc' },
   });
   res.json({ data: items });
 });

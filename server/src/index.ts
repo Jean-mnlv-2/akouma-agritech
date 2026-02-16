@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express, { Request, Response, ErrorRequestHandler, NextFunction } from 'express';
+import express, { Request, Response, ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -39,9 +39,6 @@ import { statsRouter } from './routes/stats';
 import { ordersRouter } from './routes/orders';
 import { promoCodesRouter } from './routes/promoCodes';
 import { deliveryPartnersRouter } from './routes/deliveryPartners';
-import { createRateLimiter } from './middleware/rateLimit';
-import { recordRequest, renderPrometheusMetrics } from './utils/metrics';
-import { logger } from './utils/logger';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -74,20 +71,9 @@ const upload = multer({
 });
 
 app.use(helmet({
+  // Allow resources like images to be loaded cross-origin (frontend 8080 -> backend 4000)
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    recordRequest(duration);
-    const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
-    logger[level](`${req.method} ${req.originalUrl} ${res.statusCode}`, {
-      durationMs: duration,
-    });
-  });
-  next();
-});
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
@@ -108,7 +94,7 @@ app.get('/health', async (req: Request, res: Response) => {
   try {
     await prisma.$queryRawUnsafe('SELECT 1');
     res.json({ status: 'ok' });
-  } catch (_error) {
+  } catch (e) {
     res.status(500).json({ status: 'error' });
   }
 });
@@ -126,13 +112,8 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 app.get('/favicon.ico', (_req: Request, res: Response) => {
+  // No favicon served by the backend; return 204 to stop repeated 404 logs
   res.status(204).end();
-});
-
-app.get('/metrics', (_req: Request, res: Response) => {
-  const body = renderPrometheusMetrics();
-  res.setHeader('Content-Type', 'text/plain; version=0.0.4');
-  res.send(body);
 });
 
 // Route d'upload générique
@@ -146,29 +127,7 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
   res.json({ url: publicUrl, path: relative });
 });
 
-const authRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-});
-
-const authSensitiveRateLimiter = createRateLimiter({
-  windowMs: 5 * 60 * 1000,
-  max: 20,
-});
-
-const publicFormsRateLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000,
-  max: 50,
-});
-
-app.use('/auth/sign-in', authSensitiveRateLimiter);
-app.use('/auth/sign-up', authSensitiveRateLimiter);
-app.use('/auth', authRateLimiter);
-app.use('/api/contact_messages', publicFormsRateLimiter);
-app.use('/api/demo_requests', publicFormsRateLimiter);
-app.use('/api/content_submissions', publicFormsRateLimiter);
-app.use('/api/donations', publicFormsRateLimiter);
-
+// Routes
 app.use('/auth', authRouter);
 app.use('/api/countries', countriesRouter);
 app.use('/api/seeds', seedsRouter);
@@ -225,7 +184,8 @@ app.use(errorHandler);
 async function ensureDefaultAdmin() {
   if (!env.DEFAULT_ADMIN_EMAIL || !env.DEFAULT_ADMIN_PASSWORD) {
     if (env.isDevelopment()) {
-      logger.warn('[auth] Default admin credentials are not fully configured.');
+      // eslint-disable-next-line no-console
+      console.warn('[auth] Default admin credentials are not fully configured.');
     }
     return;
   }
@@ -244,7 +204,8 @@ async function ensureDefaultAdmin() {
         isActive: true,
       },
     });
-    logger.info('[auth] Default admin user created', { email });
+    // eslint-disable-next-line no-console
+    console.log(`[auth] Default admin user created (${email}).`);
     return;
   }
 
@@ -259,7 +220,8 @@ async function ensureDefaultAdmin() {
         isActive: true,
       },
     });
-    logger.info('[auth] Default admin password updated', { email });
+    // eslint-disable-next-line no-console
+    console.log(`[auth] Default admin password updated (${email}).`);
   }
 }
 
@@ -268,19 +230,17 @@ async function bootstrap() {
     await ensureDefaultAdmin();
     app.listen(env.PORT, () => {
       if (env.isDevelopment()) {
-        logger.info('[server] listening', { url: `http://localhost:${env.PORT}` });
+        // eslint-disable-next-line no-console
+        console.log(`[server] listening on http://localhost:${env.PORT}`);
       }
     });
   } catch (error) {
-    logger.error('[server] Failed to start application', error);
+    // eslint-disable-next-line no-console
+    console.error('[server] Failed to start application:', error);
     process.exit(1);
   }
 }
 
-if (require.main === module) {
-  void bootstrap();
-}
-
-export { app };
+void bootstrap();
 
 

@@ -15,10 +15,10 @@ function createMockRes() {
   res.status = ((code: number) => {
     res.statusCode = code;
     return res as Response;
-  }) as unknown as Response['status'];
+  }) as any;
   res.json = ((body: unknown) => {
-    return body;
-  }) as unknown as Response['json'];
+    return body as any;
+  }) as any;
   return res as Response;
 }
 
