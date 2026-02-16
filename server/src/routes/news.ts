@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { parsePaginationAndSort } from '../utils/pagination';
 
 const prisma = new PrismaClient();
 export const newsRouter = Router();
@@ -8,9 +9,17 @@ export const newsRouter = Router();
 newsRouter.get('/', async (req: Request, res: Response) => {
   const isPublishedParam = req.query.is_published as string | undefined;
   const isPublished = typeof isPublishedParam === 'string' ? isPublishedParam === 'true' : undefined;
+  const { skip, take, orderBy } = parsePaginationAndSort(req, {
+    defaultPageSize: 50,
+    maxPageSize: 200,
+    defaultOrderBy: 'createdAt',
+    defaultOrderDir: 'desc',
+  });
   const items = await prisma.news.findMany({
     where: typeof isPublished === 'boolean' ? { isPublished } : undefined,
-    orderBy: { createdAt: 'desc' },
+    orderBy: orderBy || { createdAt: 'desc' },
+    skip,
+    take,
   });
   res.json({ data: items });
 });

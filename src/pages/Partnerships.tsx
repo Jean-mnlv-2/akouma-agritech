@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TitleManager from "@/components/TitleManager";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import ContactForm from "@/components/forms/ContactForm";
-import { api } from "@/integrations/api/client";
 import { 
   Handshake, 
   Users, 
@@ -51,6 +50,7 @@ interface PartnerRow {
   year?: string;
   website?: string;
   contact?: string;
+  order?: number;
 }
 
 const Partnerships = () => {
@@ -85,8 +85,12 @@ const Partnerships = () => {
         const res = await fetch('/api/countries');
         if (!res.ok) throw new Error('Failed to fetch countries');
         const body = await res.json();
-        const list = Array.isArray(body) ? body : body?.data || [];
-        setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || '') || 0));
+        const list = ((Array.isArray(body) ? body : body?.data) || []) as Country[];
+        setCountries(
+          list
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        );
       } catch (e) {
         toast({ title: "Erreur", description: "Impossible de charger les pays", variant: "destructive" });
       }
@@ -96,8 +100,12 @@ const Partnerships = () => {
         const res = await fetch('/api/partners');
         if (!res.ok) throw new Error('Failed to fetch partners');
         const body = await res.json();
-        const list = Array.isArray(body) ? body : body?.data || [];
-        setPartners(list.sort((a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0)));
+        const list = ((Array.isArray(body) ? body : body?.data) || []) as PartnerRow[];
+        setPartners(
+          list
+            .slice()
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+        );
       } catch (e) {
         console.warn('Impossible de charger les partenaires', e);
       }
@@ -205,9 +213,9 @@ const Partnerships = () => {
     }
   };
 
-  const handlePartnershipInputChange = (field: string, value: string) => {
+  const handlePartnershipInputChange = (field: keyof typeof partnershipForm, value: string) => {
     setPartnershipForm(prev => {
-      const next = { ...prev, [field]: value } as any;
+      const next = { ...prev, [field]: value };
       if (field === 'country_id') {
         const selected = countries.find(c => c.id.toString() === value);
         if (selected?.phoneCode) {

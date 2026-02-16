@@ -1,100 +1,30 @@
 import { Router, Request, Response } from 'express';
-import { Prisma, PrismaClient, DeliveryMethod } from '@prisma/client';
+import { PrismaClient, DeliveryMethod, Prisma } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { OrdersService, NormalizedOrderItem } from '../services/ordersService';
 
 const prisma = new PrismaClient();
-const prismaAny = prisma as any;
-type DiscountType = 'PERCENTAGE' | 'FIXED';
+const ordersService = new OrdersService(prisma);
 export const ordersRouter = Router();
 
-// Generate unique order number
-function generateOrderNumber(): string {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `AKO-${timestamp}-${random}`;
-}
+type AuthenticatedUser = {
+  id?: string;
+  role?: string;
+};
 
-function calculateShipping(subtotal: number, deliveryMethod: DeliveryMethod, partner?: { baseRate: Prisma.Decimal | null }): number {
-  if (deliveryMethod === 'PICKUP') return 0;
-  if (partner?.baseRate != null) {
-    const rate = Number(partner.baseRate);
-    if (Number.isFinite(rate) && rate >= 0) {
-      return rate;
-    }
-  }
-  if (!Number.isFinite(subtotal)) return 0;
-  return subtotal > 50000 ? 0 : 5000;
-}
-
-function calculateDiscountAmount(subtotal: number, promo: { discountType: DiscountType; discountValue: Prisma.Decimal }): number {
-  const amount = Number(promo.discountValue);
-  if (promo.discountType === 'PERCENTAGE') {
-    const rate = Math.min(Math.max(amount, 0), 100);
-    return Math.min(subtotal, (subtotal * rate) / 100);
-  }
-  return Math.min(subtotal, Math.max(amount, 0));
-}
-
-async function resolvePromoCode(tx: Prisma.TransactionClient, code: string, subtotal: number) {
-  if (!code) return { promo: null as null, discountAmount: 0 };
-
-  const now = new Date();
-  const txClient = tx as any;
-  const promo = await txClient.promoCode.findFirst({
-    where: {
-      code: code.toUpperCase(),
-      isActive: true,
-      AND: [
-        {
-          OR: [
-            { validFrom: null },
-            { validFrom: { lte: now } },
-          ],
-        },
-        {
-          OR: [
-            { validUntil: null },
-            { validUntil: { gte: now } },
-          ],
-        },
-      ],
-    },
-  }) as any;
-
-  if (!promo) {
-    throw new Error('Code promo invalide ou expiré');
-  }
-  if (promo.maxUses != null && promo.usesCount >= promo.maxUses) {
-    throw new Error('Ce code promo a atteint le nombre maximal d’utilisations');
-  }
-
-  const discountAmount = calculateDiscountAmount(subtotal, { discountType: promo.discountType as DiscountType, discountValue: promo.discountValue });
-  if (discountAmount <= 0) {
-    throw new Error('Ce code promo ne peut pas être appliqué');
-  }
-
-  return { promo, discountAmount };
-}
-
-async function createOrderEvent(tx: Prisma.TransactionClient, orderId: number, type: string, status?: string | null, paymentStatus?: string | null, note?: string | null) {
-  const txClient = tx as any;
-  await txClient.orderEvent.create({
-    data: {
-      orderId,
-      type,
-      status: status || undefined,
-      paymentStatus: paymentStatus || undefined,
-      note: note || undefined,
-    },
-  });
-}
+type AuthenticatedRequest = Request & {
+  user?: AuthenticatedUser;
+  userId?: string;
+  userRole?: string;
+};
 
 // GET /api/orders - Get all orders (admin) or user's orders
 ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
   try {
-    const authUser = (req as any).user || {};
-    const userId = (authUser.id ?? (req as any).userId) as string | undefined;
-    const userRole = (authUser.role ?? (req as any).userRole) as string | undefined;
+    const authReq = req as AuthenticatedRequest;
+    const authUser: AuthenticatedUser = authReq.user || {};
+    const userId = authUser.id ?? authReq.userId;
+    const userRole = authUser.role ?? authReq.userRole;
     if (!userId) {
       return res.status(401).json({ error: 'unauthorized' });
     }
@@ -110,7 +40,7 @@ ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
 
     let orders;
     if (userRole === 'admin' || userRole === 'supervisor') {
-      orders = await prismaAny.order.findMany({
+      orders = await prisma.order.findMany({
         include: {
           ...includeCommon,
           user: {
@@ -124,7 +54,7 @@ ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
         orderBy: { createdAt: 'desc' },
       });
     } else {
-      orders = await prismaAny.order.findMany({
+      orders = await prisma.order.findMany({
         where: { userId },
         include: includeCommon,
         orderBy: { createdAt: 'desc' },
@@ -142,15 +72,16 @@ ordersRouter.get('/', authRequired, async (req: Request, res: Response) => {
 ordersRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const authUser = (req as any).user || {};
-    const userId = (authUser.id ?? (req as any).userId) as string | undefined;
-    const userRole = (authUser.role ?? (req as any).userRole) as string | undefined;
+    const authReq = req as AuthenticatedRequest;
+    const authUser: AuthenticatedUser = authReq.user || {};
+    const userId = authUser.id ?? authReq.userId;
+    const userRole = authUser.role ?? authReq.userRole;
 
     if (isNaN(id)) {
       return res.status(400).json({ error: 'Invalid id' });
     }
 
-    const order = await prismaAny.order.findUnique({
+    const order = await prisma.order.findUnique({
       where: { id },
       include: {
         items: true,
@@ -187,8 +118,9 @@ ordersRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
 // POST /api/orders - Create a new order
 ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
   try {
-    const authUser = (req as any).user || {};
-    const userId = (authUser.id ?? (req as any).userId) as string | undefined;
+    const authReq = req as AuthenticatedRequest;
+    const authUser: AuthenticatedUser = authReq.user || {};
+    const userId = authUser.id ?? authReq.userId;
     const {
       items,
       shippingAddress,
@@ -210,7 +142,16 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Items are required' });
     }
 
-    const normalizedItems = items.map((item: any) => {
+    type IncomingOrderItem = {
+      productId: number | string;
+      productType?: string;
+      name?: string;
+      price: number | string;
+      quantity: number | string;
+      imageUrl?: string | null;
+    };
+
+    const normalizedItems: NormalizedOrderItem[] = (items as IncomingOrderItem[]).map((item) => {
       const price = Number(item.price);
       const quantity = Number(item.quantity);
       if (!item.productId || !Number.isFinite(price) || !Number.isFinite(quantity)) {
@@ -226,117 +167,38 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       };
     });
 
-    const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    if (computedSubtotal <= 0) {
-      return res.status(400).json({ error: 'Le panier est vide.' });
-    }
-
     const rawDeliveryMethod = typeof deliveryMethod === 'string' ? deliveryMethod.trim().toUpperCase() : undefined;
     const allowedDeliveryMethods = Object.values(DeliveryMethod);
     const selectedDeliveryMethod = allowedDeliveryMethods.includes(rawDeliveryMethod as DeliveryMethod)
       ? (rawDeliveryMethod as DeliveryMethod)
       : DeliveryMethod.PICKUP;
 
-    let deliveryPartnerRecord: { id: number; name: string; baseRate: Prisma.Decimal | null } | null = null;
-    let deliveryPartnerNumericId: number | null = null;
-
-    if (selectedDeliveryMethod === DeliveryMethod.DELIVERY) {
-      const numericPartnerId = Number(deliveryPartnerId);
-      if (!Number.isFinite(numericPartnerId)) {
-        return res.status(400).json({ error: 'Un partenaire de livraison valide est requis.' });
-      }
-      deliveryPartnerRecord = await prismaAny.deliveryPartner.findFirst({
-        where: { id: numericPartnerId, isActive: true },
+    try {
+      const result = await ordersService.createOrder({
+        userId,
+        items: normalizedItems,
+        shippingAddress,
+        shippingCity,
+        shippingCountry,
+        shippingPhone,
+        paymentMethod: paymentMethod || null,
+        notes: notes || null,
+        promoCode: promoCode || null,
+        deliveryMethod: selectedDeliveryMethod,
+        deliveryPartnerId: deliveryPartnerId != null ? Number(deliveryPartnerId) : null,
       });
-      if (!deliveryPartnerRecord) {
-        return res.status(404).json({ error: 'Partenaire de livraison introuvable ou inactif.' });
+      res.status(201).json({ data: result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Bad request';
+      if (message === 'Le panier est vide.' || message.startsWith('Code promo') || message.startsWith('Ce code promo')) {
+        return res.status(400).json({ error: message });
       }
-      deliveryPartnerNumericId = deliveryPartnerRecord.id;
+      if (message.startsWith('Un partenaire de livraison') || message.startsWith('Partenaire de livraison')) {
+        const status = message.startsWith('Un partenaire') ? 400 : 404;
+        return res.status(status).json({ error: message });
+      }
+      res.status(400).json({ error: message });
     }
-
-    const shippingAmount = calculateShipping(computedSubtotal, selectedDeliveryMethod, deliveryPartnerRecord || undefined);
-
-    const result = await prismaAny.$transaction(async (tx: any) => {
-      const txClient = tx as any;
-      let promoRecord: { id: number; code: string } | null = null;
-      let discountAmount = 0;
-
-      if (promoCode) {
-        const { promo, discountAmount: promoDiscount } = await resolvePromoCode(tx, promoCode, computedSubtotal);
-        promoRecord = { id: promo.id, code: promo.code };
-        discountAmount = promoDiscount;
-      }
-
-      const total = Math.max(0, computedSubtotal - discountAmount + shippingAmount);
-
-      const eventNotes: string[] = [];
-
-      if (promoRecord) {
-        eventNotes.push(`Code promo appliqué: ${promoRecord.code}`);
-      }
-      if (selectedDeliveryMethod === DeliveryMethod.DELIVERY && deliveryPartnerRecord) {
-        eventNotes.push(`Livraison: ${deliveryPartnerRecord.name}`);
-      }
-
-      const order = await txClient.order.create({
-        data: {
-          userId,
-          orderNumber: generateOrderNumber(),
-          status: 'pending',
-          paymentStatus: 'pending',
-          paymentMethod: paymentMethod || null,
-          subtotal: computedSubtotal,
-          shipping: shippingAmount,
-          discount: discountAmount,
-          total,
-          shippingAddress: shippingAddress || null,
-          shippingCity: shippingCity || null,
-          shippingCountry: shippingCountry || null,
-          shippingPhone: shippingPhone || null,
-          notes: notes || null,
-          promoCodeId: promoRecord?.id,
-          deliveryMethod: selectedDeliveryMethod,
-          deliveryPartnerId: deliveryPartnerNumericId,
-          items: {
-            create: normalizedItems.map((item) => ({
-              productId: item.productId,
-              productType: item.productType,
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              imageUrl: item.imageUrl,
-            })),
-          },
-        },
-        include: {
-          items: true,
-          promoCode: true,
-          deliveryPartner: true,
-        },
-      });
-
-      await createOrderEvent(
-        tx,
-        order.id,
-        'created',
-        order.status,
-        order.paymentStatus,
-        eventNotes.length > 0 ? eventNotes.join(' | ') : undefined,
-      );
-
-      if (promoRecord) {
-        await txClient.promoCode.update({
-          where: { id: promoRecord.id },
-          data: {
-            usesCount: { increment: 1 },
-          },
-        });
-      }
-
-      return order;
-    });
-
-    res.status(201).json({ data: result });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Bad request';
     res.status(400).json({ error: message });
@@ -357,9 +219,8 @@ ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Resp
     if (status) updateData.status = status;
     if (paymentStatus) updateData.paymentStatus = paymentStatus;
 
-    const updated = await prismaAny.$transaction(async (tx: any) => {
-      const txClient = tx as any;
-      const order = await txClient.order.update({
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const order = await tx.order.update({
         where: { id },
         data: updateData,
         include: {
@@ -377,7 +238,15 @@ ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Resp
       });
 
       if (status || paymentStatus || note) {
-        await createOrderEvent(tx, order.id, 'update', status || order.status, paymentStatus || order.paymentStatus, note || undefined);
+        await tx.orderEvent.create({
+          data: {
+            orderId: order.id,
+            type: 'update',
+            status: status || order.status,
+            paymentStatus: paymentStatus || order.paymentStatus,
+            note: note || undefined,
+          },
+        });
       }
 
       return order;
