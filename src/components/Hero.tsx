@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Play, Sprout } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-agritech.jpg";
 import { useI18n } from "@/i18n/i18n";
@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 const Hero = () => {
   const { t } = useI18n();
   const [isLoaded, setIsLoaded] = useState(false);
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     setIsLoaded(true);
@@ -36,8 +37,8 @@ const Hero = () => {
           <div className={`inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm text-primary px-4 py-2 rounded-full text-sm font-medium mb-8 border border-primary/20 transition-all duration-700 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
           }`}>
-            <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>Innovation Agritech 2024</span>
+            <Sprout className="w-4 h-4 animate-pulse" />
+          <span>Innovation Agritech {currentYear}</span>
           </div>
           
           {/* Main title with enhanced gradient */}
