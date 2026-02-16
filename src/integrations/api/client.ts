@@ -1,19 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-// API HTTP unique (sans Supabase). Par défaut utilise l'origine (Nginx proxy) pour éviter le CORS
-// En production Docker, utiliser window.location.origin pour passer par le proxy Nginx
-// VITE_API_BASE_URL ne doit être défini que pour le développement local
-const API_BASE_URL = (() => {
-	const envUrl = import.meta.env.VITE_API_BASE_URL as string;
-	// Toujours utiliser window.location.origin pour passer par le proxy Nginx
-	// Cela fonctionne en développement (port 5173) et en production Docker (port 8080)
-	// VITE_API_BASE_URL n'est utilisé que si défini explicitement ET différent de l'origine
-	if (envUrl && envUrl !== window.location.origin && !window.location.port) {
-		// Utiliser l'URL d'environnement seulement si on n'est pas sur localhost
-		return envUrl;
-	}
-	return window.location.origin;
-})();
+// Utilise VITE_API_BASE_URL si définie, sinon window.location.origin
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
 async function http(method: string, path: string, options?: { params?: Record<string, any>; body?: any; headers?: Record<string, string> }) {
   try {
