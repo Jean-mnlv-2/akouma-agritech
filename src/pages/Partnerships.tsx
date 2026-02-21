@@ -17,20 +17,15 @@ import {
   Users, 
   Globe, 
   TrendingUp, 
-  Award,
   Lightbulb,
-  Target,
-  Heart,
   Star,
   Zap,
   Shield,
   Rocket,
   Mail,
-  Phone,
   Building,
   Send,
   CheckCircle,
-  X
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
 
@@ -59,7 +54,7 @@ const Partnerships = () => {
   const [isPartnershipOpen, setIsPartnershipOpen] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
   const [partners, setPartners] = useState<PartnerRow[]>([]);
-  const [contactForm, setContactForm] = useState({
+  const [_contactForm] = useState({
     name: "",
     email: "",
     company: "",

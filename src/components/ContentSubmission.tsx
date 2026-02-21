@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Video, Headphones, Send, CheckCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/integrations/api/client";
 
 interface ContentSubmissionForm {
   name: string;

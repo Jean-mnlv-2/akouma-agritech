@@ -1,6 +1,5 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Plus, Minus, Trash2, CreditCard } from "lucide-react";
 import { useCartContext } from "@/context/CartContext";
 

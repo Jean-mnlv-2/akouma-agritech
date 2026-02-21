@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { useAdminCache } from '@/hooks/use-admin-cache';
 
 type AdminContextType = ReturnType<typeof useAdminCache>;

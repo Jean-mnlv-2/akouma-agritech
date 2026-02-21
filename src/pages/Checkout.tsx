@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,11 +10,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/integrations/api/client";
-import { CreditCard, Lock, ArrowLeft, MapPin, Truck, Loader2, Info } from "lucide-react";
+import { CreditCard, Lock, ArrowLeft, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { computeShippingFee, DeliveryMethodChoice } from "@/hooks/useCart";
 
 const Checkout = () => {
   const navigate = useNavigate();

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, ShoppingCart, Star, Tag, Package } from 'lucide-react';
+import { Loader2, Search, ShoppingCart, Star, Package } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';

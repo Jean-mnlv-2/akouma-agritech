@@ -9,7 +9,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Loader2, Globe } from "lucide-react";
-import { api } from "@/integrations/api/client";
 
 const enhancedNewsletterSchema = z.object({
   email: z.string().email("Veuillez entrer une adresse email valide"),

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Briefcase, Eye, EyeOff, Calendar, MapPin, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Briefcase, Eye, EyeOff, MapPin } from 'lucide-react';
 import { CareerDialog } from './CareerDialog';
 
 interface Career {
