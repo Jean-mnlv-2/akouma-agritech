@@ -592,21 +592,21 @@ html {
   }
 }
 
-/* Mobile page spacing to account for header height */
+/* Mobile page spacing to account for header + mobile nav height */
 @media (max-width: 768px) {
   .mobile-page-content {
-    padding-top: 6rem; /* Account for header + mobile nav */
+    padding-top: 7.5rem; /* Account for header (4rem) + mobile nav (~3.5rem) */
   }
 }
 
 /* Global spacing for pages with fixed header */
 .page-with-header {
-  padding-top: 4rem; /* 64px to account for fixed header height */
+  padding-top: 5rem; /* Account for fixed header height */
 }
 
 @media (max-width: 768px) {
   .page-with-header {
-    padding-top: 6rem; /* Account for header + mobile nav */
+    padding-top: 7.5rem; /* Account for header + mobile nav */
   }
 }
 

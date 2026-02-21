@@ -115,7 +115,8 @@ export function AdminPartners() {
 
   const updateField = (key: keyof PartnerRow, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>, key: 'logoUrl' | 'imageUrl') => {
+  // Upload function placeholder - will be connected to UI later
+  void (async function _onUpload(e: React.ChangeEvent<HTMLInputElement>, key: 'logoUrl' | 'imageUrl') {
     const file = e.target.files?.[0];
     if (!file) return;
     const formData = new FormData();
@@ -132,7 +133,7 @@ export function AdminPartners() {
     } finally {
       e.target.value = '';
     }
-  };
+  });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

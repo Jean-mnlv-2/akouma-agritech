@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Check, Trash2 } from "lucide-react";
+import { Download, Check } from "lucide-react";
 import { useOffline } from "@/hooks/useOffline";
 import { useToast } from "@/hooks/use-toast";
 

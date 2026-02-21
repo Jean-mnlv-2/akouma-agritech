@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { NewsletterForm } from "@/components/NewsletterForm";
-import { Leaf, Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from "lucide-react";
 import { useI18n } from "@/i18n/i18n";
 import { useContactSettings } from "@/hooks/use-contact-settings";
 
@@ -103,16 +103,6 @@ const Footer = () => {
                   </a>
                 </li>
               ))}
-              {/* Lien temporaire Admin */}
-              <li>
-                <a 
-                  href="/admin" 
-                  className="text-xs text-orange-500 hover:text-orange-600 transition-colors font-medium border border-orange-200 px-2 py-1 rounded"
-                  title="Accès temporaire à l'administration"
-                >
-                  🔧 Admin (temp)
-                </a>
-              </li>
             </ul>
           </div>
 

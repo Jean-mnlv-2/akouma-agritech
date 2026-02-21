@@ -29,7 +29,7 @@ const SeedsSection = () => {
   const [products, setProducts] = useState<SeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [_currentIndex, setCurrentIndex] = useState(0);
   const { t } = useI18n();
 
   useContentSync({

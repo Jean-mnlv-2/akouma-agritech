@@ -24,14 +24,14 @@ interface NewsItem {
 const NewsSection = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [_currentIndex, setCurrentIndex] = useState(0);
   const { t } = useI18n();
 
   // Utiliser le hook de synchronisation pour les actualités
   useContentSync({
     contentType: 'news',
     onUpdate: (data) => {
-      const normalizedNews = data.map((item: Record<string, unknown>) => ({
+      const normalizedNews = (data as Record<string, unknown>[]).map((item) => ({
         id: item.id as string,
         title: item.title as string,
         excerpt: item.excerpt as string,
@@ -175,7 +175,7 @@ const NewsSection = () => {
         {news.length > 1 && (
           <div className="relative">
             <div className="flex overflow-x-auto scrollbar-hide gap-6 pb-4" style={{ scrollSnapType: 'x mandatory' }}>
-              {news.slice(1).map((item, index) => (
+              {news.slice(1).map((item) => (
                 <div
                   key={item.id}
                   className="flex-shrink-0 w-80"

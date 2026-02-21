@@ -30,7 +30,7 @@ export default function AuthConfirm() {
         }
 
         // Méthode moderne
-        const { data, error } = await api.auth.exchangeCodeForSession(window.location.href);
+        const { error } = await api.auth.exchangeCodeForSession(window.location.href);
         if (error) throw error;
 
         // Récupérer la session et vérifier is_active + rôle
@@ -67,7 +67,7 @@ export default function AuthConfirm() {
         setStatus("success");
         toast({ title: t("auth.confirm.success"), description: t("auth.confirm.welcome") });
 
-        if (roles?.some((r) => r.role === "admin")) {
+        if (roles?.some((r: { role: string }) => r.role === "admin")) {
           navigate("/admin");
         } else {
           navigate("/");

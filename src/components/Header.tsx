@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Menu, Leaf, ShoppingCart } from "lucide-react";
+import { Menu, ShoppingCart } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCartContext } from "@/context/CartContext";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -20,23 +20,23 @@ const Header = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
 
-  // Handle mobile nav scroll behavior
+  // Handle mobile nav scroll behavior - hide on scroll DOWN, show on scroll UP
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down - hide mobile nav
+        // Scrolling DOWN - hide mobile nav
         setIsMobileNavVisible(false);
-      } else {
-        // Scrolling up - show mobile nav
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling UP - show mobile nav
         setIsMobileNavVisible(true);
       }
       
       setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
@@ -55,8 +55,8 @@ const Header = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', userId);
-        const admin = roles?.some(r => r.role === 'admin') ?? false;
-        const supervisor = admin || (roles?.some(r => r.role === 'supervisor') ?? false);
+        const admin = roles?.some((r: { role: string }) => r.role === 'admin') ?? false;
+        const supervisor = admin || (roles?.some((r: { role: string }) => r.role === 'supervisor') ?? false);
         setIsAdmin(admin);
         setIsSupervisor(supervisor);
       } catch {

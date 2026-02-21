@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { api } from '@/integrations/api/client';
+// api client not used directly - fetch used instead
 import { 
   Loader2, 
   Plus, 

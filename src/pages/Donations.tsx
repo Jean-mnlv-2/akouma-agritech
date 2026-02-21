@@ -2,42 +2,26 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TitleManager from "@/components/TitleManager";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import ContactForm from "@/components/forms/ContactForm";
-import { api } from "@/integrations/api/client";
 import { 
   Heart, 
-  Users, 
-  Globe, 
-  Target, 
-  Award,
-  Lightbulb,
-  Sprout,
-  Star,
-  Zap,
-  Shield,
-  Rocket,
   Gift,
-  TrendingUp,
   CheckCircle,
   CreditCard,
   Lock,
-  Mail,
-  Phone,
   Building,
-  Send,
-  ExternalLink
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
 
@@ -66,14 +50,7 @@ const Donations = () => {
     message: "",
     newsletter: true
   });
-  const [contactForm, setContactForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-    subject: "",
-    message: ""
-  });
+  // contactForm state removed - using ContactForm component instead
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -231,10 +208,6 @@ const Donations = () => {
     }
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-
   const handleInputChange = (field: string, value: string | boolean) => {
     setDonationForm(prev => {
       const next: any = { ...prev, [field]: value };
@@ -249,10 +222,6 @@ const Donations = () => {
       }
       return next;
     });
-  };
-
-  const handleContactInputChange = (field: string, value: string) => {
-    setContactForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleTierSelect = (tierId: string) => {

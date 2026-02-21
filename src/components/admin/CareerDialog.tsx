@@ -189,8 +189,8 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={formData.applicationDeadline}
-                  onSelect={(date) => setFormData({ ...formData, applicationDeadline: date })}
+                  selected={formData.applicationDeadline ?? undefined}
+                  onSelect={(date) => setFormData({ ...formData, applicationDeadline: date ?? null })}
                   initialFocus
                 />
               </PopoverContent>
