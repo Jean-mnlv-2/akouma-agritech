@@ -21,7 +21,7 @@ const Cart = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="pt-24 pb-16">
+      <div className="pt-8 pb-16">
         <div className="container mx-auto px-6">
           {/* Breadcrumb */}
           <div className="mb-8">

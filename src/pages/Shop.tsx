@@ -123,7 +123,7 @@ export default function Shop() {
           image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
         />
         <Header />
-        <div className="flex items-center justify-center min-h-[60vh] page-with-header">
+        <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
         <Footer />
@@ -140,7 +140,7 @@ export default function Shop() {
       />
       <Header />
       {/* Hero Section - Modern Design */}
-      <section className="relative pt-24 pb-20 overflow-hidden mobile-page-content">
+      <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img 
             src="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"

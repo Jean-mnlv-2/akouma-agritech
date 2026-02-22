@@ -134,7 +134,7 @@ const SeedDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container mx-auto px-6 pt-24 pb-16">
+      <div className="container mx-auto px-6 pt-8 pb-16">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
           <Link to="/" className="hover:text-primary">Accueil</Link>

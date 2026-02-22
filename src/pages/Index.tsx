@@ -33,13 +33,13 @@ const Index = () => {
         image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
       />
       <Header />
-      <main className="mobile-page-content">
+      <main>
         {/* Hero Section - Full viewport */}
         <section id="hero" className="relative">
           <Hero />
         </section>
         
-        {/* Statistics Section - Animated on scroll */}
+        {/* Statistics Section */}
         <section 
           id="stats" 
           ref={statsRef.elementRef}
@@ -50,7 +50,7 @@ const Index = () => {
           <StatsSection />
         </section>
         
-        {/* Services Section - Animated on scroll */}
+        {/* Services Section */}
         <section 
           id="services"
           ref={servicesRef.elementRef}
@@ -61,7 +61,7 @@ const Index = () => {
           <Services />
         </section>
         
-        {/* News Section - Animated on scroll */}
+        {/* News Section */}
         <section 
           id="news"
           ref={newsRef.elementRef}
@@ -72,7 +72,7 @@ const Index = () => {
           <NewsSection />
         </section>
         
-        {/* Seeds Section - Animated on scroll */}
+        {/* Seeds Section */}
         <section 
           id="seeds"
           ref={seedsRef.elementRef}
@@ -83,7 +83,7 @@ const Index = () => {
           <SeedsSection />
         </section>
         
-        {/* Shop Section - Animated on scroll */}
+        {/* Shop Section */}
         <section 
           id="shop"
           ref={shopRef.elementRef}
@@ -94,7 +94,7 @@ const Index = () => {
           <ShopSection />
         </section>
         
-        {/* Strategic Ad Placement - Animated on scroll */}
+        {/* Strategic Ad Placement */}
         <section 
           ref={adRef.elementRef}
           className={`py-12 bg-gradient-to-br from-muted/40 via-muted/20 to-background transition-all duration-1000 ${
@@ -111,7 +111,7 @@ const Index = () => {
           </div>
         </section>
         
-        {/* About Section - Animated on scroll */}
+        {/* About Section */}
         <section 
           id="about"
           ref={aboutRef.elementRef}
@@ -122,7 +122,7 @@ const Index = () => {
           <About />
         </section>
         
-        {/* Contact Section - Animated on scroll */}
+        {/* Contact Section */}
         <section 
           id="contact"
           ref={contactRef.elementRef}

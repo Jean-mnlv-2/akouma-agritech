@@ -126,7 +126,7 @@ export const AuthForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-nature flex items-center justify-center p-4">
+    <div className="flex items-center justify-center py-12 px-4">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="px-4 md:px-6 pt-6 pb-4">
           <CardTitle className="text-xl md:text-2xl text-center flex items-center justify-center space-x-2">

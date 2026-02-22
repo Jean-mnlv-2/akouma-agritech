@@ -214,7 +214,7 @@ const ELearning = () => {
       <Header />
       
       {/* Hero Section - Modern Design */}
-      <section className="relative pt-24 pb-20 overflow-hidden mobile-page-content">
+      <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img 
             src={elearningHero} 

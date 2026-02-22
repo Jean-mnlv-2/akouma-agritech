@@ -12,51 +12,50 @@ const Footer = () => {
 
   return (
     <footer className="bg-background border-t border-border/50">
-      <div className="container mx-auto px-6">
-        {/* Main Footer */}
-        <div className="py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Company Info */}
-          <div className="lg:col-span-1">
-            <div className="flex items-center space-x-2 mb-6">
+      <div className="container mx-auto px-4 md:px-6">
+        {/* Main Footer - Compact on mobile */}
+        <div className="py-8 md:py-16 grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-12">
+          {/* Company Info - Full width on mobile */}
+          <div className="col-span-2 md:col-span-1 lg:col-span-1">
+            <div className="flex items-center space-x-2 mb-4 md:mb-6">
               <img 
                 src="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
                 alt="AKOUMA Logo" 
-                className="w-10 h-10"
+                className="w-8 h-8 md:w-10 md:h-10"
               />
-              <span className="text-2xl font-bold text-primary">
+              <span className="text-xl md:text-2xl font-bold text-primary">
                 AKOUMA
               </span>
             </div>
-            <p className="text-muted-foreground mb-6 leading-relaxed">
-              Révolutionner l'agriculture africaine grâce à des technologies innovantes 
-              et durables pour un avenir prospère.
+            <p className="text-muted-foreground mb-4 md:mb-6 leading-relaxed text-sm">
+              {t("footer.desc") || "Révolutionner l'agriculture africaine grâce à des technologies innovantes et durables pour un avenir prospère."}
             </p>
-            <div className="flex space-x-4">
+            <div className="flex space-x-3">
               {contact?.facebookUrl && (
                 <a href={contact.facebookUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="hover:bg-primary hover:text-primary-foreground">
-                    <Facebook className="w-4 h-4" />
+                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
+                    <Facebook className="w-3.5 h-3.5" />
                   </Button>
                 </a>
               )}
               {contact?.xUrl && (
                 <a href={contact.xUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="hover:bg-primary hover:text-primary-foreground">
-                    <Twitter className="w-4 h-4" />
+                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
+                    <Twitter className="w-3.5 h-3.5" />
                   </Button>
                 </a>
               )}
               {contact?.linkedinUrl && (
                 <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="hover:bg-primary hover:text-primary-foreground">
-                    <Linkedin className="w-4 h-4" />
+                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
+                    <Linkedin className="w-3.5 h-3.5" />
                   </Button>
                 </a>
               )}
               {contact?.instagramUrl && (
                 <a href={contact.instagramUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="hover:bg-primary hover:text-primary-foreground">
-                    <Instagram className="w-4 h-4" />
+                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
+                    <Instagram className="w-3.5 h-3.5" />
                   </Button>
                 </a>
               )}
@@ -65,8 +64,8 @@ const Footer = () => {
 
           {/* Solutions */}
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-6">{t("footer.solutions")}</h3>
-            <ul className="space-y-3">
+            <h3 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-6">{t("footer.solutions")}</h3>
+            <ul className="space-y-2 md:space-y-3">
               {[
                 t("solutions.iot"),
                 t("solutions.analytics"),
@@ -76,7 +75,7 @@ const Footer = () => {
                 t("solutions.sustainable")
               ].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                  <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs md:text-sm">
                     {item}
                   </a>
                 </li>
@@ -86,8 +85,8 @@ const Footer = () => {
 
           {/* Company */}
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-6">{t("footer.company")}</h3>
-            <ul className="space-y-3">
+            <h3 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-6">{t("footer.company")}</h3>
+            <ul className="space-y-2 md:space-y-3">
               {[
                 { name: t("company.about"), href: "/about" },
                 { name: t("company.team"), href: "/about#team" },
@@ -95,10 +94,9 @@ const Footer = () => {
                 { name: t("company.news"), href: "/news" },
                 { name: t("company.partners"), href: "/partners" },
                 { name: t("company.donations"), href: "/donations" },
-                { name: t("company.investors"), href: "/investors" }
               ].map((item) => (
                 <li key={item.name}>
-                  <a href={item.href} className="text-muted-foreground hover:text-primary transition-colors">
+                  <a href={item.href} className="text-muted-foreground hover:text-primary transition-colors text-xs md:text-sm">
                     {item.name}
                   </a>
                 </li>
@@ -107,36 +105,36 @@ const Footer = () => {
           </div>
 
           {/* Contact Info */}
-          <div>
-            <h3 className="text-lg font-semibold text-foreground mb-6">{t("footer.contact")}</h3>
-            <div className="space-y-4">
+          <div className="col-span-2 md:col-span-1">
+            <h3 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-6">{t("footer.contact")}</h3>
+            <div className="space-y-3 md:space-y-4">
               <div className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                <div className="text-muted-foreground text-sm">
+                <MapPin className="w-4 h-4 md:w-5 md:h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div className="text-muted-foreground text-xs md:text-sm">
                   <p>{contact?.city || t("footer.city")}</p>
                   <p>{contact?.addressLine1 || t("footer.address")}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground text-sm">{contact?.phone || '+237 233 XX XX XX'}</span>
+                <Phone className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
+                <span className="text-muted-foreground text-xs md:text-sm">{contact?.phone || '+237 233 XX XX XX'}</span>
               </div>
               <div className="flex items-center space-x-3">
-                <Mail className="w-5 h-5 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground text-sm">{contact?.email || 'contact@akouma.cm'}</span>
+                <Mail className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
+                <span className="text-muted-foreground text-xs md:text-sm">{contact?.email || 'contact@akouma.cm'}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Newsletter */}
-        <div className="py-8 border-t border-border/50">
+        {/* Newsletter - Compact */}
+        <div className="py-6 md:py-8 border-t border-border/50">
           <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold text-foreground mb-2">
+            <div className="text-center mb-4 md:mb-6">
+              <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1 md:mb-2">
                 {t("footer.newsletter.title")}
               </h3>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-xs md:text-sm">
                 {t("footer.newsletter.subtitle")}
               </p>
             </div>
@@ -145,15 +143,15 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="py-6 border-t border-border/50">
-          <div className="flex justify-center mb-4">
+        <div className="py-4 md:py-6 border-t border-border/50">
+          <div className="flex justify-center mb-3 md:mb-4">
             <PWAInstallButton />
           </div>
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-muted-foreground text-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
+            <p className="text-muted-foreground text-xs md:text-sm">
               © {currentYear} AKOUMA. {t("footer.rights")}
             </p>
-            <div className="flex space-x-6 text-sm">
+            <div className="flex space-x-4 md:space-x-6 text-xs md:text-sm">
               <a href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
                 {t("footer.privacy")}
               </a>
