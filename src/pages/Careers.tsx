@@ -98,7 +98,7 @@ const Careers = () => {
     <div className="min-h-screen">
       <Header />
       
-      <section className="pt-24 pb-16">
+      <section className="pt-8 pb-16">
         <div className="container mx-auto px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">

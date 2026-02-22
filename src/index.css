@@ -592,22 +592,11 @@ html {
   }
 }
 
-/* Mobile page spacing to account for header + mobile nav height */
-@media (max-width: 768px) {
-  .mobile-page-content {
-    padding-top: 7.5rem; /* Account for header (4rem) + mobile nav (~3.5rem) */
-  }
-}
-
-/* Global spacing for pages with fixed header */
+/* Header spacer is now rendered by the Header component itself.
+   These classes are kept for backwards compatibility but are no longer needed. */
+.mobile-page-content,
 .page-with-header {
-  padding-top: 5rem; /* Account for fixed header height */
-}
-
-@media (max-width: 768px) {
-  .page-with-header {
-    padding-top: 7.5rem; /* Account for header + mobile nav */
-  }
+  /* No padding needed - Header component renders spacer divs */
 }
 
 /* Responsive Admin Dashboard Utilities */

@@ -108,7 +108,7 @@ const Seeds = () => {
       <Header />
       
       {/* Hero Section - Modern Design */}
-      <section className="relative pt-24 pb-20 bg-gradient-to-br from-green-50/50 via-background to-primary/5 overflow-hidden mobile-page-content">
+      <section className="relative pt-8 pb-20 bg-gradient-to-br from-green-50/50 via-background to-primary/5 overflow-hidden">
         {/* Background decorations */}
         <div className="absolute top-10 right-10 w-40 h-40 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>

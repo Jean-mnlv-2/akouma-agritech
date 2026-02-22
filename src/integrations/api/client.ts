@@ -20,19 +20,26 @@ async function http(method: string, path: string, options?: { params?: Record<st
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      // Ne pas logger les erreurs 401/403 qui sont normales pour les sessions non authentifiées
-      if (res.status !== 401 && res.status !== 403) {
-        console.error(`[API] ${method} ${path} failed:`, res.status, text);
+      // Don't log 401/403 (normal for unauthenticated sessions) or 404
+      if (res.status !== 401 && res.status !== 403 && res.status !== 404) {
+        console.warn(`[API] ${method} ${path}: ${res.status}`);
       }
       throw new Error(text || `HTTP ${res.status}`);
     }
     const contentType = res.headers.get("content-type") || "";
     return contentType.includes("application/json") ? res.json() : res.text();
   } catch (error) {
-    // Gérer les erreurs de connexion réseau gracieusement
+    // Handle network connection errors gracefully - only warn, don't spam console
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error(`[API] Network error for ${method} ${path}:`, error.message);
-      throw new Error('Erreur de connexion au serveur. Vérifiez que le backend est démarré.');
+      // Only log once per minute per endpoint to avoid spam
+      const key = `api_error_${method}_${path}`;
+      const lastLog = (window as any)[key];
+      const now = Date.now();
+      if (!lastLog || now - lastLog > 60000) {
+        (window as any)[key] = now;
+        console.warn(`[API] Serveur indisponible pour ${method} ${path}`);
+      }
+      throw new Error('Serveur indisponible. Vérifiez votre connexion.');
     }
     throw error;
   }
