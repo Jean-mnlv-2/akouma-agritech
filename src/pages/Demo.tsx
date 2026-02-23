@@ -1,15 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PlayCircle, Smartphone, Monitor, Calendar, Phone, Download, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+
+interface Country {
+  id: number;
+  code: string;
+  name: string;
+  phoneCode: string;
+}
 
 const Demo = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
@@ -21,8 +29,25 @@ const Demo = () => {
     phone: "",
     company: "",
     country: "",
+    country_id: "",
     message: ""
   });
+  const [countries, setCountries] = useState<Country[]>([]);
+
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch("/api/countries");
+        if (!res.ok) throw new Error("Failed to fetch countries");
+        const body = await res.json();
+        const list = Array.isArray(body) ? body : body?.data || [];
+        setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || "") || 0));
+      } catch (error) {
+        console.error("Error fetching countries:", error);
+      }
+    };
+    fetchCountries();
+  }, []);
 
   const demoOptions = [
     {
@@ -74,7 +99,7 @@ const Demo = () => {
       });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: "Demande envoyée !", description: "Nous vous contacterons sous 24h pour planifier votre démonstration." });
-      setFormData({ name: "", email: "", phone: "", company: "", country: "", message: "" });
+      setFormData({ name: "", email: "", phone: "", company: "", country: "", country_id: "", message: "" });
     } catch (err) {
       console.error(err);
       toast({ title: "Erreur", description: "Impossible d'envoyer la demande. Réessayez.", variant: "destructive" });
@@ -165,7 +190,33 @@ const Demo = () => {
                 </div>
                 <div>
                   <Label>Pays *</Label>
-                  <Input placeholder="Votre pays" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} required />
+                  <Select
+                    value={formData.country_id}
+                    onValueChange={(value) => {
+                      const selected = countries.find((c) => c.id.toString() === value);
+                      setFormData((prev) => {
+                        const next: any = { ...prev, country_id: value, country: selected?.name || "" };
+                        if (selected?.phoneCode) {
+                          const code = selected.phoneCode;
+                          if (!next.phone || !next.phone.startsWith(code)) {
+                            next.phone = code + " " + (next.phone?.replace(/^\+?\d+\s*/, "") || "");
+                          }
+                        }
+                        return next;
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez votre pays" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {countries.map((country) => (
+                        <SelectItem key={country.id} value={country.id.toString()}>
+                          {country.name} ({country.phoneCode})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Message</Label>

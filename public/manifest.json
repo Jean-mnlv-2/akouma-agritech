@@ -10,13 +10,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png",
+      "src": "/assets/logo-ak.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png",
+      "src": "/assets/logo-ak.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

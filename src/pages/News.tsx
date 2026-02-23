@@ -10,6 +10,7 @@ import DOMPurify from 'dompurify';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n/i18n';
+import logoAk from "@/assets/logo-ak.png";
 
 interface NewsItem {
   id: string;
@@ -32,6 +33,7 @@ export default function News() {
   const [pageSize] = useState(9);
   const { toast } = useToast();
   const { t } = useI18n();
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -41,7 +43,8 @@ export default function News() {
         if (selectedCategory !== 'all') params.set('category', selectedCategory);
         params.set('page', String(page));
         params.set('pageSize', String(pageSize));
-        const res = await fetch(`/api/news?${params.toString()}`, { credentials: 'include' });
+        const url = new URL(`/api/news?${params.toString()}`, apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load news');
         const body = await res.json();
         const items = Array.isArray(body) ? body : body.data;
@@ -51,7 +54,7 @@ export default function News() {
           excerpt: item.excerpt ?? item.description ?? '',
           content: item.content ?? '',
           author: item.author_name ?? 'AKOUMA Team',
-          image: item.image_url ?? '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png',
+          image: item.image_url ?? logoAk,
           featured: Boolean(item.is_featured ?? false),
           date: item.created_at || new Date().toISOString(),
           category: item.category ?? 'Général',
@@ -95,7 +98,7 @@ export default function News() {
         <TitleManager
           title={t('news.meta.title')}
           description={t('news.meta.desc')}
-          image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+          image={logoAk}
         />
         <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -111,14 +114,14 @@ export default function News() {
       <TitleManager
         title={t('news.meta.title')}
         description={t('news.meta.desc')}
-        image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+        image={logoAk}
       />
       <Header />
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img 
-            src="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+            src={logoAk}
             alt={t('news.hero.alt')}
             className="w-full h-full object-cover"
           />

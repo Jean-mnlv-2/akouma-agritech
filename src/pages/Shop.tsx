@@ -10,6 +10,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n/i18n';
 import { useCartContext } from '@/context/CartContext';
+import logoAk from "@/assets/logo-ak.png";
 
 interface Product {
   id: string;
@@ -35,13 +36,19 @@ export default function Shop() {
   const { toast } = useToast();
   const { t } = useI18n();
   const { addToCart } = useCartContext();
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/shop_products', { credentials: 'include' });
+        const url = new URL('/api/shop_products', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load products');
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('Réponse invalide du serveur pour les produits');
+        }
         const body = await res.json();
         const items = Array.isArray(body) ? body : body.data;
         const normalized = (items || []).map((item: any) => ({
@@ -50,7 +57,7 @@ export default function Shop() {
           description: item.description ?? '',
           price: Number(item.price ?? item.price_fcfa ?? 0),
           originalPrice: Number(item.originalPrice ?? item.original_price_fcfa ?? 0),
-          image: item.imageUrl ?? item.image_url ?? '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png',
+          image: item.imageUrl ?? item.image_url ?? logoAk,
           category: item.category ?? 'Général',
           inStock: Boolean(item.isActive ?? item.in_stock ?? false),
           isNew: Boolean(item.isNew ?? item.is_new ?? false),
@@ -120,7 +127,7 @@ export default function Shop() {
         <TitleManager
           title={t('shop.meta.title')}
           description={t('shop.meta.desc')}
-          image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+          image={logoAk}
         />
         <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -136,14 +143,14 @@ export default function Shop() {
       <TitleManager
         title={t('shop.meta.title')}
         description={t('shop.meta.desc')}
-        image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+        image={logoAk}
       />
       <Header />
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img 
-            src="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+            src={logoAk}
             alt={t('shop.hero.alt')}
             className="w-full h-full object-cover"
           />

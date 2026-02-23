@@ -20,6 +20,7 @@ import {
   Mail
 } from "lucide-react";
 import { useContactSettings } from "@/hooks/use-contact-settings";
+import logoAk from "@/assets/logo-ak.png";
 
 interface SeedProduct {
   id: number;
@@ -62,6 +63,7 @@ const SeedDetail = () => {
   const [product, setProduct] = useState<SeedProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const { data: contact } = useContactSettings();
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   // Fetch product data from backend
   const fetchProduct = async () => {
@@ -69,8 +71,13 @@ const SeedDetail = () => {
     
     try {
       setLoading(true);
-      const res = await fetch(`/api/seeds/${id}`, { credentials: 'include' });
+      const url = new URL(`/api/seeds/${id}`, apiBaseUrl);
+      const res = await fetch(url.toString(), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch seed product');
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Réponse invalide du serveur pour la semence');
+      }
       const { data } = await res.json();
       
       setProduct({
@@ -81,7 +88,7 @@ const SeedDetail = () => {
         variety: data.variety || '',
         price: data.price || 0,
         unit: data.unit || 'kg',
-        images: [data.imageUrl || '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png'],
+        images: [data.imageUrl || logoAk],
         rating: data.rating || 0,
         reviews: data.reviews || 0,
         availability: data.availability || 'En stock',

@@ -28,6 +28,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
+import logoAk from "@/assets/logo-ak.png";
 
 interface Country {
   id: number;
@@ -73,11 +74,13 @@ const Partnerships = () => {
     budget: "",
     timeline: ""
   });
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await fetch('/api/countries');
+        const url = new URL('/api/countries', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch countries');
         const body = await res.json();
         const list = ((Array.isArray(body) ? body : body?.data) || []) as Country[];
@@ -92,7 +95,8 @@ const Partnerships = () => {
     };
     const fetchPartners = async () => {
       try {
-        const res = await fetch('/api/partners');
+        const url = new URL('/api/partners', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch partners');
         const body = await res.json();
         const list = ((Array.isArray(body) ? body : body?.data) || []) as PartnerRow[];
@@ -172,20 +176,27 @@ const Partnerships = () => {
       return;
     }
     try {
-      const res = await fetch('/api/partnerships', {
+      const selectedCountry = countries.find(c => c.id.toString() === partnershipForm.country_id);
+      const countryName = selectedCountry?.name || "Non spécifié";
+      const messageParts: string[] = [];
+      if (partnershipForm.description) messageParts.push(`Description: ${partnershipForm.description}`);
+      if (partnershipForm.partnershipType) messageParts.push(`Type de partenariat: ${partnershipForm.partnershipType}`);
+      if (partnershipForm.budget) messageParts.push(`Budget estimé: ${partnershipForm.budget}`);
+      if (partnershipForm.timeline) messageParts.push(`Calendrier: ${partnershipForm.timeline}`);
+      const message = messageParts.length ? messageParts.join(" | ") : null;
+
+      const url = new URL('/api/partnerships', apiBaseUrl);
+      const res = await fetch(url.toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: partnershipForm.name,
+          companyName: partnershipForm.company || partnershipForm.name,
+          contactName: partnershipForm.name,
           email: partnershipForm.email,
-          company: partnershipForm.company || null,
           phone: partnershipForm.phone || null,
-          country_id: partnershipForm.country_id ? parseInt(partnershipForm.country_id) : null,
-          partnership_type: partnershipForm.partnershipType,
-          description: partnershipForm.description,
-          budget: partnershipForm.budget || null,
-          timeline: partnershipForm.timeline || null,
+          country: countryName,
+          message,
         })
       });
       if (!res.ok) throw new Error(await res.text());
@@ -230,7 +241,7 @@ const Partnerships = () => {
       <TitleManager 
         title="Partenariats"
         description="Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner l'agriculture africaine avec des solutions technologiques durables."
-        image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+        image={logoAk}
       />
       <Header />
       

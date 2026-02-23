@@ -17,12 +17,18 @@ interface LegalPage {
 const Privacy = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [privacyPage, setPrivacyPage] = useState<LegalPage | null>(null);
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     const fetchPrivacyPage = async () => {
       try {
-        const res = await fetch('/api/legal_pages?slug=privacy&isPublished=true', { credentials: 'include' });
+        const url = new URL('/api/legal_pages?slug=privacy&isPublished=true', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch privacy page');
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('Réponse invalide du serveur pour la page de confidentialité');
+        }
         const { data } = await res.json();
         
         if (data && data.length > 0) {

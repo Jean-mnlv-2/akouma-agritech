@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import logoAk from "@/assets/logo-ak.png";
 
 interface Article {
   id: string;
@@ -51,7 +52,7 @@ const NewsDetail = () => {
         author: data.author_name || data.author || 'AKOUMA Team',
         date: data.created_at || data.date,
         category: data.category || 'Général',
-        image: data.image_url || '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png',
+        image: data.image_url || logoAk,
         readTime: String(data.read_time || 5) + ' min',
         tags: [data.category || 'Général'],
         relatedArticles: []
@@ -69,7 +70,7 @@ const NewsDetail = () => {
             .map((it: any) => ({
               id: String(it.id),
               title: it.title,
-              image: it.image_url || '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png',
+              image: it.image_url || logoAk,
               date: it.created_at || new Date().toISOString(),
             }));
           normalized.relatedArticles = related;

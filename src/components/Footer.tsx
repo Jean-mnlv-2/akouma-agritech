@@ -4,6 +4,7 @@ import { NewsletterForm } from "@/components/NewsletterForm";
 import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from "lucide-react";
 import { useI18n } from "@/i18n/i18n";
 import { useContactSettings } from "@/hooks/use-contact-settings";
+import logoAk from "@/assets/logo-ak.png";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -19,7 +20,7 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1 lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4 md:mb-6">
               <img 
-                src="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+                src={logoAk}
                 alt="AKOUMA Logo" 
                 className="w-8 h-8 md:w-10 md:h-10"
               />

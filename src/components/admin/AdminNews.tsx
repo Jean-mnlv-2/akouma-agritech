@@ -23,10 +23,12 @@ export function AdminNews() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<NewsArticle | null>(null);
   const { toast } = useToast();
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   const fetchNews = useCallback(async () => {
     try {
-      const res = await fetch('/api/news', { credentials: 'include' });
+      const url = new URL('/api/news', apiBaseUrl);
+      const res = await fetch(url.toString(), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to load');
       const body = await res.json();
       const items = Array.isArray(body) ? body : body.data;
@@ -49,7 +51,8 @@ export function AdminNews() {
   const handleDelete = async (newsId: number) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette actualité ?')) return;
     try {
-      const res = await fetch(`/api/news/${newsId}`, { method: 'DELETE', credentials: 'include' });
+      const url = new URL(`/api/news/${newsId}`, apiBaseUrl);
+      const res = await fetch(url.toString(), { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error('Failed to delete');
       toast({ title: 'Succès', description: 'Actualité supprimée avec succès' });
       fetchNews();
@@ -64,14 +67,16 @@ export function AdminNews() {
       const isEditing = !!editingNews;
       let res: Response;
       if (isEditing) {
-        res = await fetch(`/api/news/${(editingNews as any).id}`, {
+        const url = new URL(`/api/news/${(editingNews as any).id}`, apiBaseUrl);
+        res = await fetch(url.toString(), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(newsData),
         });
       } else {
-        res = await fetch('/api/news', {
+        const url = new URL('/api/news', apiBaseUrl);
+        res = await fetch(url.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

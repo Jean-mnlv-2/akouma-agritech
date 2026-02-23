@@ -24,6 +24,7 @@ export function AdminLegalPages() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPage, setEditingPage] = useState<LegalPage | null>(null);
   const { toast } = useToast();
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     fetchLegalPages();
@@ -31,8 +32,13 @@ export function AdminLegalPages() {
 
   const fetchLegalPages = async () => {
     try {
-      const res = await fetch('/api/legal_pages', { credentials: 'include' });
+      const url = new URL('/api/legal_pages', apiBaseUrl);
+      const res = await fetch(url.toString(), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to load');
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Réponse invalide du serveur pour les pages légales');
+      }
       const body = await res.json();
       const items = Array.isArray(body) ? body : body.data;
       setLegalPages(items || []);
@@ -73,14 +79,16 @@ export function AdminLegalPages() {
       const payload = { title: pageData.title, content: pageData.content, slug: pageData.slug };
       let res: Response;
       if (isEditing) {
-        res = await fetch(`/api/legal_pages/${editingPage!.id}`, {
+        const url = new URL(`/api/legal_pages/${editingPage!.id}`, apiBaseUrl);
+        res = await fetch(url.toString(), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(payload),
         });
       } else {
-        res = await fetch('/api/legal_pages', {
+        const url = new URL('/api/legal_pages', apiBaseUrl);
+        res = await fetch(url.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

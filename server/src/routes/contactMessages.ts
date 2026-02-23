@@ -5,16 +5,45 @@ import { authRequired, adminOnly } from '../middleware/authRequired';
 const prisma = new PrismaClient();
 export const contactMessagesRouter = Router();
 
+function mapContactMessage(item: any) {
+  return {
+    id: item.id,
+    name: item.name,
+    email: item.email,
+    phone: item.phone || null,
+    company: item.company || null,
+    project_type: item.project_type || null,
+    subject: item.subject || null,
+    message: item.message,
+    country: item.country || null,
+    status: item.status,
+    created_at: item.createdAt ? item.createdAt.toISOString() : null,
+    processedAt: item.processedAt ? item.processedAt.toISOString() : null,
+  };
+}
+
 contactMessagesRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
   const items = await prisma.contactMessage.findMany({ orderBy: { createdAt: 'desc' } });
-  res.json({ data: items });
+  const mapped = items.map(mapContactMessage);
+  res.json({ data: mapped });
 });
 
 contactMessagesRouter.post('/', async (req: Request, res: Response) => {
-  const { name, email, subject, message, country } = req.body || {};
+  const { name, email, subject, message, country, phone, company, project_type } = req.body || {};
   if (!name || !email || !message) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.contactMessage.create({ data: { name, email, subject, message, country } });
-  res.status(201).json({ data: created });
+  const created = await prisma.contactMessage.create({
+    data: {
+      name,
+      email,
+      subject: subject || null,
+      message,
+      country: country || null,
+      phone: phone || null,
+      company: company || null,
+      project_type: project_type || null,
+    },
+  });
+  res.status(201).json({ data: mapContactMessage(created) });
 });
 
 contactMessagesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {

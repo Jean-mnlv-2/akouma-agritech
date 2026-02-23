@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import logoAk from "@/assets/logo-ak.png";
 
 interface Product {
   id: string;
@@ -39,6 +40,7 @@ const ProductDetail = () => {
   
   const { addToCart } = useCartContext();
   const { toast } = useToast();
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   // Fetch product data from backend
   const fetchProduct = async () => {
@@ -46,8 +48,13 @@ const ProductDetail = () => {
     
     try {
       setLoading(true);
-      const res = await fetch(`/api/shop_products/${id}`, { credentials: 'include' });
+      const url = new URL(`/api/shop_products/${id}`, apiBaseUrl);
+      const res = await fetch(url.toString(), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch product');
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Réponse invalide du serveur pour le produit');
+      }
       const { data } = await res.json();
       
       setProduct({
@@ -57,7 +64,7 @@ const ProductDetail = () => {
         longDescription: data.longDescription || data.description,
         price: data.price || 0,
         originalPrice: data.originalPrice,
-        image: data.imageUrl || '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png',
+        image: data.imageUrl || logoAk,
         category: data.category || 'Général',
         rating: data.rating || 0,
         reviews: data.reviews || 0,
@@ -66,7 +73,7 @@ const ProductDetail = () => {
         isBestSeller: data.isBestSeller || false,
         specifications: data.specifications || {},
         features: data.features || [],
-        gallery: data.gallery || [data.imageUrl || '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png']
+        gallery: data.gallery || [data.imageUrl || logoAk]
       });
     } catch (error) {
       console.error('Error fetching product:', error);

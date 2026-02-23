@@ -24,6 +24,7 @@ export const EnhancedNewsletterForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [countries, setCountries] = useState<Array<{code: string, name: string, phoneCode: string}>>([]);
   const { toast } = useToast();
+   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   const form = useForm<EnhancedNewsletterFormData>({
     resolver: zodResolver(enhancedNewsletterSchema),
@@ -40,8 +41,10 @@ export const EnhancedNewsletterForm = () => {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await fetch('/api/countries');
-        const body = await (res.ok ? res.json() : Promise.resolve([]));
+        const url = new URL('/api/countries', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
+        const contentType = res.headers.get('content-type') || '';
+        const body = await (res.ok && contentType.includes('application/json') ? res.json() : Promise.resolve([]));
         const list = Array.isArray(body) ? body : (body?.data || []);
         setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || '') || 0));
       } catch (error) {
@@ -72,7 +75,8 @@ export const EnhancedNewsletterForm = () => {
       }
       const selectedCountry = countries.find(c => c.name === data.country);
       const fullPhone = data.phone ? `${selectedCountry?.phoneCode || '+XXX'} ${data.phone}` : null;
-      const res = await fetch('/api/newsletter_subscriptions', {
+      const url = new URL('/api/newsletter_subscriptions', apiBaseUrl);
+      const res = await fetch(url.toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

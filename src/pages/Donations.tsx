@@ -24,6 +24,7 @@ import {
   Building,
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
+import logoAk from "@/assets/logo-ak.png";
 
 interface Country {
   id: number;
@@ -51,11 +52,13 @@ const Donations = () => {
     newsletter: true
   });
   // contactForm state removed - using ContactForm component instead
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await fetch('/api/countries');
+        const url = new URL('/api/countries', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch countries');
         const body = await res.json();
         const list = Array.isArray(body) ? body : body?.data || [];
@@ -132,9 +135,11 @@ const Donations = () => {
   useEffect(() => {
     const fetchSections = async () => {
       try {
+        const impactsUrl = new URL('/api/donation_impacts', apiBaseUrl);
+        const storiesUrl = new URL('/api/success_stories', apiBaseUrl);
         const [impRes, stoRes] = await Promise.all([
-          fetch('/api/donation_impacts'),
-          fetch('/api/success_stories'),
+          fetch(impactsUrl.toString(), { credentials: 'include' }),
+          fetch(storiesUrl.toString(), { credentials: 'include' }),
         ]);
         const [impBody, stoBody] = await Promise.all([
           impRes.ok ? impRes.json() : Promise.resolve({ data: [] }),
@@ -168,22 +173,28 @@ const Donations = () => {
       return;
     }
     try {
-      const res = await fetch('/api/donations', {
+      const selectedCountry = countries.find(c => c.id.toString() === donationForm.country_id);
+      const countryName = selectedCountry?.name || "Non spécifié";
+      const parts: string[] = [];
+      if (donationForm.message) parts.push(`Message: ${donationForm.message}`);
+      parts.push(`Mode de paiement: ${donationForm.paymentMethod}`);
+      parts.push(`Don anonyme: ${donationForm.anonymous ? "oui" : "non"}`);
+      parts.push(`Newsletter: ${donationForm.newsletter ? "oui" : "non"}`);
+      if (donationForm.company) parts.push(`Entreprise: ${donationForm.company}`);
+      if (donationForm.phone) parts.push(`Téléphone: ${donationForm.phone}`);
+      const message = parts.join(" | ");
+
+      const url = new URL('/api/donations', apiBaseUrl);
+      const res = await fetch(url.toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          name: donationForm.name,
+          donorName: donationForm.name,
           email: donationForm.email,
-          phone: donationForm.phone || null,
-          company: donationForm.company || null,
-          country_id: donationForm.country_id ? parseInt(donationForm.country_id) : null,
           amount: amountNumber,
-          payment_method: donationForm.paymentMethod,
-          anonymous: donationForm.anonymous,
-          message: donationForm.message || null,
-          newsletter: donationForm.newsletter,
-          payment_reference: null,
+          country: countryName,
+          message,
         })
       });
       if (!res.ok) throw new Error(await res.text());
@@ -248,7 +259,7 @@ const Donations = () => {
       <TitleManager 
         title="Dons"
         description="Votre don contribue directement à révolutionner l'agriculture africaine. Chaque contribution fait une différence réelle dans la vie des agriculteurs."
-        image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+        image={logoAk}
       />
       <Header />
       

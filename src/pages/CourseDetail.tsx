@@ -10,6 +10,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
+import logoAk from "@/assets/logo-ak.png";
 
 interface Course {
   id: string;
@@ -65,7 +66,7 @@ const CourseDetail = () => {
         price: data.price || 0,
         level: data.level || 'Tous niveaux',
         category: data.category || 'Général',
-        thumbnail: data.thumbnailUrl || data.imageUrl || '/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png',
+        thumbnail: data.thumbnailUrl || data.imageUrl || logoAk,
         isLive: !!data.isLive,
         modules: Array.isArray(data.modules) ? data.modules.map((m: any, idx: number) => ({
           id: String(m.id ?? idx + 1),

@@ -16,6 +16,7 @@ import ContentSubmission from "@/components/ContentSubmission";
 import OfflineButton from "@/components/OfflineButton";
 import elearningHero from "@/assets/elearning-hero.jpg";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
+import logoAk from "@/assets/logo-ak.png";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
@@ -232,7 +233,7 @@ const ELearning = () => {
         title="E-Learning"
         description="Formations agricoles, webinaires et ressources pour révolutionner vos pratiques."
         canonical={window.location.origin + '/elearning'}
-        image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+        image={logoAk}
       />
       <Header />
       

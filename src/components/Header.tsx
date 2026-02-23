@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import CartDrawer from "./CartDrawer";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n/i18n";
+import logoAk from "@/assets/logo-ak.png";
 
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -109,7 +110,7 @@ const Header = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
               <img 
-                src="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+                src={logoAk}
                 alt="AKOUMA Logo" 
                 className="w-8 h-8 md:w-10 md:h-10"
               />

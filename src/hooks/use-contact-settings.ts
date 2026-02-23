@@ -23,6 +23,7 @@ export function useContactSettings() {
   const [data, setData] = useState<ContactSettings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     let cancelled = false;
@@ -30,8 +31,13 @@ export function useContactSettings() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/contact_settings');
+        const url = new URL('/api/contact_settings', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load contact settings');
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('Réponse invalide du serveur pour les paramètres de contact');
+        }
         const body = await res.json();
         const list = Array.isArray(body) ? body : body.data;
         const first = (list && list[0]) || null;

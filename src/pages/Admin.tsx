@@ -24,6 +24,7 @@ import {
   Tag
 } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
+import logoAk from "@/assets/logo-ak.png";
 import { AdminCourses } from '@/components/admin/AdminCourses';
 import { AdminNews } from '@/components/admin/AdminNews';
 import { AdminSeeds } from '@/components/admin/AdminSeeds';
@@ -229,7 +230,7 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen bg-background admin-responsive">
-      <TitleManager title="Administration" description="Dashboard d'administration AKOUMA Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png" />
+      <TitleManager title="Administration" description="Dashboard d'administration AKOUMA Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image={logoAk} />
       
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">

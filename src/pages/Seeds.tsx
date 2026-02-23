@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import DOMPurify from 'dompurify';
 import TitleManager from "@/components/TitleManager";
 import { useI18n } from "@/i18n/i18n";
+import logoAk from "@/assets/logo-ak.png";
 
 interface SeedProduct {
   id: number;
@@ -35,6 +36,7 @@ const Seeds = () => {
   const [products, setProducts] = useState<SeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   const categories = [
     { id: "all", name: "Toutes catégories" },
@@ -51,8 +53,13 @@ const Seeds = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/seeds');
+        const url = new URL('/api/seeds', apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch seeds');
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('Réponse invalide du serveur pour les semences');
+        }
         const body = await res.json();
         const data = (Array.isArray(body) ? body : body?.data) || [];
         setProducts((data || []).map((item: Record<string, unknown>) => ({
@@ -103,7 +110,7 @@ const Seeds = () => {
         title={t("seeds.meta.title")}
         description={t("seeds.meta.desc")}
         canonical={window.location.origin + '/seeds'}
-        image="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+        image={logoAk}
       />
       <Header />
       
