@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, User, Lock, Shield } from "lucide-react";
+import { Loader2, Eye, EyeOff, User, Lock, Shield, Mail } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useNavigate } from "react-router-dom";
 
@@ -33,6 +33,9 @@ export const AuthForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -54,41 +57,36 @@ export const AuthForm = () => {
 
   const onLogin = async (data: AuthFormData) => {
     setIsLoading(true);
-    
     try {
-      console.log('Tentative de connexion avec:', data.email);
-      
       const { data: authData } = await api.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
-      // Redirection basée sur la session côté API (user.role)
       if (authData?.user) {
         const role = (authData.user as any).role || 'customer';
-        console.log('User role:', role);
-        console.log('Auth data:', authData);
-        
         if (role === 'admin' || role === 'supervisor') {
-          console.log('Redirecting to admin dashboard');
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
           navigate('/admin');
         } else {
-          console.log('Redirecting to home');
           toast({ title: "Connexion réussie", description: "Bienvenue !" });
           navigate('/');
         }
-      } else {
-        console.log('No user data received');
       }
     } catch (error: unknown) {
       console.error('Login error:', error);
       const errorMessage = error instanceof Error ? error.message : "Une erreur s'est produite lors de la connexion";
-      toast({
-        title: "Erreur",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      
+      let userMessage = errorMessage;
+      if (errorMessage.includes('invalid credentials') || errorMessage.includes('401')) {
+        userMessage = "Email ou mot de passe incorrect.";
+      } else if (errorMessage.includes('account disabled')) {
+        userMessage = "Votre compte est désactivé. Contactez l'administrateur.";
+      } else if (errorMessage.includes('Serveur indisponible') || errorMessage.includes('fetch')) {
+        userMessage = "Le serveur est temporairement indisponible. Réessayez dans quelques instants.";
+      }
+      
+      toast({ title: "Erreur de connexion", description: userMessage, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +94,6 @@ export const AuthForm = () => {
 
   const onSignup = async (data: SignupFormData) => {
     setIsLoading(true);
-    
     try {
       const fullName = `${data.firstName} ${data.lastName}`.trim();
       await api.auth.signUp({
@@ -105,25 +102,107 @@ export const AuthForm = () => {
         options: { data: { full_name: fullName } }
       });
 
-      // Profile and role creation is now handled by database triggers
-      // No need to manually create them here
-
       toast({ title: "Inscription réussie", description: "Bienvenue dans votre espace client !" });
-
       signupForm.reset();
       navigate('/');
     } catch (error: unknown) {
       console.error('Signup error:', error);
-      const errorMessage = error instanceof Error ? error.message : "Une erreur s'est produite lors de l'inscription";
-      toast({
-        title: "Erreur",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      const errorMessage = error instanceof Error ? error.message : "Une erreur s'est produite";
+      
+      let userMessage = errorMessage;
+      if (errorMessage.includes('email already used') || errorMessage.includes('409')) {
+        userMessage = "Cet email est déjà utilisé. Essayez de vous connecter.";
+      } else if (errorMessage.includes('Serveur indisponible')) {
+        userMessage = "Le serveur est temporairement indisponible. Réessayez dans quelques instants.";
+      }
+      
+      toast({ title: "Erreur d'inscription", description: userMessage, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
+      toast({ title: "Erreur", description: "Veuillez saisir un email valide.", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      // Send reset request to backend
+      await fetch('/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      // Always show success to avoid email enumeration
+      setResetSent(true);
+      toast({ title: "Email envoyé", description: "Si cet email existe dans notre système, vous recevrez un lien de réinitialisation." });
+    } catch {
+      // Still show success to prevent enumeration
+      setResetSent(true);
+      toast({ title: "Demande prise en compte", description: "Si cet email existe, un lien de réinitialisation sera envoyé." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (showForgotPassword) {
+    return (
+      <div className="flex items-center justify-center py-12 px-4">
+        <Card className="w-full max-w-md mx-4">
+          <CardHeader className="px-4 md:px-6 pt-6 pb-4">
+            <CardTitle className="text-xl md:text-2xl text-center flex items-center justify-center space-x-2">
+              <Mail className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
+              <span>Mot de passe oublié</span>
+            </CardTitle>
+            <CardDescription className="text-center text-sm md:text-base">
+              Entrez votre adresse email pour recevoir un lien de réinitialisation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 md:px-6 pb-6 space-y-4">
+            {resetSent ? (
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  <Mail className="w-8 h-8 text-primary" />
+                </div>
+                <p className="text-muted-foreground">
+                  Si l'adresse <strong>{resetEmail}</strong> est associée à un compte, 
+                  vous recevrez un email avec les instructions de réinitialisation.
+                </p>
+                <Button variant="outline" className="w-full" onClick={() => { setShowForgotPassword(false); setResetSent(false); setResetEmail(""); }}>
+                  Retour à la connexion
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="votre@email.com"
+                    className="pl-10"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                  />
+                </div>
+                <Button className="w-full" onClick={handleForgotPassword} disabled={isLoading}>
+                  {isLoading ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours...</>
+                  ) : (
+                    "Envoyer le lien"
+                  )}
+                </Button>
+                <Button variant="ghost" className="w-full text-sm" onClick={() => { setShowForgotPassword(false); setResetSent(false); }}>
+                  ← Retour à la connexion
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center py-12 px-4">
@@ -152,16 +231,11 @@ export const AuthForm = () => {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm md:text-base">Email</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              type="email" 
-                              placeholder="votre@email.com" 
-                              className="pl-10 text-sm md:text-base"
-                              {...field} 
-                            />
+                            <Input type="email" placeholder="votre@email.com" className="pl-10" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -174,14 +248,14 @@ export const AuthForm = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm md:text-base">Mot de passe</FormLabel>
+                        <FormLabel>Mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
                               type={showPassword ? "text" : "password"}
                               placeholder="Votre mot de passe"
-                              className="pl-10 pr-10 text-sm md:text-base"
+                              className="pl-10 pr-10"
                               {...field} 
                             />
                             <Button
@@ -191,11 +265,7 @@ export const AuthForm = () => {
                               className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                               onClick={() => setShowPassword(!showPassword)}
                             >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                           </div>
                         </FormControl>
@@ -204,16 +274,19 @@ export const AuthForm = () => {
                     )}
                   />
 
-                  <Button 
-                    type="submit" 
-                    className="w-full text-sm md:text-base py-2 md:py-3" 
-                    disabled={isLoading}
-                  >
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Connexion...
-                      </>
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connexion...</>
                     ) : (
                       "Se connecter"
                     )}
@@ -231,23 +304,22 @@ export const AuthForm = () => {
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm md:text-base">Prénom</FormLabel>
+                          <FormLabel>Prénom</FormLabel>
                           <FormControl>
-                            <Input placeholder="Prénom" {...field} className="text-sm md:text-base" />
+                            <Input placeholder="Prénom" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
                     <FormField
                       control={signupForm.control}
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm md:text-base">Nom</FormLabel>
+                          <FormLabel>Nom</FormLabel>
                           <FormControl>
-                            <Input placeholder="Nom" {...field} className="text-sm md:text-base" />
+                            <Input placeholder="Nom" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -260,16 +332,11 @@ export const AuthForm = () => {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm md:text-base">Email</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              type="email" 
-                              placeholder="votre@email.com"
-                              className="pl-10 text-sm md:text-base"
-                              {...field} 
-                            />
+                            <Input type="email" placeholder="votre@email.com" className="pl-10" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -282,14 +349,14 @@ export const AuthForm = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm md:text-base">Mot de passe</FormLabel>
+                        <FormLabel>Mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
                               type={showPassword ? "text" : "password"}
                               placeholder="Mot de passe (min. 6 caractères)"
-                              className="pl-10 text-sm md:text-base"
+                              className="pl-10"
                               {...field} 
                             />
                           </div>
@@ -304,14 +371,14 @@ export const AuthForm = () => {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm md:text-base">Confirmer le mot de passe</FormLabel>
+                        <FormLabel>Confirmer le mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
                               type={showPassword ? "text" : "password"}
                               placeholder="Confirmez votre mot de passe"
-                              className="pl-10 text-sm md:text-base"
+                              className="pl-10"
                               {...field} 
                             />
                           </div>
@@ -321,18 +388,9 @@ export const AuthForm = () => {
                     )}
                   />
 
-                  {/* Champ isAdmin supprimé pour éviter l'élévation de privilèges côté client */}
-
-                  <Button 
-                    type="submit" 
-                    className="w-full text-sm md:text-base py-2 md:py-3" 
-                    disabled={isLoading}
-                  >
+                  <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Inscription...
-                      </>
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inscription...</>
                     ) : (
                       "S'inscrire"
                     )}

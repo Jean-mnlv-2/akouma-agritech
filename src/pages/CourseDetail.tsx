@@ -89,13 +89,27 @@ const CourseDetail = () => {
     fetchCourse();
   }, [id]);
 
-  const handleEnrollment = (formData: any) => {
-    console.log("Enrollment data:", formData);
-    setEnrolled(true);
-    toast({
-      title: "Inscription réussie !",
-      description: "Vous êtes maintenant inscrit au cours. Vous recevrez un email de confirmation.",
-    });
+  const handleEnrollment = async (formData: any) => {
+    try {
+      const res = await fetch('/api/contact_messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          project_type: `Inscription cours: ${course?.title}`,
+          message: `Motivation: ${formData.motivation || '—'}. Expérience: ${formData.experience || '—'}`,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setEnrolled(true);
+      toast({ title: "Inscription réussie !", description: "Vous recevrez un email de confirmation." });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erreur", description: "Impossible de s'inscrire. Réessayez.", variant: "destructive" });
+    }
   };
 
   const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(price);
