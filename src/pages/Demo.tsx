@@ -3,19 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PlayCircle, Smartphone, Monitor, Calendar, Phone, Download, ArrowLeft, CheckCircle } from "lucide-react";
+import { PlayCircle, Smartphone, Monitor, Calendar, Phone, Download, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useToast } from "@/hooks/use-toast";
 
 const Demo = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     company: "",
+    country: "",
     message: ""
   });
 
@@ -46,17 +51,41 @@ const Demo = () => {
     }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simuler l'envoi
-    console.log("Demo request:", { ...formData, demoType: selectedDemo });
-    alert("Votre demande de démo a été envoyée ! Nous vous contacterons sous 24h.");
+    if (!formData.name || !formData.email) {
+      toast({ title: "Erreur", description: "Nom et email sont requis.", variant: "destructive" });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/demo_requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          company: formData.company || null,
+          country: formData.country || 'Non spécifié',
+          message: `${selectedDemo ? `Type de démo: ${selectedDemo}. ` : ''}${formData.message}`,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: "Demande envoyée !", description: "Nous vous contacterons sous 24h pour planifier votre démonstration." });
+      setFormData({ name: "", email: "", phone: "", company: "", country: "", message: "" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erreur", description: "Impossible d'envoyer la demande. Réessayez.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDownloadBrochure = () => {
-    // Simuler le téléchargement
     const link = document.createElement('a');
-    link.href = '/demo-brochure-akouma.pdf'; // URL fictive
+    link.href = '/demo-brochure-akouma.pdf';
     link.download = 'AKOUMA-Brochure-Solutions.pdf';
     link.click();
   };
@@ -66,13 +95,11 @@ const Demo = () => {
       <Header />
       
       <div className="container mx-auto px-6 py-12">
-        {/* Back button */}
         <Link to="/" className="inline-flex items-center text-primary hover:text-primary/80 mb-8">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour à l'accueil
         </Link>
 
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
             Découvrez AKOUMA en Action
@@ -83,7 +110,6 @@ const Demo = () => {
           </p>
         </div>
 
-        {/* Demo options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           {demoOptions.map((demo) => (
             <Card 
@@ -97,12 +123,10 @@ const Demo = () => {
                 <demo.icon className="w-12 h-12 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">{demo.title}</h3>
                 <p className="text-muted-foreground mb-4">{demo.description}</p>
-                <div className="text-sm text-primary font-medium mb-4">
-                  Durée: {demo.duration}
-                </div>
+                <div className="text-sm text-primary font-medium mb-4">Durée: {demo.duration}</div>
                 <div className="space-y-2">
                   {demo.features.map((feature, index) => (
-                    <div key={`demo-${demo.id}-feature-${index}-${feature.slice(0, 15)}`} className="flex items-center text-sm text-muted-foreground">
+                    <div key={`demo-${demo.id}-feature-${index}`} className="flex items-center text-sm text-muted-foreground">
                       <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
                       {feature}
                     </div>
@@ -113,9 +137,7 @@ const Demo = () => {
           ))}
         </div>
 
-        {/* Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Request demo form */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -125,43 +147,41 @@ const Demo = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  placeholder="Nom complet *"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-                <Input
-                  type="email"
-                  placeholder="Email *"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
-                <Input
-                  placeholder="Téléphone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-                <Input
-                  placeholder="Entreprise"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                />
-                <Textarea
-                  placeholder="Parlez-nous de vos besoins..."
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                />
-                <Button type="submit" className="w-full" disabled={!selectedDemo}>
-                  <Phone className="w-4 h-4 mr-2" />
-                  Planifier un appel
+                <div>
+                  <Label>Nom complet *</Label>
+                  <Input placeholder="Votre nom" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                </div>
+                <div>
+                  <Label>Email *</Label>
+                  <Input type="email" placeholder="votre@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+                </div>
+                <div>
+                  <Label>Téléphone</Label>
+                  <Input placeholder="+226 XX XX XX XX" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Entreprise</Label>
+                  <Input placeholder="Votre entreprise" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Pays *</Label>
+                  <Input placeholder="Votre pays" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} required />
+                </div>
+                <div>
+                  <Label>Message</Label>
+                  <Textarea placeholder="Parlez-nous de vos besoins..." value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} />
+                </div>
+                <Button type="submit" className="w-full" disabled={!selectedDemo || isSubmitting}>
+                  {isSubmitting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours...</>
+                  ) : (
+                    <><Phone className="w-4 h-4 mr-2" />Planifier un appel</>
+                  )}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          {/* Quick actions */}
           <div className="space-y-6">
             <Card>
               <CardContent className="p-6">

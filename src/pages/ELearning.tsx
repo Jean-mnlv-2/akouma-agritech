@@ -136,10 +136,33 @@ const ELearning = () => {
   }, [selectedCategory, searchQuery]);
 
   const handleRegistration = async () => {
+    if (!registerForm.name || !registerForm.email) {
+      toast({ title: "Erreur", description: "Nom et email sont requis.", variant: "destructive" });
+      return;
+    }
     setIsRegistering(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsRegistering(false);
+    try {
+      const res = await fetch('/api/contact_messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: registerForm.name,
+          email: registerForm.email,
+          phone: registerForm.phone || null,
+          project_type: 'Inscription E-Learning',
+          message: `Inscription E-Learning. Pays: ${registerForm.country || 'Non spécifié'}`,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: "Inscription enregistrée !", description: "Vous serez contacté avec vos accès sous 24h." });
+      setRegisterForm({ name: '', email: '', country: '', phone: '' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erreur", description: "Impossible d'envoyer l'inscription. Réessayez.", variant: "destructive" });
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   const filteredCourses = courses.filter(course => {
