@@ -2,143 +2,129 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Filter, BookOpen, Video, Headphones, Radio, PlayCircle, Award, Users, Clock, UserPlus } from "lucide-react";
+import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, Star, CheckCircle, Radio } from "lucide-react";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import AdSpace from "@/components/AdSpace";
 import ContentSubmission from "@/components/ContentSubmission";
-import OfflineButton from "@/components/OfflineButton";
 import elearningHero from "@/assets/elearning-hero.jpg";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
 import logoAk from "@/assets/logo-ak.png";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/i18n/i18n";
 import DOMPurify from 'dompurify';
 import countryList from 'react-select-country-list';
 import TitleManager from "@/components/TitleManager";
+import { Link } from "react-router-dom";
 
-// Définir un type UI strict pour les cours
 interface UICourse {
   id: string;
   title: string;
   description: string;
   price: string;
   category: string;
+  level: string;
+  duration: string;
+  students: number;
+  rating: number;
+  isCertifying: boolean;
+  thumbnail: string;
+  instructor: string;
 }
 
 const ELearning = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Tous");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const itemsPerPage = 6;
   const [courses, setCourses] = useState<UICourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [showEnrollPopup, setShowEnrollPopup] = useState(false);
   const { toast } = useToast();
+  const { t } = useI18n();
 
-  const categories = ["Tous", "Agriculture", "Irrigation", "Maladies des plantes", "Techniques modernes", "Gestion"];
+  const categories = [
+    t("elearning.categories.all"),
+    t("elearning.categories.agriculture"),
+    t("elearning.categories.irrigation"),
+    t("elearning.categories.diseases"),
+    t("elearning.categories.techniques"),
+    t("elearning.categories.management"),
+  ];
+
+  const [liveStreams, setLiveStreams] = useState<any[]>([]);
+  const [_loadingStreams, setLoadingStreams] = useState(true);
 
   useEffect(() => {
     const fetchCourses = async () => {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await api
-          .from('courses')
-          .select('*')
-          .order('created_at', { ascending: false });
-
+        const { data, error } = await api.from('courses').select('*').order('created_at', { ascending: false });
         if (error) throw error;
-        
         setCourses((data || []).map((c: any) => ({
           id: String(c.id ?? ''),
           title: String(c.title ?? ''),
           description: String(c.description ?? ''),
-          price: String(c.price ?? ''),
-          category: String(c.category ?? '')
+          price: String(c.price ?? 'Gratuit'),
+          category: String(c.category ?? ''),
+          level: String(c.level ?? 'Débutant'),
+          duration: String(c.duration ?? '—'),
+          students: Number(c.students ?? c.enrollmentsCount ?? 0),
+          rating: Number(c.rating ?? 4.5),
+          isCertifying: Boolean(c.isCertifying ?? c.is_certifying ?? true),
+          thumbnail: String(c.thumbnailUrl ?? c.image_url ?? courseThumbnail),
+          instructor: String(c.instructor ?? c.instructorName ?? 'AKOUMA Team'),
         })));
-      } catch (err) {
-        setError("Erreur lors du chargement des cours.");
+      } catch {
+        setError(t("elearning.error"));
         setCourses([]);
       }
       setLoading(false);
     };
+
+    const fetchLiveStreams = async () => {
+      try {
+        setLoadingStreams(true);
+        const { data, error } = await api.from('live_streams').select('*').order('scheduledTime', { ascending: true });
+        if (error) throw error;
+        setLiveStreams(data || []);
+      } catch {
+        // silent
+      } finally {
+        setLoadingStreams(false);
+      }
+    };
+
     fetchCourses();
     fetchLiveStreams();
-    fetchStats();
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      setLoadingStats(true);
-      const { data, error } = await api
-        .from('elearning_stats')
-        .select('*')
-        .order('createdAt', { ascending: true });
+  const filteredCourses = courses.filter(course => {
+    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         course.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === t("elearning.categories.all") || selectedCategory === "Tous" || course.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-      if (error) throw error;
-      setStats(data || []);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-      // Fallback to default stats if API fails
-      setStats([
-        { icon: BookOpen, value: "150+", label: "Cours disponibles" },
-        { icon: Users, value: "5000+", label: "Étudiants actifs" },
-        { icon: Award, value: "98%", label: "Taux de satisfaction" },
-        { icon: Clock, value: "24/7", label: "Accès illimité" }
-      ]);
-    } finally {
-      setLoadingStats(false);
-    }
+  const allCountries = countryList().getData();
+  const [registerForm, setRegisterForm] = useState({ name: '', email: '', country: '', phone: '', activity: '' });
+  
+  const getCountryDialCode = (countryName: string) => {
+    const map: Record<string, string> = {
+      'Cameroun': '+237', "Côte d'Ivoire": '+225', 'Burkina Faso': '+226', 'Mali': '+223',
+      'Sénégal': '+221', 'Bénin': '+229', 'France': '+33', 'Nigeria': '+234', 'Ghana': '+233',
+    };
+    return map[countryName] || '+XXX';
   };
-
-  const fetchLiveStreams = async () => {
-    try {
-      setLoadingStreams(true);
-      const { data, error } = await api
-        .from('live_streams')
-        .select('*')
-        .order('scheduledTime', { ascending: true });
-
-      if (error) throw error;
-      setLiveStreams(data || []);
-    } catch (error) {
-      console.error('Error fetching live streams:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de charger les live streams',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingStreams(false);
-    }
-  };
-
-  const [liveStreams, setLiveStreams] = useState<any[]>([]);
-  const [loadingStreams, setLoadingStreams] = useState(true);
-  const [stats, setStats] = useState<any[]>([]);
-  const [loadingStats, setLoadingStats] = useState(true);
-
-  // Simulate loading
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [selectedCategory, searchQuery]);
 
   const handleRegistration = async () => {
     if (!registerForm.name || !registerForm.email) {
-      toast({ title: "Erreur", description: "Nom et email sont requis.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("elearning.register.required"), variant: "destructive" });
       return;
     }
     setIsRegistering(true);
@@ -152,525 +138,430 @@ const ELearning = () => {
           email: registerForm.email,
           phone: registerForm.phone || null,
           project_type: 'Inscription E-Learning',
-          message: `Inscription E-Learning. Pays: ${registerForm.country || 'Non spécifié'}`,
+          message: `Pays: ${registerForm.country || 'N/A'}. Activité: ${registerForm.activity || 'N/A'}`,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      toast({ title: "Inscription enregistrée !", description: "Vous serez contacté avec vos accès sous 24h." });
-      setRegisterForm({ name: '', email: '', country: '', phone: '' });
-    } catch (err) {
-      console.error(err);
-      toast({ title: "Erreur", description: "Impossible d'envoyer l'inscription. Réessayez.", variant: "destructive" });
+      toast({ title: t("elearning.register.success"), description: t("elearning.register.success_desc") });
+      setRegisterForm({ name: '', email: '', country: '', phone: '', activity: '' });
+    } catch {
+      toast({ title: t("common.error"), description: t("elearning.register.error"), variant: "destructive" });
     } finally {
       setIsRegistering(false);
     }
   };
 
-  const filteredCourses = courses.filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         course.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "Tous" || course.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Pagination for courses
-  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedCourses = filteredCourses.slice(startIndex, startIndex + itemsPerPage);
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCategory]);
-
-  const allCountries = countryList().getData();
-  const [registerForm, setRegisterForm] = useState({
-    name: '',
-    email: '',
-    country: '',
-    phone: ''
-  });
-  const getCountryDialCode = (countryName: string) => {
-    const countryCodeMap: { [key: string]: string } = {
-      'Cameroun': '+237',
-      'Côte d\'Ivoire': '+225',
-      'Burkina Faso': '+226',
-      'Mali': '+223',
-      'Sénégal': '+221',
-      'Bénin': '+229',
-      'Togo': '+228',
-      'Guinée': '+224',
-      'France': '+33',
-      'États-Unis': '+1',
-      'Canada': '+1',
-      'Royaume-Uni': '+44',
-      'Allemagne': '+49',
-      'Belgique': '+32',
-      'Suisse': '+41',
-      'Nigeria': '+234',
-      'Ghana': '+233',
-      'Maroc': '+212',
-      'Tunisie': '+216',
-      'Algérie': '+213',
-      'Égypte': '+20',
-      'Afrique du Sud': '+27',
-      'Kenya': '+254',
-      'Ouganda': '+256',
-      'Tanzanie': '+255',
-      'Rwanda': '+250',
-      'Burundi': '+257',
-      'Madagascar': '+261',
-      'Maurice': '+230',
-      'Seychelles': '+248'
-    };
-    
-    return countryCodeMap[countryName] || '+XXX';
+  const getLevelColor = (level: string) => {
+    switch (level.toLowerCase()) {
+      case 'débutant': case 'beginner': return 'bg-green-100 text-green-800 border-green-300';
+      case 'intermédiaire': case 'intermediate': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'avancé': case 'advanced': return 'bg-red-100 text-red-800 border-red-300';
+      default: return 'bg-muted text-muted-foreground border-border';
+    }
   };
 
+  const freePreviewContent = [
+    {
+      icon: Video,
+      title: t("elearning.preview.video1"),
+      desc: t("elearning.preview.video1_desc"),
+      type: "video",
+      duration: "12 min",
+    },
+    {
+      icon: Video,
+      title: t("elearning.preview.video2"),
+      desc: t("elearning.preview.video2_desc"),
+      type: "video",
+      duration: "8 min",
+    },
+    {
+      icon: Download,
+      title: t("elearning.preview.pdf"),
+      desc: t("elearning.preview.pdf_desc"),
+      type: "pdf",
+    },
+  ];
+
+  const stats = [
+    { icon: BookOpen, value: "150+", label: t("elearning.stat.courses") },
+    { icon: Users, value: "5000+", label: t("elearning.stat.students") },
+    { icon: Award, value: "98%", label: t("elearning.stat.satisfaction") },
+    { icon: Clock, value: "24/7", label: t("elearning.stat.access") },
+  ];
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <TitleManager
-        title="E-Learning"
-        description="Formations agricoles, webinaires et ressources pour révolutionner vos pratiques."
+        title={t("elearning.meta.title")}
+        description={t("elearning.meta.desc")}
         canonical={window.location.origin + '/elearning'}
         image={logoAk}
       />
       <Header />
       
-      {/* Hero Section - Modern Design */}
+      {/* Hero Section */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
-          <img 
-            src={elearningHero} 
-            alt="E-learning AKOUMA"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/50"></div>
-          {/* Animated background decorations */}
+          <img src={elearningHero} alt={t("elearning.hero.alt")} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/50"></div>
           <div className="absolute top-20 right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
         
-        <div className="relative container mx-auto px-6 z-10">
+        <div className="relative container mx-auto px-4 sm:px-6 z-10">
           <div className="max-w-4xl">
-            <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border border-primary/30 hover:scale-105 transition-transform">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Formation Agricole Professionnelle
+            <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border border-primary/30">
+              <GraduationCap className="w-4 h-4 mr-2" />
+              {t("elearning.hero.badge")}
             </Badge>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-              Plateforme d'<span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">E-Learning</span> Agricole
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              {t("elearning.hero.title").split("E-Learning")[0]}
+              <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">E-Learning</span>
+              {t("elearning.hero.title").split("E-Learning")[1] || ""}
             </h1>
-            <p className="text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
-              Accédez à des formations de qualité, des webinaires en direct et des ressources 
-              complètes pour révolutionner vos pratiques agricoles.
+            <p className="text-lg sm:text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
+              {t("elearning.hero.desc")}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="lg" variant="nature" className="text-lg px-8 focus-visible:ring-4 focus-visible:ring-primary/40 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/30" aria-label="S'inscrire maintenant">
+                  <Button size="lg" variant="nature" className="text-lg px-8 hover:scale-105 transition-all">
                     <UserPlus className="w-5 h-5 mr-2" />
-                    S'inscrire maintenant
+                    {t("elearning.register")}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Inscription à AKOUMA E-Learning</DialogTitle>
-                    <DialogDescription>
-                      Rejoignez notre plateforme et accédez à plus de 150 cours agricoles
-                    </DialogDescription>
+                    <DialogTitle>{t("elearning.register.title")}</DialogTitle>
+                    <DialogDescription>{t("elearning.register.desc")}</DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Nom complet</label>
-                      <Input placeholder="Votre nom complet" value={registerForm.name} onChange={e => setRegisterForm(f => ({ ...f, name: e.target.value }))} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Email</label>
-                      <Input type="email" placeholder="votre@email.com" value={registerForm.email} onChange={e => setRegisterForm(f => ({ ...f, email: e.target.value }))} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Pays</label>
-                      <select
-                        className="w-full border rounded px-3 py-2 bg-background"
-                        value={registerForm.country}
-                        onChange={e => setRegisterForm(f => ({ ...f, country: e.target.value }))}
-                      >
-                        <option value="">Sélectionnez votre pays</option>
-                        {allCountries.map((c) => (
-                          <option key={c.value} value={c.label}>{c.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Téléphone</label>
-                      <div className="flex space-x-2">
-                        <div className="w-24 text-sm text-muted-foreground flex items-center justify-center border rounded-md bg-muted">
-                          {registerForm.country ? getCountryDialCode(registerForm.country) : '+XXX'}
-                        </div>
-                        <Input
-                          placeholder="Numéro de téléphone"
-                          value={registerForm.phone}
-                          onChange={e => setRegisterForm(f => ({ ...f, phone: e.target.value }))}
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      className="w-full" 
-                      onClick={handleRegistration}
-                      disabled={isRegistering}
-                    >
-                      {isRegistering ? "Inscription en cours..." : "S'inscrire gratuitement"}
-                    </Button>
-                  </div>
+                  <RegistrationForm
+                    form={registerForm}
+                    setForm={setRegisterForm}
+                    countries={allCountries}
+                    getDialCode={getCountryDialCode}
+                    onSubmit={handleRegistration}
+                    isLoading={isRegistering}
+                    t={t}
+                  />
                 </DialogContent>
               </Dialog>
-              <Button size="lg" variant="outline" className="text-lg px-8 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white/20 hover:border-white/50 focus-visible:ring-4 focus-visible:ring-accent/40 transition-all duration-300 hover:scale-105 hover:shadow-lg" aria-label="Parcourir les cours">
+              <Button size="lg" variant="outline" className="text-lg px-8 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white/20 hover:scale-105 transition-all" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
                 <PlayCircle className="w-5 h-5 mr-2" />
-                Parcourir les cours
+                {t("elearning.browse")}
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section - Enhanced */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-10 right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 left-10 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        
-        <div className="container mx-auto px-6 relative z-10">
-          {loadingStats ? (
-            <div className="flex items-center justify-center py-12">
-              <LoadingSpinner size="large" text="Chargement des statistiques..." />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-              {stats.map((stat, index) => {
-                const getIcon = (iconName: string) => {
-                  switch (iconName?.toLowerCase()) {
-                    case 'bookopen': return BookOpen;
-                    case 'users': return Users;
-                    case 'award': return Award;
-                    case 'clock': return Clock;
-                    default: return BookOpen;
-                  }
-                };
-                const IconComponent = getIcon(stat.icon);
-                const delay = index * 100;
-                const colors = [
-                  "from-blue-500 to-cyan-500",
-                  "from-green-500 to-emerald-500",
-                  "from-yellow-500 to-orange-500",
-                  "from-purple-500 to-pink-500"
-                ];
-                
-                return (
-                  <div 
-                    key={`stat-${index}-${stat.label}`} 
-                    className="text-center group hover:scale-105 transition-all duration-300"
-                    style={{ transitionDelay: `${delay}ms` }}
-                  >
-                    <div className={`w-20 h-20 bg-gradient-to-br ${colors[index % colors.length]} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg`}>
-                      <IconComponent className="w-10 h-10 text-white" />
-                    </div>
-                    <div className={`text-4xl font-bold bg-gradient-to-r ${colors[index % colors.length]} bg-clip-text text-transparent mb-2`}>{stat.value}</div>
-                    <div className="text-muted-foreground font-medium">{stat.label}</div>
+      {/* Stats */}
+      <section className="py-16 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {stats.map((stat, i) => {
+              const colors = ["from-blue-500 to-cyan-500", "from-green-500 to-emerald-500", "from-yellow-500 to-orange-500", "from-purple-500 to-pink-500"];
+              return (
+                <div key={i} className="text-center group hover:scale-105 transition-all duration-300">
+                  <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br ${colors[i]} rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:rotate-3 transition-all shadow-lg`}>
+                    <stat.icon className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                   </div>
-                );
-              })}
-            </div>
-          )}
-          
-          {/* Ad Banner */}
-          <div className="mt-12">
-            <AdSpace 
-              size="banner" 
-              title="Partenaire officiel - TechnoAgri Solutions"
-              description="Découvrez nos formations avancées en agriculture de précision"
-              buttonText="Découvrir"
-            />
+                  <div className={`text-2xl sm:text-4xl font-bold bg-gradient-to-r ${colors[i]} bg-clip-text text-transparent mb-1`}>{stat.value}</div>
+                  <div className="text-sm sm:text-base text-muted-foreground font-medium">{stat.label}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Content Submission Section - Enhanced */}
-      <section className="py-20 bg-gradient-to-br from-green-50/50 via-blue-50/30 to-background relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
-        
-        <div className="container mx-auto px-6 relative z-10">
+      {/* Free Preview Section */}
+      <section className="py-16 sm:py-20 bg-gradient-to-br from-green-50/50 via-background to-primary/5 dark:from-green-950/20">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-400">
+              <Eye className="w-4 h-4 mr-2" />
+              {t("elearning.preview.badge")}
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              {t("elearning.preview.title")}
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t("elearning.preview.subtitle")}
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {freePreviewContent.map((item, i) => (
+              <Card key={i} className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 border-2 border-border overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <CardHeader className="relative z-10">
+                  <div className={`w-14 h-14 ${item.type === 'pdf' ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-primary to-accent'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-lg`}>
+                    <item.icon className="w-7 h-7 text-white" />
+                  </div>
+                  <CardTitle className="text-lg group-hover:text-primary transition-colors">{item.title}</CardTitle>
+                  <CardDescription>{item.desc}</CardDescription>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  {item.duration && (
+                    <div className="flex items-center text-sm text-muted-foreground mb-3">
+                      <Clock className="w-4 h-4 mr-1" /> {item.duration}
+                    </div>
+                  )}
+                  <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                    {item.type === 'pdf' ? (
+                      <><Download className="w-4 h-4 mr-2" />{t("elearning.preview.download")}</>
+                    ) : (
+                      <><PlayCircle className="w-4 h-4 mr-2" />{t("elearning.preview.watch")}</>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Course Catalog */}
+      <section id="courses-section" className="py-16 sm:py-20">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              {t("elearning.catalog.title")}
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t("elearning.catalog.subtitle")}
+            </p>
+          </div>
+
+          {/* Search & Filters */}
+          <div className="mb-8 space-y-4">
+            <div className="relative max-w-md mx-auto">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                placeholder={t("elearning.search")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-12 text-base border-2 focus:border-primary transition-colors"
+              />
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {categories.map((cat) => (
+                <Button
+                  key={cat}
+                  variant={selectedCategory === cat ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(cat)}
+                  className="transition-all hover:scale-105"
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Course Grid */}
+          {loading ? (
+            <LoadingSpinner size="large" text={t("elearning.loading")} />
+          ) : error ? (
+            <div className="text-center py-12 text-destructive">{error}</div>
+          ) : filteredCourses.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">{t("elearning.none")}</h3>
+              <p className="text-muted-foreground">{t("elearning.none_desc")}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {filteredCourses.map((course, index) => (
+                <Card key={course.id} className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 border-2 border-border overflow-hidden" style={{ transitionDelay: `${index * 50}ms` }}>
+                  {/* Thumbnail */}
+                  <div className="relative overflow-hidden h-48">
+                    <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    {/* Badges */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-2">
+                      <Badge className={`${getLevelColor(course.level)} text-xs font-semibold border`}>{course.level}</Badge>
+                      {course.isCertifying && (
+                        <Badge className="bg-yellow-500 text-white text-xs border-yellow-600">
+                          <Award className="w-3 h-3 mr-1" />
+                          {t("elearning.certifying")}
+                        </Badge>
+                      )}
+                    </div>
+                    {course.price === "Gratuit" && (
+                      <Badge className="absolute top-3 right-3 bg-green-500 text-white">{t("elearning.free")}</Badge>
+                    )}
+                    {/* Play overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                        <PlayCircle className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="outline" className="text-xs">{course.category || t("elearning.category")}</Badge>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        <span className="font-semibold">{course.rating}</span>
+                      </div>
+                    </div>
+                    <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2">
+                      {course.title}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2 text-sm">
+                      <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="pt-0">
+                    {/* Meta info */}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3 flex-wrap">
+                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{course.duration}</span>
+                      <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{course.students} {t("elearning.students_label")}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground mb-3 flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5" /> {course.instructor}
+                    </div>
+
+                    {/* Price & Actions */}
+                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                      <span className="text-xl font-bold text-primary">{course.price === "Gratuit" || course.price === "0" ? t("elearning.free") : `${course.price} FCFA`}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <Button variant="outline" size="sm" asChild className="hover:scale-105 transition-transform">
+                        <Link to={`/elearning/${course.id}`}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          {t("elearning.view_program")}
+                        </Link>
+                      </Button>
+                      <Button size="sm" onClick={() => setShowEnrollPopup(true)} className="hover:scale-105 transition-transform">
+                        <UserPlus className="w-4 h-4 mr-1" />
+                        {t("elearning.enroll")}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Content Submission */}
+      <section className="py-16 bg-gradient-to-br from-green-50/50 via-blue-50/30 to-background dark:from-green-950/20 dark:via-blue-950/10">
+        <div className="container mx-auto px-4 sm:px-6">
           <ContentSubmission />
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="py-16">
-        <div className="container mx-auto px-6">
-          <Tabs defaultValue="courses" className="w-full">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 space-y-4 lg:space-y-0">
-              <TabsList className="grid w-full lg:w-auto grid-cols-4 lg:grid-cols-4">
-                <TabsTrigger value="courses" className="flex items-center space-x-2">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Cours</span>
-                </TabsTrigger>
-                <TabsTrigger value="videos" className="flex items-center space-x-2">
-                  <Video className="w-4 h-4" />
-                  <span>Vidéos</span>
-                </TabsTrigger>
-                <TabsTrigger value="podcasts" className="flex items-center space-x-2">
-                  <Headphones className="w-4 h-4" />
-                  <span>Podcasts</span>
-                </TabsTrigger>
-                <TabsTrigger value="live" className="flex items-center space-x-2">
-                  <Radio className="w-4 h-4" />
-                  <span>Live</span>
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Search and Filter */}
-              <div className="flex space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Rechercher un cours..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-64"
-                  />
-                </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filtres
-                </Button>
-              </div>
-            </div>
-
-            {/* Categories */}
-            <div className="flex flex-wrap gap-2 mb-8">
-              {categories.map((category) => (
-                <Badge
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </Badge>
+      {/* Live Streams */}
+      {liveStreams.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4 sm:px-6">
+            <h2 className="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <Radio className="w-6 h-6 inline mr-2 text-red-500" />
+              {t("elearning.tabs.live")}
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {liveStreams.map((stream) => (
+                <LiveStream
+                  key={stream.id}
+                  id={stream.id.toString()}
+                  title={stream.title}
+                  instructor={stream.instructorName || t("elearning.instructor")}
+                  scheduledTime={stream.scheduledTime ? new Date(stream.scheduledTime).toLocaleString('fr-FR') : t("elearning.scheduled")}
+                  duration={stream.durationMinutes ? `${stream.durationMinutes}min` : t("elearning.duration")}
+                  viewers={stream.viewerCount || 0}
+                  isLive={stream.isLive}
+                  description={stream.description || ''}
+                  thumbnail={stream.thumbnailUrl || courseThumbnail}
+                  category={stream.category || t("elearning.category")}
+                  platform="youtube"
+                  url={stream.streamUrl}
+                />
               ))}
             </div>
+          </div>
+        </section>
+      )}
 
-            <TabsContent value="courses" className="space-y-8">
-              {loading ? (
-                <LoadingSpinner size="large" text="Chargement des cours..." />
-              ) : error ? (
-                <div className="text-center py-12 text-destructive">{error}</div>
-              ) : paginatedCourses.length === 0 ? (
-                <div className="text-center py-12">
-                  <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Aucun cours trouvé</h3>
-                  <p className="text-muted-foreground">
-                    Essayez de modifier vos critères de recherche ou de filtrage.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                    {paginatedCourses.map((course, index) => {
-                      const delay = index * 50;
-                      return (
-                        <div 
-                          key={course.id} 
-                          className="relative group"
-                          style={{ transitionDelay: `${delay}ms` }}
-                        >
-                          <Card className="hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <CardHeader className="relative z-10">
-                              <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
-                                <BookOpen className="w-6 h-6 text-white" />
-                              </div>
-                              <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors mb-3">
-                                {course.title}
-                              </CardTitle>
-                              <CardDescription className="text-sm leading-relaxed">
-                                <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="relative z-10">
-                              <p className="text-lg font-semibold text-primary mb-4">
-                                Prix: {course.price}
-                              </p>
-                              <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                                Découvrir le cours
-                              </Button>
-                            </CardContent>
-                            {course.price === "Gratuit" && (
-                              <div className="absolute top-2 right-2 z-10">
-                                <OfflineButton
-                                  id={course.id}
-                                  title={course.title}
-                                  content={course.description}
-                                  type="course"
-                                  size="sm"
-                                />
-                              </div>
-                            )}
-                          </Card>
-                        </div>
-                      );
-                    })}
-                  </div>
-                   
-                  {totalPages > 1 && (
-                    <>
-                      <div className="mb-8">
-                        <AdSpace 
-                          size="inline" 
-                          title="Nouveau ! Cours d'agriculture biologique"
-                          description="Apprenez les techniques durables avec nos experts certifiés"
-                          buttonText="S'inscrire maintenant"
-                        />
-                      </div>
-                      <div className="flex justify-center">
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious 
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  if (currentPage > 1) setCurrentPage(currentPage - 1);
-                                }}
-                                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                              />
-                            </PaginationItem>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                              <PaginationItem key={page}>
-                                <PaginationLink
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    setCurrentPage(page);
-                                  }}
-                                  isActive={currentPage === page}
-                                >
-                                  {page}
-                                </PaginationLink>
-                              </PaginationItem>
-                            ))}
-                            <PaginationItem>
-                              <PaginationNext 
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                                }}
-                                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </TabsContent>
-
-            <TabsContent value="videos" className="space-y-8">
-              {isLoading ? (
-                <LoadingSpinner size="large" text="Chargement des vidéos..." />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {paginatedCourses.map((course) => (
-                    <Card key={course.id} className="hover:shadow-elegant transition-shadow">
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                          <Video className="w-5 h-5 text-primary" />
-                          <span>{course.title}</span>
-                        </CardTitle>
-                        <CardDescription className="text-sm">
-                          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }} />
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button variant="outline" className="w-full">
-                          Voir la vidéo
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="podcasts" className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card className="hover:shadow-elegant transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Headphones className="w-5 h-5 text-primary" />
-                      <span>Podcasts agricoles</span>
-                    </CardTitle>
-                    <CardDescription>
-                      Écoutez nos experts parler des dernières innovations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      Contenu podcast à venir...
-                    </p>
-                    <Button variant="outline" className="w-full">
-                      Bientôt disponible
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="live" className="space-y-8">
-              {loadingStreams ? (
-                <LoadingSpinner size="large" text="Chargement des live streams..." />
-              ) : liveStreams.length === 0 ? (
-                <div className="text-center py-12">
-                  <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Aucun live stream disponible</h3>
-                  <p className="text-muted-foreground">
-                    Aucun live stream n'est programmé pour le moment.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {liveStreams.map((stream) => (
-                    <LiveStream 
-                      key={stream.id} 
-                      id={stream.id.toString()}
-                      title={stream.title}
-                      instructor={stream.instructorName || 'Instructeur non renseigné'}
-                      scheduledTime={stream.scheduledTime ? new Date(stream.scheduledTime).toLocaleString('fr-FR') : 'Non programmé'}
-                      duration={stream.durationMinutes ? `${stream.durationMinutes}min` : 'Non renseigné'}
-                      viewers={stream.viewerCount || 0}
-                      isLive={stream.isLive}
-                      description={stream.description || ''}
-                      thumbnail={stream.thumbnailUrl || courseThumbnail}
-                      category={stream.category || 'Général'}
-                      platform="youtube"
-                      url={stream.streamUrl}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
-      </section>
+      {/* Enrollment Popup */}
+      <Dialog open={showEnrollPopup} onOpenChange={setShowEnrollPopup}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-primary" />
+              {t("elearning.enroll_popup.title")}
+            </DialogTitle>
+            <DialogDescription>{t("elearning.enroll_popup.desc")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-primary/5 rounded-lg p-4 text-center">
+              <CheckCircle className="w-10 h-10 text-primary mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">{t("elearning.enroll_popup.benefit")}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" asChild>
+                <Link to="/auth">{t("elearning.enroll_popup.login")}</Link>
+              </Button>
+              <Button asChild>
+                <Link to="/auth">{t("elearning.enroll_popup.signup")}</Link>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
   );
 };
+
+// Registration Form Component
+const RegistrationForm = ({ form, setForm, countries, getDialCode, onSubmit, isLoading, t }: any) => (
+  <div className="space-y-4">
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{t("elearning.register.name")}</label>
+      <Input placeholder={t("elearning.register.name_placeholder")} value={form.name} onChange={e => setForm((f: any) => ({ ...f, name: e.target.value }))} />
+    </div>
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{t("elearning.register.email")}</label>
+      <Input type="email" placeholder={t("elearning.register.email_placeholder")} value={form.email} onChange={e => setForm((f: any) => ({ ...f, email: e.target.value }))} />
+    </div>
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{t("elearning.register.country")}</label>
+      <select className="w-full border rounded px-3 py-2 bg-background text-sm" value={form.country} onChange={e => setForm((f: any) => ({ ...f, country: e.target.value }))}>
+        <option value="">{t("elearning.register.country_placeholder")}</option>
+        {countries.map((c: any) => <option key={c.value} value={c.label}>{c.label}</option>)}
+      </select>
+    </div>
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{t("elearning.register.activity")}</label>
+      <select className="w-full border rounded px-3 py-2 bg-background text-sm" value={form.activity} onChange={e => setForm((f: any) => ({ ...f, activity: e.target.value }))}>
+        <option value="">{t("elearning.register.activity_placeholder")}</option>
+        <option value="farmer">{t("elearning.register.activity_farmer")}</option>
+        <option value="student">{t("elearning.register.activity_student")}</option>
+        <option value="technician">{t("elearning.register.activity_technician")}</option>
+        <option value="researcher">{t("elearning.register.activity_researcher")}</option>
+        <option value="other">{t("elearning.register.activity_other")}</option>
+      </select>
+    </div>
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{t("elearning.register.phone")}</label>
+      <div className="flex space-x-2">
+        <div className="w-20 text-sm text-muted-foreground flex items-center justify-center border rounded-md bg-muted">
+          {form.country ? getDialCode(form.country) : '+XXX'}
+        </div>
+        <Input placeholder={t("elearning.register.phone_placeholder")} value={form.phone} onChange={e => setForm((f: any) => ({ ...f, phone: e.target.value }))} className="flex-1" />
+      </div>
+    </div>
+    <Button className="w-full" onClick={onSubmit} disabled={isLoading}>
+      {isLoading ? t("elearning.register.loading") : t("elearning.register.submit")}
+    </Button>
+  </div>
+);
 
 export default ELearning;
