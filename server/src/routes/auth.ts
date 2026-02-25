@@ -29,7 +29,8 @@ function setAuthCookie(res: Response, token: string): void {
 authRouter.post('/sign-in', async (req: Request, res: Response) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
-  const user = await prisma.user.findUnique({ where: { email } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user) return res.status(401).json({ error: 'invalid credentials' });
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return res.status(401).json({ error: 'invalid credentials' });
@@ -51,7 +52,8 @@ authRouter.post('/sign-in', async (req: Request, res: Response) => {
 authRouter.post('/sign-up', async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
-  const exists = await prisma.user.findUnique({ where: { email } });
+  const normalizedSignupEmail = email.toLowerCase().trim();
+  const exists = await prisma.user.findUnique({ where: { email: normalizedSignupEmail } });
   if (exists) return res.status(409).json({ error: 'email already used' });
   const passwordHash = await bcrypt.hash(password, 12);
 
@@ -59,7 +61,7 @@ authRouter.post('/sign-up', async (req: Request, res: Response) => {
 
   const created = await prisma.user.create({
     data: {
-      email,
+      email: normalizedSignupEmail,
       passwordHash,
       fullName: safeFullName,
       role: 'customer',
