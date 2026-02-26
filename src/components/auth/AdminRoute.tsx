@@ -12,19 +12,37 @@ export default function AdminRoute({ children }: AdminRouteProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     const verify = async () => {
       try {
-        const { data: { session } } = await api.auth.getSession();
-        const userId = session?.user?.id;
-        if (!userId) {
+        // First check if we just logged in (sessionStorage has fresh data)
+        const cachedUser = sessionStorage.getItem('akouma_auth_user');
+        if (cachedUser) {
+          try {
+            const user = JSON.parse(cachedUser);
+            if (user?.role === 'admin' && user?.isActive !== false) {
+              setAuthorized(true);
+              setLoading(false);
+              // Clear cache after use, future checks will use cookie/session
+              sessionStorage.removeItem('akouma_auth_user');
+              return;
+            }
+          } catch {
+            sessionStorage.removeItem('akouma_auth_user');
+          }
+        }
+
+        // Fallback: verify via API session cookie
+        const { data: { user } } = await api.auth.getUser();
+        
+        if (!user) {
           toast({ title: "Authentification requise", description: "Veuillez vous connecter." });
           navigate("/auth");
           return;
         }
-        // Nouvelle logique: lire l'utilisateur depuis l'API et vérifier son rôle directement
-        const { data: { user } } = await api.auth.getUser();
+
         const role = (user as any)?.role;
         const isActive = (user as any)?.isActive ?? true;
 
@@ -40,11 +58,12 @@ export default function AdminRoute({ children }: AdminRouteProps) {
           navigate("/auth");
           return;
         }
+
+        setAuthorized(true);
       } catch (e) {
         console.error("AdminRoute error:", e);
         toast({ title: "Erreur", description: "Impossible de vérifier les autorisations.", variant: "destructive" });
         navigate("/auth");
-        return;
       } finally {
         setLoading(false);
       }
@@ -60,6 +79,8 @@ export default function AdminRoute({ children }: AdminRouteProps) {
       </div>
     );
   }
+
+  if (!authorized) return null;
 
   return <>{children}</>;
 }

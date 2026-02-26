@@ -65,6 +65,16 @@ export const AuthForm = () => {
 
       if (authData?.user) {
         const role = (authData.user as any).role || 'customer';
+        const isActive = (authData.user as any).isActive;
+        
+        if (isActive === false) {
+          toast({ title: "Compte désactivé", description: "Votre compte est désactivé. Contactez l'administrateur.", variant: "destructive" });
+          return;
+        }
+
+        // Store session info for AdminRoute to use immediately after redirect
+        sessionStorage.setItem('akouma_auth_user', JSON.stringify(authData.user));
+
         if (role === 'admin' || role === 'supervisor') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
           navigate('/admin');
@@ -72,6 +82,8 @@ export const AuthForm = () => {
           toast({ title: "Connexion réussie", description: "Bienvenue !" });
           navigate('/');
         }
+      } else {
+        toast({ title: "Erreur de connexion", description: "Email ou mot de passe incorrect.", variant: "destructive" });
       }
     } catch (error: unknown) {
       console.error('Login error:', error);

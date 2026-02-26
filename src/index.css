@@ -129,25 +129,25 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-size: 17px;
-    line-height: 1.75;
+    font-size: 18px;
+    line-height: 1.8;
   }
 
   /* Augmentation globale des tailles de texte */
   p, li, span, td, th, label {
-    font-size: 1.0625rem;
-    line-height: 1.75;
+    font-size: 1.125rem;
+    line-height: 1.8;
   }
 
   input, textarea, select {
-    font-size: 1rem;
+    font-size: 1.0625rem;
     line-height: 1.6;
   }
 
-  h1 { @apply text-4xl md:text-5xl lg:text-6xl; }
-  h2 { @apply text-3xl md:text-4xl lg:text-5xl; }
-  h3 { @apply text-2xl md:text-3xl; }
-  h4 { @apply text-xl md:text-2xl; }
+  h1 { @apply text-4xl md:text-5xl lg:text-6xl font-bold; }
+  h2 { @apply text-3xl md:text-4xl lg:text-5xl font-bold; }
+  h3 { @apply text-2xl md:text-3xl font-semibold; }
+  h4 { @apply text-xl md:text-2xl font-semibold; }
 
   .text-sm { font-size: 0.9375rem; }
   .text-xs { font-size: 0.8125rem; }
