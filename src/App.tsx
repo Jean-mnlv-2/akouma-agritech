@@ -52,6 +52,7 @@ import Partnerships from "./pages/Partnerships";
 import Donations from "./pages/Donations";
 import NotFound from "./pages/NotFound";
 import LearningDashboard from "./pages/LearningDashboard";
+import CourseLearn from "./pages/CourseLearn";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -100,6 +101,7 @@ const App = () => (
                 <Route path="/partners" element={<Partnerships />} />
                 <Route path="/donations" element={<Donations />} />
                 <Route path="/dashboard/learning" element={<LearningDashboard />} />
+                <Route path="/elearning/:id/learn" element={<CourseLearn />} />
                 <Route path="/investors" element={<div>Investors - Coming Soon</div>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Sprout } from "lucide-react";
+import { ArrowRight, Play, Sprout, BookOpen, ShoppingBag, Leaf } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-agritech.jpg";
 import { useI18n } from "@/i18n/i18n";
@@ -16,107 +16,88 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background with gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-nature"></div>
+      {/* Background image with parallax effect */}
       <div 
-        className="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-1000"
+        className="absolute inset-0 bg-cover bg-center bg-fixed"
         style={{ backgroundImage: `url(${heroImage})` }}
-      ></div>
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
       
       {/* Animated floating elements */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-xl animate-pulse animate-float"></div>
-      <div className="absolute bottom-32 right-16 w-24 h-24 bg-accent/10 rounded-full blur-xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-      <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-primary/5 rounded-full blur-lg animate-float" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-20 left-10 w-40 h-40 bg-primary/15 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-32 right-16 w-32 h-32 bg-secondary/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute top-1/3 right-1/4 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '2s' }} />
       
-      {/* Gradient mesh overlay for depth */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
-      
-      <div className="relative z-10 container mx-auto px-6 text-center">
-        <div className="max-w-4xl mx-auto">
-          {/* Badge with animation */}
-          <div className={`inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm text-primary px-4 py-2 rounded-full text-sm font-medium mb-8 border border-primary/20 transition-all duration-700 ${
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 text-center">
+        <div className="max-w-5xl mx-auto">
+          {/* Badge */}
+          <div className={`inline-flex items-center gap-2 bg-white/10 backdrop-blur-md text-white px-5 py-2.5 rounded-full text-sm font-medium mb-8 border border-white/20 transition-all duration-700 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
           }`}>
-            <Sprout className="w-4 h-4 animate-pulse" />
-          <span>Innovation Agritech {currentYear}</span>
+            <Sprout className="w-4 h-4 text-green-400 animate-pulse" />
+            <span>Innovation Agritech {currentYear}</span>
           </div>
           
-          {/* Main title with enhanced gradient */}
-          <h1 className={`text-5xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight transition-all duration-1000 ${
-            isLoaded ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'
-          }`} style={{ animationDelay: '0.1s' }}>
-            AKOUMA
+          {/* Main title */}
+          <h1 className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black mb-4 text-white leading-none tracking-tight transition-all duration-1000 ${
+            isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}>
+            AKO<span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">UMA</span>
           </h1>
           
-          <h2 className={`text-2xl md:text-4xl lg:text-5xl font-semibold text-foreground mb-8 leading-relaxed transition-all duration-1000 ${
+          <h2 className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-white/90 mb-6 leading-relaxed transition-all duration-1000 delay-100 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-          }`} style={{ animationDelay: '0.2s' }}>
+          }`}>
             {t("hero.subtitle")}
           </h2>
           
-          {/* Description with fade-in */}
-          <p className={`text-lg md:text-xl lg:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed transition-all duration-1000 ${
+          <p className={`text-base sm:text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed transition-all duration-1000 delay-200 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-          }`} style={{ animationDelay: '0.3s' }}>
+          }`}>
             {t("hero.desc")}
           </p>
           
-          {/* CTA Buttons with enhanced animations */}
-          <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center transition-all duration-1000 ${
+          {/* CTA Buttons */}
+          <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 transition-all duration-1000 delay-300 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-          }`} style={{ animationDelay: '0.4s' }}>
-            <Link to="/about" className="group">
-              <Button 
-                variant="hero" 
-                size="xl" 
-                className="group focus-visible:ring-4 focus-visible:ring-primary/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/30"
-                aria-label={t("hero.cta.solutions")}
-              >
+          }`}>
+            <Link to="/about">
+              <Button size="lg" className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white text-lg px-8 py-6 rounded-xl shadow-lg shadow-green-900/30 hover:shadow-xl hover:scale-105 transition-all">
                 {t("hero.cta.solutions")}
-                <ArrowRight className="ml-2 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            
-            <Link to="/demo" className="group">
-              <Button 
-                variant="outline" 
-                size="xl" 
-                className="group bg-background/90 backdrop-blur-md border-2 focus-visible:ring-4 focus-visible:ring-accent/40 transition-all duration-300 hover:scale-105 hover:bg-background hover:shadow-lg"
-                aria-label={t("hero.cta.demo")}
-              >
-                <Play className="mr-2 transition-transform group-hover:scale-110" />
+            <Link to="/demo">
+              <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white/20 text-lg px-8 py-6 rounded-xl hover:scale-105 transition-all">
+                <Play className="mr-2 w-5 h-5" />
                 {t("hero.cta.demo")}
               </Button>
             </Link>
           </div>
           
-          {/* Stats with staggered animation */}
-          <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 pt-8 border-t border-border/50 transition-all duration-1000 ${
+          {/* Quick navigation cards */}
+          <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto transition-all duration-1000 delay-500 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`} style={{ animationDelay: '0.6s' }}>
+          }`}>
             {[
-              { value: "500+", label: t("hero.stat.farmers") },
-              { value: "25%", label: t("hero.stat.yield") },
-              { value: "30%", label: t("hero.stat.cost") }
-            ].map((stat, index) => (
-              <div 
-                key={index}
-                className="text-center group hover:scale-105 transition-transform duration-300"
-              >
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2 group-hover:text-accent transition-colors">
-                  {stat.value}
-                </div>
-                <div className="text-muted-foreground text-sm md:text-base">{stat.label}</div>
-              </div>
+              { icon: BookOpen, label: "E-Learning", desc: "150+ cours", href: "/elearning", color: "from-blue-500/20 to-cyan-500/20 border-blue-400/30" },
+              { icon: Leaf, label: "Semences", desc: "Qualité certifiée", href: "/seeds", color: "from-green-500/20 to-emerald-500/20 border-green-400/30" },
+              { icon: ShoppingBag, label: "Boutique", desc: "Équipements pro", href: "/shop", color: "from-orange-500/20 to-amber-500/20 border-orange-400/30" },
+            ].map((item) => (
+              <Link key={item.href} to={item.href} className={`group bg-gradient-to-br ${item.color} backdrop-blur-md rounded-xl p-5 border hover:scale-105 transition-all duration-300`}>
+                <item.icon className="w-8 h-8 text-white mb-2 group-hover:scale-110 transition-transform" />
+                <h3 className="text-white font-bold text-lg">{item.label}</h3>
+                <p className="text-white/60 text-sm">{item.desc}</p>
+              </Link>
             ))}
           </div>
         </div>
       </div>
       
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 border-2 border-primary/30 rounded-full flex justify-center">
-          <div className="w-1 h-3 bg-primary/50 rounded-full mt-2 animate-pulse"></div>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce">
+        <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
+          <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-pulse" />
         </div>
       </div>
     </section>
