@@ -234,11 +234,11 @@ function AdminContent() {
   const handleLogout = async () => { await api.auth.signOut(); navigate('/'); };
 
   return (
-    <div className="min-h-screen bg-background admin-responsive">
+    <div key="admin-root-container" className="min-h-screen bg-background admin-responsive">
       <TitleManager title="Administration" description="Dashboard d'administration AKOUMA Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/logo-ak.png" />
       
       {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+      <div key="admin-header" className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="container mx-auto px-4 py-4">
           <div className="admin-header-responsive">
             <div className="admin-header-responsive header-content">
@@ -268,25 +268,25 @@ function AdminContent() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div key="admin-main-content" className="container mx-auto px-4 py-6">
         {/* Dashboard Stats */}
-        <div className="admin-grid-responsive admin-grid-responsive-6 mb-8">
-          {statsConfig.map((stat) => (<StatCard key={stat.title} {...stat} className="admin-card-mobile" />))}
+        <div key="admin-stats-grid" className="admin-grid-responsive admin-grid-responsive-6 mb-8">
+          {statsConfig.map((stat) => (<StatCard key={`stat-${stat.title}`} {...stat} className="admin-card-mobile" />))}
         </div>
 
         {/* Tabs */}
-        <div className="admin-space-responsive-md">
+        <div key="admin-tabs-container" className="admin-space-responsive-md">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="admin-tabs-scroll w-full overflow-x-auto overflow-y-hidden whitespace-nowrap flex-nowrap">
+            <TabsList key="admin-tabs-list" className="admin-tabs-scroll w-full overflow-x-auto overflow-y-hidden whitespace-nowrap flex-nowrap">
               {tabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value} className="flex-shrink-0 min-w-fit px-3 py-2 flex items-center space-x-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                <TabsTrigger key={`trigger-${tab.value}`} value={tab.value} className="flex-shrink-0 min-w-fit px-3 py-2 flex items-center space-x-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
                   <tab.icon className="w-4 h-4 flex-shrink-0" />
                   <span className="whitespace-nowrap">{tab.label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
 
-            <div className="mt-6" key={activeTab}>
+            <div className="mt-6" key={`content-${activeTab}`}>
               {activeTab === 'users' && <AdminUserManagement />}
               {activeTab === 'orders' && <AdminOrders />}
               {activeTab === 'promos' && <AdminPromoCodes />}
@@ -310,7 +310,7 @@ function AdminContent() {
       </div>
 
       {/* Password Change Dialog */}
-      <AdminPasswordDialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
+      <AdminPasswordDialog key="admin-password-dialog" open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
     </div>
   );
 }
