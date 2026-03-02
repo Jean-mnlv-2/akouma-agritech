@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Video, Headphones, Send, CheckCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
+import { useCountries } from "@/hooks/use-countries";
 
 interface ContentSubmissionForm {
   name: string;
@@ -29,7 +30,7 @@ interface ContentSubmissionForm {
 const ContentSubmission = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [countries, setCountries] = useState<Array<{code: string, name: string, phoneCode: string}>>([]);
+  const { countries, updatePhoneWithCode } = useCountries();
   const { toast } = useToast();
 
   const form = useForm<ContentSubmissionForm>({
@@ -49,33 +50,6 @@ const ContentSubmission = () => {
       country: ""
     }
   });
-
-  // Charger les pays depuis l'API
-  React.useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const res = await fetch('/api/countries');
-        const body = await (res.ok ? res.json() : Promise.resolve([]));
-        const list = Array.isArray(body) ? body : (body?.data || []);
-        setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || '') || 0));
-      } catch (error) {
-        console.error('Error fetching countries:', error);
-        setCountries([
-          { code: "CM", name: "Cameroun", phoneCode: "+237" },
-          { code: "NG", name: "Nigeria", phoneCode: "+234" },
-          { code: "GH", name: "Ghana", phoneCode: "+233" },
-          { code: "CI", name: "Côte d'Ivoire", phoneCode: "+225" },
-          { code: "SN", name: "Sénégal", phoneCode: "+221" },
-          { code: "UG", name: "Ouganda", phoneCode: "+256" },
-          { code: "KE", name: "Kenya", phoneCode: "+254" },
-          { code: "TZ", name: "Tanzanie", phoneCode: "+255" },
-          { code: "ET", name: "Éthiopie", phoneCode: "+251" },
-          { code: "ZA", name: "Afrique du Sud", phoneCode: "+27" }
-        ]);
-      }
-    };
-    fetchCountries();
-  }, []);
 
   const onSubmit = async (data: ContentSubmissionForm) => {
     setIsSubmitting(true);
@@ -238,13 +212,7 @@ const ContentSubmission = () => {
                           <Select 
                             onValueChange={(val) => {
                               field.onChange(val);
-                              const selected = countries.find(c => c.name === val);
-                              const code = selected?.phoneCode;
-                              const current = form.getValues('phone') || '';
-                              if (code) {
-                                const stripped = current.replace(/^\+?\d+\s*/, '');
-                                form.setValue('phone', `${code} ${stripped}`.trim());
-                              }
+                              form.setValue('phone', updatePhoneWithCode(form.getValues('phone'), val));
                             }} 
                             defaultValue={field.value}
                           >

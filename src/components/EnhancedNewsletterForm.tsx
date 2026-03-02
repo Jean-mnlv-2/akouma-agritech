@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useCountries } from "@/hooks/use-countries";
 import { Mail, Loader2, Globe } from "lucide-react";
 
 const enhancedNewsletterSchema = z.object({
@@ -22,7 +23,7 @@ type EnhancedNewsletterFormData = z.infer<typeof enhancedNewsletterSchema>;
 
 export const EnhancedNewsletterForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [countries, setCountries] = useState<Array<{code: string, name: string, phoneCode: string}>>([]);
+  const { countries, updatePhoneWithCode } = useCountries();
   const { toast } = useToast();
    const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
@@ -37,29 +38,6 @@ export const EnhancedNewsletterForm = () => {
     }
   });
 
-  // Charger les pays depuis l'API
-  useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const url = new URL('/api/countries', apiBaseUrl);
-        const res = await fetch(url.toString(), { credentials: 'include' });
-        const contentType = res.headers.get('content-type') || '';
-        const body = await (res.ok && contentType.includes('application/json') ? res.json() : Promise.resolve([]));
-        const list = Array.isArray(body) ? body : (body?.data || []);
-        setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || '') || 0));
-      } catch (error) {
-        console.error('Error fetching countries:', error);
-        setCountries([
-          { code: "CM", name: "Cameroun", phoneCode: "+237" },
-          { code: "FR", name: "France", phoneCode: "+33" },
-          { code: "US", name: "États-Unis", phoneCode: "+1" },
-          { code: "GB", name: "Royaume-Uni", phoneCode: "+44" }
-        ]);
-      }
-    };
-    fetchCountries();
-  }, []);
-
   const onSubmit = async (data: EnhancedNewsletterFormData) => {
     setIsSubmitting(true);
     try {
@@ -73,8 +51,7 @@ export const EnhancedNewsletterForm = () => {
         setIsSubmitting(false);
         return;
       }
-      const selectedCountry = countries.find(c => c.name === data.country);
-      const fullPhone = data.phone ? `${selectedCountry?.phoneCode || '+XXX'} ${data.phone}` : null;
+      const fullPhone = data.phone || null;
       const url = new URL('/api/newsletter_subscriptions', apiBaseUrl);
       const res = await fetch(url.toString(), {
         method: 'POST',
@@ -171,13 +148,7 @@ export const EnhancedNewsletterForm = () => {
                   <Select 
                     onValueChange={(val) => {
                       field.onChange(val);
-                      const selected = countries.find(c => c.name === val);
-                      const code = selected?.phoneCode;
-                      const current = form.getValues('phone') || '';
-                      if (code) {
-                        const stripped = current.replace(/^\+?\d+\s*/, '');
-                        form.setValue('phone', `${code} ${stripped}`.trim());
-                      }
+                      form.setValue('phone', updatePhoneWithCode(form.getValues('phone') || "", val));
                     }} 
                     defaultValue={field.value}
                   >

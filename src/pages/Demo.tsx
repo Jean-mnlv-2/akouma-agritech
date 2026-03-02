@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCountries } from "@/hooks/use-countries";
 import { PlayCircle, Smartphone, Monitor, Calendar, Phone, Download, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -15,6 +17,7 @@ const Demo = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { countries, updatePhoneWithCode } = useCountries();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -23,6 +26,19 @@ const Demo = () => {
     country: "",
     message: ""
   });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'country') {
+        return {
+          ...next,
+          phone: updatePhoneWithCode(prev.phone, value)
+        };
+      }
+      return next;
+    });
+  };
 
   const demoOptions = [
     {
@@ -149,27 +165,38 @@ const Demo = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label>Nom complet *</Label>
-                  <Input placeholder="Votre nom" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                  <Input placeholder="Votre nom" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
                 </div>
                 <div>
                   <Label>Email *</Label>
-                  <Input type="email" placeholder="votre@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+                  <Input type="email" placeholder="votre@email.com" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
                 </div>
                 <div>
                   <Label>Téléphone</Label>
-                  <Input placeholder="+226 XX XX XX XX" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                  <Input placeholder="+237 XX XX XX XX" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
                 </div>
                 <div>
                   <Label>Entreprise</Label>
-                  <Input placeholder="Votre entreprise" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} />
+                  <Input placeholder="Votre entreprise" value={formData.company} onChange={(e) => handleInputChange("company", e.target.value)} />
                 </div>
                 <div>
                   <Label>Pays *</Label>
-                  <Input placeholder="Votre pays" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} required />
+                  <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez votre pays" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.name}>
+                          {country.name} ({country.phoneCode})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Message</Label>
-                  <Textarea placeholder="Parlez-nous de vos besoins..." value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} />
+                  <Textarea placeholder="Parlez-nous de vos besoins..." value={formData.message} onChange={(e) => handleInputChange("message", e.target.value)} />
                 </div>
                 <Button type="submit" className="w-full" disabled={!selectedDemo || isSubmitting}>
                   {isSubmitting ? (

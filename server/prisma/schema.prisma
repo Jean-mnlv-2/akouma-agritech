@@ -138,7 +138,7 @@ model ContactMessage {
   phone       String?
   company     String?
   project_type String?
-  status      String   @default("new") // new, processed, completed
+  status      String   @default("new")
   processedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -150,7 +150,7 @@ model ContentSubmission {
   content   String
   author    String
   email     String
-  status    String   @default("pending") // pending, approved, rejected
+  status    String   @default("pending")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

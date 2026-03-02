@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import ContactForm from "@/components/forms/ContactForm";
+import { useCountries } from "@/hooks/use-countries";
 import { 
   Handshake, 
   Users, 
@@ -29,13 +30,6 @@ import {
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
 
-interface Country {
-  id: number;
-  code: string;
-  name: string;
-  phoneCode: string;
-}
-
 interface PartnerRow {
   id: number;
   name: string;
@@ -52,7 +46,7 @@ const Partnerships = () => {
   const { toast } = useToast();
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isPartnershipOpen, setIsPartnershipOpen] = useState(false);
-  const [countries, setCountries] = useState<Country[]>([]);
+  const { countries, updatePhoneWithCode } = useCountries();
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [_contactForm] = useState({
     name: "",
@@ -75,21 +69,6 @@ const Partnerships = () => {
   });
 
   useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const res = await fetch('/api/countries');
-        if (!res.ok) throw new Error('Failed to fetch countries');
-        const body = await res.json();
-        const list = ((Array.isArray(body) ? body : body?.data) || []) as Country[];
-        setCountries(
-          list
-            .slice()
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        );
-      } catch (e) {
-        toast({ title: "Erreur", description: "Impossible de charger les pays", variant: "destructive" });
-      }
-    };
     const fetchPartners = async () => {
       try {
         const res = await fetch('/api/partners');
@@ -105,7 +84,6 @@ const Partnerships = () => {
         console.warn('Impossible de charger les partenaires', e);
       }
     };
-    fetchCountries();
     fetchPartners();
   }, [toast]);
 
@@ -212,14 +190,7 @@ const Partnerships = () => {
     setPartnershipForm(prev => {
       const next = { ...prev, [field]: value };
       if (field === 'country_id') {
-        const selected = countries.find(c => c.id.toString() === value);
-        if (selected?.phoneCode) {
-          // Préfixer le téléphone si vide ou sans indicatif
-          const code = selected.phoneCode;
-          if (!next.phone || !next.phone.startsWith(code)) {
-            next.phone = code + ' ' + (next.phone?.replace(/^\+?\d+\s*/, '') || '');
-          }
-        }
+        next.phone = updatePhoneWithCode(prev.phone, value);
       }
       return next;
     });
@@ -335,7 +306,7 @@ const Partnerships = () => {
                           </SelectTrigger>
                           <SelectContent className="max-h-60">
                             {countries.map((c) => (
-                              <SelectItem key={c.id} value={c.id.toString()}>
+                              <SelectItem key={c.code || c.id} value={c.id?.toString() || c.name}>
                                 {c.name} ({c.phoneCode})
                               </SelectItem>
                             ))}

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Loader2 } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n/i18n";
+import { useCountries } from "@/hooks/use-countries";
 
 const newsletterSchema = z.object({
   email: z.string().email("Veuillez entrer une adresse email valide"),
@@ -36,6 +37,7 @@ export const NewsletterForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
+  const { countries, updatePhoneWithCode } = useCountries();
 
   const form = useForm<NewsletterFormData>({
     resolver: zodResolver(newsletterSchema),
@@ -46,16 +48,6 @@ export const NewsletterForm = ({
       phone: ""
     }
   });
-
-  const countries = [
-    { code: "+237", name: "Cameroun", flag: "🇨🇲" },
-    { code: "+225", name: "Côte d'Ivoire", flag: "🇨🇮" },
-    { code: "+226", name: "Burkina Faso", flag: "🇧🇫" },
-    { code: "+223", name: "Mali", flag: "🇲🇱" },
-    { code: "+221", name: "Sénégal", flag: "🇸🇳" },
-    { code: "+33", name: "France", flag: "🇫🇷" },
-    { code: "+1", name: "États-Unis", flag: "🇺🇸" }
-  ];
 
   const onSubmit = async (data: NewsletterFormData) => {
     setIsSubmitting(true);
@@ -146,20 +138,25 @@ export const NewsletterForm = ({
               name="country"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("newsletter.country")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>{t("form.country") || "Pays"}</FormLabel>
+                  <Select 
+                    onValueChange={(val) => {
+                      field.onChange(val);
+                      if (showPhoneField) {
+                        form.setValue('phone', updatePhoneWithCode(form.getValues('phone') || "", val));
+                      }
+                    }} 
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t("newsletter.country.placeholder")} />
+                        <SelectValue placeholder={t("form.select.country") || "Sélectionnez votre pays"} />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      {countries.map(country => (
-                        <SelectItem key={country.code} value={country.code}>
-                          <span className="flex items-center space-x-2">
-                            <span>{country.flag}</span>
-                            <span>{country.name} ({country.code})</span>
-                          </span>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {countries.map((country) => (
+                        <SelectItem key={country.code} value={country.name}>
+                          {country.name} ({country.phoneCode})
                         </SelectItem>
                       ))}
                     </SelectContent>

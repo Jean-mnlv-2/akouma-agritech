@@ -10,6 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/integrations/api/client";
+import { useCountries } from "@/hooks/use-countries";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreditCard, Lock, ArrowLeft, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -30,6 +32,8 @@ const Checkout = () => {
   } | null>(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
   
+  const { countries, updatePhoneWithCode } = useCountries();
+  
   // Form state
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingCity, setShippingCity] = useState("");
@@ -37,6 +41,11 @@ const Checkout = () => {
   const [shippingPhone, setShippingPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("orange_money");
   const [notes, setNotes] = useState("");
+
+  const handleCountryChange = (value: string) => {
+    setShippingCountry(value);
+    setShippingPhone(prev => updatePhoneWithCode(prev, value));
+  };
 
   const subtotal = getCartTotal();
   const shipping = subtotal > 50000 ? 0 : 5000;
@@ -281,13 +290,18 @@ const Checkout = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="country">Pays *</Label>
-                        <Input
-                          id="country"
-                          value={shippingCountry}
-                          onChange={(e) => setShippingCountry(e.target.value)}
-                          placeholder="Pays"
-                          required
-                        />
+                        <Select value={shippingCountry} onValueChange={handleCountryChange}>
+                          <SelectTrigger id="country">
+                            <SelectValue placeholder="Sélectionnez votre pays" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {countries.map((country) => (
+                              <SelectItem key={country.code} value={country.name}>
+                                {country.name} ({country.phoneCode})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="phone">Téléphone *</Label>

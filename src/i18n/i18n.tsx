@@ -86,8 +86,9 @@ const resources: Resources = {
     "company.news": "Actualités",
     "company.partners": "Partenariats",
     "company.donations": "Dons",
-    "company.investors": "Investisseurs"
-    ,
+    "company.investors": "Investisseurs",
+    "form.country": "Pays",
+    "form.select.country": "Sélectionnez votre pays",
     "hero.subtitle": "L'avenir de l'agriculture intelligente",
     "hero.desc": "Révolutionnons l'agriculture avec des solutions technologiques innovantes. Optimisez vos rendements, réduisez vos coûts et cultivez durablement.",
     "hero.cta.solutions": "Découvrir nos solutions",
