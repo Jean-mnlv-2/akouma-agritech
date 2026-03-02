@@ -7,13 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Send, Loader2 } from "lucide-react";
 import { api } from "@/integrations/api/client";
-
-interface Country {
-  id: number;
-  code: string;
-  name: string;
-  phoneCode: string;
-}
+import { useCountries } from "@/hooks/use-countries";
 
 interface ContactFormProps {
   source?: 'general' | 'partnerships' | 'donations' | 'support' | 'careers';
@@ -34,7 +28,7 @@ const ContactForm = ({
 }: ContactFormProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [countries, setCountries] = useState<Country[]>([]);
+  const { countries, updatePhoneWithCode } = useCountries();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -48,47 +42,6 @@ const ContactForm = ({
     education: ""
   });
 
-  // Fetch countries on component mount
-  useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const { data, error } = await api
-          .from('countries')
-          .select('*');
-
-        if (error) {
-          console.warn('Countries table not found, using fallback list:', error);
-          setCountries([
-            { id: 1, code: 'CM', name: 'Cameroun', phoneCode: '+237' },
-            { id: 2, code: 'FR', name: 'France', phoneCode: '+33' },
-            { id: 3, code: 'US', name: 'États-Unis', phoneCode: '+1' },
-            { id: 4, code: 'GB', name: 'Royaume-Uni', phoneCode: '+44' },
-            { id: 5, code: 'DE', name: 'Allemagne', phoneCode: '+49' },
-            { id: 6, code: 'CA', name: 'Canada', phoneCode: '+1' },
-            { id: 7, code: 'BE', name: 'Belgique', phoneCode: '+32' },
-            { id: 8, code: 'CH', name: 'Suisse', phoneCode: '+41' },
-            { id: 9, code: 'SN', name: 'Sénégal', phoneCode: '+221' },
-            { id: 10, code: 'CI', name: 'Côte d\'Ivoire', phoneCode: '+225' }
-          ]);
-          return;
-        }
-        const list = Array.isArray(data) ? data : [];
-        setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || '') || 0));
-      } catch (error) {
-        console.error('Error fetching countries:', error);
-        setCountries([
-          { id: 1, code: 'CM', name: 'Cameroun', phoneCode: '+237' },
-          { id: 2, code: 'FR', name: 'France', phoneCode: '+33' },
-          { id: 3, code: 'US', name: 'États-Unis', phoneCode: '+1' },
-          { id: 4, code: 'GB', name: 'Royaume-Uni', phoneCode: '+44' },
-          { id: 5, code: 'DE', name: 'Allemagne', phoneCode: '+49' }
-        ]);
-      }
-    };
-
-    fetchCountries();
-  }, [toast]);
-
   // Update subject when prefillSubject changes
   useEffect(() => {
     if (prefillSubject) {
@@ -98,15 +51,12 @@ const ContactForm = ({
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => {
-      const next: any = { ...prev, [field]: value };
+      const next = { ...prev, [field]: value };
       if (field === 'country_id') {
-        const selected = countries.find(c => c.id.toString() === value);
-        if (selected?.phoneCode) {
-          const code = selected.phoneCode;
-          if (!next.phone || !next.phone.startsWith(code)) {
-            next.phone = code + ' ' + (next.phone?.replace(/^\+?\d+\s*/, '') || '');
-          }
-        }
+        return {
+          ...next,
+          phone: updatePhoneWithCode(prev.phone, value)
+        };
       }
       return next;
     });
@@ -260,10 +210,10 @@ const ContactForm = ({
           </SelectTrigger>
           <SelectContent className="max-h-60">
             {countries.map((country) => (
-              <SelectItem key={country.id} value={country.id.toString()}>
-                {country.name} ({country.phoneCode})
-              </SelectItem>
-            ))}
+                        <SelectItem key={country.code || country.id} value={country.id?.toString() || country.name}>
+                          {country.name} ({country.phoneCode})
+                        </SelectItem>
+                      ))}
           </SelectContent>
         </Select>
       </div>

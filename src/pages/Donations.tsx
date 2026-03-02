@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import ContactForm from "@/components/forms/ContactForm";
+import { useCountries } from "@/hooks/use-countries";
 import { 
   Heart, 
   Gift,
@@ -25,19 +26,12 @@ import {
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
 
-interface Country {
-  id: number;
-  code: string;
-  name: string;
-  phoneCode: string;
-}
-
 const Donations = () => {
   const { toast } = useToast();
   const [isDonationOpen, setIsDonationOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string>("");
-  const [countries, setCountries] = useState<Country[]>([]);
+  const { countries, updatePhoneWithCode } = useCountries();
   const [donationForm, setDonationForm] = useState({
     name: "",
     email: "",
@@ -51,21 +45,6 @@ const Donations = () => {
     newsletter: true
   });
   // contactForm state removed - using ContactForm component instead
-
-  useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const res = await fetch('/api/countries');
-        if (!res.ok) throw new Error('Failed to fetch countries');
-        const body = await res.json();
-        const list = Array.isArray(body) ? body : body?.data || [];
-        setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || '') || 0));
-      } catch (e) {
-        toast({ title: "Erreur", description: "Impossible de charger les pays", variant: "destructive" });
-      }
-    };
-    fetchCountries();
-  }, [toast]);
 
   const donationTiers = [
     {
@@ -210,15 +189,12 @@ const Donations = () => {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setDonationForm(prev => {
-      const next: any = { ...prev, [field]: value };
+      const next = { ...prev, [field]: value };
       if (field === 'country_id' && typeof value === 'string') {
-        const selected = countries.find(c => c.id.toString() === value);
-        if (selected?.phoneCode) {
-          const code = selected.phoneCode;
-          if (!next.phone || !next.phone.startsWith(code)) {
-            next.phone = code + ' ' + (next.phone?.replace(/^\+?\d+\s*/, '') || '');
-          }
-        }
+        return {
+          ...next,
+          phone: updatePhoneWithCode(prev.phone, value)
+        };
       }
       return next;
     });
@@ -585,9 +561,9 @@ const Donations = () => {
                     <SelectValue placeholder="Sélectionnez votre pays" />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    {countries.map((c) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>
-                        {c.name} ({c.phoneCode})
+                    {countries.map((country) => (
+                      <SelectItem key={country.code || country.id} value={country.id?.toString() || country.name}>
+                        {country.name} ({country.phoneCode})
                       </SelectItem>
                     ))}
                   </SelectContent>

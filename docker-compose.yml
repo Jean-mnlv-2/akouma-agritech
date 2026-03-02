@@ -3,14 +3,14 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-akouma}
-      POSTGRES_USER: ${POSTGRES_USER:-akouma}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-akouma}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jean}
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d akouma"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,7 +24,7 @@ services:
       PORT: 4000
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8080}
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_min_32_chars_for_docker_1234567890}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-akouma}:${POSTGRES_PASSWORD:-akouma}@db:5432/${POSTGRES_DB:-akouma}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-jean}@db:5432/${POSTGRES_DB:-akouma}
       DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@akouma.org}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-AkoumaAdmin2026!}
       DEFAULT_ADMIN_FULL_NAME: ${DEFAULT_ADMIN_FULL_NAME:-AKOUMA Admin}

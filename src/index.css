@@ -172,7 +172,6 @@ All colors MUST be HSL.
   }
 }
 
-/* Animations personnalisées pour une interface plus joviale */
 @keyframes fade-in-up {
   from {
     opacity: 0;
