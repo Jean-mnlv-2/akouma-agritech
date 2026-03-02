@@ -126,9 +126,9 @@ export const FileUpload = ({
           </div>
         </div>
       ) : (
-        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
+        <div className="relative border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
           <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-sm text-muted-foreground mb-2 pointer-events-none">
             Cliquez pour sélectionner un fichier
           </p>
           <Input
@@ -136,9 +136,9 @@ export const FileUpload = ({
             accept={accept}
             onChange={handleFileChange}
             disabled={uploading}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground pointer-events-none">
             PNG, JPG, GIF jusqu'à 5MB
           </p>
         </div>

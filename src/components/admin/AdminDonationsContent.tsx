@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Textarea } from '@/components/ui/textarea';
+// import ReactQuill from 'react-quill';
+// import 'react-quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
@@ -156,9 +157,14 @@ export function AdminDonationsContent() {
               <Input value={impactForm.icon || ''} onChange={(e) => setImpactForm({ ...impactForm, icon: e.target.value })} placeholder="🌱" />
             </div>
           </div>
-          <div>
+          <div className="space-y-2">
             <Label>Description</Label>
-            <ReactQuill theme="snow" value={impactForm.description || ''} onChange={(value) => setImpactForm({ ...impactForm, description: value })} className="bg-white rounded" style={{ minHeight: 120 }} />
+            <Textarea 
+              value={impactForm.description || ''} 
+              onChange={(e) => setImpactForm({ ...impactForm, description: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 120 }} 
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
@@ -226,9 +232,14 @@ export function AdminDonationsContent() {
               <FileUpload label="Image de l'histoire" accept="image/*" value={storyForm.imageUrl || ''} onChange={(url) => setStoryForm({ ...storyForm, imageUrl: url })} />
             </div>
           </div>
-          <div>
-            <Label>Description</Label>
-            <ReactQuill theme="snow" value={storyForm.description || ''} onChange={(value) => setStoryForm({ ...storyForm, description: value })} className="bg-white rounded" style={{ minHeight: 120 }} />
+          <div className="space-y-2">
+            <Label>Contenu de l'histoire</Label>
+            <Textarea 
+              value={storyForm.description || ''} 
+              onChange={(e) => setStoryForm({ ...storyForm, description: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 120 }} 
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>

@@ -3,12 +3,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Textarea unused - rich editor used instead
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// Uploads handled by backend API
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+// import ReactQuill from 'react-quill';
+// import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 
 interface Product {
@@ -218,8 +217,14 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <ReactQuill id="description" theme="snow" value={formData.description} onChange={(value) => setFormData({ ...formData, description: value })} className="bg-white rounded" style={{ minHeight: 120 }} />
+            <Label htmlFor="description">Description *</Label>
+            <Textarea 
+              id="description" 
+              value={formData.description} 
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 120 }} 
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -296,9 +301,27 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="features">Caractéristiques (séparées par des virgules)</Label>
-            <Input id="features" value={formData.features} onChange={(e) => setFormData({ ...formData, features: e.target.value })} placeholder="Haute qualité, Durable, Garantie 2 ans" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="features">Caractéristiques (HTML)</Label>
+              <Textarea 
+                id="features" 
+                value={formData.features} 
+                onChange={(e) => setFormData({ ...formData, features: e.target.value })} 
+                className="bg-white rounded" 
+                style={{ minHeight: 120 }} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="specifications">Spécifications (HTML)</Label>
+              <Textarea 
+                id="specifications" 
+                value={formData.specifications} 
+                onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} 
+                className="bg-white rounded" 
+                style={{ minHeight: 120 }} 
+              />
+            </div>
           </div>
           <div className="grid grid-cols-4 gap-4">
             <div className="flex items-center space-x-2"><Switch id="in_stock" checked={formData.in_stock} onCheckedChange={(checked) => setFormData({ ...formData, in_stock: checked })} /><Label htmlFor="in_stock">En stock</Label></div>

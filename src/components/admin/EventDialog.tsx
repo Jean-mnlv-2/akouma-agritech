@@ -9,8 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Textarea } from '@/components/ui/textarea';
+// import ReactQuill from 'react-quill';
+// import 'react-quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
 
 interface Event {
@@ -136,11 +137,10 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <ReactQuill
+            <Textarea
               id="description"
-              theme="snow"
               value={formData.description}
-              onChange={(value) => setFormData({ ...formData, description: value })}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="bg-white rounded"
               style={{ minHeight: 120 }}
             />

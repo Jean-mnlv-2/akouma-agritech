@@ -147,7 +147,7 @@ export default function AdminElearningEnrollments() {
                     <SelectItem value="all">Tous les pays</SelectItem>
                     <SelectItem value="with_country">Avec pays</SelectItem>
                     <SelectItem value="without_country">Sans pays</SelectItem>
-                    {countries.map(country => (<SelectItem key={country} value={country!}>{country}</SelectItem>))}
+                    {countries.map(country => country && (<SelectItem key={country} value={country}>{country}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
