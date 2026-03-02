@@ -119,11 +119,14 @@ authRouter.post('/forgot-password', async (req: Request, res: Response) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const expiry = new Date(Date.now() + 3600000); // 1 heure
+  const expiry = new Date(Date.now() + 3600000);
 
   await prisma.user.update({
-    where: { id: user.id },
-    data: { resetToken: token, resetTokenExpiry: expiry }
+    where: { email: user.email },
+    data: {
+      resetToken: token,
+      resetTokenExpiry: expiry,
+    },
   });
 
   try {

@@ -25,6 +25,7 @@ model User {
   assignedTasks Task[]                @relation("TaskAssignedTo")
   createdTasks  Task[]                @relation("TaskCreatedBy")
   orders        Order[]
+  reminderLogs  ReminderLog[]
 }
 
 model Country {
@@ -184,8 +185,9 @@ model ELearningEnrollment {
   dailyTimeSlot   String?
 
   // Relations
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  reminderLogs ReminderLog[]
 
   @@unique([userId, courseId])
 }
@@ -299,7 +301,8 @@ model CoursePreviewItem {
   type        String   // video, pdf (kept for legacy/ease)
   title       String
   description String?
-  url         String
+  contentUrl  String
+  duration    String?
   order       Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -315,15 +318,20 @@ model CoursePreviewItem {
 }
 
 model ReminderLog {
-  id         Int      @id @default(autoincrement())
-  enrollmentId Int?
-  userId     String?
-  courseId   Int?
-  email      String
-  status     String   // success, failed
-  error      String?
-  sentAt     DateTime @default(now())
-  createdAt  DateTime @default(now())
+  id           Int                 @id @default(autoincrement())
+  enrollmentId Int
+  userId       String
+  courseId     Int
+  email        String
+  status       String              @default("success") // success, failed
+  error        String?
+  sentAt       DateTime            @default(now())
+  createdAt    DateTime            @default(now())
+
+  enrollment   ELearningEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sentAt])
 }
 
 /// Tasks used in supervisor/admin workflows
