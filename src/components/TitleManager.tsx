@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import logoAk from "@/assets/logo-ak.png";
 
 type TitleManagerProps = {
   title?: string;
@@ -38,12 +37,13 @@ export function TitleManager({ title, description, image, canonical, noIndex }: 
     const computedTitle = title ? `${title} | ${siteName}` : siteName;
     document.title = computedTitle;
     
+    // Ajouter le favicon avec le logo AKOUMA
     const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
     if (!favicon) {
       const link = document.createElement('link');
       link.rel = 'icon';
       link.type = 'image/png';
-      link.href = logoAk;
+      link.href = '/logo-ak.png';
       document.head.appendChild(link);
     }
 

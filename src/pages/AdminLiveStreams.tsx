@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-// api client not used directly - fetch used instead
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 import { 
   Loader2, 
   Plus, 
@@ -56,9 +57,39 @@ interface LiveStream {
 }
 
 export default function AdminLiveStreams() {
-  const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
-  const [users, setUsers] = useState<Array<{id: string, fullName: string, email: string}>>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: liveStreams = [], isLoading } = useQuery<LiveStream[]>({
+    queryKey: ['admin', 'live-streams'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/live_streams');
+      const list = Array.isArray(res) ? res : res.data;
+      const sorted = (list || []).slice().sort((a: any, b: any) => {
+        const aVal = a.scheduledTime ? new Date(a.scheduledTime).getTime() : 0;
+        const bVal = b.scheduledTime ? new Date(b.scheduledTime).getTime() : 0;
+        return aVal - bVal;
+      });
+      return sorted;
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+  const { data: users = [] } = useQuery<Array<{id: string, fullName: string, email: string}>>({
+    queryKey: ['admin', 'users-list'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/profiles');
+      const { data } = Array.isArray(res) ? { data: res } : res;
+      const adminUsers = (data || []).filter((user: any) => 
+        user.role === 'admin' || user.role === 'supervisor'
+      ).map((user: any) => ({
+        id: user.id,
+        fullName: user.fullName || user.email,
+        email: user.email
+      }));
+      return adminUsers;
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingStream, setEditingStream] = useState<LiveStream | undefined>(undefined);
@@ -80,140 +111,61 @@ export default function AdminLiveStreams() {
     }
   });
 
-  const fetchLiveStreams = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/live_streams', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch live streams');
-      const { data } = await res.json();
-      const list = (data || []) as any[];
-      list.sort((a, b) => {
-        const aVal = a.scheduledTime ? new Date(a.scheduledTime).getTime() : 0;
-        const bVal = b.scheduledTime ? new Date(b.scheduledTime).getTime() : 0;
-        return aVal - bVal;
-      });
-      setLiveStreams(list as any);
-    } catch (error) {
-      console.error('Error fetching live streams:', error);
-      toast({ title: 'Erreur', description: 'Impossible de charger les live streams', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  useEffect(() => { /* initial effects no longer needed due to React Query */ }, []);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const res = await fetch('/api/profiles', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch users');
-      const { data } = await res.json();
-      // Filtrer seulement les utilisateurs admin et superviseur
-      const adminUsers = (data || []).filter((user: any) => 
-        user.role === 'admin' || user.role === 'supervisor'
-      ).map((user: any) => ({
-        id: user.id,
-        fullName: user.fullName || user.email,
-        email: user.email
-      }));
-      setUsers(adminUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({ title: 'Erreur', description: 'Impossible de charger les utilisateurs', variant: 'destructive' });
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchLiveStreams();
-    fetchUsers();
-  }, [fetchLiveStreams, fetchUsers]);
-
-  const onSubmit = async (data: LiveStreamFormData) => {
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        title: data.title.trim(),
-        instructorName: data.instructorName?.trim() || null,
-        scheduledTime: data.scheduledTime || null,
-        durationMinutes: data.durationMinutes || null,
-        viewerCount: data.viewerCount,
-        isLive: data.isLive,
-        description: data.description?.trim() || null,
-        category: data.category?.trim() || null,
-        thumbnailUrl: data.thumbnailUrl?.trim() || null,
-        streamUrl: data.streamUrl?.trim() || null,
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: LiveStreamFormData; id?: number }) => {
+      const d = payload.data;
+      const mapped = {
+        title: d.title.trim(),
+        instructorName: d.instructorName?.trim() || null,
+        scheduledTime: d.scheduledTime || null,
+        durationMinutes: d.durationMinutes || null,
+        viewerCount: d.viewerCount,
+        isLive: d.isLive,
+        description: d.description?.trim() || null,
+        category: d.category?.trim() || null,
+        thumbnailUrl: d.thumbnailUrl?.trim() || null,
+        streamUrl: d.streamUrl?.trim() || null,
       };
-
-      let res: Response;
-      if (editingStream) {
-        res = await fetch(`/api/live_streams/${editingStream.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-          const errorText = await res.text();
-          let errorMessage = 'Impossible de mettre à jour le live stream';
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error || errorData.details || errorMessage;
-          } catch {
-            errorMessage = errorText || errorMessage;
-          }
-          throw new Error(errorMessage);
-        }
-        toast({ title: 'Succès', description: 'Live stream mis à jour avec succès' });
-      } else {
-        res = await fetch('/api/live_streams', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-          const errorText = await res.text();
-          let errorMessage = 'Impossible de créer le live stream';
-          try {
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error || errorData.details || errorMessage;
-          } catch {
-            errorMessage = errorText || errorMessage;
-          }
-          throw new Error(errorMessage);
-        }
-        toast({ title: 'Succès', description: 'Live stream créé avec succès' });
+      if (payload.id) {
+        return api.request('PUT', `/api/live_streams/${payload.id}`, { body: mapped });
       }
-
+      return api.request('POST', `/api/live_streams`, { body: mapped });
+    },
+    onSuccess: () => {
+      toast({ title: editingStream ? 'Succès' : 'Succès', description: editingStream ? 'Live stream mis à jour avec succès' : 'Live stream créé avec succès' });
       form.reset();
       setEditingStream(undefined);
       setIsDialogOpen(false);
-      fetchLiveStreams();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'live-streams'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving live stream:', error);
       const errorMessage = error instanceof Error ? error.message : 'Impossible de sauvegarder le live stream';
-      toast({ 
-        title: 'Erreur', 
-        description: errorMessage, 
-        variant: 'destructive' 
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+      toast({ title: 'Erreur', description: errorMessage, variant: 'destructive' });
+    },
+    onSettled: () => setIsSubmitting(false),
+  });
+  const onSubmit = async (data: LiveStreamFormData) => {
+    setIsSubmitting(true);
+    upsertMutation.mutate({ data, id: editingStream?.id });
   };
 
-  const deleteLiveStream = async (id: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce live stream ?')) return;
-    try {
-      const res = await fetch(`/api/live_streams/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(await res.text());
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => api.request('DELETE', `/api/live_streams/${id}`),
+    onSuccess: () => {
       toast({ title: 'Live stream supprimé' });
-      fetchLiveStreams();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'live-streams'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting live stream:', error);
       toast({ title: 'Erreur', description: 'Impossible de supprimer le live stream', variant: 'destructive' });
     }
+  });
+  const deleteLiveStream = (id: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce live stream ?')) return;
+    deleteMutation.mutate(id);
   };
 
   const openEditDialog = (stream: LiveStream) => {
@@ -239,7 +191,7 @@ export default function AdminLiveStreams() {
     setIsDialogOpen(false);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="w-8 h-8 animate-spin" />

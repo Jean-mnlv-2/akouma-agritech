@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 type PartnerRow = {
   id: number;
@@ -27,90 +29,75 @@ type PartnerRow = {
 export function AdminPartners() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [editing, setEditing] = useState<PartnerRow | null>(null);
   const [form, setForm] = useState<Partial<PartnerRow>>({ isActive: true, order: 0 });
+  const queryClient = useQueryClient();
 
-  const fetchPartners = async () => {
-    try {
-      const res = await fetch('/api/partners', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const list = (Array.isArray(body) ? body : body.data) as PartnerRow[];
-      setPartners(list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-    } catch (e) {
-      console.error(e);
-      toast({ title: 'Erreur', description: "Impossible de charger les partenaires", variant: 'destructive' });
-    }
-  };
-
-  useEffect(() => { fetchPartners(); }, []);
+  const { data: partners = [] } = useQuery<PartnerRow[]>({
+    queryKey: ['admin', 'partners'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/partners');
+      const list = (Array.isArray(res) ? res : res.data) as PartnerRow[];
+      return (list || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const resetForm = () => { setEditing(null); setForm({ isActive: true, order: 0 }); };
   const onEdit = (row: PartnerRow) => { setEditing(row); setForm(row); };
 
-  const onDelete = async (row: PartnerRow) => {
-    if (!confirm(`Supprimer le partenaire "${row.name}" ?`)) return;
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/partners/${row.id}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to delete');
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => api.request('DELETE', `/api/partners/${id}`),
+    onSuccess: () => {
       toast({ title: 'Supprimé', description: 'Partenaire supprimé.' });
-      await fetchPartners();
-    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] });
+    },
+    onError: (e: unknown) => {
       console.error(e);
       toast({ title: 'Erreur', description: 'Suppression échouée', variant: 'destructive' });
-    } finally {
-      setLoading(false);
     }
+  });
+  const onDelete = (row: PartnerRow) => {
+    if (!confirm(`Supprimer le partenaire "${row.name}" ?`)) return;
+    setLoading(true);
+    deleteMutation.mutate(row.id, { onSettled: () => setLoading(false) });
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      const payload = {
-        name: form.name?.trim(),
-        logo: form.logo || null,
-        logoUrl: (form as any).logoUrl || null,
-        imageUrl: (form as any).imageUrl || null,
-        type: form.type || null,
-        description: form.description || null,
-        year: form.year || null,
-        website: form.website || null,
-        contact: form.contact || null,
-        order: Number(form.order ?? 0),
-        isActive: Boolean(form.isActive),
-      } as any;
-      if (!payload.name) { toast({ title: 'Validation', description: 'Le nom est requis.', variant: 'destructive' }); return; }
-
-      let res: Response;
-      if (editing) {
-        res = await fetch(`/api/partners/${editing.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      } else {
-        res = await fetch('/api/partners', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      }
-      if (!res.ok) throw new Error(await res.text());
-
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: any; id?: number }) => {
+      if (payload.id) return api.request('PUT', `/api/partners/${payload.id}`, { body: payload.data });
+      return api.request('POST', `/api/partners`, { body: payload.data });
+    },
+    onSuccess: () => {
       toast({ title: editing ? 'Mis à jour' : 'Ajouté', description: editing ? 'Partenaire mis à jour.' : 'Partenaire ajouté.' });
       resetForm();
-      await fetchPartners();
-    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] });
+    },
+    onError: (e: unknown) => {
       console.error(e);
       toast({ title: 'Erreur', description: "Enregistrement échoué", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    },
+    onSettled: () => setLoading(false),
+  });
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const payload = {
+      name: form.name?.trim(),
+      logo: form.logo || null,
+      logoUrl: (form as any).logoUrl || null,
+      imageUrl: (form as any).imageUrl || null,
+      type: form.type || null,
+      description: form.description || null,
+      year: form.year || null,
+      website: form.website || null,
+      contact: form.contact || null,
+      order: Number(form.order ?? 0),
+      isActive: Boolean(form.isActive),
+    } as any;
+    if (!payload.name) { toast({ title: 'Validation', description: 'Le nom est requis.', variant: 'destructive' }); setLoading(false); return; }
+    upsertMutation.mutate({ data: payload, id: editing?.id });
   };
 
   const updateField = (key: keyof PartnerRow, value: any) => setForm((prev) => ({ ...prev, [key]: value }));

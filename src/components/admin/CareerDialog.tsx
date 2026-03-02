@@ -104,13 +104,13 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {career ? 'Modifier l\'offre d\'emploi' : 'Nouvelle offre d\'emploi'}
+            {career ? "Modifier l'offre" : "Nouvelle offre d'emploi"}
           </DialogTitle>
           <DialogDescription>
-            {career ? 'Modifiez les informations de l\'offre d\'emploi' : 'Créez une nouvelle offre d\'emploi'}
+            Publiez une opportunité de carrière chez AKOUMA.
           </DialogDescription>
         </DialogHeader>
 

@@ -4,7 +4,6 @@ import { NewsletterForm } from "@/components/NewsletterForm";
 import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from "lucide-react";
 import { useI18n } from "@/i18n/i18n";
 import { useContactSettings } from "@/hooks/use-contact-settings";
-import logoAk from "@/assets/logo-ak.png";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -20,43 +19,43 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1 lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4 md:mb-6">
               <img 
-                src={logoAk}
+                src="/logo-ak.png"
                 alt="AKOUMA Logo" 
-                className="w-8 h-8 md:w-10 md:h-10"
+                className="w-10 h-10 md:w-14 md:h-14"
               />
-              <span className="text-xl md:text-2xl font-bold text-primary">
+              <span className="text-2xl md:text-3xl font-bold text-primary">
                 AKOUMA
               </span>
             </div>
-            <p className="text-muted-foreground mb-4 md:mb-6 leading-relaxed text-sm">
+            <p className="text-muted-foreground mb-4 md:mb-6 leading-relaxed text-base">
               {t("footer.desc") || "Révolutionner l'agriculture africaine grâce à des technologies innovantes et durables pour un avenir prospère."}
             </p>
             <div className="flex space-x-3">
               {contact?.facebookUrl && (
                 <a href={contact.facebookUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
-                    <Facebook className="w-3.5 h-3.5" />
+                  <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
+                    <Facebook className="w-5 h-5" />
                   </Button>
                 </a>
               )}
               {contact?.xUrl && (
                 <a href={contact.xUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
-                    <Twitter className="w-3.5 h-3.5" />
+                  <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
+                    <Twitter className="w-5 h-5" />
                   </Button>
                 </a>
               )}
               {contact?.linkedinUrl && (
                 <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
-                    <Linkedin className="w-3.5 h-3.5" />
+                  <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
+                    <Linkedin className="w-5 h-5" />
                   </Button>
                 </a>
               )}
               {contact?.instagramUrl && (
                 <a href={contact.instagramUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="icon" className="w-8 h-8 hover:bg-primary hover:text-primary-foreground">
-                    <Instagram className="w-3.5 h-3.5" />
+                  <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
+                    <Instagram className="w-5 h-5" />
                   </Button>
                 </a>
               )}
@@ -65,7 +64,7 @@ const Footer = () => {
 
           {/* Solutions */}
           <div>
-            <h3 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-6">{t("footer.solutions")}</h3>
+            <h3 className="text-base md:text-xl font-semibold text-foreground mb-3 md:mb-6">{t("footer.solutions")}</h3>
             <ul className="space-y-2 md:space-y-3">
               {[
                 t("solutions.iot"),
@@ -76,7 +75,7 @@ const Footer = () => {
                 t("solutions.sustainable")
               ].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-xs md:text-sm">
+                  <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm md:text-base">
                     {item}
                   </a>
                 </li>
@@ -86,7 +85,7 @@ const Footer = () => {
 
           {/* Company */}
           <div>
-            <h3 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-6">{t("footer.company")}</h3>
+            <h3 className="text-base md:text-xl font-semibold text-foreground mb-3 md:mb-6">{t("footer.company")}</h3>
             <ul className="space-y-2 md:space-y-3">
               {[
                 { name: t("company.about"), href: "/about" },
@@ -97,7 +96,7 @@ const Footer = () => {
                 { name: t("company.donations"), href: "/donations" },
               ].map((item) => (
                 <li key={item.name}>
-                  <a href={item.href} className="text-muted-foreground hover:text-primary transition-colors text-xs md:text-sm">
+                  <a href={item.href} className="text-muted-foreground hover:text-primary transition-colors text-sm md:text-base">
                     {item.name}
                   </a>
                 </li>
@@ -107,22 +106,22 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div className="col-span-2 md:col-span-1">
-            <h3 className="text-sm md:text-lg font-semibold text-foreground mb-3 md:mb-6">{t("footer.contact")}</h3>
+            <h3 className="text-base md:text-xl font-semibold text-foreground mb-3 md:mb-6">{t("footer.contact")}</h3>
             <div className="space-y-3 md:space-y-4">
               <div className="flex items-start space-x-3">
-                <MapPin className="w-4 h-4 md:w-5 md:h-5 text-primary mt-0.5 flex-shrink-0" />
-                <div className="text-muted-foreground text-xs md:text-sm">
+                <MapPin className="w-5 h-5 md:w-6 md:h-6 text-primary mt-0.5 flex-shrink-0" />
+                <div className="text-muted-foreground text-sm md:text-base">
                   <p>{contact?.city || t("footer.city")}</p>
                   <p>{contact?.addressLine1 || t("footer.address")}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                <Phone className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground text-xs md:text-sm">{contact?.phone || '+237 233 XX XX XX'}</span>
+                <Phone className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
+                <span className="text-muted-foreground text-sm md:text-base">{contact?.phone || '+237 233 XX XX XX'}</span>
               </div>
               <div className="flex items-center space-x-3">
-                <Mail className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground text-xs md:text-sm">{contact?.email || 'contact@akouma.cm'}</span>
+                <Mail className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
+                <span className="text-muted-foreground text-sm md:text-base">{contact?.email || 'contact@akouma.cm'}</span>
               </div>
             </div>
           </div>
@@ -132,10 +131,10 @@ const Footer = () => {
         <div className="py-6 md:py-8 border-t border-border/50">
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-4 md:mb-6">
-              <h3 className="text-sm md:text-lg font-semibold text-foreground mb-1 md:mb-2">
+              <h3 className="text-base md:text-xl font-semibold text-foreground mb-1 md:mb-2">
                 {t("footer.newsletter.title")}
               </h3>
-              <p className="text-muted-foreground text-xs md:text-sm">
+              <p className="text-muted-foreground text-sm md:text-base">
                 {t("footer.newsletter.subtitle")}
               </p>
             </div>
@@ -149,10 +148,10 @@ const Footer = () => {
             <PWAInstallButton />
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
-            <p className="text-muted-foreground text-xs md:text-sm">
+            <p className="text-muted-foreground text-sm md:text-base">
               © {currentYear} AKOUMA. {t("footer.rights")}
             </p>
-            <div className="flex space-x-4 md:space-x-6 text-xs md:text-sm">
+            <div className="flex space-x-4 md:space-x-6 text-sm md:text-base">
               <a href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
                 {t("footer.privacy")}
               </a>

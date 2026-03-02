@@ -31,7 +31,6 @@ const ContentSubmission = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [countries, setCountries] = useState<Array<{code: string, name: string, phoneCode: string}>>([]);
   const { toast } = useToast();
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   const form = useForm<ContentSubmissionForm>({
     defaultValues: {
@@ -55,10 +54,8 @@ const ContentSubmission = () => {
   React.useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const url = new URL('/api/countries', apiBaseUrl);
-        const res = await fetch(url.toString(), { credentials: 'include' });
-        const contentType = res.headers.get('content-type') || '';
-        const body = await (res.ok && contentType.includes('application/json') ? res.json() : Promise.resolve([]));
+        const res = await fetch('/api/countries');
+        const body = await (res.ok ? res.json() : Promise.resolve([]));
         const list = Array.isArray(body) ? body : (body?.data || []);
         setCountries(list.sort((a: any, b: any) => a?.name?.localeCompare?.(b?.name || '') || 0));
       } catch (error) {
@@ -108,8 +105,7 @@ const ContentSubmission = () => {
         file_url: data.fileUrl?.trim() || null,
       };
 
-      const url = new URL('/api/content_submissions', apiBaseUrl);
-      const res = await fetch(url.toString(), {
+      const res = await fetch('/api/content_submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

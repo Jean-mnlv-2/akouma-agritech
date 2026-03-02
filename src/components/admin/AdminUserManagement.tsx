@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,8 @@ import {
   ShoppingCart
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 const userSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -50,10 +52,9 @@ const STATUS_FILTER = ['all', 'active', 'inactive'] as const;
 type StatusFilter = typeof STATUS_FILTER[number];
 
 export function AdminUserManagement() {
-  const [users, setUsers] = useState<Array<User>>([]);
+  const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState<string>('');
-  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
@@ -67,46 +68,37 @@ export function AdminUserManagement() {
     defaultValues: { email: '', firstName: '', lastName: '', role: 'customer' },
   });
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/profiles', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load users');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setUsers(items || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs:', error);
-      toast({ title: 'Erreur', description: 'Impossible de charger les utilisateurs', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  const { data, isLoading } = useQuery<User[]>({
+    queryKey: ['admin', 'users'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/profiles');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+  const users: User[] = Array.isArray(data) ? data : [];
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { setCurrentPage(1); }, [statusFilter, search]);
 
-  const createUser = async (data: UserFormData) => {
-    try {
-      setIsCreating(true);
-      const res = await fetch('/api/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email: data.email, firstName: data.firstName, lastName: data.lastName, role: data.role }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      toast({ title: 'Succès', description: `Utilisateur ${data.role} créé avec succès.` });
+  const createUserMutation = useMutation({
+    mutationFn: async (payload: UserFormData) => {
+      return api.request('POST', '/api/profiles', { body: { email: payload.email, firstName: payload.firstName, lastName: payload.lastName, role: payload.role } });
+    },
+    onSuccess: () => {
+      toast({ title: 'Succès', description: 'Utilisateur créé avec succès.' });
       form.reset();
       setIsDialogOpen(false);
-      fetchUsers();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error creating user:', error);
       toast({ title: 'Erreur', description: "Impossible de créer l'utilisateur", variant: 'destructive' });
-    } finally {
-      setIsCreating(false);
-    }
-  };
+    },
+    onSettled: () => setIsCreating(false),
+  });
+  const createUser = (data: UserFormData) => { setIsCreating(true); createUserMutation.mutate(data); };
 
   const handleToggleClick = (user: User) => {
     const willActivate = user.is_active === false;
@@ -117,61 +109,54 @@ export function AdminUserManagement() {
     toggleUserStatus(user.id, willActivate);
   };
 
-  const updateUser = async (data: UserFormData) => {
-    if (!editingUser) return;
-    try {
-      setIsCreating(true);
-      const res = await fetch(`/api/profiles/${editingUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ firstName: data.firstName, lastName: data.lastName, email: data.email, role: data.role }),
-      });
-      if (!res.ok) throw new Error(await res.text());
+  const updateUserMutation = useMutation({
+    mutationFn: async (payload: { id: string; data: UserFormData }) => {
+      return api.request('PUT', `/api/profiles/${payload.id}`, { body: { firstName: payload.data.firstName, lastName: payload.data.lastName, email: payload.data.email, role: payload.data.role } });
+    },
+    onSuccess: () => {
       toast({ title: 'Succès', description: "Utilisateur mis à jour avec succès" });
       form.reset();
       setEditingUser(undefined);
       setIsDialogOpen(false);
-      fetchUsers();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error updating user:', error);
       toast({ title: 'Erreur', description: "Impossible de mettre à jour l'utilisateur", variant: 'destructive' });
-    } finally {
-      setIsCreating(false);
-    }
-  };
+    },
+    onSettled: () => setIsCreating(false),
+  });
+  const updateUser = (data: UserFormData) => { if (!editingUser) return; setIsCreating(true); updateUserMutation.mutate({ id: editingUser.id, data }); };
 
-  const deleteUser = async (userId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) return;
-    try {
-      const res = await fetch(`/api/profiles/${userId}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error(await res.text());
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => api.request('DELETE', `/api/profiles/${userId}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Utilisateur supprimé avec succès' });
-      fetchUsers();
-    } catch (error: unknown) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (error: unknown) => {
       console.error('Erreur lors de la suppression:', error);
       toast({ title: 'Erreur', description: "Impossible de supprimer l'utilisateur", variant: 'destructive' });
     }
-  };
+  });
+  const deleteUser = (userId: string) => { if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) return; deleteUserMutation.mutate(userId); };
 
-  const toggleUserStatus = async (userId: string, makeActive: boolean) => {
-    try {
-      const res = await fetch(`/api/profiles/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ isActive: makeActive }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      toast({ title: 'Succès', description: `Utilisateur ${makeActive ? 'activé' : 'désactivé'} avec succès` });
-      fetchUsers();
-    } catch (error) {
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (payload: { userId: string; isActive: boolean }) => {
+      return api.request('PUT', `/api/profiles/${payload.userId}`, { body: { isActive: payload.isActive } });
+    },
+    onSuccess: (_res, variables) => {
+      toast({ title: 'Succès', description: `Utilisateur ${variables.isActive ? 'activé' : 'désactivé'} avec succès` });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (error: unknown) => {
       console.error('Erreur lors du changement de statut:', error);
       toast({ title: 'Erreur', description: "Impossible de changer le statut de l'utilisateur", variant: 'destructive' });
     }
-  };
+  });
+  const toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
 
-  const filteredUsers = users.filter((u: User) => {
+  const filteredUsers: User[] = users.filter((u: User) => {
     if (statusFilter === 'active' && u.is_active === false) return false;
     if (statusFilter === 'inactive' && u.is_active !== false) return false;
     if (search.trim()) {
@@ -187,13 +172,13 @@ export function AdminUserManagement() {
   const endIndex = startIndex + pageSize;
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
-  const allVisibleSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedIds.has(u.id));
-  const someVisibleSelected = filteredUsers.some(u => selectedIds.has(u.id));
+  const allVisibleSelected = filteredUsers.length > 0 && filteredUsers.every((u: User) => selectedIds.has(u.id));
+  const someVisibleSelected = filteredUsers.some((u: User) => selectedIds.has(u.id));
   const selectedCount = selectedIds.size;
 
   const toggleSelectAllVisible = (checked: boolean | string) => {
     const next = new Set(selectedIds);
-    if (checked) { filteredUsers.forEach(u => next.add(u.id)); } else { filteredUsers.forEach(u => next.delete(u.id)); }
+    if (checked) { filteredUsers.forEach((u: User) => next.add(u.id)); } else { filteredUsers.forEach((u: User) => next.delete(u.id)); }
     setSelectedIds(next);
   };
 
@@ -209,17 +194,17 @@ export function AdminUserManagement() {
     if (!confirmed) return;
     try {
       for (const userId of selectedIds) {
-        const u = users.find(x => x.id === userId);
+        const u = users.find((x: User) => x.id === userId);
         if (!u) continue;
         if (makeActive && u.is_active === false) {
-          await fetch(`/api/profiles/${userId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ isActive: true }) });
+          await api.request('PUT', `/api/profiles/${userId}`, { body: { isActive: true } });
         } else if (!makeActive && u.is_active !== false) {
-          await fetch(`/api/profiles/${userId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ isActive: false }) });
+          await api.request('PUT', `/api/profiles/${userId}`, { body: { isActive: false } });
         }
       }
       toast({ title: 'Succès', description: makeActive ? 'Utilisateurs activés' : 'Utilisateurs désactivés' });
       setSelectedIds(new Set());
-      fetchUsers();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     } catch (e) {
       console.error('Bulk toggle error:', e);
       toast({ title: 'Erreur', description: 'Action groupée échouée', variant: 'destructive' });
@@ -266,7 +251,7 @@ export function AdminUserManagement() {
 
   const closeDialog = () => { setEditingUser(undefined); form.reset(); setIsDialogOpen(false); };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="w-8 h-8 animate-spin" />

@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Leaf, Star, Package, Truck, Shield } from "lucide-react";
+import { Search, Leaf, Star, Package, Truck, Shield, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import DOMPurify from 'dompurify';
 import TitleManager from "@/components/TitleManager";
@@ -35,65 +35,80 @@ const Seeds = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [products, setProducts] = useState<SeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
-  const categories = [
-    { id: "all", name: "Toutes catégories" },
-    { id: "cereales", name: "Céréales" },
-    { id: "legumineuses", name: "Légumineuses" },
-    { id: "legumes", name: "Légumes" },
-    { id: "fruits", name: "Fruits" },
-    { id: "fourrage", name: "Plantes fourragères" },
-    { id: "aromates", name: "Herbes & Aromates" }
-  ];
+  const { t } = useI18n();
+
+  const fetchSeeds = async () => {
+    setLoading(true);
+    try {
+      const url = new URL('/api/seeds', apiBaseUrl);
+      const res = await fetch(url.toString(), { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch seeds');
+      
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Réponse invalide du serveur');
+      }
+
+      const body = await res.json();
+      const data = (Array.isArray(body) ? body : body?.data) || [];
+      
+      const normalizedProducts: SeedProduct[] = (data || []).map((item: any) => ({
+        id: Number(item.id),
+        name: String(item.name || ""),
+        description: String(item.description || ""),
+        category: String(item.category || ""),
+        variety: String(item.variety || ""),
+        price: Number(item.price_fcfa) || 0,
+        unit: String(item.unit || ""),
+        image: String(item.image_url || ""),
+        rating: Number(item.rating) || 0,
+        reviews: Number(item.total_reviews) || 0,
+        availability: (item.availability || 'En stock') as 'En stock' | 'Rupture' | 'Pré-commande',
+        harvestTime: String(item.harvest_time || ""),
+        yield: String(item.yield_info || ""),
+        features: Array.isArray(item.features) ? item.features : [],
+      }));
+
+      const uniqueProducts = Array.from(new Map(normalizedProducts.map(p => [p.id, p])).values());
+      setProducts(uniqueProducts);
+    } catch (e) {
+      console.error("Error fetching seeds:", e);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = useMemo(() => [
+    { id: "all", name: t("seeds.cat.all") },
+    { id: "cereales", name: t("seeds.cat.cereales") },
+    { id: "legumineuses", name: t("seeds.cat.legumineuses") },
+    { id: "legumes", name: t("seeds.cat.legumes") },
+    { id: "fruits", name: t("seeds.cat.fruits") },
+    { id: "fourrage", name: t("seeds.cat.fourrage") },
+    { id: "aromates", name: t("seeds.cat.aromates") }
+  ], [t]);
 
   useEffect(() => {
-    const fetchSeeds = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const url = new URL('/api/seeds', apiBaseUrl);
-        const res = await fetch(url.toString(), { credentials: 'include' });
-        if (!res.ok) throw new Error('Failed to fetch seeds');
-        const contentType = res.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) {
-          throw new Error('Réponse invalide du serveur pour les semences');
-        }
-        const body = await res.json();
-        const data = (Array.isArray(body) ? body : body?.data) || [];
-        setProducts((data || []).map((item: Record<string, unknown>) => ({
-          id: Number(item.id),
-          name: String(item.name),
-          description: String(item.description),
-          category: String(item.category),
-          variety: String(item.variety),
-          price: Number((item as any).price_fcfa) || 0,
-          unit: String((item as any).unit || ''),
-          image: String((item as any).image_url || ''),
-          rating: Number((item as any).rating) || 0,
-          reviews: Number((item as any).total_reviews) || 0,
-          availability: String((item as any).availability || 'En stock') as 'En stock' | 'Rupture' | 'Pré-commande',
-          harvestTime: String((item as any).harvest_time || ''),
-          yield: String((item as any).yield_info || ''),
-          features: Array.isArray((item as any).features) ? (item as any).features as string[] : [],
-        })));
-      } catch (e) {
-        setError("Erreur lors du chargement des semences.");
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSeeds();
   }, []);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = useMemo(() => {
+    const searchLower = searchQuery.toLowerCase().trim();
+    
+    return products.filter(product => {
+      const matchesSearch = !searchLower || 
+        product.name.toLowerCase().includes(searchLower) ||
+        product.description.toLowerCase().includes(searchLower) ||
+        product.variety.toLowerCase().includes(searchLower);
+        
+      const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, selectedCategory]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fr-CF', {
@@ -103,7 +118,6 @@ const Seeds = () => {
     }).format(price);
   };
 
-  const { t } = useI18n();
   return (
     <div className="min-h-screen bg-background">
       <TitleManager
@@ -149,28 +163,47 @@ const Seeds = () => {
       {/* Search and Filters - Enhanced */}
       <section className="py-10 bg-gradient-to-br from-card via-background to-muted/20 border-b border-border/50">
         <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between max-w-6xl mx-auto">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-col md:flex-row gap-6 items-center justify-between max-w-6xl mx-auto">
+            <div className="relative flex-1 w-full max-w-md">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder={t("seeds.search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 text-base border-2 focus:border-primary transition-colors"
+                className="pl-12 h-12 text-base border-2 focus:border-primary transition-all duration-300"
               />
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full md:w-64 h-12 border-2 focus:border-primary transition-colors">
-                <SelectValue placeholder={t("seeds.select_category")} />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            
+            <div className="flex items-center gap-4 w-full md:w-auto">
+              <Select key="category-filter" value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full md:w-64 h-12 border-2 focus:border-primary transition-all duration-300">
+                  <SelectValue placeholder={t("seeds.select_category")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              { (searchQuery || selectedCategory !== "all") && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { setSearchQuery(""); setSelectedCategory("all"); }}
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  Réinitialiser
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="max-w-6xl mx-auto mt-4 px-2">
+            <p className="text-sm text-muted-foreground">
+              {filteredProducts.length} {filteredProducts.length > 1 ? "produits trouvés" : "produit trouvé"}
+            </p>
           </div>
         </div>
       </section>
@@ -179,11 +212,12 @@ const Seeds = () => {
       <section className="py-16">
         <div className="container mx-auto px-6">
           {loading ? (
-            <div className="text-center py-12">{t("seeds.loading")}</div>
-          ) : error ? (
-            <div className="text-center py-12 text-destructive">{error}</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            <div key="loading-seeds" className="text-center py-20">
+              <RefreshCw className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+              <p className="text-lg text-muted-foreground">{t("seeds.loading")}</p>
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            <div key="seeds-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {filteredProducts.map((product) => (
                 <Card key={product.id} className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden">
                   <div className="relative overflow-hidden">
@@ -214,9 +248,10 @@ const Seeds = () => {
                         <span className="text-sm text-muted-foreground">({product.reviews})</span>
                       </div>
                     </div>
-                    <CardDescription className="text-sm">
-                      <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }} />
-                    </CardDescription>
+                    <div 
+                      className="text-sm text-muted-foreground mt-1 line-clamp-2 min-h-[2.5rem]"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
+                    />
                   </CardHeader>
 
                   <CardContent className="space-y-4">
@@ -274,12 +309,10 @@ const Seeds = () => {
                 </Card>
               ))}
             </div>
-          )}
-
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-12">
-              <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">{t("seeds.none")}</h3>
+          ) : (
+             <div key="no-seeds-found" className="text-center py-12">
+               <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+               <h3 className="text-xl font-semibold mb-2">{t("seeds.none")}</h3>
               <p className="text-muted-foreground">
                 {t("seeds.try_adjust")}
               </p>

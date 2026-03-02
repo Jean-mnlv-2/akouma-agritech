@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminLegalPageDialog } from './AdminLegalPageDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface LegalPage {
   id: string;
@@ -19,36 +21,20 @@ interface LegalPage {
 }
 
 export function AdminLegalPages() {
-  const [legalPages, setLegalPages] = useState<LegalPage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPage, setEditingPage] = useState<LegalPage | null>(null);
   const { toast } = useToast();
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
-
-  useEffect(() => {
-    fetchLegalPages();
-  }, []);
-
-  const fetchLegalPages = async () => {
-    try {
-      const url = new URL('/api/legal_pages', apiBaseUrl);
-      const res = await fetch(url.toString(), { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error('Réponse invalide du serveur pour les pages légales');
-      }
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setLegalPages(items || []);
-    } catch (error) {
-      console.error('Error fetching legal pages:', error);
-      toast({ title: 'Erreur', description: "Impossible de charger les pages légales", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: legalPages = [], isLoading } = useQuery<LegalPage[]>({
+    queryKey: ['admin', 'legal-pages'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/legal_pages');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const handleCreate = () => {
     setEditingPage(null);
@@ -60,52 +46,43 @@ export function AdminLegalPages() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (pageId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette page ?')) return;
-    try {
-      const res = await fetch(`/api/legal_pages/${pageId}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to delete');
+  const deleteMutation = useMutation({
+    mutationFn: async (pageId: string) => api.request('DELETE', `/api/legal_pages/${pageId}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Page supprimée avec succès' });
-      fetchLegalPages();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'legal-pages'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting legal page:', error);
       toast({ title: 'Erreur', description: "Impossible de supprimer la page", variant: 'destructive' });
     }
+  });
+  const handleDelete = (pageId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette page ?')) return;
+    deleteMutation.mutate(pageId);
   };
 
-  const handleSave = async (pageData: { title: string; content: string; slug?: string }) => {
-    try {
-      const isEditing = !!editingPage;
-      const payload = { title: pageData.title, content: pageData.content, slug: pageData.slug };
-      let res: Response;
-      if (isEditing) {
-        const url = new URL(`/api/legal_pages/${editingPage!.id}`, apiBaseUrl);
-        res = await fetch(url.toString(), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      } else {
-        const url = new URL('/api/legal_pages', apiBaseUrl);
-        res = await fetch(url.toString(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      }
-      if (!res.ok) throw new Error(await res.text());
-      toast({ title: 'Succès', description: `Page ${isEditing ? 'modifiée' : 'créée'} avec succès` });
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: { title: string; content: string; slug?: string }; id?: string }) => {
+      if (payload.id) return api.request('PUT', `/api/legal_pages/${payload.id}`, { body: payload.data });
+      return api.request('POST', '/api/legal_pages', { body: payload.data });
+    },
+    onSuccess: () => {
+      toast({ title: 'Succès', description: `Page ${editingPage ? 'modifiée' : 'créée'} avec succès` });
       setDialogOpen(false);
-      fetchLegalPages();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'legal-pages'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving legal page:', error);
       toast({ title: 'Erreur', description: `Impossible de ${editingPage ? 'modifier' : 'créer'} la page`, variant: 'destructive' });
     }
+  });
+  const handleSave = (pageData: { title: string; content: string; slug?: string }) => {
+    const id = editingPage?.id;
+    upsertMutation.mutate({ data: { title: pageData.title, content: pageData.content, slug: pageData.slug }, id });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin" />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminProductDialog } from './AdminProductDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface ProductRow {
   id: string;
@@ -26,76 +28,63 @@ interface ProductRow {
 }
 
 export function AdminProducts() {
-  const [products, setProducts] = useState<ProductRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
   const { toast } = useToast();
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      const res = await fetch('/api/shop_products', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setProducts(items || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      toast({ title: 'Erreur', description: 'Impossible de charger les produits', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  const { data: products = [], isLoading } = useQuery<ProductRow[]>({
+    queryKey: ['admin', 'products'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/shop_products');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const handleCreate = () => { setEditingProduct(null); setDialogOpen(true); };
   const handleEdit = (product: ProductRow) => { setEditingProduct(product); setDialogOpen(true); };
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
-    try {
-      const res = await fetch(`/api/shop_products/${productId}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to delete');
+  const deleteMutation = useMutation({
+    mutationFn: async (productId: string) => api.request('DELETE', `/api/shop_products/${productId}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Produit supprimé avec succès' });
-      fetchProducts();
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting product:', error);
-      toast({ title: 'Erreur', description: error?.message || 'Impossible de supprimer le produit', variant: 'destructive' });
+      toast({ title: 'Erreur', description: 'Impossible de supprimer le produit', variant: 'destructive' });
     }
+  });
+  const handleDelete = (productId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+    deleteMutation.mutate(productId);
   };
 
   type ProductUpsert = Record<string, unknown>;
-  const handleSave = async (productData: ProductUpsert) => {
-    try {
-      const isEditing = !!editingProduct;
-      let res: Response;
-      if (isEditing) {
-        res = await fetch(`/api/shop_products/${(editingProduct as any).id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(productData),
-        });
-      } else {
-        res = await fetch('/api/shop_products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(productData),
-        });
-      }
-      if (!res.ok) throw new Error(await res.text());
+  const upsertMutation = useMutation({
+    mutationFn: async (args: { data: ProductUpsert; id?: string }) => {
+      if (args.id) return api.request('PUT', `/api/shop_products/${args.id}`, { body: args.data });
+      return api.request('POST', '/api/shop_products', { body: args.data });
+    },
+    onSuccess: () => {
       toast({ title: 'Succès', description: `Produit ${editingProduct ? 'modifié' : 'créé'} avec succès` });
       setDialogOpen(false);
-      fetchProducts();
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving product:', error);
-      toast({ title: 'Erreur', description: error?.message || `Impossible de ${editingProduct ? 'modifier' : 'créer'} le produit`, variant: 'destructive' });
+      toast({ title: 'Erreur', description: `Impossible de ${editingProduct ? 'modifier' : 'créer'} le produit`, variant: 'destructive' });
     }
+  });
+  const handleSave = (productData: ProductUpsert) => {
+    const id = editingProduct ? (editingProduct as any).id : undefined;
+    upsertMutation.mutate({ data: productData, id });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin" />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Leaf, Star, Package, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
@@ -28,7 +28,6 @@ interface SeedProduct {
 const SeedsSection = () => {
   const [products, setProducts] = useState<SeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_currentIndex, setCurrentIndex] = useState(0);
   const { t } = useI18n();
 
@@ -171,13 +170,13 @@ const SeedsSection = () => {
                   <h3 className="text-2xl font-bold text-foreground mb-4 group-hover:text-primary transition-colors">
                     {products[0].name}
                   </h3>
-                  <p className="text-muted-foreground mb-4 line-clamp-3">
+                  <div className="text-muted-foreground mb-4 line-clamp-3">
                     <div 
                       dangerouslySetInnerHTML={{ 
                         __html: DOMPurify.sanitize(products[0].description) 
                       }} 
                     />
-                  </p>
+                  </div>
                   <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
                     <div>
                       <span className="font-medium text-foreground">{t('seeds.variety')}:</span>
@@ -252,13 +251,13 @@ const SeedsSection = () => {
                     </CardHeader>
 
                     <CardContent className="pt-0 space-y-3">
-                      <CardDescription className="text-sm line-clamp-2">
+                      <div className="text-sm text-muted-foreground line-clamp-2">
                         <div 
                           dangerouslySetInnerHTML={{ 
                             __html: DOMPurify.sanitize(product.description) 
                           }} 
                         />
-                      </CardDescription>
+                      </div>
                       
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>

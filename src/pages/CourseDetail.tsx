@@ -3,14 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Star, Play, Clock, Users, BookOpen, CheckCircle, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import logoAk from "@/assets/logo-ak.png";
 
 interface Course {
   id: string;
@@ -66,7 +65,7 @@ const CourseDetail = () => {
         price: data.price || 0,
         level: data.level || 'Tous niveaux',
         category: data.category || 'Général',
-        thumbnail: data.thumbnailUrl || data.imageUrl || logoAk,
+        thumbnail: data.thumbnailUrl || data.imageUrl || '/logo-ak.png',
         isLive: !!data.isLive,
         modules: Array.isArray(data.modules) ? data.modules.map((m: any, idx: number) => ({
           id: String(m.id ?? idx + 1),
@@ -319,6 +318,9 @@ const CourseDetail = () => {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Inscription au cours</DialogTitle>
+                          <DialogDescription>
+                            Veuillez remplir le formulaire ci-dessous pour vous inscrire à ce cours.
+                          </DialogDescription>
                         </DialogHeader>
                         <EnrollmentForm onSubmit={handleEnrollment} course={course} />
                       </DialogContent>

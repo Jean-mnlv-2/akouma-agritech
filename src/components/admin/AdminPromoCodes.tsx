@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarClock, CheckCircle, Loader2, Plus, Power, RefreshCcw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface PromoCodeDto {
   id: number;
@@ -48,32 +50,23 @@ const defaultForm: PromoFormState = {
 };
 
 export const AdminPromoCodes = () => {
-  const [promoCodes, setPromoCodes] = useState<PromoCodeDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<PromoCodeDto | null>(null);
   const [formState, setFormState] = useState<PromoFormState>(defaultForm);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const loadPromoCodes = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/promo-codes', { credentials: 'include' });
-      if (!res.ok) throw new Error('Impossible de charger les codes promo');
-      const body = await res.json();
-      setPromoCodes(Array.isArray(body.data) ? body.data : []);
-    } catch (error) {
-      console.error('Promo code load error:', error);
-      toast({ title: 'Erreur', description: "Impossible de charger les codes promotionnels", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    loadPromoCodes();
-  }, [loadPromoCodes]);
+  const { data: promoCodes = [], isLoading, refetch } = useQuery<PromoCodeDto[]>({
+    queryKey: ['admin', 'promo-codes'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/promo-codes');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const openCreateDialog = () => {
     setEditingPromo(null);
@@ -114,24 +107,15 @@ export const AdminPromoCodes = () => {
         isActive: formState.isActive,
       };
 
-      const endpoint = editingPromo ? `/api/promo-codes/${editingPromo.id}` : '/api/promo-codes';
-      const method = editingPromo ? 'PUT' : 'POST';
-
-      const res = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body?.error || 'Impossible de sauvegarder le code promo');
+      if (editingPromo) {
+        await api.request('PUT', `/api/promo-codes/${editingPromo.id}`, { body: payload });
+      } else {
+        await api.request('POST', `/api/promo-codes`, { body: payload });
       }
 
       toast({ title: editingPromo ? 'Code promo mis à jour' : 'Code promo créé', description: payload.code });
       setDialogOpen(false);
-      loadPromoCodes();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'promo-codes'] });
     } catch (error: any) {
       console.error('Promo code save error:', error);
       toast({ title: 'Erreur', description: error.message || 'Impossible de sauvegarder le code promo', variant: 'destructive' });
@@ -142,23 +126,16 @@ export const AdminPromoCodes = () => {
 
   const handleToggle = async (promo: PromoCodeDto) => {
     try {
-      const res = await fetch(`/api/promo-codes/${promo.id}/toggle`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ isActive: !promo.isActive }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Impossible de changer le statut');
+      await api.request('PATCH', `/api/promo-codes/${promo.id}/toggle`, { body: { isActive: !promo.isActive } });
       toast({ title: 'Statut mis à jour', description: `Code ${promo.code} ${promo.isActive ? 'désactivé' : 'activé'}` });
-      loadPromoCodes();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'promo-codes'] });
     } catch (error: any) {
       console.error('Promo toggle error:', error);
       toast({ title: 'Erreur', description: error.message || 'Impossible de mettre à jour le statut', variant: 'destructive' });
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -180,7 +157,7 @@ export const AdminPromoCodes = () => {
           <CardDescription>Créez et gérez les promotions appliquées au panier</CardDescription>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadPromoCodes}>
+          <Button variant="outline" onClick={() => refetch()}>
             <RefreshCcw className="w-4 h-4 mr-2" />
             Actualiser
           </Button>

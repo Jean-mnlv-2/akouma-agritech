@@ -199,10 +199,10 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {product ? 'Modifier le produit' : 'Nouveau produit'}
+            {product ? "Modifier le produit" : "Ajouter un produit"}
           </DialogTitle>
           <DialogDescription>
-            Remplissez les informations du produit
+            Gérez les articles de la boutique AKOUMA.
           </DialogDescription>
         </DialogHeader>
 

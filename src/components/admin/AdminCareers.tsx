@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Briefcase, Eye, EyeOff, MapPin } from 'lucide-react';
 import { CareerDialog } from './CareerDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface Career {
   id: number;
@@ -23,74 +25,73 @@ interface Career {
 }
 
 export const AdminCareers = () => {
-  const [careers, setCareers] = useState<Career[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCareer, setEditingCareer] = useState<Career | null>(null);
   const { toast } = useToast();
 
-  const fetchCareers = useCallback(async () => {
-    try {
-      const res = await fetch('/api/careers', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setCareers(items || []);
-    } catch (error) {
-      console.error('Error fetching careers:', error);
-      toast({ title: 'Erreur', description: "Impossible de charger les offres d'emploi", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  const { data: careers = [], isLoading } = useQuery<Career[]>({
+    queryKey: ['admin', 'careers'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/careers');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => { fetchCareers(); }, [fetchCareers]);
-
-  const handleSave = async (careerData: Omit<Career, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      let res: Response;
-      if (editingCareer) {
-        res = await fetch(`/api/careers/${editingCareer.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(careerData) });
-      } else {
-        res = await fetch('/api/careers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(careerData) });
-      }
-      if (!res.ok) throw new Error(await res.text());
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: Omit<Career, 'id' | 'createdAt' | 'updatedAt'>; id?: number }) => {
+      if (payload.id) return api.request('PUT', `/api/careers/${payload.id}`, { body: payload.data });
+      return api.request('POST', '/api/careers', { body: payload.data });
+    },
+    onSuccess: () => {
       toast({ title: 'Succès', description: editingCareer ? "Offre d'emploi mise à jour" : "Offre d'emploi créée" });
       setIsDialogOpen(false);
       setEditingCareer(null);
-      fetchCareers();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'careers'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving career:', error);
       toast({ title: 'Erreur', description: "Impossible de sauvegarder l'offre d'emploi", variant: 'destructive' });
     }
+  });
+  const handleSave = (careerData: Omit<Career, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const id = editingCareer?.id;
+    upsertMutation.mutate({ data: careerData, id });
   };
 
   const handleEdit = (career: Career) => { setEditingCareer(career); setIsDialogOpen(true); };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette offre d'emploi ?")) return;
-    try {
-      const res = await fetch(`/api/careers/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to delete');
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => api.request('DELETE', `/api/careers/${id}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: "Offre d'emploi supprimée avec succès" });
-      fetchCareers();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'careers'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting career:', error);
       toast({ title: 'Erreur', description: "Impossible de supprimer l'offre d'emploi", variant: 'destructive' });
     }
+  });
+  const handleDelete = (id: number) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette offre d'emploi ?")) return;
+    deleteMutation.mutate(id);
   };
 
-  const togglePublished = async (career: Career) => {
-    try {
-      const res = await fetch(`/api/careers/${career.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ isPublished: !career.isPublished }) });
-      if (!res.ok) throw new Error(await res.text());
+  const togglePublishedMutation = useMutation({
+    mutationFn: async (career: Career) => api.request('PUT', `/api/careers/${career.id}`, { body: { isPublished: !career.isPublished } }),
+    onSuccess: (_res, career) => {
       toast({ title: 'Succès', description: `Offre d'emploi ${!career.isPublished ? 'publiée' : 'dépubliée'} avec succès` });
-      fetchCareers();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'careers'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error toggling career status:', error);
       toast({ title: 'Erreur', description: "Impossible de modifier le statut de l'offre d'emploi", variant: 'destructive' });
     }
-  };
+  });
+  const togglePublished = (career: Career) => { togglePublishedMutation.mutate(career); };
 
   const getEmploymentTypeLabel = (type: string) => {
     switch (type) {
@@ -102,7 +103,7 @@ export const AdminCareers = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">

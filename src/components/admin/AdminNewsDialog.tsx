@@ -115,9 +115,11 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {news ? 'Modifier l\'article' : 'Nouvel article'}
+            {news ? "Modifier l'actualité" : "Ajouter une actualité"}
           </DialogTitle>
-          <DialogDescription>Remplissez les informations de l'article</DialogDescription>
+          <DialogDescription>
+            Publiez ou modifiez un article d'actualité pour la plateforme.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">

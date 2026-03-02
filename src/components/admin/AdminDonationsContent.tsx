@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 type DonationImpact = {
   id: number;
@@ -33,34 +35,46 @@ type SuccessStory = {
 
 export function AdminDonationsContent() {
   const { toast } = useToast();
-  const [impacts, setImpacts] = useState<DonationImpact[]>([]);
-  const [stories, setStories] = useState<SuccessStory[]>([]);
+  const queryClient = useQueryClient();
+  const { data: impacts = [] } = useQuery<DonationImpact[]>({
+    queryKey: ['admin', 'donation-impacts'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/donation_impacts');
+      const items = Array.isArray(res) ? res : res.data;
+      return (items || []).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+    },
+    staleTime: 30000, refetchOnWindowFocus: false,
+  });
+  const { data: stories = [] } = useQuery<SuccessStory[]>({
+    queryKey: ['admin', 'success-stories'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/success_stories');
+      const items = Array.isArray(res) ? res : res.data;
+      return (items || []).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+    },
+    staleTime: 30000, refetchOnWindowFocus: false,
+  });
   const [impactForm, setImpactForm] = useState<Partial<DonationImpact>>({ isActive: true, order: 0, progress: 0 });
   const [impactEditing, setImpactEditing] = useState<DonationImpact | null>(null);
   const [storyForm, setStoryForm] = useState<Partial<SuccessStory>>({ isActive: true, order: 0 });
   const [storyEditing, setStoryEditing] = useState<SuccessStory | null>(null);
 
-  const fetchAll = async () => {
-    try {
-      const [impRes, stoRes] = await Promise.all([
-          fetch('/api/donation_impacts', { credentials: 'include' }),
-          fetch('/api/success_stories', { credentials: 'include' }),
-      ]);
-      if (!impRes.ok || !stoRes.ok) throw new Error('Failed to load');
-      const impBody = await impRes.json();
-      const stoBody = await stoRes.json();
-      const impItems = Array.isArray(impBody) ? impBody : impBody.data;
-      const stoItems = Array.isArray(stoBody) ? stoBody : stoBody.data;
-      setImpacts((impItems || []).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)));
-      setStories((stoItems || []).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)));
-    } catch (e) {
-      console.error(e);
-      toast({ title: 'Erreur', description: 'Chargement des contenus de dons échoué', variant: 'destructive' });
+  useEffect(() => { /* React Query charge les données */ }, []);
+
+  const saveImpactMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      if (impactEditing) return api.request('PUT', `/api/donation_impacts/${impactEditing.id}`, { body: payload });
+      return api.request('POST', `/api/donation_impacts`, { body: payload });
+    },
+    onSuccess: async () => {
+      setImpactEditing(null); setImpactForm({ isActive: true, order: 0, progress: 0 });
+      toast({ title: 'Succès', description: 'Impact enregistré.' });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'donation-impacts'] });
+    },
+    onError: () => {
+      toast({ title: 'Erreur', description: 'Enregistrement échoué', variant: 'destructive' });
     }
-  };
-
-  useEffect(() => { fetchAll(); }, []);
-
+  });
   const saveImpact = async () => {
     const payload: any = {
       title: impactForm.title?.trim(),
@@ -72,29 +86,34 @@ export function AdminDonationsContent() {
       isActive: Boolean(impactForm.isActive),
     };
     if (!payload.title) { toast({ title: 'Validation', description: 'Titre requis', variant: 'destructive' }); return; }
-    try {
-      let res: Response;
-      if (impactEditing) {
-        res = await fetch(`/api/donation_impacts/${impactEditing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
-      } else {
-        res = await fetch('/api/donation_impacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
-      }
-      if (!res.ok) throw new Error(await res.text());
-      setImpactEditing(null); setImpactForm({ isActive: true, order: 0, progress: 0 });
-      await fetchAll();
-      toast({ title: 'Succès', description: 'Impact enregistré.' });
-    } catch (e) {
-      console.error(e);
-      toast({ title: 'Erreur', description: 'Enregistrement échoué', variant: 'destructive' });
-    }
+    saveImpactMutation.mutate(payload);
   };
 
+  const deleteImpactMutation = useMutation({
+    mutationFn: async (id: number) => api.request('DELETE', `/api/donation_impacts/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'donation-impacts'] });
+    }
+  });
   const deleteImpact = async (row: DonationImpact) => {
     if (!confirm(`Supprimer l'impact "${row.title}" ?`)) return;
-    await fetch(`/api/donation_impacts/${row.id}`, { method: 'DELETE', credentials: 'include' });
-    await fetchAll();
+    deleteImpactMutation.mutate(row.id);
   };
 
+  const saveStoryMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      if (storyEditing) return api.request('PUT', `/api/success_stories/${storyEditing.id}`, { body: payload });
+      return api.request('POST', `/api/success_stories`, { body: payload });
+    },
+    onSuccess: async () => {
+      setStoryEditing(null); setStoryForm({ isActive: true, order: 0 });
+      toast({ title: 'Succès', description: 'Histoire enregistrée.' });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'success-stories'] });
+    },
+    onError: () => {
+      toast({ title: 'Erreur', description: 'Enregistrement échoué', variant: 'destructive' });
+    }
+  });
   const saveStory = async () => {
     const payload: any = {
       title: storyForm.title?.trim(),
@@ -106,27 +125,18 @@ export function AdminDonationsContent() {
       isActive: Boolean(storyForm.isActive),
     };
     if (!payload.title) { toast({ title: 'Validation', description: 'Titre requis', variant: 'destructive' }); return; }
-    try {
-      let res: Response;
-      if (storyEditing) {
-        res = await fetch(`/api/success_stories/${storyEditing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
-      } else {
-        res = await fetch('/api/success_stories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
-      }
-      if (!res.ok) throw new Error(await res.text());
-      setStoryEditing(null); setStoryForm({ isActive: true, order: 0 });
-      await fetchAll();
-      toast({ title: 'Succès', description: 'Histoire enregistrée.' });
-    } catch (e) {
-      console.error(e);
-      toast({ title: 'Erreur', description: 'Enregistrement échoué', variant: 'destructive' });
-    }
+    saveStoryMutation.mutate(payload);
   };
 
+  const deleteStoryMutation = useMutation({
+    mutationFn: async (id: number) => api.request('DELETE', `/api/success_stories/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'success-stories'] });
+    }
+  });
   const deleteStory = async (row: SuccessStory) => {
     if (!confirm(`Supprimer l'histoire "${row.title}" ?`)) return;
-    await fetch(`/api/success_stories/${row.id}`, { method: 'DELETE', credentials: 'include' });
-    await fetchAll();
+    deleteStoryMutation.mutate(row.id);
   };
 
   return (

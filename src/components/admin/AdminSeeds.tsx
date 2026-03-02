@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminSeedDialog } from './AdminSeedDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface Seed {
   id: string;
@@ -20,7 +22,6 @@ interface Seed {
   isFeatured?: boolean;
   imageUrl?: string;
   createdAt?: string;
-  // Legacy fields for backward display compatibility
   price_fcfa?: number;
   stock_quantity?: number;
   is_published?: boolean;
@@ -29,30 +30,21 @@ interface Seed {
 }
 
 export function AdminSeeds() {
-  const [seeds, setSeeds] = useState<Seed[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
   const { toast } = useToast();
 
-  const fetchSeeds = useCallback(async () => {
-    try {
-      const res = await fetch('/api/seeds', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setSeeds(items || []);
-    } catch (error) {
-      console.error('Error fetching seeds:', error);
-      toast({ title: 'Erreur', description: "Impossible de charger les semences", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchSeeds();
-  }, [fetchSeeds]);
+  const { data: seeds = [], isLoading } = useQuery<Seed[]>({
+    queryKey: ['admin', 'seeds'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/seeds');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const handleCreate = () => {
     setEditingSeed(null);
@@ -64,69 +56,58 @@ export function AdminSeeds() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (seedId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette semence ?')) return;
-    try {
-      const res = await fetch(`/api/seeds/${seedId}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to delete');
+  const deleteMutation = useMutation({
+    mutationFn: async (seedId: string) => api.request('DELETE', `/api/seeds/${seedId}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Semence supprimée avec succès' });
-      fetchSeeds();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'seeds'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting seed:', error);
       toast({ title: 'Erreur', description: 'Impossible de supprimer la semence', variant: 'destructive' });
     }
+  });
+  const handleDelete = (seedId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette semence ?')) return;
+    deleteMutation.mutate(seedId);
   };
 
   type SeedUpsert = Record<string, unknown>;
-  const handleSave = async (seedData: SeedUpsert) => {
-    try {
-      const isEditing = !!editingSeed;
-      // Map legacy dialog fields to Prisma API
-      const payload = {
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: SeedUpsert; id?: string }) => {
+      const seedData = payload.data as any;
+      const mapped = {
         name: seedData.name || '',
-        description: (seedData as any).description || null,
-        category: (seedData as any).category || null,
-        variety: (seedData as any).variety || null,
-        price: (seedData as any).price_fcfa || 0,
-        unit: (seedData as any).unit || null,
-        stock: (seedData as any).stock_quantity || 0,
-        availability: (seedData as any).availability || null,
-        imageUrl: (seedData as any).image_url || null,
-        isPublished: (seedData as any).is_published !== false,
-        slug: (seedData as any).slug || undefined,
+        description: seedData.description || null,
+        category: seedData.category || null,
+        variety: seedData.variety || null,
+        price: seedData.price_fcfa ?? seedData.price ?? 0,
+        unit: seedData.unit || null,
+        stock: seedData.stock_quantity ?? seedData.stock ?? 0,
+        availability: seedData.availability || null,
+        imageUrl: seedData.image_url ?? seedData.imageUrl ?? null,
+        isPublished: seedData.is_published ?? seedData.isPublished ?? true,
+        slug: seedData.slug || undefined,
       };
-
-      let res: Response;
-      if (isEditing) {
-        res = await fetch(`/api/seeds/${editingSeed!.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      } else {
-        res = await fetch('/api/seeds', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      }
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || 'Request failed');
-      }
-
-      toast({ title: 'Succès', description: `Semence ${isEditing ? 'modifiée' : 'créée'} avec succès` });
+      if (payload.id) return api.request('PUT', `/api/seeds/${payload.id}`, { body: mapped });
+      return api.request('POST', '/api/seeds', { body: mapped });
+    },
+    onSuccess: () => {
+      toast({ title: 'Succès', description: `Semence ${editingSeed ? 'modifiée' : 'créée'} avec succès` });
       setDialogOpen(false);
-      fetchSeeds();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'seeds'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving seed:', error);
       toast({ title: 'Erreur', description: `Impossible de ${editingSeed ? 'modifier' : 'créer'} la semence`, variant: 'destructive' });
     }
+  });
+  const handleSave = (seedData: SeedUpsert) => {
+    const id = editingSeed?.id;
+    upsertMutation.mutate({ data: seedData, id });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin" />

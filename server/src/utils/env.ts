@@ -90,6 +90,8 @@ export const env = {
   DEFAULT_ADMIN_FULL_NAME,
   DEFAULT_ADMIN_FORCE_RESET,
   API_PUBLIC_URL: process.env.API_PUBLIC_URL ?? `http://localhost:${PORT}`,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  EMAIL_FROM: process.env.EMAIL_FROM || 'AKOUMA <noreply@akouma.com>',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
   validateSecrets: () => {

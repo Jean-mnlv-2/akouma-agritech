@@ -10,6 +10,7 @@ import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { env } from './utils/env';
+import { initCronJobs } from './utils/cron';
 import { authRouter } from './routes/auth';
 import { countriesRouter } from './routes/countries';
 import { seedsRouter } from './routes/seeds';
@@ -19,6 +20,10 @@ import { legalPagesRouter } from './routes/legalPages';
 import { shopProductsRouter } from './routes/shopProducts';
 import { partnershipsRouter } from './routes/partnerships';
 import { partnersRouter } from './routes/partners';
+import { coursePreviewTypesRouter } from './routes/coursePreviewTypes';
+import { coursePreviewItemsRouter } from './routes/coursePreviewItems';
+import { reminderLogsRouter } from './routes/reminderLogs';
+import { ensureCoursePreviewTypes } from './utils/seedPreviewTypes';
 import { donationsRouter } from './routes/donations';
 import { contactMessagesRouter } from './routes/contactMessages';
 import { contentSubmissionsRouter } from './routes/contentSubmissions';
@@ -157,6 +162,9 @@ app.use('/api/stats', statsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/promo-codes', promoCodesRouter);
 app.use('/api/delivery-partners', deliveryPartnersRouter);
+app.use('/api/course_preview_types', coursePreviewTypesRouter);
+app.use('/api/course_preview_items', coursePreviewItemsRouter);
+app.use('/api/reminder_logs', reminderLogsRouter);
 app.use('/api', genericRouter);
 
 // Middleware de gestion d'erreur centralisée
@@ -228,6 +236,8 @@ async function ensureDefaultAdmin() {
 async function bootstrap() {
   try {
     await ensureDefaultAdmin();
+    await ensureCoursePreviewTypes(prisma);
+    initCronJobs();
     app.listen(env.PORT, () => {
       if (env.isDevelopment()) {
         // eslint-disable-next-line no-console

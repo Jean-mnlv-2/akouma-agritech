@@ -59,10 +59,13 @@ export function AdminLegalPageDialog({ open, onOpenChange, page, onSave }: Admin
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{page ? 'Modifier la page légale' : 'Nouvelle page légale'}</DialogTitle>
-          <DialogDescription>Remplissez les informations de la page légale</DialogDescription>
+          <DialogTitle>
+            {page ? "Modifier la page" : "Ajouter une nouvelle page"}
+          </DialogTitle>
+          <DialogDescription>
+            Éditez le contenu légal de la page {page?.title || ''}.
+          </DialogDescription>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
