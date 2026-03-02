@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import countriesData from "@/assets/countries.json";
+import { api } from "@/integrations/api/client";
 
 export interface Country {
   code: string;
@@ -14,14 +15,11 @@ export const useCountries = () => {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await fetch('/api/countries');
-        if (res.ok) {
-          const body = await res.json();
-          const list = ((Array.isArray(body) ? body : body?.data) || []) as Country[];
-          if (list.length > 0) {
-            setCountries(list.sort((a, b) => a.name.localeCompare(b.name)));
-            return;
-          }
+        const body = await api.request('GET', '/api/countries');
+        const list = ((Array.isArray(body) ? body : body?.data) || []) as Country[];
+        if (list.length > 0) {
+          setCountries(list.sort((a, b) => a.name.localeCompare(b.name)));
+          return;
         }
       } catch (e) {
         console.warn('Failed to fetch countries from API, using fallback JSON', e);

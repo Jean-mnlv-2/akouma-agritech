@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2, 
@@ -179,9 +179,9 @@ function AdminContent() {
 
       setUser({ email: user.email, role: user.role });
 
-      const hasAdminRole = user.role === 'admin';
+      const isAuthorized = user.role === 'admin' || user.role === 'supervisor';
       
-      if (!hasAdminRole) {
+      if (!isAuthorized) {
         toast({ title: "Accès refusé", description: "Vous n'avez pas les permissions pour accéder à cette page.", variant: "destructive" });
         navigate('/auth');
         return;
@@ -254,7 +254,9 @@ function AdminContent() {
               <div className="flex items-center space-x-2 text-xs md:text-sm text-muted-foreground bg-muted/50 px-2 md:px-3 py-1 md:py-2 rounded-lg w-full sm:w-auto">
                 <User className="admin-icon-responsive-sm flex-shrink-0" />
                 <span className="truncate">{user?.email}</span>
-                <Badge variant="secondary" className="ml-2 admin-text-responsive-xs">{user?.role === 'admin' ? 'Admin' : 'User'}</Badge>
+                <Badge variant="secondary" className="ml-2 admin-text-responsive-xs capitalize">
+                  {user?.role === 'admin' ? 'Admin' : user?.role === 'supervisor' ? 'Superviseur' : 'Utilisateur'}
+                </Badge>
               </div>
               <div className="admin-btn-group-mobile">
                 <Button variant="outline" onClick={() => setPasswordDialogOpen(true)} className="admin-btn-mobile flex items-center space-x-1 md:space-x-2"><Lock className="admin-icon-responsive-sm" /><span className="hidden sm:inline">Mot de passe</span></Button>
@@ -284,23 +286,25 @@ function AdminContent() {
               ))}
             </TabsList>
 
-            <TabsContent value="users" className="admin-space-responsive-md"><AdminUserManagement /></TabsContent>
-            <TabsContent value="orders" className="admin-space-responsive-md"><AdminOrders /></TabsContent>
-            <TabsContent value="promos" className="admin-space-responsive-md"><AdminPromoCodes /></TabsContent>
-            <TabsContent value="courses" className="admin-space-responsive-md"><AdminCourses /></TabsContent>
-            <TabsContent value="course-previews" className="admin-space-responsive-md"><AdminCoursePreviews /></TabsContent>
-            <TabsContent value="reminder-logs" className="admin-space-responsive-md"><AdminReminderLogs /></TabsContent>
-            <TabsContent value="news" className="admin-space-responsive-md"><AdminNews /></TabsContent>
-            <TabsContent value="seeds" className="admin-space-responsive-md"><AdminSeeds /></TabsContent>
-            <TabsContent value="products" className="admin-space-responsive-md"><AdminProducts /></TabsContent>
-            <TabsContent value="legal" className="admin-space-responsive-md"><AdminLegalPages /></TabsContent>
-            <TabsContent value="partners" className="admin-space-responsive-md"><AdminPartners /></TabsContent>
-            <TabsContent value="donations-content" className="admin-space-responsive-md"><AdminDonationsContent /></TabsContent>
-            <TabsContent value="careers" className="admin-space-responsive-md"><AdminCareers /></TabsContent>
-            <TabsContent value="events" className="admin-space-responsive-md"><AdminEvents /></TabsContent>
-            <TabsContent value="livestreams" className="admin-space-responsive-md"><AdminLiveStreams /></TabsContent>
-            <TabsContent value="submissions" className="admin-space-responsive-md"><AdminSubmissions /></TabsContent>
-            <TabsContent value="contact-settings" className="admin-space-responsive-md"><AdminContactSettings /></TabsContent>
+            <div className="mt-6" key={activeTab}>
+              {activeTab === 'users' && <AdminUserManagement />}
+              {activeTab === 'orders' && <AdminOrders />}
+              {activeTab === 'promos' && <AdminPromoCodes />}
+              {activeTab === 'courses' && <AdminCourses />}
+              {activeTab === 'course-previews' && <AdminCoursePreviews />}
+              {activeTab === 'reminder-logs' && <AdminReminderLogs />}
+              {activeTab === 'news' && <AdminNews />}
+              {activeTab === 'seeds' && <AdminSeeds />}
+              {activeTab === 'products' && <AdminProducts />}
+              {activeTab === 'legal' && <AdminLegalPages />}
+              {activeTab === 'partners' && <AdminPartners />}
+              {activeTab === 'donations-content' && <AdminDonationsContent />}
+              {activeTab === 'careers' && <AdminCareers />}
+              {activeTab === 'events' && <AdminEvents />}
+              {activeTab === 'livestreams' && <AdminLiveStreams />}
+              {activeTab === 'submissions' && <AdminSubmissions />}
+              {activeTab === 'contact-settings' && <AdminContactSettings />}
+            </div>
           </Tabs>
         </div>
       </div>

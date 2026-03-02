@@ -3,11 +3,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Textarea unused - rich editor used instead
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+// import ReactQuill from 'react-quill';
+// import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 
 interface Seed {
@@ -139,7 +139,8 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
       const url = data.url as string;
       setFormData({ ...formData, image_url: url });
       setPreviewUrl(url);
-    } catch (_e) {
+    } catch (error) {
+      console.error('Image upload error:', error);
       alert('Erreur lors de l\'upload de l\'image');
     } finally {
       setUploading(false);
@@ -164,7 +165,8 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
       });
       const urls = await Promise.all(uploads);
       setGalleryUrls((prev) => Array.from(new Set([...(prev || []), ...urls])));
-    } catch (_e) {
+    } catch (error) {
+      console.error('Gallery upload error:', error);
       alert('Erreur lors de l\'upload de la galerie');
     } finally {
       setGalleryUploading(false);
@@ -200,8 +202,14 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <ReactQuill id="description" theme="snow" value={formData.description} onChange={(value) => setFormData({ ...formData, description: value })} className="bg-white rounded" style={{ minHeight: 120 }} />
+            <Label htmlFor="description">Description *</Label>
+            <Textarea 
+              id="description" 
+              value={formData.description} 
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 120 }} 
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -259,10 +267,27 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
             </div>
           </div>
 
-          {/* Éditeurs de texte */}
-          <div className="space-y-2">
-            <Label htmlFor="planting_instructions">Instructions de plantation</Label>
-            <ReactQuill id="planting_instructions" theme="snow" value={formData.planting_instructions} onChange={(value) => setFormData({ ...formData, planting_instructions: value })} className="bg-white rounded" style={{ minHeight: 120, marginBottom: 16 }} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="planting_instructions">Instructions de plantation</Label>
+              <Textarea 
+                id="planting_instructions" 
+                value={formData.planting_instructions} 
+                onChange={(e) => setFormData({ ...formData, planting_instructions: e.target.value })} 
+                className="bg-white rounded" 
+                style={{ minHeight: 120 }} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="care_instructions">Instructions d'entretien</Label>
+              <Textarea 
+                id="care_instructions" 
+                value={formData.care_instructions} 
+                onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })} 
+                className="bg-white rounded" 
+                style={{ minHeight: 120 }} 
+              />
+            </div>
           </div>
 
           {/* Image principale */}

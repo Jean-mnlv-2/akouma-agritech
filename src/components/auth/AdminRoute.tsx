@@ -22,7 +22,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
         if (cachedUser) {
           try {
             const user = JSON.parse(cachedUser);
-            if (user?.role === 'admin' && user?.isActive !== false) {
+            if ((user?.role === 'admin' || user?.role === 'supervisor') && user?.isActive !== false) {
               setAuthorized(true);
               setLoading(false);
               // Clear cache after use, future checks will use cookie/session
@@ -53,7 +53,9 @@ export default function AdminRoute({ children }: AdminRouteProps) {
           return;
         }
 
-        if (role !== "admin") {
+        const isAuthorized = role === "admin" || role === "supervisor";
+
+        if (!isAuthorized) {
           toast({ title: "Accès refusé", description: "Permissions administrateur requises.", variant: "destructive" });
           navigate("/auth");
           return;

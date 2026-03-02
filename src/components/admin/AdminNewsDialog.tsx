@@ -3,12 +3,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Textarea unused - rich editor used instead
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// Uploads handled by backend API
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+// import ReactQuill from 'react-quill';
+// import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 
 interface NewsArticle {
@@ -134,11 +133,23 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
           </div>
           <div className="space-y-2">
             <Label htmlFor="excerpt">Extrait</Label>
-            <ReactQuill id="excerpt" theme="snow" value={formData.excerpt} onChange={(value) => setFormData({ ...formData, excerpt: value })} className="bg-white rounded" style={{ minHeight: 80, marginBottom: 16 }} />
+            <Textarea 
+              id="excerpt" 
+              value={formData.excerpt} 
+              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 80, marginBottom: 16 }} 
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="content">Contenu de l'article *</Label>
-            <ReactQuill id="content" theme="snow" value={formData.content} onChange={(value) => setFormData({ ...formData, content: value })} className="bg-white rounded" style={{ minHeight: 180 }} />
+            <Textarea 
+              id="content" 
+              value={formData.content} 
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 180 }} 
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -3,18 +3,34 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Course } from './AdminCourses';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+// import ReactQuill from 'react-quill';
+// import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
+
+interface CourseData {
+  title: string;
+  description: string | null;
+  content: string | null;
+  price: number;
+  duration: number;
+  level: string | null;
+  thumbnailUrl: string | null;
+  videoUrl: string | null;
+  isPublished: boolean;
+  isPreviewAvailable: boolean;
+  languages: string[];
+  slug: string;
+}
 
 interface AdminCourseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   course: Course | null;
-  onSave: (courseData: any) => void;
+  onSave: (courseData: CourseData) => void;
 }
 
 export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminCourseDialogProps) {
@@ -64,8 +80,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         course_materials_url: '',
         is_published: course.is_published || false,
         is_featured: course.is_featured || false,
-        is_preview_available: (course as any).isPreviewAvailable ?? false,
-        languages_csv: Array.isArray((course as any).languages) ? ((course as any).languages.join(', ')) : '',
+        is_preview_available: (course as Course & { isPreviewAvailable?: boolean }).isPreviewAvailable ?? false,
+        languages_csv: Array.isArray((course as Course & { languages?: string[] }).languages) ? ((course as Course & { languages?: string[] }).languages?.join(', ') || '') : '',
         slug: course.title?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || ''
       });
     } else {
@@ -130,6 +146,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       setFormData({ ...formData, thumbnail_url: url });
       setPreviewImageUrl(url);
     } catch (err) {
+      console.error('Image upload error:', err);
       alert('Erreur lors de l\'upload de l\'image');
     }
     setUploadingImage(false);
@@ -149,6 +166,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       setFormData({ ...formData, video_url: url });
       setPreviewVideoUrl(url);
     } catch (err) {
+      console.error('Video upload error:', err);
       alert('Erreur lors de l\'upload de la vidéo');
     }
     setUploadingVideo(false);
@@ -177,16 +195,34 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <ReactQuill id="description" theme="snow" value={formData.description} onChange={(value) => setFormData({ ...formData, description: value })} className="bg-white rounded" style={{ minHeight: 120 }} />
+            <Label htmlFor="description">Description *</Label>
+            <Textarea 
+              id="description" 
+              value={formData.description} 
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 100 }} 
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="excerpt">Extrait</Label>
-            <ReactQuill id="excerpt" theme="snow" value={formData.excerpt} onChange={(value) => setFormData({ ...formData, excerpt: value })} className="bg-white rounded" style={{ minHeight: 80, marginBottom: 16 }} />
+            <Textarea 
+              id="excerpt" 
+              value={formData.excerpt} 
+              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 80, marginBottom: 16 }} 
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="content">Contenu du cours</Label>
-            <ReactQuill id="content" theme="snow" value={formData.content} onChange={(value) => setFormData({ ...formData, content: value })} className="bg-white rounded" style={{ minHeight: 180, marginBottom: 16 }} />
+            <Label htmlFor="content">Contenu du cours (HTML) *</Label>
+            <Textarea 
+              id="content" 
+              value={formData.content} 
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })} 
+              className="bg-white rounded" 
+              style={{ minHeight: 150 }} 
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

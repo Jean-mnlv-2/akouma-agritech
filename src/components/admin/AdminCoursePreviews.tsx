@@ -97,10 +97,10 @@ export function AdminCoursePreviews() {
                   {types.map((t: any) => (<SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>))}
                 </SelectContent>
               </Select>
-              <Select value={String(filterTypeId ?? '')} onValueChange={(v) => setFilterTypeId(v ? Number(v) : undefined)}>
+              <Select value={filterTypeId ? String(filterTypeId) : 'all'} onValueChange={(v) => setFilterTypeId(v === 'all' ? undefined : Number(v))}>
                 <SelectTrigger className="w-48"><SelectValue placeholder="Filtrer par type" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les types</SelectItem>
+                  <SelectItem value="all">Tous les types</SelectItem>
                   {types.map((t: any) => (<SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>))}
                 </SelectContent>
               </Select>

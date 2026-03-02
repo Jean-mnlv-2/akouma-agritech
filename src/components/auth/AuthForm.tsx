@@ -75,9 +75,12 @@ export const AuthForm = () => {
         // Store session info for AdminRoute to use immediately after redirect
         sessionStorage.setItem('akouma_auth_user', JSON.stringify(authData.user));
 
-        if (role === 'admin' || role === 'supervisor') {
+        if (role === 'admin') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
           navigate('/admin', { replace: true });
+        } else if (role === 'supervisor') {
+          toast({ title: "Connexion réussie", description: "Bienvenue dans votre espace superviseur" });
+          navigate('/supervisor', { replace: true });
         } else {
           toast({ title: "Connexion réussie", description: "Bienvenue !" });
           navigate('/', { replace: true });

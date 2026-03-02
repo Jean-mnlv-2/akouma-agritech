@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,12 +44,12 @@ export function AdminContactSettings() {
 
   const hasRecord = useMemo(() => Boolean(localSettings && localSettings.id), [localSettings]);
 
-  // Sync local editable state when server data loads
-  if (settings && (!localSettings || !localSettings.id) && !isLoading) {
-    // Avoid controlled/uncontrolled issues by initializing once
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    setLocalSettings(settings);
-  }
+
+  useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      setLocalSettings(settings);
+    }
+  }, [settings]);
 
   const handleChange = (key: keyof ContactSettings, value: string) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
@@ -57,12 +57,11 @@ export function AdminContactSettings() {
 
   const saveMutation = useMutation({
     mutationFn: async (payload: ContactSettings) => {
-      const cleanPayload: ContactSettings = { ...payload };
-      Object.keys(cleanPayload).forEach((k) => {
-        const key = k as keyof ContactSettings;
+      const cleanPayload = { ...payload };
+      (Object.keys(cleanPayload) as Array<keyof ContactSettings>).forEach((key) => {
         const val = cleanPayload[key];
         if (typeof val === 'string' && val.trim() === '') {
-          (cleanPayload as any)[key] = null;
+          (cleanPayload as Record<string, unknown>)[key] = null;
         }
       });
       if (hasRecord && localSettings.id) {
