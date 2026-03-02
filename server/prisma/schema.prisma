@@ -8,15 +8,17 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  fullName     String?
-  avatarUrl    String?
-  role         String   @default("customer")
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash     String
+  fullName         String?
+  avatarUrl        String?
+  role             String   @default("customer")
+  isActive         Boolean  @default(true)
+  resetToken       String?  @unique
+  resetTokenExpiry DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   enrollments   ELearningEnrollment[]
@@ -55,11 +57,14 @@ model Course {
   thumbnailUrl String?
   videoUrl     String?
   isPublished  Boolean  @default(false)
+  isPreviewAvailable Boolean @default(false)
+  languages    String[] @default(["Français"])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   // Relations
   enrollments ELearningEnrollment[]
+  previewItems CoursePreviewItem[]
 }
 
 model News {
@@ -163,12 +168,20 @@ model DemoRequest {
 }
 
 model ELearningEnrollment {
-  id          Int       @id @default(autoincrement())
-  userId      String
-  courseId    Int
-  enrolledAt  DateTime  @default(now())
-  completedAt DateTime?
-  progress    Int       @default(0) // pourcentage de completion
+  id              Int       @id @default(autoincrement())
+  userId          String
+  courseId        Int
+  enrolledAt      DateTime  @default(now())
+  completedAt     DateTime?
+  progress        Int       @default(0)
+  
+  studyPace       String    @default("standard")
+  startDate       DateTime?
+  targetEndDate   DateTime?
+  remindersEnabled Boolean   @default(true)
+  lastReminderSent DateTime?
+  studyDays       String?
+  dailyTimeSlot   String?
 
   // Relations
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -266,6 +279,51 @@ model ELearningStat {
   icon      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CoursePreviewType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // e.g., "video", "pdf"
+  label     String   // e.g., "Vidéo", "Document PDF"
+  icon      String?  // e.g., "Video", "FileText" (Lucide icon name)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items     CoursePreviewItem[]
+}
+
+model CoursePreviewItem {
+  id          Int      @id @default(autoincrement())
+  courseId    Int
+  typeId      Int
+  type        String   // video, pdf (kept for legacy/ease)
+  title       String
+  description String?
+  url         String
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  previewType CoursePreviewType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([typeId])
+  @@index([isActive])
+  @@index([order])
+}
+
+model ReminderLog {
+  id         Int      @id @default(autoincrement())
+  enrollmentId Int?
+  userId     String?
+  courseId   Int?
+  email      String
+  status     String   // success, failed
+  error      String?
+  sentAt     DateTime @default(now())
+  createdAt  DateTime @default(now())
 }
 
 /// Tasks used in supervisor/admin workflows

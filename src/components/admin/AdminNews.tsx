@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminNewsDialog } from './AdminNewsDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface NewsArticle {
   id: number;
@@ -18,82 +20,62 @@ interface NewsArticle {
 }
 
 export function AdminNews() {
-  const [news, setNews] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<NewsArticle | null>(null);
   const { toast } = useToast();
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
-  const fetchNews = useCallback(async () => {
-    try {
-      const url = new URL('/api/news', apiBaseUrl);
-      const res = await fetch(url.toString(), { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setNews(items || []);
-    } catch (error) {
-      console.error('Error fetching news:', error);
-      toast({ title: 'Erreur', description: "Impossible de charger les actualités", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchNews();
-  }, [fetchNews]);
+  const { data: news = [], isLoading } = useQuery<NewsArticle[]>({
+    queryKey: ['admin', 'news'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/news');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const handleCreate = () => { setEditingNews(null); setDialogOpen(true); };
   const handleEdit = (newsItem: NewsArticle) => { setEditingNews(newsItem); setDialogOpen(true); };
 
-  const handleDelete = async (newsId: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette actualité ?')) return;
-    try {
-      const url = new URL(`/api/news/${newsId}`, apiBaseUrl);
-      const res = await fetch(url.toString(), { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to delete');
+  const deleteMutation = useMutation({
+    mutationFn: async (newsId: number) => api.request('DELETE', `/api/news/${newsId}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Actualité supprimée avec succès' });
-      fetchNews();
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'news'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting news:', error);
-      toast({ title: 'Erreur', description: error?.message || "Impossible de supprimer l'actualité", variant: 'destructive' });
+      toast({ title: 'Erreur', description: "Impossible de supprimer l'actualité", variant: 'destructive' });
     }
+  });
+  const handleDelete = (newsId: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette actualité ?')) return;
+    deleteMutation.mutate(newsId);
   };
 
-  const handleSave = async (newsData: any) => {
-    try {
-      const isEditing = !!editingNews;
-      let res: Response;
-      if (isEditing) {
-        const url = new URL(`/api/news/${(editingNews as any).id}`, apiBaseUrl);
-        res = await fetch(url.toString(), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(newsData),
-        });
-      } else {
-        const url = new URL('/api/news', apiBaseUrl);
-        res = await fetch(url.toString(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(newsData),
-        });
-      }
-      if (!res.ok) throw new Error(await res.text());
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: any; id?: number }) => {
+      if (payload.id) return api.request('PUT', `/api/news/${payload.id}`, { body: payload.data });
+      return api.request('POST', '/api/news', { body: payload.data });
+    },
+    onSuccess: () => {
       toast({ title: 'Succès', description: `Actualité ${editingNews ? 'modifiée' : 'créée'} avec succès` });
       setDialogOpen(false);
-      fetchNews();
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'news'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving news:', error);
-      toast({ title: 'Erreur', description: error?.message || `Impossible de ${editingNews ? 'modifier' : 'créer'} l'actualité`, variant: 'destructive' });
+      toast({ title: 'Erreur', description: `Impossible de ${editingNews ? 'modifier' : 'créer'} l'actualité`, variant: 'destructive' });
     }
+  });
+  const handleSave = (newsData: any) => {
+    const id = editingNews ? (editingNews as any).id : undefined;
+    upsertMutation.mutate({ data: newsData, id });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin" />

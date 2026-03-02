@@ -180,9 +180,11 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {seed ? 'Modifier la semence' : 'Nouvelle semence'}
+            {seed ? 'Modifier la semence' : 'Ajouter une semence'}
           </DialogTitle>
-          <DialogDescription>Remplissez les informations de la semence</DialogDescription>
+          <DialogDescription>
+            Renseignez les détails techniques et commerciaux de la semence.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">

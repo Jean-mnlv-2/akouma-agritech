@@ -12,7 +12,6 @@ import ShopSection from "@/components/ShopSection";
 import StatsSection from "@/components/StatsSection";
 import { useI18n } from "@/i18n/i18n";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
-import logoAk from "@/assets/logo-ak.png";
 
 const Index = () => {
   const { t } = useI18n();
@@ -31,7 +30,7 @@ const Index = () => {
         title={t("index.title")}
         description={t("index.description")}
         canonical={window.location.origin + '/'}
-        image={logoAk}
+        image="/logo-ak.png"
       />
       <Header />
       <main>

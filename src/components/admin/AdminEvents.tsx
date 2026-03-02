@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Calendar, MapPin, Eye, EyeOff } from 'lucide-react';
 import { EventDialog } from './EventDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface Event {
   id: number;
@@ -20,91 +22,75 @@ interface Event {
 }
 
 export const AdminEvents = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const { toast } = useToast();
 
-  const fetchEvents = useCallback(async () => {
-    try {
-      const res = await fetch('/api/events', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setEvents(items || []);
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      toast({ title: 'Erreur', description: 'Impossible de charger les événements', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  const { data: events = [], isLoading } = useQuery<Event[]>({
+    queryKey: ['admin', 'events'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/events');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
-
-  const handleSave = async (eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      let res: Response;
-      if (editingEvent) {
-        res = await fetch(`/api/events/${editingEvent.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(eventData),
-        });
-      } else {
-        res = await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(eventData),
-        });
-      }
-      if (!res.ok) throw new Error(await res.text());
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>; id?: number }) => {
+      if (payload.id) return api.request('PUT', `/api/events/${payload.id}`, { body: payload.data });
+      return api.request('POST', '/api/events', { body: payload.data });
+    },
+    onSuccess: () => {
       toast({ title: 'Succès', description: editingEvent ? 'Événement mis à jour' : 'Événement créé' });
       setIsDialogOpen(false);
       setEditingEvent(null);
-      fetchEvents();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving event:', error);
       toast({ title: 'Erreur', description: 'Impossible de sauvegarder l\'événement', variant: 'destructive' });
     }
+  });
+  const handleSave = (eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const id = editingEvent?.id;
+    upsertMutation.mutate({ data: eventData, id });
   };
 
   const handleEdit = (event: Event) => { setEditingEvent(event); setIsDialogOpen(true); };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) return;
-    try {
-      const res = await fetch(`/api/events/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to delete');
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => api.request('DELETE', `/api/events/${id}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Événement supprimé avec succès' });
-      fetchEvents();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting event:', error);
       toast({ title: 'Erreur', description: "Impossible de supprimer l'événement", variant: 'destructive' });
     }
+  });
+  const handleDelete = (id: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) return;
+    deleteMutation.mutate(id);
   };
 
-  const togglePublished = async (event: Event) => {
-    try {
-      const res = await fetch(`/api/events/${event.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ isPublished: !event.isPublished }),
-      });
-      if (!res.ok) throw new Error(await res.text());
+  const togglePublishedMutation = useMutation({
+    mutationFn: async (event: Event) => api.request('PUT', `/api/events/${event.id}`, { body: { isPublished: !event.isPublished } }),
+    onSuccess: (_res, event) => {
       toast({ title: 'Succès', description: `Événement ${!event.isPublished ? 'publié' : 'dépublié'} avec succès` });
-      fetchEvents();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error toggling event status:', error);
       toast({ title: 'Erreur', description: "Impossible de modifier le statut de l'événement", variant: 'destructive' });
     }
-  };
+  });
+  const togglePublished = (event: Event) => { togglePublishedMutation.mutate(event); };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">

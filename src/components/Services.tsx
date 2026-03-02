@@ -82,13 +82,13 @@ const Services = () => {
         </div>
 
         {/* Services grid with staggered animations */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-16">
+        <div className="flex md:grid overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 gap-6 md:gap-8 mb-16 snap-x snap-mandatory hide-scrollbar">
           {services.map((service, index) => {
             const delay = index * 100;
             return (
               <Card 
                 key={`service-${index}-${service.title}`} 
-                className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-3 bg-card/90 backdrop-blur-md border border-border/50 overflow-hidden relative"
+                className="min-w-[280px] sm:min-w-[320px] md:min-w-0 group hover:shadow-xl transition-all duration-500 hover:-translate-y-3 bg-card/90 backdrop-blur-md border border-border/50 overflow-hidden relative snap-center"
                 style={{
                   animationDelay: `${delay}ms`
                 }}

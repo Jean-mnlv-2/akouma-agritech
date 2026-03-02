@@ -77,10 +77,10 @@ export const AuthForm = () => {
 
         if (role === 'admin' || role === 'supervisor') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
-          navigate('/admin');
+          navigate('/admin', { replace: true });
         } else {
           toast({ title: "Connexion réussie", description: "Bienvenue !" });
-          navigate('/');
+          navigate('/', { replace: true });
         }
       } else {
         toast({ title: "Erreur de connexion", description: "Email ou mot de passe incorrect.", variant: "destructive" });
@@ -141,17 +141,11 @@ export const AuthForm = () => {
     }
     setIsLoading(true);
     try {
-      // Send reset request to backend
-      await fetch('/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail }),
-      });
-      // Always show success to avoid email enumeration
+      await api.auth.forgotPassword(resetEmail);
       setResetSent(true);
       toast({ title: "Email envoyé", description: "Si cet email existe dans notre système, vous recevrez un lien de réinitialisation." });
-    } catch {
-      // Still show success to prevent enumeration
+    } catch (error) {
+      console.error('Forgot password error:', error);
       setResetSent(true);
       toast({ title: "Demande prise en compte", description: "Si cet email existe, un lien de réinitialisation sera envoyé." });
     } finally {

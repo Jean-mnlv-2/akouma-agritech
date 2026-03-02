@@ -120,6 +120,16 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  @layer utilities {
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  }
 }
 
 @layer base {
@@ -151,6 +161,15 @@ All colors MUST be HSL.
 
   .text-sm { font-size: 0.9375rem; }
   .text-xs { font-size: 0.8125rem; }
+
+  /* Uniformiser les sous-titres colorés dans les titres */
+  h1 .text-muted-foreground,
+  h2 .text-muted-foreground,
+  h3 .text-muted-foreground,
+  h4 .text-muted-foreground {
+    font-size: inherit;
+    line-height: inherit;
+  }
 }
 
 /* Animations personnalisées pour une interface plus joviale */

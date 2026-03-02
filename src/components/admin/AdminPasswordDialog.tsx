@@ -93,7 +93,7 @@ export function AdminPasswordDialog({ open, onOpenChange }: AdminPasswordDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Lock className="w-5 h-5" />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface OrderItem {
   id: number;
@@ -65,55 +67,47 @@ interface Order {
 }
 
 export function AdminOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      const res = await fetch('/api/orders', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setOrders(items || []);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({ title: 'Erreur', description: "Impossible de charger les commandes", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  const { data: orders = [], isLoading } = useQuery<Order[]>({
+    queryKey: ['admin', 'orders'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/orders');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsDialogOpen(true);
   };
 
-  const handleUpdateStatus = async (orderId: number, status: string, paymentStatus?: string) => {
-    try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status, paymentStatus }),
-      });
-      if (!res.ok) throw new Error('Failed to update');
+  const updateOrderMutation = useMutation({
+    mutationFn: async (args: { orderId: number; status: string; paymentStatus?: string }) => {
+      const res = await api.request('PUT', `/api/orders/${args.orderId}`, { body: { status: args.status, paymentStatus: args.paymentStatus } });
+      return Array.isArray(res) ? res : res;
+    },
+    onSuccess: (res: any) => {
       toast({ title: 'Succès', description: 'Statut de la commande mis à jour' });
-      fetchOrders();
-      if (selectedOrder?.id === orderId) {
-        const updated = await res.json();
-        setSelectedOrder(updated.data);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+      const updated = res?.data;
+      if (updated && selectedOrder?.id === updated.id) {
+        setSelectedOrder(updated);
       }
-    } catch (error) {
-      console.error('Error updating order:', error);
+    },
+    onError: () => {
       toast({ title: 'Erreur', description: 'Impossible de mettre à jour la commande', variant: 'destructive' });
     }
+  });
+
+  const handleUpdateStatus = (orderId: number, status: string, paymentStatus?: string) => {
+    updateOrderMutation.mutate({ orderId, status, paymentStatus });
   };
 
   const getStatusBadge = (status: string) => {
@@ -152,7 +146,7 @@ export function AdminOrders() {
     });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -430,4 +424,3 @@ export function AdminOrders() {
     </Card>
   );
 }
-

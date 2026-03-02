@@ -39,13 +39,13 @@ const Hero = () => {
           </div>
           
           {/* Main title */}
-          <h1 className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black mb-4 text-white leading-none tracking-tight transition-all duration-1000 ${
+          <h1 className={`text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black mb-4 text-white leading-none tracking-tight transition-all duration-1000 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             AKO<span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">UMA</span>
           </h1>
           
-          <h2 className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-white/90 mb-6 leading-relaxed transition-all duration-1000 delay-100 ${
+          <h2 className={`text-lg sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-white/90 mb-6 leading-relaxed transition-all duration-1000 delay-100 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}>
             {t("hero.subtitle")}

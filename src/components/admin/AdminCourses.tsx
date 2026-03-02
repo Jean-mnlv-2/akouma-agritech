@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminCourseDialog } from './AdminCourseDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 export interface Course {
   id: string;
@@ -26,67 +28,62 @@ export interface Course {
 }
 
 export function AdminCourses() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const { toast } = useToast();
 
-  const fetchCourses = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/courses', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to load');
-      const body = await res.json();
-      const items = Array.isArray(body) ? body : body.data;
-      setCourses(items || []);
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-      toast({ title: 'Erreur', description: 'Impossible de charger les cours', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => { fetchCourses(); }, [fetchCourses]);
+  const { data: courses = [], isLoading } = useQuery<Course[]>({
+    queryKey: ['admin', 'courses'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/courses');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
   const handleCreate = () => { setEditingCourse(null); setDialogOpen(true); };
   const handleEdit = (course: Course) => { setEditingCourse(course); setDialogOpen(true); };
 
-  const handleDelete = async (courseId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) return;
-    try {
-      const res = await fetch(`/api/courses/${courseId}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error(await res.text());
+  const deleteMutation = useMutation({
+    mutationFn: async (courseId: string) => api.request('DELETE', `/api/courses/${courseId}`),
+    onSuccess: () => {
       toast({ title: 'Succès', description: 'Cours supprimé avec succès' });
-      fetchCourses();
-    } catch (error: unknown) {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error deleting course:', error);
-      toast({ title: 'Erreur', description: (error as Error).message || 'Impossible de supprimer le cours', variant: 'destructive' });
+      toast({ title: 'Erreur', description: 'Impossible de supprimer le cours', variant: 'destructive' });
     }
+  });
+  const handleDelete = (courseId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) return;
+    deleteMutation.mutate(courseId);
   };
 
-  const handleSave = async (courseData: any) => {
-    try {
-      const isEditing = !!editingCourse;
-      let res: Response;
-      if (isEditing) {
-        res = await fetch(`/api/courses/${(editingCourse as any).id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(courseData) });
-      } else {
-        res = await fetch('/api/courses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(courseData) });
-      }
-      if (!res.ok) throw new Error(await res.text());
+  const upsertMutation = useMutation({
+    mutationFn: async (payload: { data: any; id?: string }) => {
+      if (payload.id) return api.request('PUT', `/api/courses/${payload.id}`, { body: payload.data });
+      return api.request('POST', '/api/courses', { body: payload.data });
+    },
+    onSuccess: () => {
       toast({ title: 'Succès', description: `Cours ${editingCourse ? 'modifié' : 'créé'} avec succès` });
       setDialogOpen(false);
-      fetchCourses();
-    } catch (error) {
-      const err = error as { message?: string };
+      queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+    },
+    onError: (error: unknown) => {
       console.error('Error saving course:', error);
-      toast({ title: 'Erreur', description: err.message || `Impossible de ${editingCourse ? 'modifier' : 'créer'} le cours`, variant: 'destructive' });
+      toast({ title: 'Erreur', description: `Impossible de ${editingCourse ? 'modifier' : 'créer'} le cours`, variant: 'destructive' });
     }
+  });
+  const handleSave = (courseData: any) => {
+    const id = editingCourse ? (editingCourse as any).id : undefined;
+    upsertMutation.mutate({ data: courseData, id });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -116,6 +113,8 @@ export function AdminCourses() {
               <TableHead>Prix</TableHead>
               <TableHead>Durée</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead>Aperçu Gratuit</TableHead>
+              <TableHead>Langues</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -145,8 +144,32 @@ export function AdminCourses() {
                   </div>
                 </TableCell>
                 <TableCell>
+                  <Badge variant={(course.isPreviewAvailable ?? false) ? 'default' : 'secondary'}>
+                    {(course.isPreviewAvailable ?? false) ? 'Oui' : 'Non'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="max-w-[240px]">
+                  {Array.isArray(course.languages) && course.languages.length > 0 ? course.languages.join(', ') : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleEdit(course)}><Edit className="w-4 h-4" /></Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const next = !(course.isPreviewAvailable ?? false);
+                          await api.request('PUT', `/api/courses/${course.id}`, { body: { isPreviewAvailable: next } });
+                          toast({ title: 'Mis à jour', description: 'Disponibilité de l’aperçu gratuit modifiée.' });
+                          queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+                        } catch {
+                          toast({ title: 'Erreur', description: 'Impossible de mettre à jour', variant: 'destructive' });
+                        }
+                      }}
+                    >
+                      {(course.isPreviewAvailable ?? false) ? 'Désactiver Aperçu' : 'Activer Aperçu'}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleDelete(course.id)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </TableCell>

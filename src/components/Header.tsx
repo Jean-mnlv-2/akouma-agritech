@@ -9,7 +9,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import CartDrawer from "./CartDrawer";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n/i18n";
-import logoAk from "@/assets/logo-ak.png";
 
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -95,11 +94,11 @@ const Header = () => {
     { name: t("nav.elearning"), href: "/elearning" },
     { name: t("nav.seeds"), href: "/seeds" },
     { name: t("nav.shop"), href: "/shop" },
+    { name: t("nav.news"), href: "/news" },
     { name: t("nav.agri"), href: "/agri-consulting" },
     { name: t("nav.partners"), href: "/partners" },
     { name: t("nav.donations"), href: "/donations" },
     { name: t("nav.about"), href: "/about" },
-    { name: t("nav.news"), href: "/news" },
   ];
 
   return (
@@ -110,9 +109,9 @@ const Header = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
               <img 
-                src={logoAk}
+                src="/logo-ak.png"
                 alt="AKOUMA Logo" 
-                className="w-8 h-8 md:w-10 md:h-10"
+                className="w-8 h-8 md:w-12 md:h-12"
               />
               <span className="text-xl md:text-2xl font-bold text-primary">
                 AKOUMA
@@ -125,7 +124,7 @@ const Header = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                  className={`text-base font-medium transition-colors hover:text-primary ${
                     location.pathname === item.href ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
@@ -135,7 +134,7 @@ const Header = () => {
               {isAdmin && (
                 <Link
                   to="/admin"
-                  className={`text-sm font-medium transition-colors hover:text-primary ${location.pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}
+                  className={`text-base font-medium transition-colors hover:text-primary ${location.pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}
                 >
                   {t("nav.admin")}
                 </Link>
@@ -143,7 +142,7 @@ const Header = () => {
               {!isAdmin && isSupervisor && (
                 <Link
                   to="/supervisor"
-                  className={`text-sm font-medium transition-colors hover:text-primary ${location.pathname === '/supervisor' ? 'text-primary' : 'text-muted-foreground'}`}
+                  className={`text-base font-medium transition-colors hover:text-primary ${location.pathname === '/supervisor' ? 'text-primary' : 'text-muted-foreground'}`}
                 >
                   {t("nav.supervisor")}
                 </Link>
@@ -246,12 +245,12 @@ const Header = () => {
                   </div>
 
                   {/* Mobile nav links */}
-                  <nav className="space-y-3">
+                  <nav className="space-y-4">
                     {navigation.map((item) => (
                       <Link
                         key={item.name}
                         to={item.href}
-                        className={`block text-sm font-medium transition-colors hover:text-primary ${
+                        className={`block text-base font-medium transition-colors hover:text-primary ${
                           location.pathname === item.href ? "text-primary" : "text-muted-foreground"
                         }`}
                       >
@@ -264,14 +263,14 @@ const Header = () => {
                     <Button
                       variant="outline"
                       onClick={() => setIsCartOpen(true)}
-                      className="w-full relative"
+                      className="w-full relative py-6 text-base"
                     >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      <ShoppingCart className="w-5 h-5 mr-2" />
                       {t("header.cart")} ({itemsCount})
                     </Button>
-                    <div className="mt-4">
+                    <div className="mt-6">
                       <select
-                        className="w-full bg-transparent text-sm border rounded px-2 py-2"
+                        className="w-full bg-transparent text-base border rounded px-3 py-3"
                         value={lang}
                         onChange={(e) => setLang(e.target.value as any)}
                         aria-label="Language selector"
@@ -290,15 +289,15 @@ const Header = () => {
         
         {/* Mobile Navigation - Horizontal Scrollable */}
         <div className={`lg:hidden border-t border-border/50 transition-all duration-300 ${
-          isMobileNavVisible ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+          isMobileNavVisible ? 'max-h-14 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
         }`}>
           <div className="container mx-auto px-4">
-            <nav className="flex items-center space-x-4 py-2.5 overflow-x-auto scrollbar-hide">
+            <nav className="flex items-center space-x-5 py-3 overflow-x-auto scrollbar-hide hide-scrollbar">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`text-xs font-medium whitespace-nowrap transition-colors hover:text-primary ${
+                  className={`text-sm font-medium whitespace-nowrap transition-colors hover:text-primary ${
                     location.pathname === item.href ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
@@ -308,7 +307,7 @@ const Header = () => {
               {isAdmin && (
                 <Link
                   to="/admin"
-                  className={`text-xs font-medium whitespace-nowrap transition-colors hover:text-primary ${location.pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}
+                  className={`text-sm font-medium whitespace-nowrap transition-colors hover:text-primary ${location.pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}
                 >
                   Admin
                 </Link>

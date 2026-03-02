@@ -3,11 +3,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Textarea unused - rich editor used instead
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Course } from './AdminCourses';
-// Uploads go through backend API
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
@@ -36,6 +34,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     course_materials_url: '',
     is_published: false,
     is_featured: false,
+    is_preview_available: false,
+    languages_csv: 'Français',
     slug: ''
   });
 
@@ -64,6 +64,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         course_materials_url: '',
         is_published: course.is_published || false,
         is_featured: course.is_featured || false,
+        is_preview_available: (course as any).isPreviewAvailable ?? false,
+        languages_csv: Array.isArray((course as any).languages) ? ((course as any).languages.join(', ')) : '',
         slug: course.title?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || ''
       });
     } else {
@@ -83,6 +85,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         course_materials_url: '',
         is_published: false,
         is_featured: false,
+        is_preview_available: false,
+        languages_csv: '',
         slug: ''
       });
     }
@@ -91,6 +95,10 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const slug = formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const languages = formData.languages_csv
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     const payload = {
       title: formData.title,
       description: formData.description || null,
@@ -101,7 +109,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       thumbnailUrl: formData.thumbnail_url || null,
       videoUrl: formData.video_url || null,
       isPublished: formData.is_published || false,
-      // category/instructor not modeled in Prisma; ignore or include if you add fields later
+      isPreviewAvailable: formData.is_preview_available || false,
+      languages,
       slug,
     };
     onSave(payload);
@@ -150,13 +159,12 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {course ? 'Modifier le cours' : 'Nouveau cours'}
+            {course ? "Modifier le cours" : "Ajouter un nouveau cours"}
           </DialogTitle>
           <DialogDescription>
-            Remplissez les informations du cours
+            Remplissez les informations ci-dessous pour {course ? "mettre à jour" : "créer"} un cours.
           </DialogDescription>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -243,6 +251,11 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2"><Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} /><Label htmlFor="is_published">Publié</Label></div>
             <div className="flex items-center space-x-2"><Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} /><Label htmlFor="is_featured">Mis en avant</Label></div>
+            <div className="flex items-center space-x-2"><Switch id="is_preview_available" checked={formData.is_preview_available} onCheckedChange={(checked) => setFormData({ ...formData, is_preview_available: checked })} /><Label htmlFor="is_preview_available">Aperçu Gratuit</Label></div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="languages_csv">Langues (séparées par des virgules)</Label>
+            <Input id="languages_csv" value={formData.languages_csv} onChange={(e) => setFormData({ ...formData, languages_csv: e.target.value })} placeholder="Français, Hausa, Swahili..." />
           </div>
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>

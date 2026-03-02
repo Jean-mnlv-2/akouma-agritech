@@ -139,6 +139,14 @@ function createApiClient() {
         // À implémenter côté backend si nécessaire
         return { data: { user: args }, error: null };
       },
+      forgotPassword: async (email: string) => {
+        const res = await http('POST', '/auth/forgot-password', { body: { email } });
+        return { data: res, error: null };
+      },
+      resetPassword: async (args: { token: string; password: any }) => {
+        const res = await http('POST', '/auth/reset-password', { body: args });
+        return { data: res, error: null };
+      },
       admin: {
         createUser: async (args: any) => {
           const res = await http('POST', '/auth/sign-up', { body: { email: args.email, password: args.password, fullName: args.user_metadata?.first_name ? `${args.user_metadata.first_name} ${args.user_metadata.last_name || ''}`.trim() : undefined } });

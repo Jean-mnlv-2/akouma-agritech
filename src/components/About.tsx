@@ -95,13 +95,13 @@ const About = () => {
             {t("about.objectives.title")}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="flex md:grid overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 gap-6 md:gap-8 snap-x snap-mandatory hide-scrollbar">
             {["about.objectives.o1","about.objectives.o2","about.objectives.o3","about.objectives.o4","about.objectives.o5"].map((objective, index) => {
               const delay = index * 100;
               return (
                 <div 
                   key={`objective-${index}-${objective}`} 
-                  className="bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-6 md:p-8 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden"
+                  className="min-w-[280px] sm:min-w-[320px] md:min-w-0 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-6 md:p-8 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden snap-center"
                   style={{ transitionDelay: `${delay}ms` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -125,13 +125,13 @@ const About = () => {
             {t("about.solutions.title")}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          <div className="flex md:grid overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 gap-6 md:gap-8 snap-x snap-mandatory hide-scrollbar">
             {["about.solutions.s1","about.solutions.s2","about.solutions.s3","about.solutions.s4","about.solutions.s5"].map((solution, index) => {
               const delay = index * 100;
               return (
                 <div 
                   key={`solution-${index}-${solution}`} 
-                  className="bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-6 md:p-8 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden"
+                  className="min-w-[280px] sm:min-w-[320px] md:min-w-0 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-6 md:p-8 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden snap-center"
                   style={{ transitionDelay: `${delay}ms` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>

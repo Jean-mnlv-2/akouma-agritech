@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+// 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, FileText, Calendar } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 interface ContactMessage {
   id: string;
@@ -48,84 +50,77 @@ interface DemoRequest {
 }
 
 export const AdminSubmissions = () => {
-  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
-  const [contentSubmissions, setContentSubmissions] = useState<ContentSubmission[]>([]);
-  const [demoRequests, setDemoRequests] = useState<DemoRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => { fetchAllSubmissions(); }, []);
-
-  const fetchAllSubmissions = async () => {
-    try {
+  const { data, isLoading, refetch } = useQuery<{
+    contact: ContactMessage[];
+    content: ContentSubmission[];
+    demo: DemoRequest[];
+  }>({
+    queryKey: ['admin', 'submissions'],
+    queryFn: async () => {
       const [contactRes, contentRes, demoRes] = await Promise.all([
-        fetch('/api/contact_messages', { credentials: 'include' }),
-        fetch('/api/content_submissions', { credentials: 'include' }),
-        fetch('/api/demo_requests', { credentials: 'include' }),
+        api.request('GET', '/api/contact_messages'),
+        api.request('GET', '/api/content_submissions'),
+        api.request('GET', '/api/demo_requests'),
       ]);
-      if (!contactRes.ok || !contentRes.ok || !demoRes.ok) throw new Error('Failed to load');
-      const [contactBody, contentBody, demoBody] = await Promise.all([contactRes.json(), contentRes.json(), demoRes.json()]);
-      setContactMessages((Array.isArray(contactBody) ? contactBody : contactBody.data) || []);
-      setContentSubmissions((Array.isArray(contentBody) ? contentBody : contentBody.data) || []);
-      setDemoRequests((Array.isArray(demoBody) ? demoBody : demoBody.data) || []);
-    } catch (error) {
-      console.error('Error fetching submissions:', error);
-      toast({ title: 'Erreur', description: 'Impossible de charger les soumissions', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
+      const contact = Array.isArray(contactRes) ? contactRes : contactRes.data;
+      const content = Array.isArray(contentRes) ? contentRes : contentRes.data;
+      const demo = Array.isArray(demoRes) ? demoRes : demoRes.data;
+      return { contact: contact || [], content: content || [], demo: demo || [] };
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
 
-  const updateStatus = async (
-    collection: 'contactMessages' | 'contentSubmissions' | 'demoRequests',
-    id: string,
-    status: string
-  ) => {
-    // Mapper les noms de collection aux routes API correctes
-    const routeMap: Record<string, string> = {
-      contactMessages: 'contact_messages',
-      contentSubmissions: 'content_submissions',
-      demoRequests: 'demo_requests',
-    };
-    const route = routeMap[collection] || collection;
-    try {
-      const res = await fetch(`/api/${route}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status, processedAt: new Date().toISOString() }),
-      });
-      if (!res.ok) throw new Error(await res.text());
+  const updateStatusMutation = useMutation({
+    mutationFn: async (args: { collection: 'contactMessages' | 'contentSubmissions' | 'demoRequests'; id: string; status: string }) => {
+      const routeMap: Record<string, string> = {
+        contactMessages: 'contact_messages',
+        contentSubmissions: 'content_submissions',
+        demoRequests: 'demo_requests',
+      };
+      const route = routeMap[args.collection] || args.collection;
+      return api.request('PUT', `/api/${route}/${args.id}`, { body: { status: args.status, processedAt: new Date().toISOString() } });
+    },
+    onSuccess: async () => {
       toast({ title: 'Statut mis à jour', description: 'Le statut a été modifié avec succès' });
-      fetchAllSubmissions();
-    } catch (error) {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'submissions'] });
+    },
+    onError: async (error: unknown) => {
       console.error('Error updating status:', error);
       toast({ title: 'Erreur', description: "Impossible de mettre à jour le statut", variant: 'destructive' });
     }
-  };
+  });
 
-  const handleDelete = async (
-    collection: 'contactMessages' | 'contentSubmissions' | 'demoRequests',
-    id: string
-  ) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.')) return;
-    
-    // Mapper les noms de collection aux routes API correctes
-    const routeMap: Record<string, string> = {
-      contactMessages: 'contact_messages',
-      contentSubmissions: 'content_submissions',
-      demoRequests: 'demo_requests',
-    };
-    const route = routeMap[collection] || collection;
-    try {
-      const res = await fetch(`/api/${route}/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error(await res.text());
+  const deleteMutation = useMutation({
+    mutationFn: async (args: { collection: 'contactMessages' | 'contentSubmissions' | 'demoRequests'; id: string }) => {
+      const routeMap: Record<string, string> = {
+        contactMessages: 'contact_messages',
+        contentSubmissions: 'content_submissions',
+        demoRequests: 'demo_requests',
+      };
+      const route = routeMap[args.collection] || args.collection;
+      return api.request('DELETE', `/api/${route}/${args.id}`);
+    },
+    onSuccess: async () => {
       toast({ title: 'Supprimé', description: 'L’élément a été supprimé avec succès.' });
-      fetchAllSubmissions();
-    } catch (error) {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'submissions'] });
+    },
+    onError: async (error: unknown) => {
       console.error('Error deleting submission:', error);
       toast({ title: 'Erreur', description: "Impossible de supprimer l’élément.", variant: 'destructive' });
     }
+  });
+
+  const updateStatus = (collection: 'contactMessages' | 'contentSubmissions' | 'demoRequests', id: string, status: string) => {
+    updateStatusMutation.mutate({ collection, id, status });
+  };
+
+  const handleDelete = (collection: 'contactMessages' | 'contentSubmissions' | 'demoRequests', id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.')) return;
+    deleteMutation.mutate({ collection, id });
   };
 
   const getStatusBadge = (status: string) => {
@@ -138,24 +133,24 @@ export const AdminSubmissions = () => {
     return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
   };
 
-  if (loading) { return <div className="text-center py-8">Chargement des soumissions...</div>; }
+  if (isLoading) { return <div className="text-center py-8">Chargement des soumissions...</div>; }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gestion des Soumissions</h2>
-        <Button onClick={fetchAllSubmissions} variant="outline">Actualiser</Button>
+        <Button onClick={() => refetch()} variant="outline">Actualiser</Button>
       </div>
 
       <Tabs defaultValue="contact" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="contact" className="flex items-center gap-2"><MessageSquare className="w-4 h-4" />Messages Contact ({contactMessages.length})</TabsTrigger>
-          <TabsTrigger value="content" className="flex items-center gap-2"><FileText className="w-4 h-4" />Contenus ({contentSubmissions.length})</TabsTrigger>
-          <TabsTrigger value="demo" className="flex items-center gap-2"><Calendar className="w-4 h-4" />Consultations ({demoRequests.length})</TabsTrigger>
+          <TabsTrigger value="contact" className="flex items-center gap-2"><MessageSquare className="w-4 h-4" />Messages Contact ({(data?.contact || []).length})</TabsTrigger>
+          <TabsTrigger value="content" className="flex items-center gap-2"><FileText className="w-4 h-4" />Contenus ({(data?.content || []).length})</TabsTrigger>
+          <TabsTrigger value="demo" className="flex items-center gap-2"><Calendar className="w-4 h-4" />Consultations ({(data?.demo || []).length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="contact" className="space-y-4">
-          {contactMessages.map((message) => (
+          {(data?.contact || []).map((message) => (
             <Card key={message.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
@@ -181,7 +176,7 @@ export const AdminSubmissions = () => {
         </TabsContent>
 
         <TabsContent value="content" className="space-y-4">
-          {contentSubmissions.map((submission) => (
+          {(data?.content || []).map((submission) => (
             <Card key={submission.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
@@ -215,7 +210,7 @@ export const AdminSubmissions = () => {
         </TabsContent>
 
         <TabsContent value="demo" className="space-y-4">
-          {demoRequests.map((request) => (
+          {(data?.demo || []).map((request) => (
             <Card key={request.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>

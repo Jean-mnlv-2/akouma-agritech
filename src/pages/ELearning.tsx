@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, Star, CheckCircle, Radio } from "lucide-react";
+import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, Star, CheckCircle, Radio, Languages } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -20,6 +28,7 @@ import DOMPurify from 'dompurify';
 import countryList from 'react-select-country-list';
 import TitleManager from "@/components/TitleManager";
 import { Link } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
 
 interface UICourse {
   id: string;
@@ -34,6 +43,8 @@ interface UICourse {
   isCertifying: boolean;
   thumbnail: string;
   instructor: string;
+  isPreviewAvailable?: boolean;
+  languages?: string[];
 }
 
 const ELearning = () => {
@@ -46,6 +57,12 @@ const ELearning = () => {
   const [showEnrollPopup, setShowEnrollPopup] = useState(false);
   const { toast } = useToast();
   const { t } = useI18n();
+
+  const [languageFilter, setLanguageFilter] = useState<string>('Toutes langues');
+  const [showOnlyPreview, setShowOnlyPreview] = useState<boolean>(false);
+  const [previewItems, setPreviewItems] = useState<any[]>([]);
+
+  const availableLanguages = Array.from(new Set(courses.flatMap((c: any) => Array.isArray(c.languages) ? c.languages : [])));
 
   const categories = [
     t("elearning.categories.all"),
@@ -79,6 +96,8 @@ const ELearning = () => {
           isCertifying: Boolean(c.isCertifying ?? c.is_certifying ?? true),
           thumbnail: String(c.thumbnailUrl ?? c.image_url ?? courseThumbnail),
           instructor: String(c.instructor ?? c.instructorName ?? 'AKOUMA Team'),
+          isPreviewAvailable: Boolean(c.isPreviewAvailable ?? c.is_preview_available ?? false),
+          languages: Array.isArray(c.languages) ? c.languages : [],
         })));
       } catch {
         setError(t("elearning.error"));
@@ -108,7 +127,9 @@ const ELearning = () => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          course.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === t("elearning.categories.all") || selectedCategory === "Tous" || course.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesLanguage = languageFilter === 'Toutes langues' || (Array.isArray((course as any).languages) && (course as any).languages.includes(languageFilter));
+    const matchesPreview = !showOnlyPreview || ((course as any).isPreviewAvailable === true);
+    return matchesSearch && matchesCategory && matchesLanguage && matchesPreview;
   });
 
   const allCountries = countryList().getData();
@@ -160,28 +181,43 @@ const ELearning = () => {
     }
   };
 
-  const freePreviewContent = [
-    {
-      icon: Video,
-      title: t("elearning.preview.video1"),
-      desc: t("elearning.preview.video1_desc"),
-      type: "video",
-      duration: "12 min",
+  const { data: fetchedPreviewItems = [] } = useQuery({
+    queryKey: ['course-preview-items'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/course_preview_items');
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
     },
-    {
-      icon: Video,
-      title: t("elearning.preview.video2"),
-      desc: t("elearning.preview.video2_desc"),
-      type: "video",
-      duration: "8 min",
-    },
-    {
-      icon: Download,
-      title: t("elearning.preview.pdf"),
-      desc: t("elearning.preview.pdf_desc"),
-      type: "pdf",
-    },
+    staleTime: 60000,
+  });
+
+  useEffect(() => {
+    if (fetchedPreviewItems && fetchedPreviewItems.length > 0) {
+      setPreviewItems(fetchedPreviewItems);
+    }
+  }, [fetchedPreviewItems]);
+
+  const freePreviewContent = previewItems.length > 0 ? previewItems.slice(0, 3).map((it: any) => ({
+    icon: it.type === 'pdf' ? Download : Video,
+    title: it.title,
+    desc: it.description || '',
+    type: it.type,
+    duration: it.type === 'video' ? undefined : undefined,
+    url: it.url,
+  })) : [
+    { icon: Video, title: t("elearning.preview.video1"), desc: t("elearning.preview.video1_desc"), type: "video", duration: "12 min", url: "https://www.youtube.com/embed/ysz5S6PUM-U" },
+    { icon: Video, title: t("elearning.preview.video2"), desc: t("elearning.preview.video2_desc"), type: "video", duration: "8 min", url: "https://www.youtube.com/embed/X2tZcCO5bQk" },
+    { icon: Download, title: t("elearning.preview.pdf"), desc: t("elearning.preview.pdf_desc"), type: "pdf", url: "/lovable-uploads/agritech-guide.pdf" },
   ];
+
+  const getPreviewIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'FileText': return Download;
+      case 'Headphones': return Radio;
+      case 'Download': return Download;
+      default: return Video;
+    }
+  };
 
   const stats = [
     { icon: BookOpen, value: "150+", label: t("elearning.stat.courses") },
@@ -214,12 +250,12 @@ const ELearning = () => {
               <GraduationCap className="w-4 h-4 mr-2" />
               {t("elearning.hero.badge")}
             </Badge>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
               {t("elearning.hero.title").split("E-Learning")[0]}
               <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">E-Learning</span>
               {t("elearning.hero.title").split("E-Learning")[1] || ""}
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
+            <p className="text-base sm:text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
               {t("elearning.hero.desc")}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -292,32 +328,62 @@ const ELearning = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {freePreviewContent.map((item, i) => (
-              <Card key={i} className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 border-2 border-border overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <CardHeader className="relative z-10">
-                  <div className={`w-14 h-14 ${item.type === 'pdf' ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-primary to-accent'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-lg`}>
-                    <item.icon className="w-7 h-7 text-white" />
-                  </div>
-                  <CardTitle className="text-lg group-hover:text-primary transition-colors">{item.title}</CardTitle>
-                  <CardDescription>{item.desc}</CardDescription>
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  {item.duration && (
-                    <div className="flex items-center text-sm text-muted-foreground mb-3">
-                      <Clock className="w-4 h-4 mr-1" /> {item.duration}
+            {(previewItems.length > 0 ? previewItems : freePreviewContent).map((item: any, i: number) => {
+              const Icon = item.icon || getPreviewIcon(item.previewType?.icon || 'Play');
+              const isVideo = item.type === 'video' || item.previewType?.name === 'video';
+              return (
+                <Card key={i} className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 border-2 border-border overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <CardHeader className="relative z-10">
+                    <div className={`w-14 h-14 ${!isVideo ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-primary to-accent'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-all shadow-lg`}>
+                      <Icon className="w-7 h-7 text-white" />
                     </div>
-                  )}
-                  <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                    {item.type === 'pdf' ? (
-                      <><Download className="w-4 h-4 mr-2" />{t("elearning.preview.download")}</>
-                    ) : (
-                      <><PlayCircle className="w-4 h-4 mr-2" />{t("elearning.preview.watch")}</>
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors">{item.title}</CardTitle>
+                    <CardDescription>{item.description || item.desc}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    {item.duration && (
+                      <div className="flex items-center text-sm text-muted-foreground mb-3">
+                        <Clock className="w-4 h-4 mr-1" /> {item.duration}
+                      </div>
                     )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                          {!isVideo ? (
+                            <><Download className="w-4 h-4 mr-2" />{t("elearning.preview.download")}</>
+                          ) : (
+                            <><PlayCircle className="w-4 h-4 mr-2" />{t("elearning.preview.watch")}</>
+                          )}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-none">
+                        <DialogHeader className="sr-only">
+                          <DialogTitle>{item.title}</DialogTitle>
+                          <DialogDescription>{item.description || item.desc}</DialogDescription>
+                        </DialogHeader>
+                        <div className="aspect-video w-full">
+                          {isVideo ? (
+                            <iframe 
+                              src={item.url} 
+                              className="w-full h-full" 
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                              allowFullScreen
+                            ></iframe>
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
+                              <Download className="w-16 h-16 mb-4 text-primary" />
+                              <h3 className="text-xl font-bold mb-4">{item.title}</h3>
+                              <Button asChild><a href={item.url} target="_blank" rel="noreferrer">Télécharger le document</a></Button>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -345,18 +411,38 @@ const ELearning = () => {
                 className="pl-12 h-12 text-base border-2 focus:border-primary transition-colors"
               />
             </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {categories.map((cat) => (
-                <Button
-                  key={cat}
-                  variant={selectedCategory === cat ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(cat)}
-                  className="transition-all hover:scale-105"
-                >
-                  {cat}
-                </Button>
-              ))}
+            <div className="flex flex-wrap justify-center items-center gap-4">
+              <div className="flex flex-wrap justify-center gap-2">
+                {categories.map((cat) => (
+                  <Button
+                    key={cat}
+                    variant={selectedCategory === cat ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory(cat)}
+                    className="transition-all hover:scale-105"
+                  >
+                    {cat}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={languageFilter} onValueChange={(val) => setLanguageFilter(val)}>
+                  <SelectTrigger className="w-[180px]">
+                    <Languages className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Choisir une langue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Toutes langues">Toutes langues</SelectItem>
+                    {availableLanguages.map((lang: any) => (
+                      <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <Switch id="preview-only" checked={showOnlyPreview} onCheckedChange={setShowOnlyPreview} />
+                  <label htmlFor="preview-only" className="text-sm">{t("elearning.preview.only") || "Aperçu disponible"}</label>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -388,6 +474,12 @@ const ELearning = () => {
                           {t("elearning.certifying")}
                         </Badge>
                       )}
+                    {(course.isPreviewAvailable ?? false) && (
+                      <Badge className="bg-blue-600 text-white text-xs border-blue-700">
+                        <Eye className="w-3 h-3 mr-1" />
+                        {t("elearning.preview.badge")}
+                      </Badge>
+                    )}
                     </div>
                     {course.price === "Gratuit" && (
                       <Badge className="absolute top-3 right-3 bg-green-500 text-white">{t("elearning.free")}</Badge>
@@ -442,6 +534,73 @@ const ELearning = () => {
                         {t("elearning.enroll")}
                       </Button>
                     </div>
+                    {(course.isPreviewAvailable ?? false) && (
+                      <div className="mt-3">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline" className="w-full">
+                              <Eye className="w-4 h-4 mr-2" />
+                              {t("elearning.preview.open")}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>{t("elearning.preview.title")}</DialogTitle>
+                              <DialogDescription>{t("elearning.preview.subtitle") || "Consultez un extrait du cours avant de vous inscrire."}</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              {previewItems.filter((it: any) => it.courseId === Number(course.id)).length === 0 ? (
+                                <p className="text-muted-foreground">{t("elearning.preview.none")}</p>
+                              ) : (
+                                previewItems.filter((it: any) => it.courseId === Number(course.id)).map((item: any) => {
+                                  const isVideo = item.type === 'video' || item.previewType?.name === 'video';
+                                  return (
+                                    <div key={item.id} className="border rounded p-3 space-y-3">
+                                      <div className="flex items-center gap-3">
+                                        {isVideo ? <PlayCircle className="w-5 h-5 text-primary" /> : <Download className="w-5 h-5 text-primary" />}
+                                        <div>
+                                          <div className="font-medium">{item.title}</div>
+                                          {item.description && <div className="text-sm text-muted-foreground">{item.description}</div>}
+                                        </div>
+                                      </div>
+                                      <Dialog>
+                                        <DialogTrigger asChild>
+                                          <Button variant="outline" size="sm">
+                                            {isVideo ? t("elearning.preview.watch") : t("elearning.preview.download")}
+                                          </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-none">
+                                          <DialogHeader className="sr-only">
+                                            <DialogTitle>{item.title}</DialogTitle>
+                                            <DialogDescription>{item.description || item.title}</DialogDescription>
+                                          </DialogHeader>
+                                          <div className="aspect-video w-full">
+                                            {isVideo ? (
+                                              <iframe 
+                                                src={item.url} 
+                                                className="w-full h-full" 
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                allowFullScreen
+                                              ></iframe>
+                                            ) : (
+                                              <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
+                                                <Download className="w-16 h-16 mb-4 text-primary" />
+                                                <h3 className="text-xl font-bold mb-4">{item.title}</h3>
+                                                <Button asChild><a href={item.url} target="_blank" rel="noreferrer">Télécharger le document</a></Button>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </DialogContent>
+                                      </Dialog>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

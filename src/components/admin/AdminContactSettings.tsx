@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/integrations/api/client';
 
 type ContactSettings = {
   id?: number;
@@ -26,74 +28,60 @@ type ContactSettings = {
 
 export function AdminContactSettings() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<ContactSettings>({});
+  const queryClient = useQueryClient();
+  const { data: settings = {}, isLoading } = useQuery<ContactSettings>({
+    queryKey: ['admin', 'contact-settings'],
+    queryFn: async () => {
+      const res = await api.request('GET', '/api/contact_settings');
+      const list = Array.isArray(res) ? res : res.data;
+      return (list && list[0]) || {};
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+  const [localSettings, setLocalSettings] = useState<ContactSettings>({});
 
-  const hasRecord = useMemo(() => Boolean(settings && settings.id), [settings]);
+  const hasRecord = useMemo(() => Boolean(localSettings && localSettings.id), [localSettings]);
 
-  const loadSettings = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/contact_settings');
-      if (!res.ok) throw new Error('Failed');
-      const body = await res.json();
-      const list = Array.isArray(body) ? body : body.data;
-      const first = (list && list[0]) || {};
-      setSettings(first || {});
-    } catch (e) {
-      console.error(e);
-      toast({ title: 'Erreur', description: "Impossible de charger les paramètres de contact", variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { loadSettings(); }, []);
+  // Sync local editable state when server data loads
+  if (settings && (!localSettings || !localSettings.id) && !isLoading) {
+    // Avoid controlled/uncontrolled issues by initializing once
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    setLocalSettings(settings);
+  }
 
   const handleChange = (key: keyof ContactSettings, value: string) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    setLocalSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const save = async () => {
-    setSaving(true);
-    try {
-      const payload: ContactSettings = { ...settings };
-      // Clean empty strings to nulls for consistency
-      Object.keys(payload).forEach((k) => {
+  const saveMutation = useMutation({
+    mutationFn: async (payload: ContactSettings) => {
+      const cleanPayload: ContactSettings = { ...payload };
+      Object.keys(cleanPayload).forEach((k) => {
         const key = k as keyof ContactSettings;
-        const val = payload[key];
+        const val = cleanPayload[key];
         if (typeof val === 'string' && val.trim() === '') {
-          (payload as any)[key] = null;
+          (cleanPayload as any)[key] = null;
         }
       });
-
-      let res: Response;
-      if (hasRecord && settings.id) {
-        res = await fetch(`/api/contact_settings/${settings.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      } else {
-        res = await fetch('/api/contact_settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
+      if (hasRecord && localSettings.id) {
+        return api.request('PUT', `/api/contact_settings/${localSettings.id}`, { body: cleanPayload });
       }
-      if (!res.ok) throw new Error(await res.text());
-      await loadSettings();
+      return api.request('POST', `/api/contact_settings`, { body: cleanPayload });
+    },
+    onSuccess: async () => {
       toast({ title: 'Enregistré', description: 'Paramètres de contact mis à jour' });
-    } catch (e) {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'contact-settings'] });
+      setSaving(false);
+    },
+    onError: (e: unknown) => {
       console.error(e);
       toast({ title: 'Erreur', description: "Échec de l'enregistrement", variant: 'destructive' });
-    } finally {
       setSaving(false);
     }
-  };
+  });
+  const save = async () => { setSaving(true); saveMutation.mutate(localSettings); };
 
   const Field = ({ label, value, onChange, type = 'text' as const, placeholder }: { label: string; value?: string | null; onChange: (v: string) => void; type?: 'text' | 'email' | 'url'; placeholder?: string; }) => (
     <div className="space-y-2">
@@ -109,29 +97,29 @@ export function AdminContactSettings() {
         <CardTitle>Contacts & Réseaux sociaux</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {loading ? (
+        {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement...</p>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Téléphone" value={settings.phone ?? ''} onChange={(v) => handleChange('phone', v)} placeholder="Ex: +237 6XX XX XX XX" />
-              <Field label="WhatsApp" value={settings.whatsappNumber ?? ''} onChange={(v) => handleChange('whatsappNumber', v)} placeholder="Ex: +237 6XX XX XX XX" />
-              <Field label="Email" type="email" value={settings.email ?? ''} onChange={(v) => handleChange('email', v)} placeholder="Ex: contact@akouma.cm" />
-              <Field label="Site Web" type="url" value={settings.websiteUrl ?? ''} onChange={(v) => handleChange('websiteUrl', v)} placeholder="https://www.akouma.cm" />
-              <Field label="Adresse (ligne 1)" value={settings.addressLine1 ?? ''} onChange={(v) => handleChange('addressLine1', v)} />
-              <Field label="Adresse (ligne 2)" value={settings.addressLine2 ?? ''} onChange={(v) => handleChange('addressLine2', v)} />
-              <Field label="Ville" value={settings.city ?? ''} onChange={(v) => handleChange('city', v)} />
-              <Field label="Pays" value={settings.country ?? ''} onChange={(v) => handleChange('country', v)} />
+              <Field label="Téléphone" value={localSettings.phone ?? ''} onChange={(v) => handleChange('phone', v)} placeholder="Ex: +237 6XX XX XX XX" />
+              <Field label="WhatsApp" value={localSettings.whatsappNumber ?? ''} onChange={(v) => handleChange('whatsappNumber', v)} placeholder="Ex: +237 6XX XX XX XX" />
+              <Field label="Email" type="email" value={localSettings.email ?? ''} onChange={(v) => handleChange('email', v)} placeholder="Ex: contact@akouma.cm" />
+              <Field label="Site Web" type="url" value={localSettings.websiteUrl ?? ''} onChange={(v) => handleChange('websiteUrl', v)} placeholder="https://www.akouma.cm" />
+              <Field label="Adresse (ligne 1)" value={localSettings.addressLine1 ?? ''} onChange={(v) => handleChange('addressLine1', v)} />
+              <Field label="Adresse (ligne 2)" value={localSettings.addressLine2 ?? ''} onChange={(v) => handleChange('addressLine2', v)} />
+              <Field label="Ville" value={localSettings.city ?? ''} onChange={(v) => handleChange('city', v)} />
+              <Field label="Pays" value={localSettings.country ?? ''} onChange={(v) => handleChange('country', v)} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Facebook" type="url" value={settings.facebookUrl ?? ''} onChange={(v) => handleChange('facebookUrl', v)} placeholder="https://facebook.com/..." />
-              <Field label="Instagram" type="url" value={settings.instagramUrl ?? ''} onChange={(v) => handleChange('instagramUrl', v)} placeholder="https://instagram.com/..." />
-              <Field label="TikTok" type="url" value={settings.tiktokUrl ?? ''} onChange={(v) => handleChange('tiktokUrl', v)} placeholder="https://tiktok.com/@..." />
-              <Field label="YouTube" type="url" value={settings.youtubeUrl ?? ''} onChange={(v) => handleChange('youtubeUrl', v)} placeholder="https://youtube.com/@..." />
-              <Field label="LinkedIn" type="url" value={settings.linkedinUrl ?? ''} onChange={(v) => handleChange('linkedinUrl', v)} placeholder="https://linkedin.com/company/..." />
-              <Field label="X (Twitter)" type="url" value={settings.xUrl ?? ''} onChange={(v) => handleChange('xUrl', v)} placeholder="https://x.com/..." />
-              <Field label="Telegram" type="url" value={settings.telegramUrl ?? ''} onChange={(v) => handleChange('telegramUrl', v)} placeholder="https://t.me/..." />
+              <Field label="Facebook" type="url" value={localSettings.facebookUrl ?? ''} onChange={(v) => handleChange('facebookUrl', v)} placeholder="https://facebook.com/..." />
+              <Field label="Instagram" type="url" value={localSettings.instagramUrl ?? ''} onChange={(v) => handleChange('instagramUrl', v)} placeholder="https://instagram.com/..." />
+              <Field label="TikTok" type="url" value={localSettings.tiktokUrl ?? ''} onChange={(v) => handleChange('tiktokUrl', v)} placeholder="https://tiktok.com/@..." />
+              <Field label="YouTube" type="url" value={localSettings.youtubeUrl ?? ''} onChange={(v) => handleChange('youtubeUrl', v)} placeholder="https://youtube.com/@..." />
+              <Field label="LinkedIn" type="url" value={localSettings.linkedinUrl ?? ''} onChange={(v) => handleChange('linkedinUrl', v)} placeholder="https://linkedin.com/company/..." />
+              <Field label="X (Twitter)" type="url" value={localSettings.xUrl ?? ''} onChange={(v) => handleChange('xUrl', v)} placeholder="https://x.com/..." />
+              <Field label="Telegram" type="url" value={localSettings.telegramUrl ?? ''} onChange={(v) => handleChange('telegramUrl', v)} placeholder="https://t.me/..." />
             </div>
 
             <div className="pt-2">

@@ -21,11 +21,14 @@ import {
   Calendar,
   Radio,
   Receipt,
-  Tag
+  Tag,
+  Eye,
+  History
 } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
-import logoAk from "@/assets/logo-ak.png";
 import { AdminCourses } from '@/components/admin/AdminCourses';
+import { AdminCoursePreviews } from '@/components/admin/AdminCoursePreviews';
+import { AdminReminderLogs } from '@/components/admin/AdminReminderLogs';
 import { AdminNews } from '@/components/admin/AdminNews';
 import { AdminSeeds } from '@/components/admin/AdminSeeds';
 import { AdminProducts } from '@/components/admin/AdminProducts';
@@ -104,6 +107,8 @@ function AdminContent() {
     { value: 'orders', label: 'Commandes', icon: Receipt },
     { value: 'promos', label: 'Codes promo', icon: Tag },
     { value: 'courses', label: 'Cours', icon: BookOpen },
+    { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
+    { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
     { value: 'news', label: 'Actualités', icon: Newspaper },
     { value: 'seeds', label: 'Semences', icon: Sprout },
     { value: 'products', label: 'Produits', icon: Package },
@@ -230,7 +235,7 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen bg-background admin-responsive">
-      <TitleManager title="Administration" description="Dashboard d'administration AKOUMA Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image={logoAk} />
+      <TitleManager title="Administration" description="Dashboard d'administration AKOUMA Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/logo-ak.png" />
       
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
@@ -283,6 +288,8 @@ function AdminContent() {
             <TabsContent value="orders" className="admin-space-responsive-md"><AdminOrders /></TabsContent>
             <TabsContent value="promos" className="admin-space-responsive-md"><AdminPromoCodes /></TabsContent>
             <TabsContent value="courses" className="admin-space-responsive-md"><AdminCourses /></TabsContent>
+            <TabsContent value="course-previews" className="admin-space-responsive-md"><AdminCoursePreviews /></TabsContent>
+            <TabsContent value="reminder-logs" className="admin-space-responsive-md"><AdminReminderLogs /></TabsContent>
             <TabsContent value="news" className="admin-space-responsive-md"><AdminNews /></TabsContent>
             <TabsContent value="seeds" className="admin-space-responsive-md"><AdminSeeds /></TabsContent>
             <TabsContent value="products" className="admin-space-responsive-md"><AdminProducts /></TabsContent>

@@ -2,7 +2,9 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { env } from '../utils/env';
+import { emailService } from '../utils/email';
 
 const prisma = new PrismaClient();
 export const authRouter = Router();
@@ -104,6 +106,58 @@ authRouter.get('/session', async (req: Request, res: Response) => {
     }
     return res.json({ user: null });
   }
+});
+
+authRouter.post('/forgot-password', async (req: Request, res: Response) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'Email requis' });
+  
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  if (!user) {
+    // Ne pas révéler si l'utilisateur existe
+    return res.json({ message: 'Si un compte existe pour cet e-mail, un lien de réinitialisation sera envoyé.' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiry = new Date(Date.now() + 3600000); // 1 heure
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { resetToken: token, resetTokenExpiry: expiry }
+  });
+
+  try {
+    await emailService.sendResetPasswordEmail(user.email, token);
+    res.json({ message: 'Lien de réinitialisation envoyé.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'e-mail' });
+  }
+});
+
+authRouter.post('/reset-password', async (req: Request, res: Response) => {
+  const { token, password } = req.body || {};
+  if (!token || !password) return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
+
+  const user = await prisma.user.findFirst({
+    where: {
+      resetToken: token,
+      resetTokenExpiry: { gt: new Date() }
+    }
+  });
+
+  if (!user) return res.status(400).json({ error: 'Token invalide ou expiré' });
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash,
+      resetToken: null,
+      resetTokenExpiry: null
+    }
+  });
+
+  res.json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
 });
 
 

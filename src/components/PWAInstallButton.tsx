@@ -117,7 +117,7 @@ const PWAInstallButton = () => {
               Installer AKOUMA
             </DialogTitle>
             <DialogDescription>
-              Installez l'application AKOUMA sur votre appareil pour un accès rapide et une meilleure expérience.
+              Profitez d'une meilleure expérience en installant notre application sur votre appareil.
             </DialogDescription>
           </DialogHeader>
           
