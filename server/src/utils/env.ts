@@ -100,10 +100,10 @@ export const env = {
         throw new Error('JWT_SECRET doit être défini et avoir au moins 32 caractères en production');
       }
       if (DEFAULT_ADMIN_EMAIL === DEFAULTS.DEFAULT_ADMIN_EMAIL) {
-        throw new Error('DEFAULT_ADMIN_EMAIL doit être défini en production');
+        throw new Error(`DEFAULT_ADMIN_EMAIL doit être défini en production (ne peut pas être "${DEFAULTS.DEFAULT_ADMIN_EMAIL}")`);
       }
       if (DEFAULT_ADMIN_PASSWORD === DEFAULTS.DEFAULT_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD.length < 8) {
-        throw new Error('DEFAULT_ADMIN_PASSWORD doit être défini en production et contenir au moins 8 caractères');
+        throw new Error('DEFAULT_ADMIN_PASSWORD doit être défini en production, différer de la valeur par défaut et contenir au moins 8 caractères');
       }
     }
   },
