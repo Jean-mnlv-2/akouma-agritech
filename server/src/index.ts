@@ -76,7 +76,7 @@ const upload = multer({
 });
 
 app.use(helmet({
-  // Allow resources like images to be loaded cross-origin (frontend 8080 -> backend 4000)
+  contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(morgan('dev'));

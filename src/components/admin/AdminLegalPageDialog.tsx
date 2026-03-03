@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { slugify } from '@/lib/utils';
 
 interface LegalPage {
   id: string;
@@ -34,14 +35,13 @@ export function AdminLegalPageDialog({ open, onOpenChange, page, onSave }: Admin
 
   useEffect(() => {
     if (page) {
-      const autoSlug = (page.title || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       setFormData({
         title: page.title || '',
         type: page.type || '',
         content: '',
         version: page.version || '1.0',
         effective_date: page.effective_date ? new Date(page.effective_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        slug: autoSlug
+        slug: (page as any).slug || slugify(page.title || '')
       });
     } else {
       setFormData({ title: '', type: '', content: '', version: '1.0', effective_date: new Date().toISOString().split('T')[0], slug: '' });
@@ -70,7 +70,20 @@ export function AdminLegalPageDialog({ open, onOpenChange, page, onSave }: Admin
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Titre *</Label>
-              <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+              <Input 
+                id="title" 
+                value={formData.title} 
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  const newSlug = slugify(newTitle);
+                  if (!formData.slug || formData.slug === slugify(formData.title)) {
+                    setFormData({ ...formData, title: newTitle, slug: newSlug });
+                  } else {
+                    setFormData({ ...formData, title: newTitle });
+                  }
+                }} 
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="slug">Slug (URL)</Label>

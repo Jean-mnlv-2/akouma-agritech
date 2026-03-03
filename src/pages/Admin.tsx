@@ -84,6 +84,26 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, descripti
   );
 };
 
+const tabs = [
+  { value: 'users', label: 'Utilisateurs', icon: Shield },
+  { value: 'orders', label: 'Commandes', icon: Receipt },
+  { value: 'promos', label: 'Codes promo', icon: Tag },
+  { value: 'courses', label: 'Cours', icon: BookOpen },
+  { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
+  { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
+  { value: 'news', label: 'Actualités', icon: Newspaper },
+  { value: 'seeds', label: 'Semences', icon: Sprout },
+  { value: 'products', label: 'Produits', icon: Package },
+  { value: 'legal', label: 'Pages Légales', icon: FileText },
+  { value: 'partners', label: 'Partenaires', icon: Users },
+  { value: 'donations-content', label: 'Dons - Contenus', icon: FileText },
+  { value: 'careers', label: 'Emplois', icon: Briefcase },
+  { value: 'events', label: 'Événements', icon: Calendar },
+  { value: 'livestreams', label: 'Live Streams', icon: Radio },
+  { value: 'submissions', label: 'Soumissions', icon: FileText },
+  { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
+];
+
 function AdminContent() {
   const [user, setUser] = useState<{ email?: string; role?: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -100,27 +120,6 @@ function AdminContent() {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Configuration des onglets
-  const tabs = [
-    { value: 'users', label: 'Utilisateurs', icon: Shield },
-    { value: 'orders', label: 'Commandes', icon: Receipt },
-    { value: 'promos', label: 'Codes promo', icon: Tag },
-    { value: 'courses', label: 'Cours', icon: BookOpen },
-    { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
-    { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
-    { value: 'news', label: 'Actualités', icon: Newspaper },
-    { value: 'seeds', label: 'Semences', icon: Sprout },
-    { value: 'products', label: 'Produits', icon: Package },
-    { value: 'legal', label: 'Pages Légales', icon: FileText },
-    { value: 'partners', label: 'Partenaires', icon: Users },
-    { value: 'donations-content', label: 'Dons - Contenus', icon: FileText },
-    { value: 'careers', label: 'Emplois', icon: Briefcase },
-    { value: 'events', label: 'Événements', icon: Calendar },
-    { value: 'livestreams', label: 'Live Streams', icon: Radio },
-    { value: 'submissions', label: 'Soumissions', icon: FileText },
-    { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
-  ];
 
   // Configuration des statistiques
   const statsConfig = [
@@ -168,59 +167,73 @@ function AdminContent() {
     }
   ];
 
-  const checkAuth = useCallback(async () => {
-    try {
-      const { data: { user } } = await api.auth.getUser();
-      
-      if (!user) {
-        navigate('/auth');
-        return;
+  useEffect(() => {
+    let isMounted = true;
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await api.auth.getUser();
+        if (!isMounted) return;
+        
+        if (!user) {
+          navigate('/auth');
+          return;
+        }
+
+        setUser({ email: user.email, role: user.role });
+        const isAuthorized = user.role === 'admin' || user.role === 'supervisor';
+        
+        if (!isAuthorized) {
+          toast({ title: "Accès refusé", description: "Vous n'avez pas les permissions pour accéder à cette page.", variant: "destructive" });
+          navigate('/auth');
+          return;
+        }
+
+        setIsAdmin(true);
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error checking auth:', error);
+          navigate('/auth');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
+    };
 
-      setUser({ email: user.email, role: user.role });
-
-      const isAuthorized = user.role === 'admin' || user.role === 'supervisor';
-      
-      if (!isAuthorized) {
-        toast({ title: "Accès refusé", description: "Vous n'avez pas les permissions pour accéder à cette page.", variant: "destructive" });
-        navigate('/auth');
-        return;
-      }
-
-      setIsAdmin(true);
-    } catch (error) {
-      console.error('Error checking auth:', error);
-      navigate('/auth');
-    } finally {
-      setLoading(false);
-    }
+    checkAuth();
+    return () => { isMounted = false; };
   }, [navigate, toast]);
 
-  const fetchDashboardStats = useCallback(async () => {
-    try {
-      const res = await fetch('/api/stats', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      const body = await res.json();
-      const s = body?.data || {};
-      setStats({
-        totalUsers: Number(s.totalUsers || 0),
-        totalCourses: Number(s.totalCourses || 0),
-        totalNews: Number(s.totalNews || 0),
-        totalSeeds: Number(s.totalSeeds || 0),
-        totalProducts: Number(s.totalProducts || 0),
-        totalSubmissions: Number(s.totalSubmissions || 0),
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-    }
-  }, []);
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDashboardStats = async () => {
+      try {
+        const res = await fetch('/api/stats', { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to fetch stats');
+        const body = await res.json();
+        if (!isMounted) return;
+        const s = body?.data || {};
+        setStats({
+          totalUsers: Number(s.totalUsers || 0),
+          totalCourses: Number(s.totalCourses || 0),
+          totalNews: Number(s.totalNews || 0),
+          totalSeeds: Number(s.totalSeeds || 0),
+          totalProducts: Number(s.totalProducts || 0),
+          totalSubmissions: Number(s.totalSubmissions || 0),
+        });
+      } catch (error) {
+        if (isMounted) console.error('Error fetching dashboard stats:', error);
+      }
+    };
 
-  useEffect(() => { checkAuth(); }, [checkAuth]);
-  useEffect(() => { if (isAdmin) { fetchDashboardStats(); } }, [isAdmin, fetchDashboardStats]);
+    if (isAdmin) { fetchDashboardStats(); }
+    return () => { isMounted = false; };
+  }, [isAdmin]);
+
+  const handleLogout = async () => { await api.auth.signOut(); navigate('/'); };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background" translate="no">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Chargement du dashboard...</p>
@@ -229,16 +242,20 @@ function AdminContent() {
     );
   }
 
-  if (!isAdmin) { return null; }
-
-  const handleLogout = async () => { await api.auth.signOut(); navigate('/'); };
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background" translate="no">
+        <p className="text-muted-foreground">Accès non autorisé.</p>
+      </div>
+    );
+  }
 
   return (
-    <div key="admin-root-container" className="min-h-screen bg-background admin-responsive">
+    <div className="min-h-screen bg-background admin-responsive" translate="no">
       <TitleManager title="Administration" description="Dashboard d'administration AKOUMA Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/logo-ak.png" />
       
       {/* Header */}
-      <div key="admin-header" className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="container mx-auto px-4 py-4">
           <div className="admin-header-responsive">
             <div className="admin-header-responsive header-content">
@@ -268,16 +285,16 @@ function AdminContent() {
       </div>
 
       {/* Main Content */}
-      <div key="admin-main-content" className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6">
         {/* Dashboard Stats */}
-        <div key="admin-stats-grid" className="admin-grid-responsive admin-grid-responsive-6 mb-8">
+        <div className="admin-grid-responsive admin-grid-responsive-6 mb-8">
           {statsConfig.map((stat) => (<StatCard key={`stat-${stat.title}`} {...stat} className="admin-card-mobile" />))}
         </div>
 
         {/* Tabs */}
-        <div key="admin-tabs-container" className="admin-space-responsive-md">
+        <div className="admin-space-responsive-md">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList key="admin-tabs-list" className="admin-tabs-scroll w-full overflow-x-auto overflow-y-hidden whitespace-nowrap flex-nowrap">
+            <TabsList className="admin-tabs-scroll w-full overflow-x-auto overflow-y-hidden whitespace-nowrap flex-nowrap">
               {tabs.map((tab) => (
                 <TabsTrigger key={`trigger-${tab.value}`} value={tab.value} className="flex-shrink-0 min-w-fit px-3 py-2 flex items-center space-x-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
                   <tab.icon className="w-4 h-4 flex-shrink-0" />
@@ -286,7 +303,7 @@ function AdminContent() {
               ))}
             </TabsList>
 
-            <div className="mt-6" key={`content-${activeTab}`}>
+            <div className="mt-6">
               {activeTab === 'users' && <AdminUserManagement />}
               {activeTab === 'orders' && <AdminOrders />}
               {activeTab === 'promos' && <AdminPromoCodes />}
@@ -310,7 +327,7 @@ function AdminContent() {
       </div>
 
       {/* Password Change Dialog */}
-      <AdminPasswordDialog key="admin-password-dialog" open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
+      <AdminPasswordDialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
     </div>
   );
 }

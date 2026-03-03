@@ -55,11 +55,15 @@ export default function SupervisorRoute({ children }: SupervisorRouteProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <LoadingSpinner size="large" text="Vérification des autorisations..." />
       </div>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div className="supervisor-route-wrapper min-h-screen bg-background">
+      {children}
+    </div>
+  );
 }

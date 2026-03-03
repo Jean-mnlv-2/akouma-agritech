@@ -16,20 +16,20 @@ shopProductsRouter.get('/', async (req: Request, res: Response) => {
 });
 
 shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { name, description, price, stock, category, imageUrl, isActive } = req.body || {};
-  if (!name || price == null) return res.status(400).json({ error: 'missing fields' });
+  const { name, slug, description, price, stock, category, imageUrl, isActive } = req.body || {};
+  if (!name || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.shopProduct.create({
-    data: { name, description, price, stock: stock ?? 0, category, imageUrl, isActive: isActive ?? true },
+    data: { name, slug, description, price, stock: stock ?? 0, category, imageUrl, isActive: isActive ?? true },
   });
   res.status(201).json({ data: created });
 });
 
 shopProductsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { name, description, price, stock, category, imageUrl, isActive } = req.body || {};
+  const { name, slug, description, price, stock, category, imageUrl, isActive } = req.body || {};
   const updated = await prisma.shopProduct.update({
     where: { id },
-    data: { name, description, price, stock, category, imageUrl, isActive },
+    data: { name, slug, description, price, stock, category, imageUrl, isActive },
   });
   res.json({ data: updated });
 });

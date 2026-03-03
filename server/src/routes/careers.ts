@@ -19,16 +19,16 @@ careersRouter.get('/', async (_req: Request, res: Response) => {
 });
 
 careersRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { title, description, requirements, location, employmentType, department, salaryRange, isPublished, applicationDeadline } = req.body || {};
-  if (!title || !description || !location) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.career.create({ data: { title, description, requirements, location, employmentType, department, salaryRange, isPublished: isPublished ?? false, applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null } });
+  const { title, slug, description, requirements, location, employmentType, department, salaryRange, isPublished, applicationDeadline } = req.body || {};
+  if (!title || !slug || !description || !location) return res.status(400).json({ error: 'missing fields' });
+  const created = await prisma.career.create({ data: { title, slug, description, requirements, location, employmentType, department, salaryRange, isPublished: isPublished ?? false, applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null } });
   res.status(201).json({ data: created });
 });
 
 careersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { title, description, requirements, location, employmentType, department, salaryRange, isPublished, applicationDeadline } = req.body || {};
-  const updated = await prisma.career.update({ where: { id }, data: { title, description, requirements, location, employmentType, department, salaryRange, isPublished, applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : undefined } });
+  const { title, slug, description, requirements, location, employmentType, department, salaryRange, isPublished, applicationDeadline } = req.body || {};
+  const updated = await prisma.career.update({ where: { id }, data: { title, slug, description, requirements, location, employmentType, department, salaryRange, isPublished, applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : undefined } });
   res.json({ data: updated });
 });
 

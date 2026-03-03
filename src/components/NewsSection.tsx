@@ -32,14 +32,14 @@ const NewsSection = () => {
     contentType: 'news',
     onUpdate: (data) => {
       const normalizedNews = (data as Record<string, unknown>[]).map((item) => ({
-        id: item.id as string,
+        id: String(item.id),
         title: item.title as string,
         excerpt: item.excerpt as string,
         content: item.content as string,
-        author: item.author_name as string || 'AKOUMA Team',
-        image: item.image_url as string || '/placeholder.svg',
-        featured: item.is_featured as boolean || false,
-        date: item.created_at as string,
+        author: item.author as string || item.author_name as string || 'AKOUMA Team',
+        image: item.imageUrl as string || item.image_url as string || '/placeholder.svg',
+        featured: item.isPublished as boolean || item.is_featured as boolean || false,
+        date: item.createdAt as string || item.created_at as string,
         category: item.category as string || 'Général',
         read_time: item.read_time as number || 5,
       }));

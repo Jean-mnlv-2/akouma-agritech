@@ -11,12 +11,14 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
+import { slugify } from '@/lib/utils';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
 
 interface Career {
   id: number;
   title: string;
+  slug: string;
   description: string;
   requirements?: string;
   location: string;
@@ -39,6 +41,7 @@ interface CareerDialogProps {
 export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialogProps) => {
   const [formData, setFormData] = useState({
     title: '',
+    slug: '',
     description: '',
     requirements: '',
     location: '',
@@ -53,6 +56,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
     if (career) {
       setFormData({
         title: career.title,
+        slug: career.slug || slugify(career.title),
         description: career.description,
         requirements: career.requirements || '',
         location: career.location,
@@ -65,6 +69,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
     } else {
       setFormData({
         title: '',
+        slug: '',
         description: '',
         requirements: '',
         location: '',
@@ -82,6 +87,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
     
     const careerData = {
       title: formData.title,
+      slug: formData.slug || slugify(formData.title),
       description: formData.description,
       requirements: formData.requirements || undefined,
       location: formData.location,
@@ -122,12 +128,32 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
               <Input
                 id="title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  const newSlug = slugify(newTitle);
+                  if (!formData.slug || formData.slug === slugify(formData.title)) {
+                    setFormData({ ...formData, title: newTitle, slug: newSlug });
+                  } else {
+                    setFormData({ ...formData, title: newTitle });
+                  }
+                }}
                 required
                 placeholder="Développeur Full Stack"
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug (URL)</Label>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                placeholder="genere-automatiquement"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="location">Lieu de travail *</Label>
               <Input
@@ -138,9 +164,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
                 placeholder="Ouagadougou, Burkina Faso"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="department">Département</Label>
               <Input
@@ -150,7 +174,9 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
                 placeholder="Technologie, Marketing, RH..."
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="employmentType">Type d'emploi</Label>
               <Select value={formData.employmentType} onValueChange={(value) => setFormData({ ...formData, employmentType: value })}>
@@ -166,16 +192,16 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="salaryRange">Fourchette salariale</Label>
-            <Input
-              id="salaryRange"
-              value={formData.salaryRange}
-              onChange={(e) => setFormData({ ...formData, salaryRange: e.target.value })}
-              placeholder="300 000 - 500 000 FCFA"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="salaryRange">Fourchette salariale</Label>
+              <Input
+                id="salaryRange"
+                value={formData.salaryRange}
+                onChange={(e) => setFormData({ ...formData, salaryRange: e.target.value })}
+                placeholder="300 000 - 500 000 FCFA"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

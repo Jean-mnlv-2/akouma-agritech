@@ -61,8 +61,10 @@ const App = () => (
     <ThemeProvider defaultTheme="light" storageKey="akouma-ui-theme">
       <CartProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
+          <div className="stable-ui-container">
+            <Toaster />
+            <Sonner />
+          </div>
           <BrowserRouter
             future={{
               v7_startTransition: true,

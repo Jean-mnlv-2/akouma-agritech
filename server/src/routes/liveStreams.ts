@@ -28,9 +28,12 @@ liveStreamsRouter.post('/', authRequired, adminOnly, async (req: Request, res: R
       console.log('Creating live stream with data:', req.body);
     }
 
-    const { title } = req.body as { title?: unknown };
+    const { title, slug } = req.body as { title?: unknown; slug?: unknown };
     if (typeof title !== 'string' || title.trim().length === 0) {
       return res.status(422).json({ error: 'validation_error', details: 'Title is required' });
+    }
+    if (typeof slug !== 'string' || slug.trim().length === 0) {
+      return res.status(422).json({ error: 'validation_error', details: 'Slug is required' });
     }
 
     // Coercions and validations
@@ -52,6 +55,7 @@ liveStreamsRouter.post('/', authRequired, adminOnly, async (req: Request, res: R
 
     const data = {
       title: title.trim(),
+      slug: slug.trim(),
       description: typeof req.body.description === 'string' && req.body.description.trim().length > 0 ? req.body.description.trim() : undefined,
       instructorName: typeof req.body.instructorName === 'string' && req.body.instructorName.trim().length > 0 ? req.body.instructorName.trim() : undefined,
       category: typeof req.body.category === 'string' && req.body.category.trim().length > 0 ? req.body.category.trim() : undefined,
@@ -97,6 +101,7 @@ liveStreamsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res:
 
     const data = {
       title: typeof req.body.title === 'string' ? req.body.title.trim() : undefined,
+      slug: typeof req.body.slug === 'string' ? req.body.slug.trim() : undefined,
       description: typeof req.body.description === 'string' && req.body.description.trim().length > 0 ? req.body.description.trim() : undefined,
       instructorName: typeof req.body.instructorName === 'string' && req.body.instructorName.trim().length > 0 ? req.body.instructorName.trim() : undefined,
       category: typeof req.body.category === 'string' && req.body.category.trim().length > 0 ? req.body.category.trim() : undefined,
