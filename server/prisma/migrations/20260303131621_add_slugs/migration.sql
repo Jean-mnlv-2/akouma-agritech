@@ -1,84 +1,59 @@
-/*
-  Warnings:
-
-  - A unique constraint covering the columns `[slug]` on the table `Career` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `Course` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `DonationImpact` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `Event` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `LiveStream` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `News` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `Partner` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `Seed` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `ShopProduct` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[slug]` on the table `SuccessStory` will be added. If there are existing duplicate values, this will fail.
-  - Added the required column `slug` to the `Career` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `Course` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `DonationImpact` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `LiveStream` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `News` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `Partner` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `Seed` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `ShopProduct` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `slug` to the `SuccessStory` table without a default value. This is not possible if the table is not empty.
-
-*/
--- AlterTable
-ALTER TABLE "public"."Career" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."Course" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."DonationImpact" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."Event" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."LiveStream" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."News" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."Partner" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."Seed" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."ShopProduct" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."SuccessStory" ADD COLUMN     "slug" TEXT NOT NULL;
-
--- CreateIndex
+-- AlterTable Career
+ALTER TABLE "public"."Career" ADD COLUMN "slug" TEXT;
+UPDATE "public"."Career" SET "slug" = 'career-' || id;
+ALTER TABLE "public"."Career" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "Career_slug_key" ON "public"."Career"("slug");
 
--- CreateIndex
+-- AlterTable Course
+ALTER TABLE "public"."Course" ADD COLUMN "slug" TEXT;
+UPDATE "public"."Course" SET "slug" = 'course-' || id;
+ALTER TABLE "public"."Course" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "Course_slug_key" ON "public"."Course"("slug");
 
--- CreateIndex
+-- AlterTable DonationImpact
+ALTER TABLE "public"."DonationImpact" ADD COLUMN "slug" TEXT;
+UPDATE "public"."DonationImpact" SET "slug" = 'impact-' || id;
+ALTER TABLE "public"."DonationImpact" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "DonationImpact_slug_key" ON "public"."DonationImpact"("slug");
 
--- CreateIndex
+-- AlterTable Event
+ALTER TABLE "public"."Event" ADD COLUMN "slug" TEXT;
+UPDATE "public"."Event" SET "slug" = 'event-' || id;
+ALTER TABLE "public"."Event" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "Event_slug_key" ON "public"."Event"("slug");
 
--- CreateIndex
+-- AlterTable LiveStream
+ALTER TABLE "public"."LiveStream" ADD COLUMN "slug" TEXT;
+UPDATE "public"."LiveStream" SET "slug" = 'live-' || id;
+ALTER TABLE "public"."LiveStream" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "LiveStream_slug_key" ON "public"."LiveStream"("slug");
 
--- CreateIndex
+-- AlterTable News
+ALTER TABLE "public"."News" ADD COLUMN "slug" TEXT;
+UPDATE "public"."News" SET "slug" = 'news-' || id;
+ALTER TABLE "public"."News" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "News_slug_key" ON "public"."News"("slug");
 
--- CreateIndex
+-- AlterTable Partner
+ALTER TABLE "public"."Partner" ADD COLUMN "slug" TEXT;
+UPDATE "public"."Partner" SET "slug" = 'partner-' || id;
+ALTER TABLE "public"."Partner" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "Partner_slug_key" ON "public"."Partner"("slug");
 
--- CreateIndex
+-- AlterTable Seed
+ALTER TABLE "public"."Seed" ADD COLUMN "slug" TEXT;
+UPDATE "public"."Seed" SET "slug" = 'seed-' || id;
+ALTER TABLE "public"."Seed" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "Seed_slug_key" ON "public"."Seed"("slug");
 
--- CreateIndex
+-- AlterTable ShopProduct
+ALTER TABLE "public"."ShopProduct" ADD COLUMN "slug" TEXT;
+UPDATE "public"."ShopProduct" SET "slug" = 'product-' || id;
+ALTER TABLE "public"."ShopProduct" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "ShopProduct_slug_key" ON "public"."ShopProduct"("slug");
 
--- CreateIndex
+-- AlterTable SuccessStory
+ALTER TABLE "public"."SuccessStory" ADD COLUMN "slug" TEXT;
+UPDATE "public"."SuccessStory" SET "slug" = 'story-' || id;
+ALTER TABLE "public"."SuccessStory" ALTER COLUMN "slug" SET NOT NULL;
 CREATE UNIQUE INDEX "SuccessStory_slug_key" ON "public"."SuccessStory"("slug");
