@@ -1,54 +1,68 @@
+# ------------------------------------------------------------------------------
 # Configuration Apache pour SPA React - AKOUMA Agritech
-# Gestion professionnelle du routage côté client
+# ------------------------------------------------------------------------------
+
+# Désactiver le parcours des répertoires (Sécurité)
+Options -Indexes
 
 # Activation de la réécriture d'URL
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
 
-# Redirection de toutes les routes vers index.html (sauf les fichiers existants)
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ /index.html [QSA,L]
+    # Redirection HTTPS (Optionnel mais recommandé si non géré par le Cloud/Load Balancer)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Headers de sécurité modernes
+    # Ne pas appliquer de règles si le fichier ou dossier existe physiquement
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Redirection de toutes les autres routes vers index.html pour React Router
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# Headers de sécurité
+# ------------------------------------------------------------------------------
 <IfModule mod_headers.c>
-    # Protection XSS
     Header always set X-XSS-Protection "1; mode=block"
-    
-    # Protection contre le clickjacking
     Header always set X-Frame-Options "DENY"
-    
-    # Protection MIME type sniffing
     Header always set X-Content-Type-Options "nosniff"
-    
-    # Politique de référent
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     
-    # Content Security Policy basique
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
+    # CSP : Ajout de connect-src pour vos APIs et mise à jour des sources
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.akouma.cm;"
     
-    # HSTS (HTTPS Strict Transport Security)
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 </IfModule>
 
-# Compression Gzip pour les performances
+# ------------------------------------------------------------------------------
+# Compression Gzip (DEFLATE)
+# ------------------------------------------------------------------------------
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/xml
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE application/xml
-    AddOutputFilterByType DEFLATE application/xhtml+xml
-    AddOutputFilterByType DEFLATE application/rss+xml
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/x-javascript
-    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css
+    AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript application/x-javascript application/json
+    AddOutputFilterByType DEFLATE font/ttf font/otf image/svg+xml
 </IfModule>
 
-# Cache des ressources statiques
+# ------------------------------------------------------------------------------
+# Gestion du Cache (Expires)
+# ------------------------------------------------------------------------------
 <IfModule mod_expires.c>
     ExpiresActive On
+    ExpiresDefault "access plus 2 days"
+
+    # IMPORTANT : Pas de cache pour l'index.html (évite de servir une vieille version du JS)
+    ExpiresByType text/html "access plus 0 seconds"
     
-    # Images
+    # Ressources statiques avec hash (JS/CSS de build)
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    
+    # Media et Images
     ExpiresByType image/jpg "access plus 1 month"
     ExpiresByType image/jpeg "access plus 1 month"
     ExpiresByType image/gif "access plus 1 month"
@@ -56,30 +70,20 @@ RewriteRule ^(.*)$ /index.html [QSA,L]
     ExpiresByType image/webp "access plus 1 month"
     ExpiresByType image/svg+xml "access plus 1 month"
     
-    # CSS et JavaScript
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType application/x-javascript "access plus 1 month"
-    
     # Fonts
     ExpiresByType font/woff "access plus 1 year"
     ExpiresByType font/woff2 "access plus 1 year"
-    ExpiresByType application/font-woff "access plus 1 year"
-    ExpiresByType application/font-woff2 "access plus 1 year"
-    
-    # HTML
-    ExpiresByType text/html "access plus 1 hour"
 </IfModule>
 
-# Protection contre les attaques
+# ------------------------------------------------------------------------------
+# Protections & Blocages
+# ------------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
-    # Bloquer l'accès aux fichiers sensibles
+    # Bloquer l'accès aux fichiers sensibles et dossiers de dev
     RewriteRule ^(\.htaccess|\.htpasswd|\.git|\.env|composer\.json|package\.json|yarn\.lock|README\.md)$ - [F,L]
-    
-    # Bloquer l'accès aux dossiers système
-    RewriteRule ^(node_modules|vendor|\.git|\.vscode|\.idea)/ - [F,L]
+    RewriteRule ^(node_modules|vendor|\.vscode|\.idea)/ - [F,L]
 </IfModule>
 
-# Gestion des erreurs personnalisées
+# Gestion des erreurs
 ErrorDocument 404 /index.html
 ErrorDocument 500 /index.html
