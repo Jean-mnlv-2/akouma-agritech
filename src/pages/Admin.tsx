@@ -21,6 +21,8 @@ import {
   Calendar,
   Radio,
   Receipt,
+  Tag,
+  Eye,
   History
 } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
