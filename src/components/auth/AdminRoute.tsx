@@ -76,13 +76,23 @@ export default function AdminRoute({ children }: AdminRouteProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <LoadingSpinner size="large" text="Vérification des autorisations..." />
       </div>
     );
   }
 
-  if (!authorized) return null;
+  if (!authorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <p className="text-muted-foreground">Accès non autorisé. Redirection...</p>
+      </div>
+    );
+  }
 
-  return <>{children}</>;
+  return (
+    <div className="admin-route-wrapper min-h-screen bg-background" translate="no">
+      {children}
+    </div>
+  );
 }

@@ -11,10 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileUpload } from './FileUpload';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
+import { slugify } from '@/lib/utils';
 
 type DonationImpact = {
   id: number;
   title: string;
+  slug: string;
   description: string;
   icon?: string;
   progress?: number;
@@ -26,6 +28,7 @@ type DonationImpact = {
 type SuccessStory = {
   id: number;
   title: string;
+  slug: string;
   description: string;
   impact: string;
   year?: string;
@@ -79,6 +82,7 @@ export function AdminDonationsContent() {
   const saveImpact = async () => {
     const payload: any = {
       title: impactForm.title?.trim(),
+      slug: impactForm.slug || slugify(impactForm.title || ''),
       description: impactForm.description || '',
       icon: impactForm.icon || null,
       progress: Number(impactForm.progress ?? 0),
@@ -87,6 +91,7 @@ export function AdminDonationsContent() {
       isActive: Boolean(impactForm.isActive),
     };
     if (!payload.title) { toast({ title: 'Validation', description: 'Titre requis', variant: 'destructive' }); return; }
+    if (!payload.slug) { toast({ title: 'Validation', description: 'Slug requis', variant: 'destructive' }); return; }
     saveImpactMutation.mutate(payload);
   };
 
@@ -118,6 +123,7 @@ export function AdminDonationsContent() {
   const saveStory = async () => {
     const payload: any = {
       title: storyForm.title?.trim(),
+      slug: storyForm.slug || slugify(storyForm.title || ''),
       description: storyForm.description || '',
       impact: storyForm.impact || '',
       year: storyForm.year || null,
@@ -126,6 +132,7 @@ export function AdminDonationsContent() {
       isActive: Boolean(storyForm.isActive),
     };
     if (!payload.title) { toast({ title: 'Validation', description: 'Titre requis', variant: 'destructive' }); return; }
+    if (!payload.slug) { toast({ title: 'Validation', description: 'Slug requis', variant: 'destructive' }); return; }
     saveStoryMutation.mutate(payload);
   };
 
@@ -147,11 +154,28 @@ export function AdminDonationsContent() {
           <CardTitle>Votre Don en Action</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Titre *</Label>
-              <Input value={impactForm.title || ''} onChange={(e) => setImpactForm({ ...impactForm, title: e.target.value })} />
+              <Input 
+                value={impactForm.title || ''} 
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  const newSlug = slugify(newTitle);
+                  if (!impactForm.slug || impactForm.slug === slugify(impactForm.title || '')) {
+                    setImpactForm({ ...impactForm, title: newTitle, slug: newSlug });
+                  } else {
+                    setImpactForm({ ...impactForm, title: newTitle });
+                  }
+                }} 
+              />
             </div>
+            <div className="space-y-2">
+              <Label>Slug (URL)</Label>
+              <Input value={impactForm.slug || ''} onChange={(e) => setImpactForm({ ...impactForm, slug: e.target.value })} placeholder="genere-automatiquement" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label>Icône (emoji)</Label>
               <Input value={impactForm.icon || ''} onChange={(e) => setImpactForm({ ...impactForm, icon: e.target.value })} placeholder="🌱" />
@@ -213,11 +237,28 @@ export function AdminDonationsContent() {
           <CardTitle>Histoires de Succès</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Titre *</Label>
-              <Input value={storyForm.title || ''} onChange={(e) => setStoryForm({ ...storyForm, title: e.target.value })} />
+              <Input 
+                value={storyForm.title || ''} 
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  const newSlug = slugify(newTitle);
+                  if (!storyForm.slug || storyForm.slug === slugify(storyForm.title || '')) {
+                      setStoryForm({ ...storyForm, title: newTitle, slug: newSlug });
+                    } else {
+                      setStoryForm({ ...storyForm, title: newTitle });
+                    }
+                }} 
+              />
             </div>
+            <div className="space-y-2">
+              <Label>Slug (URL)</Label>
+              <Input value={storyForm.slug || ''} onChange={(e) => setStoryForm({ ...storyForm, slug: e.target.value })} placeholder="genere-automatiquement" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label>Année</Label>
               <Input value={storyForm.year || ''} onChange={(e) => setStoryForm({ ...storyForm, year: e.target.value })} placeholder="2024" />

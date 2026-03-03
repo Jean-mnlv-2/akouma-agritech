@@ -11,10 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileUpload } from './FileUpload';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
+import { slugify } from '@/lib/utils';
 
 type PartnerRow = {
   id: number;
   name: string;
+  slug: string;
   logo?: string;
   logoUrl?: string;
   imageUrl?: string;
@@ -86,6 +88,7 @@ export function AdminPartners() {
     setLoading(true);
     const payload = {
       name: form.name?.trim(),
+      slug: form.slug || slugify(form.name || ''),
       logo: form.logo || null,
       logoUrl: (form as any).logoUrl || null,
       imageUrl: (form as any).imageUrl || null,
@@ -98,6 +101,7 @@ export function AdminPartners() {
       isActive: Boolean(form.isActive),
     } as any;
     if (!payload.name) { toast({ title: 'Validation', description: 'Le nom est requis.', variant: 'destructive' }); setLoading(false); return; }
+    if (!payload.slug) { toast({ title: 'Validation', description: 'Le slug est requis.', variant: 'destructive' }); setLoading(false); return; }
     upsertMutation.mutate({ data: payload, id: editing?.id });
   };
 
@@ -131,9 +135,27 @@ export function AdminPartners() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-3">
-            <div>
-              <Label>Nom *</Label>
-              <Input value={form.name || ''} onChange={(e) => updateField('name', e.target.value)} placeholder="Nom du partenaire" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nom *</Label>
+                <Input 
+                  value={form.name || ''} 
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    const newSlug = slugify(newName);
+                    if (!form.slug || form.slug === slugify(form.name || '')) {
+                      setForm({ ...form, name: newName, slug: newSlug });
+                    } else {
+                      setForm({ ...form, name: newName });
+                    }
+                  }} 
+                  placeholder="Nom du partenaire" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Slug (URL)</Label>
+                <Input value={form.slug || ''} onChange={(e) => updateField('slug', e.target.value)} placeholder="genere-automatiquement" />
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>

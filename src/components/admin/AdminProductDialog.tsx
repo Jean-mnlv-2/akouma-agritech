@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { slugify } from '@/lib/utils';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
@@ -88,9 +89,8 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         is_featured: product.is_featured || false,
         is_bestseller: product.is_bestseller || false,
         is_new: product.is_new || false,
-        slug: product.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || ''
+        slug: (product as any).slug || slugify(product.name || '')
       });
-      // Reset gallery on open edit
       setGalleryUrls([]);
       setPreviewUrl(null);
     } else {
@@ -209,7 +209,20 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nom *</Label>
-              <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+              <Input 
+                id="name" 
+                value={formData.name} 
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  const newSlug = slugify(newName);
+                  if (!formData.slug || formData.slug === slugify(formData.name)) {
+                    setFormData({ ...formData, name: newName, slug: newSlug });
+                  } else {
+                    setFormData({ ...formData, name: newName });
+                  }
+                }} 
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="slug">Slug (URL)</Label>

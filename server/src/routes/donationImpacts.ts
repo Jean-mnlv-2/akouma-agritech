@@ -26,16 +26,16 @@ donationImpactsRouter.get('/admin', authRequired, adminOnly, async (_req: Reques
 });
 
 donationImpactsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { title, description, icon, progress, target, order, isActive } = req.body || {};
-  if (!title || !description) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.donationImpact.create({ data: { title, description, icon, progress: progress ?? 0, target, order: order ?? 0, isActive: isActive ?? true } });
+  const { title, slug, description, icon, progress, target, order, isActive } = req.body || {};
+  if (!title || !slug || !description) return res.status(400).json({ error: 'missing fields' });
+  const created = await prisma.donationImpact.create({ data: { title, slug, description, icon, progress: progress ?? 0, target, order: order ?? 0, isActive: isActive ?? true } });
   res.status(201).json({ data: created });
 });
 
 donationImpactsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { title, description, icon, progress, target, order, isActive } = req.body || {};
-  const updated = await prisma.donationImpact.update({ where: { id }, data: { title, description, icon, progress, target, order, isActive } });
+  const { title, slug, description, icon, progress, target, order, isActive } = req.body || {};
+  const updated = await prisma.donationImpact.update({ where: { id }, data: { title, slug, description, icon, progress, target, order, isActive } });
   res.json({ data: updated });
 });
 

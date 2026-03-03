@@ -39,6 +39,7 @@ model Country {
 model Seed {
   id          Int      @id @default(autoincrement())
   name        String
+  slug        String   @unique
   description String
   price       Decimal  @db.Decimal(12, 2)
   stock       Int      @default(0)
@@ -50,6 +51,7 @@ model Seed {
 model Course {
   id           Int      @id @default(autoincrement())
   title        String
+  slug         String   @unique
   description  String?
   content      String?
   price        Decimal  @db.Decimal(12, 2)
@@ -71,6 +73,7 @@ model Course {
 model News {
   id          Int      @id @default(autoincrement())
   title       String
+  slug        String   @unique
   content     String
   excerpt     String?
   imageUrl    String?
@@ -83,6 +86,7 @@ model News {
 model ShopProduct {
   id          Int      @id @default(autoincrement())
   name        String
+  slug        String   @unique
   description String?
   price       Decimal  @db.Decimal(12, 2)
   stock       Int      @default(0)
@@ -202,6 +206,7 @@ model NewsletterSubscription {
 model Partner {
   id          Int      @id @default(autoincrement())
   name        String
+  slug        String   @unique
   logo        String?
   logoUrl     String?
   imageUrl    String?
@@ -223,6 +228,7 @@ model Partner {
 model DonationImpact {
   id          Int      @id @default(autoincrement())
   title       String
+  slug        String   @unique
   description String
   icon        String?
   progress    Int      @default(0)
@@ -240,6 +246,7 @@ model DonationImpact {
 model SuccessStory {
   id          Int      @id @default(autoincrement())
   title       String
+  slug        String   @unique
   description String
   impact      String
   year        String?
@@ -258,6 +265,7 @@ model SuccessStory {
 model LiveStream {
   id              Int       @id @default(autoincrement())
   title           String
+  slug            String    @unique
   description     String?
   instructorName  String?
   category        String?
@@ -352,6 +360,7 @@ model Task {
 model Event {
   id          Int      @id @default(autoincrement())
   title       String
+  slug        String   @unique
   description String?
   date        DateTime
   location    String
@@ -364,6 +373,7 @@ model Event {
 model Career {
   id                Int       @id @default(autoincrement())
   title             String
+  slug              String    @unique
   description       String
   requirements      String?
   location          String

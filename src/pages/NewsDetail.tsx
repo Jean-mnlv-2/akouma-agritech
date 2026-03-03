@@ -48,10 +48,10 @@ const NewsDetail = () => {
         title: data.title,
         excerpt: data.excerpt || data.description || '',
         content: data.content || '',
-        author: data.author_name || data.author || 'AKOUMA Team',
-        date: data.created_at || data.date,
+        author: data.author || data.author_name || 'AKOUMA Team',
+        date: data.createdAt || data.created_at || data.date,
         category: data.category || 'Général',
-        image: data.image_url || '/logo-ak.png',
+        image: data.imageUrl || data.image_url || '/logo-ak.png',
         readTime: String(data.read_time || 5) + ' min',
         tags: [data.category || 'Général'],
         relatedArticles: []
@@ -69,8 +69,8 @@ const NewsDetail = () => {
             .map((it: any) => ({
               id: String(it.id),
               title: it.title,
-              image: it.image_url || '/logo-ak.png',
-              date: it.created_at || new Date().toISOString(),
+              image: it.imageUrl || it.image_url || '/logo-ak.png',
+              date: it.createdAt || it.created_at || new Date().toISOString(),
             }));
           normalized.relatedArticles = related;
         }

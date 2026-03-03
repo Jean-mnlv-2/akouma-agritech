@@ -32,16 +32,16 @@ partnersRouter.get('/admin', authRequired, adminOnly, async (_req: Request, res:
 });
 
 partnersRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { name, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive, order } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.partner.create({ data: { name, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive: isActive ?? true, order: order ?? 0 } });
+  const { name, slug, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive, order } = req.body || {};
+  if (!name || !slug) return res.status(400).json({ error: 'missing fields' });
+  const created = await prisma.partner.create({ data: { name, slug, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive: isActive ?? true, order: order ?? 0 } });
   res.status(201).json({ data: created });
 });
 
 partnersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { name, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive, order } = req.body || {};
-  const updated = await prisma.partner.update({ where: { id }, data: { name, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive, order } });
+  const { name, slug, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive, order } = req.body || {};
+  const updated = await prisma.partner.update({ where: { id }, data: { name, slug, logo, logoUrl, imageUrl, type, description, year, website, contact, isActive, order } });
   res.json({ data: updated });
 });
 

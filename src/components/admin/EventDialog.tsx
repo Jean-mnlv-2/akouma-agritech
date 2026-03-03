@@ -10,6 +10,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
+import { slugify } from '@/lib/utils';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
@@ -17,6 +18,7 @@ import { FileUpload } from './FileUpload';
 interface Event {
   id: number;
   title: string;
+  slug: string;
   description?: string;
   date: string;
   location: string;
@@ -36,6 +38,7 @@ interface EventDialogProps {
 export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogProps) => {
   const [formData, setFormData] = useState({
     title: '',
+    slug: '',
     description: '',
     date: new Date(),
     location: '',
@@ -47,6 +50,7 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
     if (event) {
       setFormData({
         title: event.title,
+        slug: event.slug || slugify(event.title),
         description: event.description || '',
         date: new Date(event.date),
         location: event.location,
@@ -56,6 +60,7 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
     } else {
       setFormData({
         title: '',
+        slug: '',
         description: '',
         date: new Date(),
         location: '',
@@ -70,6 +75,7 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
     
     const eventData = {
       title: formData.title,
+      slug: formData.slug || slugify(formData.title),
       description: formData.description || undefined,
       date: formData.date.toISOString(),
       location: formData.location,
@@ -99,11 +105,31 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
               <Input
                 id="title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  const newSlug = slugify(newTitle);
+                  if (!formData.slug || formData.slug === slugify(formData.title)) {
+                    setFormData({ ...formData, title: newTitle, slug: newSlug });
+                  } else {
+                    setFormData({ ...formData, title: newTitle });
+                  }
+                }}
                 required
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug (URL)</Label>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                placeholder="genere-automatiquement"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="location">Lieu *</Label>
               <Input
@@ -113,26 +139,26 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
                 required
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Date et heure *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(formData.date, 'PPP HH:mm', { locale: fr })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={formData.date}
-                  onSelect={(date) => date && setFormData({ ...formData, date })}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <div className="space-y-2">
+              <Label>Date et heure *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(formData.date, 'PPP HH:mm', { locale: fr })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date}
+                    onSelect={(date) => date && setFormData({ ...formData, date })}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div className="space-y-2">

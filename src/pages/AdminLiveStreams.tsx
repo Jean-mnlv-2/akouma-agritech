@@ -14,6 +14,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
+import { slugify } from '@/lib/utils';
 import { 
   Loader2, 
   Plus, 
@@ -28,6 +29,7 @@ import {
 
 const liveStreamSchema = z.object({
   title: z.string().min(1, 'Titre requis'),
+  slug: z.string().min(1, 'Slug requis'),
   instructorName: z.string().min(1, 'Instructeur requis'),
   scheduledTime: z.string().optional(),
   durationMinutes: z.number().min(1, 'Durée requise').optional(),
@@ -44,6 +46,7 @@ type LiveStreamFormData = z.infer<typeof liveStreamSchema>;
 interface LiveStream {
   id: number;
   title: string;
+  slug: string;
   instructorName: string | null;
   scheduledTime: string | null;
   durationMinutes: number | null;
@@ -99,6 +102,7 @@ export default function AdminLiveStreams() {
     resolver: zodResolver(liveStreamSchema),
     defaultValues: {
       title: '',
+      slug: '',
       instructorName: '',
       scheduledTime: '',
       durationMinutes: undefined,
@@ -118,6 +122,7 @@ export default function AdminLiveStreams() {
       const d = payload.data;
       const mapped = {
         title: d.title.trim(),
+        slug: d.slug.trim(),
         instructorName: d.instructorName?.trim() || null,
         scheduledTime: d.scheduledTime || null,
         durationMinutes: d.durationMinutes || null,
@@ -172,6 +177,7 @@ export default function AdminLiveStreams() {
     setEditingStream(stream);
     form.reset({
       title: stream.title,
+      slug: stream.slug || slugify(stream.title),
       instructorName: stream.instructorName || '',
       scheduledTime: stream.scheduledTime ? new Date(stream.scheduledTime).toISOString().slice(0, 16) : '',
       durationMinutes: stream.durationMinutes || undefined,
@@ -242,13 +248,36 @@ export default function AdminLiveStreams() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="title" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Titre *</FormLabel>
-                    <FormControl><Input placeholder="Titre du live stream" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={form.control} name="title" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Titre *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Titre du live stream" 
+                          {...field} 
+                          onChange={(e) => {
+                            const oldTitle = form.getValues('title');
+                            field.onChange(e);
+                            const newTitle = e.target.value;
+                            const currentSlug = form.getValues('slug');
+                            if (!currentSlug || currentSlug === slugify(oldTitle)) {
+                              form.setValue('slug', slugify(newTitle));
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="slug" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Slug (URL)</FormLabel>
+                      <FormControl><Input placeholder="genere-automatiquement" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="instructorName" render={({ field }) => (
                     <FormItem>

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { slugify } from '@/lib/utils';
 // import ReactQuill from 'react-quill';
 // import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
@@ -13,15 +14,19 @@ import { useRef } from 'react';
 interface NewsArticle {
   id: string;
   title: string;
-  excerpt: string;
-  content?: string;
-  author_name: string;
-  category: string;
-  is_published: boolean;
-  is_featured: boolean;
-  created_at: string;
-  views_count: number;
-  image_url?: string;
+  excerpt?: string | null;
+  content?: string | null;
+  author?: string | null;
+  author_name?: string | null; // fallback
+  category?: string | null;
+  isPublished?: boolean;
+  is_published?: boolean; // fallback
+  is_featured?: boolean;
+  createdAt?: string;
+  created_at?: string; // fallback
+  imageUrl?: string | null;
+  image_url?: string | null; // fallback
+  slug?: string;
 }
 
 interface AdminNewsDialogProps {
@@ -54,16 +59,16 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
       setFormData({
         title: news.title || '',
         excerpt: news.excerpt || '',
-        content: (news as any).content || '',
-        author_name: news.author_name || '',
+        content: news.content || '',
+        author_name: news.author || news.author_name || '',
         author_bio: '',
         category: news.category || '',
-        image_url: news.image_url || '',
-        is_published: news.is_published || false,
+        image_url: news.imageUrl || news.image_url || '',
+        is_published: news.isPublished ?? news.is_published ?? false,
         is_featured: news.is_featured || false,
-        slug: news.title?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || ''
+        slug: news.slug || slugify(news.title || '')
       });
-      setPreviewUrl(news.image_url || null);
+      setPreviewUrl(news.imageUrl || news.image_url || null);
     } else {
       setFormData({
         title: '', excerpt: '', content: '', author_name: '', author_bio: '', category: '', image_url: '', is_published: false, is_featured: false, slug: ''
@@ -124,7 +129,20 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Titre *</Label>
-              <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+              <Input 
+                id="title" 
+                value={formData.title} 
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  const newSlug = slugify(newTitle);
+                  if (!formData.slug || formData.slug === slugify(formData.title)) {
+                    setFormData({ ...formData, title: newTitle, slug: newSlug });
+                  } else {
+                    setFormData({ ...formData, title: newTitle });
+                  }
+                }} 
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="slug">Slug (URL)</Label>
