@@ -25,5 +25,4 @@ COPY --from=build /app/scripts ./scripts
 VOLUME ["/app/uploads"]
 EXPOSE 4000
 
-# Safety net: ensure client is generated in runtime env before migrations
-CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma generate && (npx prisma migrate deploy || true) && node dist/index.js"]

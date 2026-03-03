@@ -17,11 +17,13 @@ export default function AdminRoute({ children }: AdminRouteProps) {
   useEffect(() => {
     const verify = async () => {
       try {
+        console.log("[AdminRoute] Checking authorization...");
         // First check if we just logged in (sessionStorage has fresh data)
         const cachedUser = sessionStorage.getItem('akouma_auth_user');
         if (cachedUser) {
           try {
             const user = JSON.parse(cachedUser);
+            console.log("[AdminRoute] Found cached user:", user.email, "Role:", user.role);
             if ((user?.role === 'admin' || user?.role === 'supervisor') && user?.isActive !== false) {
               setAuthorized(true);
               setLoading(false);
@@ -29,15 +31,18 @@ export default function AdminRoute({ children }: AdminRouteProps) {
               sessionStorage.removeItem('akouma_auth_user');
               return;
             }
-          } catch {
+          } catch (e) {
+            console.error("[AdminRoute] Cache parse error:", e);
             sessionStorage.removeItem('akouma_auth_user');
           }
         }
 
         // Fallback: verify via API session cookie
         const { data: { user } } = await api.auth.getUser();
+        console.log("[AdminRoute] API session user:", user?.email, "Role:", (user as any)?.role);
         
         if (!user) {
+          console.warn("[AdminRoute] No user session found, redirecting to /auth");
           toast({ title: "Authentification requise", description: "Veuillez vous connecter." });
           navigate("/auth");
           return;
