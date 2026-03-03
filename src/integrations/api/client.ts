@@ -1,9 +1,11 @@
-// Utilise VITE_API_BASE_URL si définie, sinon window.location.origin
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '';
 
 async function http(method: string, path: string, options?: { params?: Record<string, any>; body?: any; headers?: Record<string, string> }) {
   try {
-    const url = new URL(path.replace(/^\/+/, "/"), API_BASE_URL);
+    const isRelative = !API_BASE_URL || API_BASE_URL.startsWith('/');
+    const baseUrl = isRelative ? window.location.origin : API_BASE_URL;
+    const url = new URL(path.replace(/^\/+/, "/"), baseUrl);
     if (options?.params) {
       for (const [key, value] of Object.entries(options.params)) {
         if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
@@ -109,7 +111,6 @@ function createApiClient() {
           const res = await http('GET', '/auth/session');
           return { data: { session: res.user ? { user: res.user } : null } };
         } catch (error) {
-          // Retourner une session vide en cas d'erreur réseau
           return { data: { session: null } };
         }
       },
@@ -118,7 +119,6 @@ function createApiClient() {
           const res = await http('GET', '/auth/session');
           return { data: { user: res.user || null } };
         } catch (error) {
-          // Retourner null en cas d'erreur réseau
           return { data: { user: null } };
         }
       },
@@ -136,7 +136,6 @@ function createApiClient() {
         return { error: null };
       },
       updateUser: async (args: any) => {
-        // À implémenter côté backend si nécessaire
         return { data: { user: args }, error: null };
       },
       forgotPassword: async (email: string) => {

@@ -13,6 +13,7 @@ import { useI18n } from "@/i18n/i18n";
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
   const { getCartItemsCount } = useCartContext();
@@ -22,7 +23,11 @@ const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
 
-  // Handle mobile nav scroll behavior - hide on scroll DOWN, show on scroll UP
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsCartOpen(false);
+  }, [location.pathname]);
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -205,7 +210,7 @@ const Header = () => {
                 </Button>
               )}
               
-              <Sheet>
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon" className="lg:hidden">
                     <Menu className="w-4 h-4" />
