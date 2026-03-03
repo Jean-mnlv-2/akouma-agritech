@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, Loader2, Package, User, MapPin, Phone } from 'lucide-react';
+import { Eye, Loader2, Package, User, MapPin, Phone, Tag, List } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
+import { AdminPromoCodes } from './AdminPromoCodes';
 
 interface OrderItem {
   id: number;
@@ -155,73 +157,102 @@ export function AdminOrders() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Package className="w-5 h-5" />
-          <span>Commandes</span>
-        </CardTitle>
-        <CardDescription>
-          Gérez toutes les commandes des clients
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {orders.length === 0 ? (
-          <div className="text-center py-8">
-            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aucune commande pour le moment</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>N° Commande</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Paiement</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{order.user?.fullName || 'N/A'}</span>
-                        <span className="text-sm text-muted-foreground">{order.user?.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell className="font-semibold">{formatPrice(Number(order.total))} FCFA</TableCell>
-                    <TableCell className="space-y-1">
-                      {getStatusBadge(order.status)}
-                      {order.promoCode && (
-                        <div className="text-xs text-muted-foreground">Code {order.promoCode.code}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>{getPaymentStatusBadge(order.paymentStatus)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewOrder(order)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Voir
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Ventes & Promotions</h2>
+          <p className="text-muted-foreground">Gérez les commandes et les codes de réduction.</p>
+        </div>
+      </div>
 
-        {/* Order Details Dialog */}
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8 max-w-[400px]">
+          <TabsTrigger value="list" className="flex items-center gap-2">
+            <List className="w-4 h-4" />
+            Commandes
+          </TabsTrigger>
+          <TabsTrigger value="promos" className="flex items-center gap-2">
+            <Tag className="w-4 h-4" />
+            Codes Promo
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Package className="w-5 h-5" />
+                <span>Liste des commandes</span>
+              </CardTitle>
+              <CardDescription>
+                Consultez et gérez toutes les transactions de la boutique.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {orders.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Aucune commande pour le moment</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>N° Commande</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Paiement</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{order.user?.fullName || 'N/A'}</span>
+                              <span className="text-sm text-muted-foreground">{order.user?.email}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{formatDate(order.createdAt)}</TableCell>
+                          <TableCell className="font-semibold">{formatPrice(Number(order.total))} FCFA</TableCell>
+                          <TableCell className="space-y-1">
+                            {getStatusBadge(order.status)}
+                            {order.promoCode && (
+                              <div className="text-xs text-muted-foreground">Code {order.promoCode.code}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>{getPaymentStatusBadge(order.paymentStatus)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewOrder(order)}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Voir
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="promos">
+          <AdminPromoCodes />
+        </TabsContent>
+      </Tabs>
+
+      {/* Order Details Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -420,7 +451,6 @@ export function AdminOrders() {
             )}
           </DialogContent>
         </Dialog>
-      </CardContent>
-    </Card>
-  );
+      </div>
+    );
 }

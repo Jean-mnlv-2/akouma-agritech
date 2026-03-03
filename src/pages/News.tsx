@@ -13,6 +13,7 @@ import { useI18n } from '@/i18n/i18n';
 
 interface NewsItem {
   id: string;
+  slug: string;
   title: string;
   excerpt: string;
   content: string;
@@ -47,6 +48,7 @@ export default function News() {
         const items = Array.isArray(body) ? body : body.data;
         const normalized = (items || []).map((item: any) => ({
           id: String(item.id),
+          slug: item.slug || String(item.id),
           title: item.title ?? '',
           excerpt: item.excerpt ?? item.description ?? '',
           content: item.content ?? '',
@@ -204,7 +206,7 @@ export default function News() {
                             {item.author}
                           </div>
                           <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                            <Link to={`/news/${item.id}`}>
+                            <Link to={`/news/${item.slug}`}>
                               {t('news.read_more')}
                               <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                             </Link>
@@ -258,7 +260,7 @@ export default function News() {
                         {item.author}
                       </div>
                       <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                        <Link to={`/news/${item.id}`}>
+                        <Link to={`/news/${item.slug}`}>
                           {t('news.read_more')}
                           <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                         </Link>

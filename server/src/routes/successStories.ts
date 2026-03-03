@@ -28,14 +28,14 @@ successStoriesRouter.get('/admin', authRequired, adminOnly, async (_req: Request
 successStoriesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   const { title, slug, description, impact, year, imageUrl, order, isActive } = req.body || {};
   if (!title || !slug || !description || !impact) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.successStory.create({ data: { title, slug, description, impact, year, imageUrl, order: order ?? 0, isActive: isActive ?? true } });
+  const created = await prisma.successStory.create({ data: { title, slug, description, impact, year, imageUrl, order: order ?? 0, isActive: isActive ?? true } as any });
   res.status(201).json({ data: created });
 });
 
 successStoriesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { title, slug, description, impact, year, imageUrl, order, isActive } = req.body || {};
-  const updated = await prisma.successStory.update({ where: { id }, data: { title, slug, description, impact, year, imageUrl, order, isActive } });
+  const updated = await prisma.successStory.update({ where: { id }, data: { title, slug, description, impact, year, imageUrl, order, isActive } as any });
   res.json({ data: updated });
 });
 

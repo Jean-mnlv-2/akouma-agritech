@@ -7,8 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { slugify } from '@/lib/utils';
-// import ReactQuill from 'react-quill';
-// import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 
 interface NewsArticle {
@@ -17,15 +17,15 @@ interface NewsArticle {
   excerpt?: string | null;
   content?: string | null;
   author?: string | null;
-  author_name?: string | null; // fallback
+  author_name?: string | null;
   category?: string | null;
   isPublished?: boolean;
-  is_published?: boolean; // fallback
+  is_published?: boolean;
   is_featured?: boolean;
   createdAt?: string;
-  created_at?: string; // fallback
+  created_at?: string;
   imageUrl?: string | null;
-  image_url?: string | null; // fallback
+  image_url?: string | null;
   slug?: string;
 }
 
@@ -33,7 +33,7 @@ interface AdminNewsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   news: NewsArticle | null;
-  onSave: (newsData: any) => void;
+  onSave: (newsData: Partial<NewsArticle>) => void;
 }
 
 export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsDialogProps) {
@@ -108,15 +108,26 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
       const url = data.url;
       setFormData({ ...formData, image_url: url });
       setPreviewUrl(url);
-    } catch (_err) {
+    } catch (err) {
+      console.error('Image upload error:', err);
       alert('Erreur lors de l\'upload de l\'image');
     }
     setUploading(false);
   };
 
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link', 'image', 'clean']
+    ],
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {news ? "Modifier l'actualité" : "Ajouter une actualité"}
@@ -125,8 +136,8 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
             Publiez ou modifiez un article d'actualité pour la plateforme.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Titre *</Label>
               <Input 
@@ -156,20 +167,22 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
               value={formData.excerpt} 
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })} 
               className="bg-white rounded" 
-              style={{ minHeight: 80, marginBottom: 16 }} 
+              placeholder="Court résumé de l'article..."
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="content">Contenu de l'article *</Label>
-            <Textarea 
-              id="content" 
-              value={formData.content} 
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })} 
-              className="bg-white rounded" 
-              style={{ minHeight: 180 }} 
-            />
+          <div className="space-y-2 min-h-[300px] flex flex-col">
+            <Label>Contenu de l'article *</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.content}
+                onChange={(content) => setFormData({ ...formData, content })}
+                modules={quillModules}
+                className="h-[250px] mb-12"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
               <Label htmlFor="author_name">Nom de l'auteur *</Label>
               <Input id="author_name" value={formData.author_name} onChange={(e) => setFormData({ ...formData, author_name: e.target.value })} required />
@@ -208,7 +221,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
               <Label htmlFor="is_featured">Mis en avant</Label>
             </div>
           </div>
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
             <Button type="submit">{news ? 'Modifier' : 'Créer'}</Button>
           </div>

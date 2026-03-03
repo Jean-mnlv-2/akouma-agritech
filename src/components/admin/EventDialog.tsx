@@ -9,10 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Textarea } from '@/components/ui/textarea';
 import { slugify } from '@/lib/utils';
-// import ReactQuill from 'react-quill';
-// import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
 
 interface Event {
@@ -86,9 +85,19 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
     onSave(eventData);
   };
 
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link', 'clean']
+    ],
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {event ? 'Modifier l\'événement' : 'Nouvel événement'}
@@ -98,8 +107,8 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Titre *</Label>
               <Input
@@ -129,7 +138,7 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="location">Lieu *</Label>
               <Input
@@ -161,15 +170,17 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="bg-white rounded"
-              style={{ minHeight: 120 }}
-            />
+          <div className="space-y-2 min-h-[300px] flex flex-col">
+            <Label>Description</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.description}
+                onChange={(content) => setFormData({ ...formData, description: content })}
+                modules={quillModules}
+                className="h-[200px] mb-12"
+              />
+            </div>
           </div>
 
           <FileUpload
@@ -179,7 +190,7 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
             onChange={(url) => setFormData({ ...formData, imageUrl: url })}
           />
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 py-4">
             <Switch
               id="isPublished"
               checked={formData.isPublished}
@@ -188,7 +199,7 @@ export const EventDialog = ({ open, onOpenChange, event, onSave }: EventDialogPr
             <Label htmlFor="isPublished">Publier l'événement</Label>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>

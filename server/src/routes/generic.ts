@@ -60,6 +60,9 @@ function mapColumnName(table: string, column: string): string {
     'telegramUrl': 'telegram_url',
     'updatedAt': 'updated_at',
     'createdAt': 'created_at',
+    'supportEmail': 'support_email',
+    'businessHours': 'business_hours',
+    'mapUrl': 'map_url',
   };
   
   return columnMap[column] || column;
@@ -78,14 +81,17 @@ function unmapColumnName(table: string, column: string): string {
     'address_line2': 'addressLine2',
     'facebook_url': 'facebookUrl',
     'instagram_url': 'instagramUrl',
-    'tiktok_url': 'tiktokUrl',
-    'youtube_url': 'youtubeUrl',
+      'tiktok_url': 'tiktokUrl',
+      'youtube_url': 'youtubeUrl',
     'linkedin_url': 'linkedinUrl',
     'x_url': 'xUrl',
     'website_url': 'websiteUrl',
     'telegram_url': 'telegramUrl',
     'updated_at': 'updatedAt',
     'created_at': 'createdAt',
+    'support_email': 'supportEmail',
+    'business_hours': 'businessHours',
+    'map_url': 'mapUrl',
   };
   
   return columnMap[column] || column;
@@ -161,22 +167,26 @@ genericRouter.post('/:table', authRequired, adminOnly, async (req: Request, res:
       return res.status(400).json({ error: 'No valid fields to insert' });
     }
     
-    // Mapper les noms de colonnes (camelCase → snake_case pour contact_settings)
     const mappedKeys = keys.map(k => mapColumnName(table, k));
-    const cols = mappedKeys.map((k) => `"${k}"`).join(', ');
-    const params = keys.map((_k, i) => `$${i + 1}`).join(', ');
-    const values = keys.map((k) => body[k]);
     
     // Exclure les champs qui ne doivent pas être insérés (comme id, createdAt, updatedAt)
     const filteredCols: string[] = [];
     const filteredParams: string[] = [];
     const filteredValues: unknown[] = [];
     mappedKeys.forEach((col, idx) => {
-      // Ne pas insérer id, createdAt, updatedAt (gérés automatiquement)
+      const originalKey = keys[idx];
+      const val = body[originalKey];
+      
       if (col !== 'id' && col !== 'created_at' && col !== 'updated_at') {
+        let processedVal = val;
+        
+        if (typeof val === 'string' && (col.includes('_at') || col.includes('_date') || col.includes('At') || col.includes('Date')) && val.match(/^\d{4}-\d{2}-\d{2}/)) {
+          processedVal = new Date(val);
+        }
+        
         filteredCols.push(`"${col}"`);
         filteredParams.push(`$${filteredValues.length + 1}`);
-        filteredValues.push(values[idx]);
+        filteredValues.push(processedVal);
       }
     });
     
@@ -195,7 +205,6 @@ genericRouter.post('/:table', authRequired, adminOnly, async (req: Request, res:
   }
 });
 
-// UPDATE (id obligatoire dans l'URL)
 genericRouter.put('/:table/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const table = ensureTable(req.params.table);
@@ -225,6 +234,10 @@ genericRouter.put('/:table/:id', authRequired, adminOnly, async (req: Request, r
           processedVal = new Date(val);
         }
         
+        // Sécurité pour les entiers (id, etc) passés en string par le front
+        const idVal = Number(id);
+        const finalId = isNaN(idVal) ? id : idVal;
+        
         processedKeys.push(mappedKey);
         processedValues.push(processedVal);
       }
@@ -234,9 +247,13 @@ genericRouter.put('/:table/:id', authRequired, adminOnly, async (req: Request, r
       return res.status(400).json({ error: 'No fields to update (excluding auto-managed fields)' });
     }
     
+    // Détection du type d'ID (Int vs UUID) pour la clause WHERE
+    const idVal = Number(id);
+    const finalId = !isNaN(idVal) && String(idVal) === id ? idVal : id;
+    
     const setClause = processedKeys.map((k, i) => `"${k}" = $${i + 1}`).join(', ');
     const sql = `UPDATE "${table}" SET ${setClause} WHERE "id" = $${processedKeys.length + 1} RETURNING *`;
-    const rows = await prisma.$queryRawUnsafe(sql, ...processedValues, id) as Array<Record<string, unknown>>;
+    const rows = await prisma.$queryRawUnsafe(sql, ...processedValues, finalId) as Array<Record<string, unknown>>;
     // Mapper les résultats de snake_case vers camelCase pour contact_settings
     const mappedRow = unmapRow(table, rows[0]);
     res.json({ data: mappedRow });
@@ -254,8 +271,13 @@ genericRouter.delete('/:table/:id', authRequired, adminOnly, async (req: Request
     if (!id || typeof id !== 'string') {
       return res.status(400).json({ error: 'Invalid id parameter' });
     }
+    
+    // Détection du type d'ID (Int vs UUID)
+    const idVal = Number(id);
+    const finalId = !isNaN(idVal) && String(idVal) === id ? idVal : id;
+    
     const sql = `DELETE FROM "${table}" WHERE "id" = $1`;
-    await prisma.$queryRawUnsafe(sql, id);
+    await prisma.$queryRawUnsafe(sql, finalId);
     res.json({ success: true });
   } catch (e) {
     const error = e instanceof Error ? e.message : 'Bad request';

@@ -1,18 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarClock, CheckCircle, Loader2, Plus, Power, RefreshCcw } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Edit, Loader2, RefreshCw, Tag } from 'lucide-react';
 import { api } from '@/integrations/api/client';
+import { AdminPromoCodeDialog } from './AdminPromoCodeDialog';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
-interface PromoCodeDto {
+interface PromoCode {
   id: number;
   code: string;
   description?: string | null;
@@ -20,294 +18,184 @@ interface PromoCodeDto {
   discountValue: number;
   maxUses?: number | null;
   usesCount: number;
-  isActive: boolean;
   validFrom?: string | null;
   validUntil?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface PromoFormState {
-  code: string;
-  description: string;
-  discountType: 'PERCENTAGE' | 'FIXED';
-  discountValue: string;
-  maxUses: string;
-  validFrom: string;
-  validUntil: string;
   isActive: boolean;
+  createdAt: string;
 }
 
-const defaultForm: PromoFormState = {
-  code: '',
-  description: '',
-  discountType: 'PERCENTAGE',
-  discountValue: '10',
-  maxUses: '',
-  validFrom: '',
-  validUntil: '',
-  isActive: true,
-};
-
-export const AdminPromoCodes = () => {
-  const queryClient = useQueryClient();
+export function AdminPromoCodes() {
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingPromo, setEditingPromo] = useState<PromoCodeDto | null>(null);
-  const [formState, setFormState] = useState<PromoFormState>(defaultForm);
-  const [saving, setSaving] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<PromoCode | null>(null);
   const { toast } = useToast();
 
-  const { data: promoCodes = [], isLoading, refetch } = useQuery<PromoCodeDto[]>({
-    queryKey: ['admin', 'promo-codes'],
-    queryFn: async () => {
-      const res = await api.request('GET', '/api/promo-codes');
-      const items = Array.isArray(res) ? res : res.data;
-      return items || [];
-    },
-    staleTime: 30000,
-    refetchOnWindowFocus: false,
-  });
-
-  const openCreateDialog = () => {
-    setEditingPromo(null);
-    setFormState(defaultForm);
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (promo: PromoCodeDto) => {
-    setEditingPromo(promo);
-    setFormState({
-      code: promo.code,
-      description: promo.description ?? '',
-      discountType: promo.discountType,
-      discountValue: String(promo.discountType === 'PERCENTAGE' ? promo.discountValue : promo.discountValue),
-      maxUses: promo.maxUses != null ? String(promo.maxUses) : '',
-      validFrom: promo.validFrom ? promo.validFrom.slice(0, 10) : '',
-      validUntil: promo.validUntil ? promo.validUntil.slice(0, 10) : '',
-      isActive: promo.isActive,
-    });
-    setDialogOpen(true);
-  };
-
-  const handleChange = (field: keyof PromoFormState, value: string | boolean) => {
-    setFormState(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
+  const fetchPromoCodes = useCallback(async () => {
     try {
-      const payload = {
-        code: formState.code.trim().toUpperCase(),
-        description: formState.description.trim() || null,
-        discountType: formState.discountType,
-        discountValue: Number(formState.discountValue),
-        maxUses: formState.maxUses ? Number(formState.maxUses) : null,
-        validFrom: formState.validFrom ? `${formState.validFrom}T00:00:00.000Z` : null,
-        validUntil: formState.validUntil ? `${formState.validUntil}T23:59:59.999Z` : null,
-        isActive: formState.isActive,
-      };
-
-      if (editingPromo) {
-        await api.request('PUT', `/api/promo-codes/${editingPromo.id}`, { body: payload });
-      } else {
-        await api.request('POST', `/api/promo-codes`, { body: payload });
-      }
-
-      toast({ title: editingPromo ? 'Code promo mis à jour' : 'Code promo créé', description: payload.code });
-      setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['admin', 'promo-codes'] });
-    } catch (error: any) {
-      console.error('Promo code save error:', error);
-      toast({ title: 'Erreur', description: error.message || 'Impossible de sauvegarder le code promo', variant: 'destructive' });
+      setLoading(true);
+      const res = await api.promoCodes.list();
+      setPromoCodes(res.data || []);
+    } catch (error) {
+      console.error('Error fetching promo codes:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les codes promo",
+        variant: "destructive",
+      });
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchPromoCodes();
+  }, [fetchPromoCodes]);
+
+  const handleCreate = () => {
+    setEditingPromo(null);
+    setDialogOpen(true);
   };
 
-  const handleToggle = async (promo: PromoCodeDto) => {
+  const handleEdit = (promo: PromoCode) => {
+    setEditingPromo(promo);
+    setDialogOpen(true);
+  };
+
+  const handleToggle = async (id: number, currentActive: boolean) => {
     try {
-      await api.request('PATCH', `/api/promo-codes/${promo.id}/toggle`, { body: { isActive: !promo.isActive } });
-      toast({ title: 'Statut mis à jour', description: `Code ${promo.code} ${promo.isActive ? 'désactivé' : 'activé'}` });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'promo-codes'] });
-    } catch (error: any) {
-      console.error('Promo toggle error:', error);
-      toast({ title: 'Erreur', description: error.message || 'Impossible de mettre à jour le statut', variant: 'destructive' });
+      await api.promoCodes.toggle(id, !currentActive);
+      toast({ title: "Succès", description: `Code promo ${!currentActive ? 'activé' : 'désactivé'}` });
+      fetchPromoCodes();
+    } catch (error) {
+      toast({ title: "Erreur", description: "Action échouée", variant: "destructive" });
     }
   };
 
-  if (isLoading) {
+  const handleSave = async (data: Partial<PromoCode>) => {
+    try {
+      if (editingPromo) {
+        await api.promoCodes.update(editingPromo.id, data);
+        toast({ title: "Succès", description: "Code promo mis à jour" });
+      } else {
+        await api.promoCodes.create(data);
+        toast({ title: "Succès", description: "Code promo créé" });
+      }
+      setDialogOpen(false);
+      fetchPromoCodes();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Enregistrement échoué";
+      toast({
+        title: "Erreur",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatDiscount = (type: 'PERCENTAGE' | 'FIXED', value: number) => {
+    if (type === 'PERCENTAGE') return `${value}%`;
+    return `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`;
+  };
+
+  if (loading && promoCodes.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Codes promotionnels</CardTitle>
-          <CardDescription>Gestion des réductions appliquées au panier</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center p-12">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <CardTitle>Codes promotionnels</CardTitle>
-          <CardDescription>Créez et gérez les promotions appliquées au panier</CardDescription>
+          <h2 className="text-3xl font-bold tracking-tight">Codes Promo</h2>
+          <p className="text-muted-foreground">Gérez les réductions et offres promotionnelles.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCcw className="w-4 h-4 mr-2" />
-            Actualiser
+          <Button variant="outline" size="icon" onClick={fetchPromoCodes} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
-          <Button onClick={openCreateDialog}>
+          <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" />
-            Nouveau code
+            Nouveau Code
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        {promoCodes.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground">
-            Aucun code promo pour le moment.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Réduction</TableHead>
-                  <TableHead>Utilisations</TableHead>
-                  <TableHead>Période</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {promoCodes.map((promo) => (
-                  <TableRow key={promo.id}>
-                    <TableCell className="font-semibold">{promo.code}</TableCell>
-                    <TableCell>
-                      {promo.discountType === 'PERCENTAGE'
-                        ? `${promo.discountValue}%`
-                        : `${promo.discountValue.toLocaleString('fr-FR')} FCFA`}
-                      {promo.description && (
-                        <div className="text-xs text-muted-foreground mt-1">{promo.description}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{promo.usesCount}{promo.maxUses ? ` / ${promo.maxUses}` : ''}</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {promo.validFrom ? `du ${new Date(promo.validFrom).toLocaleDateString('fr-FR')}` : 'Dès maintenant'}
-                      <br />
-                      {promo.validUntil ? `au ${new Date(promo.validUntil).toLocaleDateString('fr-FR')}` : 'Sans limite'}
-                    </TableCell>
-                    <TableCell>
-                      {promo.isActive ? (
-                        <Badge className="bg-green-500 text-white flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Actif</Badge>
-                      ) : (
-                        <Badge variant="outline" className="flex items-center gap-1"><Power className="w-3 h-3" /> Inactif</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditDialog(promo)}>Modifier</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleToggle(promo)}>
-                        {promo.isActive ? 'Désactiver' : 'Activer'}
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Code</TableHead>
+                <TableHead>Réduction</TableHead>
+                <TableHead>Utilisations</TableHead>
+                <TableHead>Validité</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {promoCodes.map((promo) => (
+                <TableRow key={promo.id}>
+                  <TableCell className="font-bold">
+                    <div className="flex items-center">
+                      <Tag className="w-4 h-4 mr-2 text-primary" />
+                      {promo.code}
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatDiscount(promo.discountType, promo.discountValue)}</TableCell>
+                  <TableCell>
+                    <span className="font-medium">{promo.usesCount}</span>
+                    {promo.maxUses ? <span className="text-muted-foreground"> / {promo.maxUses}</span> : <span className="text-muted-foreground text-xs ml-1">(Illimité)</span>}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {promo.validUntil ? (
+                      <span className={cn(new Date(promo.validUntil) < new Date() ? "text-destructive font-medium" : "")}>
+                        jusqu'au {format(new Date(promo.validUntil), 'dd/MM/yyyy')}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground italic">Pas d'expiration</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={promo.isActive ? "default" : "secondary"}
+                      className="cursor-pointer"
+                      onClick={() => handleToggle(promo.id, promo.isActive)}
+                    >
+                      {promo.isActive ? 'Actif' : 'Inactif'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(promo)}>
+                        <Edit className="w-4 h-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {promoCodes.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    Aucun code promo trouvé. Cliquez sur "Nouveau Code" pour commencer.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingPromo ? 'Modifier le code promo' : 'Créer un code promo'}</DialogTitle>
-            <DialogDescription>
-              Définissez la réduction accordée aux clients à l’étape panier / paiement.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Code *</Label>
-                <Input value={formState.code} onChange={(e) => handleChange('code', e.target.value)} placeholder="PROMO2025" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Type de réduction</Label>
-                <Select value={formState.discountType} onValueChange={(value: 'PERCENTAGE' | 'FIXED') => handleChange('discountType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PERCENTAGE">Pourcentage (%)</SelectItem>
-                    <SelectItem value="FIXED">Montant fixe (FCFA)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Valeur de réduction *</Label>
-                <Input type="number" min="0" step="0.01" value={formState.discountValue} onChange={(e) => handleChange('discountValue', e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Utilisations max.</Label>
-                <Input type="number" min="0" value={formState.maxUses} onChange={(e) => handleChange('maxUses', e.target.value)} placeholder="Illimité" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input value={formState.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="Réduction spéciale printemps" />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Période début</Label>
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="w-4 h-4 text-muted-foreground" />
-                  <Input type="date" value={formState.validFrom} onChange={(e) => handleChange('validFrom', e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Période fin</Label>
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="w-4 h-4 text-muted-foreground" />
-                  <Input type="date" value={formState.validUntil} onChange={(e) => handleChange('validUntil', e.target.value)} />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isActive">Code actif</Label>
-              <input
-                id="isActive"
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(e) => handleChange('isActive', e.target.checked)}
-                className="h-4 w-4"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={() => setDialogOpen(false)} disabled={saving}>Annuler</Button>
-              <Button type="button" onClick={handleSave} disabled={saving}>
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </Card>
+      <AdminPromoCodeDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        promo={editingPromo}
+        onSave={handleSave}
+      />
+    </div>
   );
-};
+}

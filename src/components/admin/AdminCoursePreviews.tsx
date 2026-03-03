@@ -10,13 +10,36 @@ import { Plus, Trash2, PlayCircle, ChevronLeft, ChevronRight } from 'lucide-reac
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
+interface CourseItem {
+  id: string | number;
+  title: string;
+}
+
+interface PreviewType {
+  id: number;
+  name: string;
+  label: string;
+  icon: string;
+}
+
+interface PreviewItem {
+  id: number;
+  courseId: number;
+  typeId: number;
+  title: string;
+  url: string;
+  description?: string | null;
+  previewType?: PreviewType;
+  type?: string;
+}
+
 export function AdminCoursePreviews() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [courseId, setCourseId] = useState<number | undefined>(undefined);
   const [form, setForm] = useState<{ courseId?: number; typeId?: number; title: string; description?: string; url: string }>({ title: '', url: '' });
 
-  const { data: courses = [] } = useQuery({
+  const { data: courses = [] } = useQuery<CourseItem[]>({
     queryKey: ['admin', 'courses'],
     queryFn: async () => {
       const res = await api.request('GET', '/api/courses');
@@ -26,7 +49,7 @@ export function AdminCoursePreviews() {
     staleTime: 30000,
   });
 
-  const { data: types = [] } = useQuery({
+  const { data: types = [] } = useQuery<PreviewType[]>({
     queryKey: ['admin', 'course-preview-types'],
     queryFn: async () => {
       const res = await api.request('GET', '/api/course_preview_types');
@@ -36,7 +59,7 @@ export function AdminCoursePreviews() {
     staleTime: 60000,
   });
 
-  const { data: items = [] } = useQuery({
+  const { data: items = [] } = useQuery<PreviewItem[]>({
     queryKey: ['admin', 'course-preview-items', courseId],
     queryFn: async () => {
       const res = await api.request('GET', `/api/course_preview_items${courseId ? `?courseId=${courseId}` : ''}`);
@@ -48,14 +71,14 @@ export function AdminCoursePreviews() {
 
   const [filterTypeId, setFilterTypeId] = useState<number | undefined>(undefined);
   const [playlistOpen, setPlaylistOpen] = useState(false);
-  const [playlist, setPlaylist] = useState<any[]>([]);
+  const [playlist, setPlaylist] = useState<PreviewItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchTitle, setSearchTitle] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const upsertMutation = useMutation({
-    mutationFn: async (payload: any) => api.request('POST', '/api/course_preview_items', { body: payload }),
+    mutationFn: async (payload: Record<string, unknown>) => api.request('POST', '/api/course_preview_items', { body: payload }),
     onSuccess: () => {
       toast({ title: 'Succès', description: 'Élément ajouté' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-items', courseId] });
@@ -86,7 +109,7 @@ export function AdminCoursePreviews() {
               <Select value={String(courseId ?? '')} onValueChange={(val) => setCourseId(val ? Number(val) : undefined)}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner un cours" /></SelectTrigger>
                 <SelectContent>
-                  {courses.map((c: any) => (<SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>))}
+                  {courses.map((c: { id: string | number; title: string }) => (<SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -94,14 +117,14 @@ export function AdminCoursePreviews() {
               <Select value={String(form.typeId ?? '')} onValueChange={(v) => setForm({ ...form, typeId: Number(v) })}>
                 <SelectTrigger className="w-48"><SelectValue placeholder="Type de ressource" /></SelectTrigger>
                 <SelectContent>
-                  {types.map((t: any) => (<SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>))}
+                  {types.map((t: { id: string | number; label: string }) => (<SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>))}
                 </SelectContent>
               </Select>
               <Select value={filterTypeId ? String(filterTypeId) : 'all'} onValueChange={(v) => setFilterTypeId(v === 'all' ? undefined : Number(v))}>
                 <SelectTrigger className="w-48"><SelectValue placeholder="Filtrer par type" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les types</SelectItem>
-                  {types.map((t: any) => (<SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>))}
+                  {types.map((t: PreviewType) => (<SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>))}
                 </SelectContent>
               </Select>
               <Input className="w-64" placeholder="Recherche par titre" value={searchTitle} onChange={(e) => { setSearchTitle(e.target.value); setPage(1); }} />
@@ -131,7 +154,7 @@ export function AdminCoursePreviews() {
                     variant="secondary"
                     onClick={() => {
                       if (!courseId) { toast({ title: 'Validation', description: 'Sélectionnez un cours', variant: 'destructive' }); return; }
-                      const videos = items.filter((it: any) => it.courseId === courseId && ((it.previewType?.name ?? it.type) === 'video'));
+                      const videos = items.filter((it: PreviewItem) => it.courseId === courseId && ((it.previewType?.name ?? it.type) === 'video'));
                       if (videos.length === 0) { toast({ title: 'Aucun', description: 'Aucune vidéo pour ce cours' }); return; }
                       setPlaylist(videos);
                       setCurrentIndex(0);
@@ -179,12 +202,12 @@ export function AdminCoursePreviews() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  const byCourse = courseId ? items.filter((it: any) => Number(it.courseId) === Number(courseId)) : items;
-                  const byType = filterTypeId ? byCourse.filter((it: any) => Number(it.typeId) === Number(filterTypeId)) : byCourse;
-                  const byText = searchTitle ? byType.filter((it: any) => String(it.title).toLowerCase().includes(searchTitle.toLowerCase())) : byType;
-                  const toCSV = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-                  const header = ['Titre', 'Type', 'URL'].map(toCSV).join(',');
-                  const lines = byText.map((it: any) => [
+                  const byCourse = courseId ? items.filter((it: PreviewItem) => Number(it.courseId) === Number(courseId)) : items;
+                  const byType = filterTypeId ? byCourse.filter((it: PreviewItem) => Number(it.typeId) === Number(filterTypeId)) : byCourse;
+                  const byText = searchTitle ? byType.filter((it: PreviewItem) => String(it.title).toLowerCase().includes(searchTitle.toLowerCase())) : byType;
+                  const toCSV = (v: string | number | null | undefined) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+                  const header = ['Titre', 'Type', 'URL'].map(v => `"${v}"`).join(',');
+                  const lines = byText.map((it: PreviewItem) => [
                     toCSV(it.title),
                     toCSV(it.previewType?.label || it.type),
                     toCSV(it.url),
@@ -205,9 +228,9 @@ export function AdminCoursePreviews() {
           </div>
 
           {(() => {
-            const byCourse = courseId ? items.filter((it: any) => Number(it.courseId) === Number(courseId)) : items;
-            const byType = filterTypeId ? byCourse.filter((it: any) => Number(it.typeId) === Number(filterTypeId)) : byCourse;
-            const byText = searchTitle ? byType.filter((it: any) => String(it.title).toLowerCase().includes(searchTitle.toLowerCase())) : byType;
+            const byCourse = courseId ? items.filter((it: PreviewItem) => Number(it.courseId) === Number(courseId)) : items;
+            const byType = filterTypeId ? byCourse.filter((it: PreviewItem) => Number(it.typeId) === Number(filterTypeId)) : byCourse;
+            const byText = searchTitle ? byType.filter((it: PreviewItem) => String(it.title).toLowerCase().includes(searchTitle.toLowerCase())) : byType;
             const total = byText.length;
             const totalPages = Math.max(1, Math.ceil(total / pageSize));
             const start = (page - 1) * pageSize;
@@ -231,7 +254,7 @@ export function AdminCoursePreviews() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageItems.map((it: any) => (
+              {pageItems.map((it: PreviewItem) => (
                 <TableRow key={it.id}>
                   <TableCell>{it.previewType?.label || it.type}</TableCell>
                   <TableCell>{it.title}</TableCell>
@@ -275,7 +298,7 @@ function AdminCoursePreviewTypes() {
   });
 
   const upsertMutation = useMutation({
-    mutationFn: async (payload: any) => api.request('POST', '/api/course_preview_types', { body: payload }),
+    mutationFn: async (payload: Partial<PreviewType>) => api.request('POST', '/api/course_preview_types', { body: payload }),
     onSuccess: () => {
       toast({ title: 'Succès', description: 'Type de ressource ajouté' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-types'] });
@@ -330,7 +353,7 @@ function AdminCoursePreviewTypes() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {types.map((t: any) => (
+            {types.map((t: PreviewType) => (
               <TableRow key={t.id}>
                 <TableCell>{t.name}</TableCell>
                 <TableCell>{t.label}</TableCell>

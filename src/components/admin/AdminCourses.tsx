@@ -12,19 +12,29 @@ import { api } from '@/integrations/api/client';
 export interface Course {
   id: string;
   title: string;
+  slug?: string;
   description?: string;
+  content?: string;
+  excerpt?: string;
   instructor_name?: string;
+  instructor_bio?: string;
   price_fcfa?: number;
   duration_minutes?: number;
   category?: string;
   level?: string;
   is_published?: boolean;
   is_featured?: boolean;
+  isPreviewAvailable?: boolean;
+  languages?: string[];
+  course_materials_url?: string;
+  thumbnail_url?: string;
+  video_url?: string;
+  modules?: any[];
+  benefits?: string[];
+  requirements?: string[];
   created_at?: string;
   enrollment_count?: number;
   rating?: number;
-  thumbnail_url?: string;
-  video_url?: string;
 }
 
 export function AdminCourses() {
@@ -64,7 +74,7 @@ export function AdminCourses() {
   };
 
   const upsertMutation = useMutation({
-    mutationFn: async (payload: { data: any; id?: string }) => {
+    mutationFn: async (payload: { data: Record<string, unknown>; id?: string }) => {
       if (payload.id) return api.request('PUT', `/api/courses/${payload.id}`, { body: payload.data });
       return api.request('POST', '/api/courses', { body: payload.data });
     },
@@ -78,8 +88,8 @@ export function AdminCourses() {
       toast({ title: 'Erreur', description: `Impossible de ${editingCourse ? 'modifier' : 'créer'} le cours`, variant: 'destructive' });
     }
   });
-  const handleSave = (courseData: any) => {
-    const id = editingCourse ? (editingCourse as any).id : undefined;
+  const handleSave = (courseData: Record<string, unknown>) => {
+    const id = editingCourse ? editingCourse.id : undefined;
     upsertMutation.mutate({ data: courseData, id });
   };
 

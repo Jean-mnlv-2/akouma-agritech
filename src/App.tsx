@@ -76,14 +76,14 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/elearning" element={<ELearning />} />
-                <Route path="/elearning/:id" element={<CourseDetail />} />
+                <Route path="/elearning/:slug" element={<CourseDetail />} />
             <Route path="/seeds" element={<Seeds />} />
-            <Route path="/seeds/:id" element={<SeedDetail />} />
+            <Route path="/seeds/:slug" element={<SeedDetail />} />
                 <Route path="/shop" element={<Shop />} />
-                <Route path="/shop/:id" element={<ProductDetail />} />
+                <Route path="/shop/:slug" element={<ProductDetail />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/news" element={<News />} />
-                <Route path="/news/:id" element={<NewsDetail />} />
+                <Route path="/news/:slug" element={<NewsDetail />} />
                 <Route path="/demo" element={<Demo />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />

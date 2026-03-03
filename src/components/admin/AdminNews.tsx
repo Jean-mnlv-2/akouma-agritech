@@ -56,7 +56,7 @@ export function AdminNews() {
   };
 
   const upsertMutation = useMutation({
-    mutationFn: async (payload: { data: any; id?: number }) => {
+    mutationFn: async (payload: { data: Record<string, unknown>; id?: number }) => {
       if (payload.id) return api.request('PUT', `/api/news/${payload.id}`, { body: payload.data });
       return api.request('POST', '/api/news', { body: payload.data });
     },
@@ -70,8 +70,8 @@ export function AdminNews() {
       toast({ title: 'Erreur', description: `Impossible de ${editingNews ? 'modifier' : 'créer'} l'actualité`, variant: 'destructive' });
     }
   });
-  const handleSave = (newsData: any) => {
-    const id = editingNews ? (editingNews as any).id : undefined;
+  const handleSave = (newsData: Record<string, unknown>) => {
+    const id = editingNews ? editingNews.id : undefined;
     upsertMutation.mutate({ data: newsData, id });
   };
 

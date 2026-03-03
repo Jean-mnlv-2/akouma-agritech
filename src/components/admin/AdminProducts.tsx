@@ -80,7 +80,7 @@ export function AdminProducts() {
     }
   });
   const handleSave = (productData: ProductUpsert) => {
-    const id = editingProduct ? (editingProduct as any).id : undefined;
+    const id = editingProduct ? editingProduct.id : undefined;
     upsertMutation.mutate({ data: productData, id });
   };
 

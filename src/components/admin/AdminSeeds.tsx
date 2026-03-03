@@ -27,6 +27,30 @@ interface Seed {
   is_published?: boolean;
   is_featured?: boolean;
   image_url?: string;
+  harvestTime?: string;
+  harvest_time?: string;
+  yield?: string;
+  yield_info?: string;
+  features?: string[];
+  fullDescription?: string;
+  origin?: string;
+  purity?: string;
+  germination?: string;
+  moisture?: string;
+  packaging?: string;
+  soilType?: string;
+  plantingDepth?: string;
+  spacing?: string;
+  watering?: string;
+  fertilizer?: string;
+  diseases?: string[];
+  plantingInstructions?: string;
+  planting_instructions?: string;
+  careInstructions?: string;
+  care_instructions?: string;
+  totalReviews?: number;
+  total_reviews?: number;
+  slug?: string;
 }
 
 export function AdminSeeds() {
@@ -75,7 +99,7 @@ export function AdminSeeds() {
   type SeedUpsert = Record<string, unknown>;
   const upsertMutation = useMutation({
     mutationFn: async (payload: { data: SeedUpsert; id?: string }) => {
-      const seedData = payload.data as any;
+      const seedData = payload.data;
       const mapped = {
         name: seedData.name || '',
         description: seedData.description || null,
@@ -88,6 +112,24 @@ export function AdminSeeds() {
         imageUrl: seedData.image_url ?? seedData.imageUrl ?? null,
         isPublished: seedData.is_published ?? seedData.isPublished ?? true,
         slug: seedData.slug || undefined,
+        // New enriched fields
+        harvestTime: seedData.harvest_time ?? seedData.harvestTime ?? null,
+        yield: seedData.yield_info ?? seedData.yield ?? null,
+        features: seedData.features ?? [],
+        fullDescription: seedData.fullDescription ?? null,
+        origin: seedData.origin ?? null,
+        purity: seedData.purity ?? null,
+        germination: seedData.germination ?? null,
+        moisture: seedData.moisture ?? null,
+        packaging: seedData.packaging ?? null,
+        soilType: seedData.soilType ?? null,
+        plantingDepth: seedData.plantingDepth ?? null,
+        spacing: seedData.spacing ?? null,
+        watering: seedData.watering ?? null,
+        fertilizer: seedData.fertilizer ?? null,
+        diseases: seedData.diseases ?? [],
+        plantingInstructions: seedData.planting_instructions ?? seedData.plantingInstructions ?? null,
+        careInstructions: seedData.care_instructions ?? seedData.careInstructions ?? null,
       };
       if (payload.id) return api.request('PUT', `/api/seeds/${payload.id}`, { body: mapped });
       return api.request('POST', '/api/seeds', { body: mapped });
@@ -104,7 +146,14 @@ export function AdminSeeds() {
   });
   const handleSave = (seedData: SeedUpsert) => {
     const id = editingSeed?.id;
-    upsertMutation.mutate({ data: seedData, id });
+    upsertMutation.mutate({
+      data: {
+        ...seedData,
+        price: seedData.price_fcfa || seedData.price,
+        stock: seedData.stock_quantity || seedData.stock,
+      },
+      id
+    });
   };
 
   if (isLoading) {

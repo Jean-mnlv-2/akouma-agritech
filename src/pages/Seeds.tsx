@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import logoAk from "@/assets/logo-ak.png";
 
 interface SeedProduct {
   id: number;
+  slug: string;
   name: string;
   description: string;
   category: string;
@@ -30,6 +31,29 @@ interface SeedProduct {
   features: string[];
 }
 
+interface RawSeedProduct {
+  id: string | number;
+  slug?: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  variety?: string;
+  price?: number | string;
+  price_fcfa?: number | string;
+  unit?: string;
+  imageUrl?: string;
+  image_url?: string;
+  rating?: number | string;
+  totalReviews?: number | string;
+  total_reviews?: number | string;
+  availability?: string;
+  harvestTime?: string;
+  harvest_time?: string;
+  yield?: string;
+  yield_info?: string;
+  features?: string[];
+}
+
 const Seeds = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -39,7 +63,7 @@ const Seeds = () => {
 
   const { t } = useI18n();
 
-  const fetchSeeds = async () => {
+  const fetchSeeds = useCallback(async () => {
     setLoading(true);
     try {
       const url = new URL('/api/seeds', apiBaseUrl);
@@ -54,20 +78,21 @@ const Seeds = () => {
       const body = await res.json();
       const data = (Array.isArray(body) ? body : body?.data) || [];
       
-      const normalizedProducts: SeedProduct[] = (data || []).map((item: any) => ({
+      const normalizedProducts: SeedProduct[] = (data || []).map((item: RawSeedProduct) => ({
         id: Number(item.id),
+        slug: String(item.slug || item.id),
         name: String(item.name || ""),
         description: String(item.description || ""),
         category: String(item.category || ""),
         variety: String(item.variety || ""),
-        price: Number(item.price_fcfa) || 0,
+        price: Number(item.price) || Number(item.price_fcfa) || 0,
         unit: String(item.unit || ""),
-        image: String(item.image_url || ""),
+        image: String(item.imageUrl || item.image_url || ""),
         rating: Number(item.rating) || 0,
-        reviews: Number(item.total_reviews) || 0,
+        reviews: Number(item.totalReviews) || Number(item.total_reviews) || 0,
         availability: (item.availability || 'En stock') as 'En stock' | 'Rupture' | 'Pré-commande',
-        harvestTime: String(item.harvest_time || ""),
-        yield: String(item.yield_info || ""),
+        harvestTime: String(item.harvestTime || item.harvest_time || ""),
+        yield: String(item.yield || item.yield_info || ""),
         features: Array.isArray(item.features) ? item.features : [],
       }));
 
@@ -79,7 +104,7 @@ const Seeds = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiBaseUrl]);
 
   const categories = useMemo(() => [
     { id: "all", name: t("seeds.cat.all") },
@@ -93,7 +118,7 @@ const Seeds = () => {
 
   useEffect(() => {
     fetchSeeds();
-  }, []);
+  }, [fetchSeeds]);
 
   const filteredProducts = useMemo(() => {
     const searchLower = searchQuery.toLowerCase().trim();
@@ -300,7 +325,7 @@ const Seeds = () => {
                         className="focus-visible:ring-4 focus-visible:ring-primary/40 transition-transform duration-200 hover:scale-105"
                         aria-label={t("seeds.details.aria")}
                       >
-                        <Link to={`/seeds/${product.id}`}>
+                        <Link to={`/seeds/${product.slug}`}>
                           {t("seeds.details")}
                         </Link>
                       </Button>

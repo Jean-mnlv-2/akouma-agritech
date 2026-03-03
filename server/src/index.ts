@@ -48,6 +48,8 @@ import { deliveryPartnersRouter } from './routes/deliveryPartners';
 const app = express();
 const prisma = new PrismaClient();
 
+app.set('trust proxy', 1);
+
 // Configuration d'upload générique
 const uploadDir = path.resolve(process.cwd(), 'uploads');
 fs.mkdirSync(uploadDir, { recursive: true });

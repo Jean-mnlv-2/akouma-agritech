@@ -10,10 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Textarea } from '@/components/ui/textarea';
 import { slugify } from '@/lib/utils';
-// import ReactQuill from 'react-quill';
-// import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface Career {
   id: number;
@@ -109,9 +108,19 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
     { value: 'freelance', label: 'Freelance' }
   ];
 
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link', 'clean']
+    ],
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {career ? "Modifier l'offre" : "Nouvelle offre d'emploi"}
@@ -121,8 +130,8 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Titre du poste *</Label>
               <Input
@@ -153,7 +162,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="location">Lieu de travail *</Label>
               <Input
@@ -176,7 +185,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="employmentType">Type d'emploi</Label>
               <Select value={formData.employmentType} onValueChange={(value) => setFormData({ ...formData, employmentType: value })}>
@@ -224,29 +233,33 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
             </Popover>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description du poste *</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="bg-white rounded"
-              style={{ minHeight: 150 }}
-            />
+          <div className="space-y-2 min-h-[250px] flex flex-col">
+            <Label>Description du poste *</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.description}
+                onChange={(content) => setFormData({ ...formData, description: content })}
+                modules={quillModules}
+                className="h-[150px] mb-12"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="requirements">Exigences et compétences</Label>
-            <Textarea
-              id="requirements"
-              value={formData.requirements}
-              onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-              className="bg-white rounded"
-              style={{ minHeight: 120 }}
-            />
+          <div className="space-y-2 min-h-[250px] flex flex-col">
+            <Label>Exigences et compétences</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.requirements}
+                onChange={(content) => setFormData({ ...formData, requirements: content })}
+                modules={quillModules}
+                className="h-[150px] mb-12"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 py-4">
             <Switch
               id="isPublished"
               checked={formData.isPublished}
@@ -255,7 +268,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
             <Label htmlFor="isPublished">Publier l'offre d'emploi</Label>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>

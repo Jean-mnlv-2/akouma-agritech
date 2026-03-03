@@ -21,14 +21,14 @@ eventsRouter.get('/', async (_req: Request, res: Response) => {
 eventsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   const { title, slug, description, date, location, imageUrl, isPublished } = req.body || {};
   if (!title || !slug || !date || !location) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.event.create({ data: { title, slug, description, date: new Date(date), location, imageUrl, isPublished: isPublished ?? false } });
+  const created = await prisma.event.create({ data: { title, slug, description, date: new Date(date), location, imageUrl, isPublished: isPublished ?? false } as any });
   res.status(201).json({ data: created });
 });
 
 eventsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { title, slug, description, date, location, imageUrl, isPublished } = req.body || {};
-  const updated = await prisma.event.update({ where: { id }, data: { title, slug, description, date: date ? new Date(date) : undefined, location, imageUrl, isPublished } });
+  const updated = await prisma.event.update({ where: { id }, data: { title, slug, description, date: date ? new Date(date) : undefined, location, imageUrl, isPublished } as any });
   res.json({ data: updated });
 });
 

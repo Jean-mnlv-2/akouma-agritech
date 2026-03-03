@@ -64,25 +64,31 @@ export const AuthForm = () => {
       });
 
       if (authData?.user) {
-        const role = (authData.user as any).role || 'customer';
-        const isActive = (authData.user as any).isActive;
+        const user = authData.user;
+        const role = user.role || 'customer';
+        const isActive = user.isActive;
         
+        console.log("[AuthForm] Login success, user role:", role, "isActive:", isActive);
+
         if (isActive === false) {
           toast({ title: "Compte désactivé", description: "Votre compte est désactivé. Contactez l'administrateur.", variant: "destructive" });
           return;
         }
 
         // Store session info for AdminRoute to use immediately after redirect
-        sessionStorage.setItem('akouma_auth_user', JSON.stringify(authData.user));
+        sessionStorage.setItem('akouma_auth_user', JSON.stringify(user));
 
         if (role === 'admin') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
+          console.log("[AuthForm] Redirecting to /admin...");
           navigate('/admin', { replace: true });
         } else if (role === 'supervisor') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre espace superviseur" });
+          console.log("[AuthForm] Redirecting to /supervisor...");
           navigate('/supervisor', { replace: true });
         } else {
           toast({ title: "Connexion réussie", description: "Bienvenue !" });
+          console.log("[AuthForm] Redirecting to /...");
           navigate('/', { replace: true });
         }
       } else {
@@ -184,16 +190,24 @@ export const AuthForm = () => {
                 </Button>
               </div>
             ) : (
-              <>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="votre@email.com"
-                    className="pl-10"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                  />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="forgot-email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="forgot-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="votre@email.com"
+                      className="pl-10"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <Button className="w-full" onClick={handleForgotPassword} disabled={isLoading}>
                   {isLoading ? (
@@ -205,7 +219,7 @@ export const AuthForm = () => {
                 <Button variant="ghost" className="w-full text-sm" onClick={() => { setShowForgotPassword(false); setResetSent(false); }}>
                   ← Retour à la connexion
                 </Button>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -240,11 +254,11 @@ export const AuthForm = () => {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel htmlFor="login-email">Email</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input type="email" placeholder="votre@email.com" className="pl-10" {...field} />
+                            <Input id="login-email" type="email" autoComplete="email" placeholder="votre@email.com" className="pl-10" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -257,11 +271,13 @@ export const AuthForm = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Mot de passe</FormLabel>
+                        <FormLabel htmlFor="login-password">Mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
+                              id="login-password"
+                              autoComplete="current-password"
                               type={showPassword ? "text" : "password"}
                               placeholder="Votre mot de passe"
                               className="pl-10 pr-10"
@@ -313,9 +329,9 @@ export const AuthForm = () => {
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Prénom</FormLabel>
+                          <FormLabel htmlFor="signup-firstName">Prénom</FormLabel>
                           <FormControl>
-                            <Input placeholder="Prénom" {...field} />
+                            <Input id="signup-firstName" autoComplete="given-name" placeholder="Prénom" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -326,9 +342,9 @@ export const AuthForm = () => {
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nom</FormLabel>
+                          <FormLabel htmlFor="signup-lastName">Nom</FormLabel>
                           <FormControl>
-                            <Input placeholder="Nom" {...field} />
+                            <Input id="signup-lastName" autoComplete="family-name" placeholder="Nom" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -341,11 +357,11 @@ export const AuthForm = () => {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel htmlFor="signup-email">Email</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input type="email" placeholder="votre@email.com" className="pl-10" {...field} />
+                            <Input id="signup-email" type="email" autoComplete="email" placeholder="votre@email.com" className="pl-10" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -358,11 +374,13 @@ export const AuthForm = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Mot de passe</FormLabel>
+                        <FormLabel htmlFor="signup-password">Mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
+                              id="signup-password"
+                              autoComplete="new-password"
                               type={showPassword ? "text" : "password"}
                               placeholder="Mot de passe (min. 6 caractères)"
                               className="pl-10"
@@ -380,11 +398,13 @@ export const AuthForm = () => {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Confirmer le mot de passe</FormLabel>
+                        <FormLabel htmlFor="signup-confirmPassword">Confirmer le mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
+                              id="signup-confirmPassword"
+                              autoComplete="new-password"
                               type={showPassword ? "text" : "password"}
                               placeholder="Confirmez votre mot de passe"
                               className="pl-10"

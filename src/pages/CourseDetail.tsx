@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,17 +39,17 @@ interface CourseModule {
 }
 
 const CourseDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const { toast } = useToast();
 
-  const fetchCourse = async () => {
-    if (!id) return;
+  const fetchCourse = useCallback(async () => {
+    if (!slug) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/courses/${id}`, { credentials: 'include' });
+      const res = await fetch(`/api/courses/slug/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch course');
       const { data } = await res.json();
       const normalized: Course = {
@@ -83,11 +83,11 @@ const CourseDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug]);
 
   useEffect(() => {
     fetchCourse();
-  }, [id]);
+  }, [fetchCourse]);
 
   const handleEnrollment = async (formData: any) => {
     try {

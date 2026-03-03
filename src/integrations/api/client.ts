@@ -22,7 +22,6 @@ async function http(method: string, path: string, options?: { params?: Record<st
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      // Don't log 401/403 (normal for unauthenticated sessions) or 404
       if (res.status !== 401 && res.status !== 403 && res.status !== 404) {
         console.warn(`[API] ${method} ${path}: ${res.status}`);
       }
@@ -31,9 +30,7 @@ async function http(method: string, path: string, options?: { params?: Record<st
     const contentType = res.headers.get("content-type") || "";
     return contentType.includes("application/json") ? res.json() : res.text();
   } catch (error) {
-    // Handle network connection errors gracefully - only warn, don't spam console
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      // Only log once per minute per endpoint to avoid spam
       const key = `api_error_${method}_${path}`;
       const lastLog = (window as any)[key];
       const now = Date.now();
