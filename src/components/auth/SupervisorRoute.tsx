@@ -25,8 +25,8 @@ export default function SupervisorRoute({ children }: SupervisorRouteProps) {
         }
 
         const { data: { user } } = await api.auth.getUser();
-        const role = (user as any)?.role;
-        const isActive = (user as any)?.isActive ?? true;
+        const role = user?.role;
+        const isActive = user?.isActive ?? true;
         if (isActive === false) {
           await api.auth.signOut();
           toast({ title: "Compte désactivé", description: "Contactez un administrateur.", variant: "destructive" });

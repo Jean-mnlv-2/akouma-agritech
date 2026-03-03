@@ -32,6 +32,7 @@ import { Switch } from "@/components/ui/switch";
 
 interface UICourse {
   id: string;
+  slug: string;
   title: string;
   description: string;
   price: string;
@@ -85,6 +86,7 @@ const ELearning = () => {
         if (error) throw error;
         setCourses((data || []).map((c: any) => ({
           id: String(c.id ?? ''),
+          slug: String(c.slug || c.id || ''),
           title: String(c.title ?? ''),
           description: String(c.description ?? ''),
           price: String(c.price ?? 'Gratuit'),
@@ -524,7 +526,7 @@ const ELearning = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <Button variant="outline" size="sm" asChild className="hover:scale-105 transition-transform">
-                        <Link to={`/elearning/${course.id}`}>
+                        <Link to={`/elearning/${course.slug}`}>
                           <Eye className="w-4 h-4 mr-1" />
                           {t("elearning.view_program")}
                         </Link>

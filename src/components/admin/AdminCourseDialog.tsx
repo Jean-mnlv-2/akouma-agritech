@@ -8,30 +8,23 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Course } from './AdminCourses';
 import { slugify } from '@/lib/utils';
-// import ReactQuill from 'react-quill';
-// import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
+import { Plus, Trash, ListPlus } from 'lucide-react';
 
-interface CourseData {
+interface Module {
+  id: string;
   title: string;
-  description: string | null;
-  content: string | null;
-  price: number;
-  duration: number;
-  level: string | null;
-  thumbnailUrl: string | null;
-  videoUrl: string | null;
-  isPublished: boolean;
-  isPreviewAvailable: boolean;
-  languages: string[];
-  slug: string;
+  duration: string;
+  lessons: string[];
 }
 
 interface AdminCourseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   course: Course | null;
-  onSave: (courseData: CourseData) => void;
+  onSave: (courseData: Record<string, unknown>) => void;
 }
 
 export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminCourseDialogProps) {
@@ -53,7 +46,10 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     is_featured: false,
     is_preview_available: false,
     languages_csv: 'Français',
-    slug: ''
+    slug: '',
+    benefits_csv: '',
+    requirements_csv: '',
+    modules: [] as Module[]
   });
 
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -68,23 +64,28 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       setFormData({
         title: course.title || '',
         description: course.description || '',
-        content: '',
-        excerpt: '',
+        content: course.content || '',
+        excerpt: course.excerpt || '',
         instructor_name: course.instructor_name || '',
-        instructor_bio: '',
+        instructor_bio: course.instructor_bio || '',
         category: course.category || '',
         level: course.level || '',
         price_fcfa: course.price_fcfa || 0,
         duration_minutes: course.duration_minutes || 0,
-        thumbnail_url: '',
-        video_url: '',
-        course_materials_url: '',
+        thumbnail_url: course.thumbnail_url || '',
+        video_url: course.video_url || '',
+        course_materials_url: course.course_materials_url || '',
         is_published: course.is_published || false,
         is_featured: course.is_featured || false,
-        is_preview_available: (course as Course & { isPreviewAvailable?: boolean }).isPreviewAvailable ?? false,
-        languages_csv: Array.isArray((course as Course & { languages?: string[] }).languages) ? ((course as Course & { languages?: string[] }).languages?.join(', ') || '') : '',
-        slug: (course as any).slug || slugify(course.title || '')
+        is_preview_available: course.isPreviewAvailable ?? false,
+        languages_csv: Array.isArray(course.languages) ? (course.languages?.join(', ') || '') : '',
+        slug: course.slug || slugify(course.title || ''),
+        benefits_csv: Array.isArray(course.benefits) ? course.benefits.join('\n') : '',
+        requirements_csv: Array.isArray(course.requirements) ? course.requirements.join('\n') : '',
+        modules: Array.isArray(course.modules) ? course.modules : []
       });
+      setPreviewImageUrl(course.thumbnail_url || null);
+      setPreviewVideoUrl(course.video_url || null);
     } else {
       setFormData({
         title: '',
@@ -103,9 +104,14 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         is_published: false,
         is_featured: false,
         is_preview_available: false,
-        languages_csv: '',
-        slug: ''
+        languages_csv: 'Français',
+        slug: '',
+        benefits_csv: '',
+        requirements_csv: '',
+        modules: []
       });
+      setPreviewImageUrl(null);
+      setPreviewVideoUrl(null);
     }
   }, [course, open]);
 
@@ -116,18 +122,36 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
+    const benefits = formData.benefits_csv
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    const requirements = formData.requirements_csv
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+      
     const payload = {
       title: formData.title,
       description: formData.description || null,
       content: formData.content || null,
+      excerpt: formData.excerpt || null,
+      instructor_name: formData.instructor_name || null,
+      instructor_bio: formData.instructor_bio || null,
+      category: formData.category || null,
       price: formData.price_fcfa || 0,
       duration: formData.duration_minutes || 0,
       level: formData.level || null,
       thumbnailUrl: formData.thumbnail_url || null,
       videoUrl: formData.video_url || null,
+      course_materials_url: formData.course_materials_url || null,
       isPublished: formData.is_published || false,
+      isFeatured: formData.is_featured || false,
       isPreviewAvailable: formData.is_preview_available || false,
       languages,
+      benefits,
+      requirements,
+      modules: formData.modules,
       slug,
     };
     onSave(payload);
@@ -173,9 +197,19 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     setUploadingVideo(false);
   };
 
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link', 'clean']
+    ],
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {course ? "Modifier le cours" : "Ajouter un nouveau cours"}
@@ -184,8 +218,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
             Remplissez les informations ci-dessous pour {course ? "mettre à jour" : "créer"} un cours.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Titre *</Label>
               <Input 
@@ -208,15 +242,17 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
               <Input id="slug" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} placeholder="genere-automatiquement" />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea 
-              id="description" 
-              value={formData.description} 
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
-              className="bg-white rounded" 
-              style={{ minHeight: 100 }} 
-            />
+          <div className="space-y-2 min-h-[200px] flex flex-col">
+            <Label>Description *</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.description}
+                onChange={(content) => setFormData({ ...formData, description: content })}
+                modules={quillModules}
+                className="h-[120px] mb-12"
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="excerpt">Extrait</Label>
@@ -225,24 +261,32 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
               value={formData.excerpt} 
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })} 
               className="bg-white rounded" 
-              style={{ minHeight: 80, marginBottom: 16 }} 
+              placeholder="Court résumé du cours..."
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="content">Contenu du cours (HTML) *</Label>
-            <Textarea 
-              id="content" 
-              value={formData.content} 
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })} 
-              className="bg-white rounded" 
-              style={{ minHeight: 150 }} 
-            />
+          <div className="space-y-2 min-h-[300px] flex flex-col">
+            <Label>Contenu du cours *</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.content}
+                onChange={(content) => setFormData({ ...formData, content })}
+                modules={quillModules}
+                className="h-[200px] mb-12"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
               <Label htmlFor="instructor_name">Nom de l'instructeur *</Label>
               <Input id="instructor_name" value={formData.instructor_name} onChange={(e) => setFormData({ ...formData, instructor_name: e.target.value })} required />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="instructor_bio">Bio de l'instructeur</Label>
+              <Textarea id="instructor_bio" value={formData.instructor_bio} onChange={(e) => setFormData({ ...formData, instructor_bio: e.target.value })} placeholder="Expert en agronomie..." />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie *</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
@@ -256,8 +300,12 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="course_materials_url">URL des supports (PDF, docs)</Label>
+              <Input id="course_materials_url" value={formData.course_materials_url} onChange={(e) => setFormData({ ...formData, course_materials_url: e.target.value })} placeholder="https://..." />
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="level">Niveau</Label>
               <Select value={formData.level} onValueChange={(value) => setFormData({ ...formData, level: value })}>
@@ -278,7 +326,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
               <Input id="duration_minutes" type="number" value={formData.duration_minutes} onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 0 })} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="thumbnail_upload">Image du cours</Label>
               <div className="flex items-center gap-3">
@@ -298,7 +346,139 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
               {previewVideoUrl && (<div className="mt-2"><video src={previewVideoUrl} controls className="w-64 h-36 rounded border" /></div>)}
             </div>
           </div>
-          <div className="flex items-center space-x-8">
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-lg font-bold">Modules et Leçons</Label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  const newModule: Module = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    title: '',
+                    duration: '',
+                    lessons: ['']
+                  };
+                  setFormData({ ...formData, modules: [...formData.modules, newModule] });
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" /> Ajouter un module
+              </Button>
+            </div>
+            
+            {formData.modules.map((module, mIdx) => (
+              <div key={module.id} className="p-4 border-2 border-dashed rounded-xl space-y-4 relative bg-muted/30">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute top-2 right-2 text-destructive"
+                  onClick={() => {
+                    const newModules = formData.modules.filter((_, i) => i !== mIdx);
+                    setFormData({ ...formData, modules: newModules });
+                  }}
+                >
+                  <Trash className="w-4 h-4" />
+                </Button>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Titre du module {mIdx + 1}</Label>
+                    <Input 
+                      value={module.title} 
+                      onChange={(e) => {
+                        const newModules = [...formData.modules];
+                        newModules[mIdx].title = e.target.value;
+                        setFormData({ ...formData, modules: newModules });
+                      }}
+                      placeholder="Ex: Introduction à l'agroécologie"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Durée du module</Label>
+                    <Input 
+                      value={module.duration} 
+                      onChange={(e) => {
+                        const newModules = [...formData.modules];
+                        newModules[mIdx].duration = e.target.value;
+                        setFormData({ ...formData, modules: newModules });
+                      }}
+                      placeholder="Ex: 45 min"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Leçons du module</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        const newModules = [...formData.modules];
+                        newModules[mIdx].lessons.push('');
+                        setFormData({ ...formData, modules: newModules });
+                      }}
+                    >
+                      <ListPlus className="w-3 h-3 mr-2" /> Ajouter une leçon
+                    </Button>
+                  </div>
+                  {module.lessons.map((lesson, lIdx) => (
+                    <div key={lIdx} className="flex items-center gap-2">
+                      <Input 
+                        value={lesson} 
+                        onChange={(e) => {
+                          const newModules = [...formData.modules];
+                          newModules[mIdx].lessons[lIdx] = e.target.value;
+                          setFormData({ ...formData, modules: newModules });
+                        }}
+                        placeholder={`Leçon ${lIdx + 1}`}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          const newModules = [...formData.modules];
+                          newModules[mIdx].lessons = newModules[mIdx].lessons.filter((_, i) => i !== lIdx);
+                          setFormData({ ...formData, modules: newModules });
+                        }}
+                      >
+                        <Trash className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="benefits_csv">Avantages (un par ligne)</Label>
+              <Textarea 
+                id="benefits_csv" 
+                value={formData.benefits_csv} 
+                onChange={(e) => setFormData({ ...formData, benefits_csv: e.target.value })} 
+                placeholder="Maîtriser les techniques de semis&#10;Comprendre le cycle de l'eau..."
+                className="h-32"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="requirements_csv">Prérequis (un par ligne)</Label>
+              <Textarea 
+                id="requirements_csv" 
+                value={formData.requirements_csv} 
+                onChange={(e) => setFormData({ ...formData, requirements_csv: e.target.value })} 
+                placeholder="Connaissances de base en sol&#10;Avoir accès à un jardin..."
+                className="h-32"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-8 border-t pt-4">
             <div className="flex items-center space-x-2"><Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} /><Label htmlFor="is_published">Publié</Label></div>
             <div className="flex items-center space-x-2"><Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} /><Label htmlFor="is_featured">Mis en avant</Label></div>
             <div className="flex items-center space-x-2"><Switch id="is_preview_available" checked={formData.is_preview_available} onCheckedChange={(checked) => setFormData({ ...formData, is_preview_available: checked })} /><Label htmlFor="is_preview_available">Aperçu Gratuit</Label></div>
@@ -307,7 +487,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
             <Label htmlFor="languages_csv">Langues (séparées par des virgules)</Label>
             <Input id="languages_csv" value={formData.languages_csv} onChange={(e) => setFormData({ ...formData, languages_csv: e.target.value })} placeholder="Français, Hausa, Swahili..." />
           </div>
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
             <Button type="submit">{course ? 'Modifier' : 'Créer'}</Button>
           </div>

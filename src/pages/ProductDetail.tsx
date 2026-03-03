@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Star, ShoppingCart, Heart, Share2, Truck, Shield, Award } from "lucide-react";
+import DOMPurify from 'dompurify';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -31,7 +32,7 @@ interface Product {
 }
 
 const ProductDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -40,15 +41,18 @@ const ProductDetail = () => {
   
   const { addToCart } = useCartContext();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
+
+  const isLoggedIn = Boolean(sessionStorage.getItem('akouma_auth_user'));
 
   // Fetch product data from backend
   const fetchProduct = async () => {
-    if (!id) return;
+    if (!slug) return;
     
     try {
       setLoading(true);
-      const url = new URL(`/api/shop_products/${id}`, apiBaseUrl);
+      const url = new URL(`/api/shop_products/slug/${slug}`, apiBaseUrl);
       const res = await fetch(url.toString(), { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch product');
       const contentType = res.headers.get('content-type') || '';
@@ -87,7 +91,7 @@ const ProductDetail = () => {
 
   useEffect(() => {
     fetchProduct();
-  }, [id]);
+  }, [slug]);
 
   const handleAddToCart = () => {
     if (product) {
@@ -224,9 +228,10 @@ const ProductDetail = () => {
                 )}
               </div>
 
-              <p className="text-muted-foreground leading-relaxed mb-6">
-                {product.longDescription}
-              </p>
+              <div 
+                className="text-muted-foreground leading-relaxed mb-6 prose prose-slate max-w-none"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.longDescription) }}
+              />
             </div>
 
             {/* Quantity and actions */}
@@ -263,7 +268,21 @@ const ProductDetail = () => {
                 <Button 
                   variant="outline" 
                   size="icon"
-                  onClick={() => setIsFavorite(!isFavorite)}
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      toast({
+                        title: "Authentification requise",
+                        description: "Veuillez vous connecter pour ajouter ce produit à vos favoris.",
+                      });
+                      navigate('/auth');
+                      return;
+                    }
+                    setIsFavorite(!isFavorite);
+                    toast({
+                      title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
+                      description: isFavorite ? "Le produit a été retiré de votre liste." : "Le produit a été ajouté à votre liste de favoris.",
+                    });
+                  }}
                 >
                   <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current text-red-500' : ''}`} />
                 </Button>

@@ -3,27 +3,47 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { slugify } from '@/lib/utils';
-// import ReactQuill from 'react-quill';
-// import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 
 interface Seed {
   id: string;
   name: string;
+  description: string;
   category: string;
   variety: string;
   price_fcfa: number;
   unit: string;
   stock_quantity: number;
   availability: string;
+  image_url: string;
+  gallery_urls: string;
+  planting_instructions: string;
+  care_instructions: string;
+  harvest_time: string;
+  yield_info: string;
+  features: string | string[];
+  fullDescription: string;
+  origin: string;
+  purity: string;
+  germination: string;
+  moisture: string;
+  packaging: string;
+  soilType: string;
+  plantingDepth: string;
+  spacing: string;
+  watering: string;
+  fertilizer: string;
+  diseases: string | string[];
   is_published: boolean;
   is_featured: boolean;
   rating: number;
   total_reviews: number;
+  slug: string;
 }
 
 interface AdminSeedDialogProps {
@@ -50,13 +70,25 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
     harvest_time: '',
     yield_info: '',
     features: '',
+    fullDescription: '',
+    origin: '',
+    purity: '',
+    germination: '',
+    moisture: '',
+    packaging: '',
+    soilType: '',
+    plantingDepth: '',
+    spacing: '',
+    watering: '',
+    fertilizer: '',
+    diseases: '',
     is_published: true,
     is_featured: false,
     slug: ''
   });
 
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(formData.image_url || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   // New: gallery state
@@ -68,26 +100,38 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
     if (seed) {
       setFormData({
         name: seed.name || '',
-        description: '',
+        description: seed.description || '',
         category: seed.category || '',
         variety: seed.variety || '',
         price_fcfa: seed.price_fcfa || 0,
         unit: seed.unit || '',
         stock_quantity: seed.stock_quantity || 0,
         availability: seed.availability || 'En stock',
-        image_url: '',
-        gallery_urls: '',
-        planting_instructions: '',
-        care_instructions: '',
-        harvest_time: '',
-        yield_info: '',
-        features: '',
-        is_published: seed.is_published || true,
-        is_featured: seed.is_featured || false,
-        slug: (seed as any).slug || slugify(seed.name || '')
+        image_url: seed.image_url || '',
+        gallery_urls: seed.gallery_urls || '',
+        planting_instructions: seed.planting_instructions || '',
+        care_instructions: seed.care_instructions || '',
+        harvest_time: seed.harvest_time || '',
+        yield_info: seed.yield_info || '',
+        features: Array.isArray(seed.features) ? seed.features.join(', ') : (seed.features || ''),
+        fullDescription: seed.fullDescription || '',
+        origin: seed.origin || '',
+        purity: seed.purity || '',
+        germination: seed.germination || '',
+        moisture: seed.moisture || '',
+        packaging: seed.packaging || '',
+        soilType: seed.soilType || '',
+        plantingDepth: seed.plantingDepth || '',
+        spacing: seed.spacing || '',
+        watering: seed.watering || '',
+        fertilizer: seed.fertilizer || '',
+        diseases: Array.isArray(seed.diseases) ? seed.diseases.join(', ') : (seed.diseases || ''),
+        is_published: seed.is_published !== undefined ? seed.is_published : true,
+        is_featured: !!seed.is_featured,
+        slug: seed.slug || slugify(seed.name || '')
       });
-      setGalleryUrls([]);
-      setPreviewUrl(null);
+      setGalleryUrls(seed.image_url ? [seed.image_url] : []); // simplified for now
+      setPreviewUrl(seed.image_url || null);
     } else {
       setFormData({
         name: '',
@@ -105,6 +149,18 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         harvest_time: '',
         yield_info: '',
         features: '',
+        fullDescription: '',
+        origin: '',
+        purity: '',
+        germination: '',
+        moisture: '',
+        packaging: '',
+        soilType: '',
+        plantingDepth: '',
+        spacing: '',
+        watering: '',
+        fertilizer: '',
+        diseases: '',
         is_published: true,
         is_featured: false,
         slug: ''
@@ -118,12 +174,14 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
     e.preventDefault();
     const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const features = formData.features ? formData.features.split(',').map(f => f.trim()) : [];
+    const diseases = formData.diseases ? formData.diseases.split(',').map(d => d.trim()) : [];
+    
     onSave({
       ...formData,
       slug,
       features,
+      diseases,
       image_url: formData.image_url || galleryUrls[0] || '',
-      gallery: galleryUrls.length ? galleryUrls : undefined,
     });
   };
 
@@ -178,9 +236,19 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
     setGalleryUrls((prev) => (prev || []).filter((u) => u !== url));
   };
 
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link', 'clean']
+    ],
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {seed ? 'Modifier la semence' : 'Ajouter une semence'}
@@ -190,8 +258,8 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nom *</Label>
               <Input 
@@ -215,18 +283,20 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea 
-              id="description" 
-              value={formData.description} 
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
-              className="bg-white rounded" 
-              style={{ minHeight: 120 }} 
-            />
+          <div className="space-y-2 min-h-[250px] flex flex-col">
+            <Label>Description *</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.description}
+                onChange={(content) => setFormData({ ...formData, description: content })}
+                modules={quillModules}
+                className="h-[150px] mb-12"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie *</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
@@ -259,7 +329,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="price_fcfa">Prix (FCFA) *</Label>
               <Input id="price_fcfa" type="number" value={formData.price_fcfa} onChange={(e) => setFormData({ ...formData, price_fcfa: parseInt(e.target.value) || 0 })} required />
@@ -281,26 +351,117 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="planting_instructions">Instructions de plantation</Label>
-              <Textarea 
-                id="planting_instructions" 
-                value={formData.planting_instructions} 
-                onChange={(e) => setFormData({ ...formData, planting_instructions: e.target.value })} 
-                className="bg-white rounded" 
-                style={{ minHeight: 120 }} 
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 min-h-[250px] flex flex-col">
+              <Label>Description Complète (HTML)</Label>
+              <div className="flex-1">
+                <ReactQuill 
+                  theme="snow"
+                  value={formData.fullDescription}
+                  onChange={(content) => setFormData({ ...formData, fullDescription: content })}
+                  modules={quillModules}
+                  className="h-[150px] mb-12"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="care_instructions">Instructions d'entretien</Label>
-              <Textarea 
-                id="care_instructions" 
-                value={formData.care_instructions} 
-                onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })} 
-                className="bg-white rounded" 
-                style={{ minHeight: 120 }} 
-              />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="origin">Origine</Label>
+                  <Input id="origin" value={formData.origin} onChange={(e) => setFormData({ ...formData, origin: e.target.value })} placeholder="ex: Local" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="purity">Pureté</Label>
+                  <Input id="purity" value={formData.purity} onChange={(e) => setFormData({ ...formData, purity: e.target.value })} placeholder="ex: 99%" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="germination">Germination</Label>
+                  <Input id="germination" value={formData.germination} onChange={(e) => setFormData({ ...formData, germination: e.target.value })} placeholder="ex: 95%" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="moisture">Humidité</Label>
+                  <Input id="moisture" value={formData.moisture} onChange={(e) => setFormData({ ...formData, moisture: e.target.value })} placeholder="ex: 12%" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="packaging">Conditionnement</Label>
+                <Input id="packaging" value={formData.packaging} onChange={(e) => setFormData({ ...formData, packaging: e.target.value })} placeholder="ex: Sachet 25kg" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <Label className="font-bold">Guide de Culture</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="soilType">Type de sol</Label>
+                  <Input id="soilType" value={formData.soilType} onChange={(e) => setFormData({ ...formData, soilType: e.target.value })} placeholder="ex: Argileux" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="plantingDepth">Profondeur</Label>
+                  <Input id="plantingDepth" value={formData.plantingDepth} onChange={(e) => setFormData({ ...formData, plantingDepth: e.target.value })} placeholder="ex: 2-3 cm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="spacing">Espacement</Label>
+                  <Input id="spacing" value={formData.spacing} onChange={(e) => setFormData({ ...formData, spacing: e.target.value })} placeholder="ex: 75x25 cm" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="watering">Arrosage</Label>
+                  <Input id="watering" value={formData.watering} onChange={(e) => setFormData({ ...formData, watering: e.target.value })} placeholder="ex: Régulier" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="fertilizer">Engrais recommandé</Label>
+                <Input id="fertilizer" value={formData.fertilizer} onChange={(e) => setFormData({ ...formData, fertilizer: e.target.value })} placeholder="ex: NPK 15-15-15" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="diseases">Maladies communes (séparées par des virgules)</Label>
+                <Input id="diseases" value={formData.diseases} onChange={(e) => setFormData({ ...formData, diseases: e.target.value })} placeholder="ex: Mildiou, Pucerons" />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <Label className="font-bold">Infos Récolte</Label>
+              <div className="space-y-1">
+                <Label htmlFor="harvest_time">Temps de récolte</Label>
+                <Input id="harvest_time" value={formData.harvest_time} onChange={(e) => setFormData({ ...formData, harvest_time: e.target.value })} placeholder="ex: 120-140 jours" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="yield_info">Rendement estimé</Label>
+                <Input id="yield_info" value={formData.yield_info} onChange={(e) => setFormData({ ...formData, yield_info: e.target.value })} placeholder="ex: 8-12 tonnes/ha" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 min-h-[250px] flex flex-col">
+              <Label>Instructions de plantation</Label>
+              <div className="flex-1">
+                <ReactQuill 
+                  theme="snow"
+                  value={formData.planting_instructions}
+                  onChange={(content) => setFormData({ ...formData, planting_instructions: content })}
+                  modules={quillModules}
+                  className="h-[150px] mb-12"
+                />
+              </div>
+            </div>
+            <div className="space-y-2 min-h-[250px] flex flex-col">
+              <Label>Instructions d'entretien</Label>
+              <div className="flex-1">
+                <ReactQuill 
+                  theme="snow"
+                  value={formData.care_instructions}
+                  onChange={(content) => setFormData({ ...formData, care_instructions: content })}
+                  modules={quillModules}
+                  className="h-[150px] mb-12"
+                />
+              </div>
             </div>
           </div>
 
@@ -348,7 +509,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
             <div className="flex items-center space-x-2"><Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} /><Label htmlFor="is_featured">Mis en avant</Label></div>
           </div>
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
             <Button type="submit">{seed ? 'Modifier' : 'Créer'}</Button>
           </div>

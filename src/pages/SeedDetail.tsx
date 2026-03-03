@@ -1,29 +1,39 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Star, 
-  Leaf, 
+  MessageSquare, 
+  Phone, 
+  ArrowLeft, 
+  CheckCircle2, 
+  ClipboardList, 
+  Sprout, 
+  ShieldCheck, 
   Truck, 
-  Shield,
-  Clock,
-  TrendingUp,
-  ArrowLeft,
-  Plus,
-  Minus,
-  Heart,
-  Mail
-} from "lucide-react";
-import { useContactSettings } from "@/hooks/use-contact-settings";
-import logoAk from "@/assets/logo-ak.png";
+  Calendar, 
+  Waves, 
+  TrendingUp, 
+  MapPin, 
+  Droplets, 
+  Zap, 
+  User,
+  Heart
+} from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import TitleManager from '@/components/TitleManager';
+import logoAk from '@/assets/logo-ak.png';
+import { useContactSettings } from '@/hooks/use-contact-settings';
+import DOMPurify from 'dompurify';
 
 interface SeedProduct {
-  id: number;
+  id: string;
   name: string;
   description: string;
   category: string;
@@ -33,7 +43,7 @@ interface SeedProduct {
   images: string[];
   rating: number;
   reviews: number;
-  availability: "En stock" | "Rupture" | "Pré-commande";
+  availability: string;
   harvestTime: string;
   yield: string;
   features: string[];
@@ -55,29 +65,31 @@ interface SeedProduct {
   };
 }
 
-const SeedDetail = () => {
-  const { id } = useParams();
-  const [quantity, setQuantity] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+export default function SeedDetail() {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [product, setProduct] = useState<SeedProduct | null>(null);
   const [loading, setLoading] = useState(true);
-  const { data: contact } = useContactSettings();
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [isFavorite, setIsFavorite] = useState(false);
+  
+  const { data: contactSettings } = useContactSettings();
+  
+  // Check if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  useEffect(() => {
+    const cachedUser = sessionStorage.getItem('akouma_auth_user');
+    setIsLoggedIn(!!cachedUser);
+  }, []);
 
-  // Fetch product data from backend
-  const fetchProduct = async () => {
-    if (!id) return;
+  const fetchSeed = useCallback(async () => {
+    if (!slug) return;
     
     try {
-      setLoading(true);
-      const url = new URL(`/api/seeds/${id}`, apiBaseUrl);
-      const res = await fetch(url.toString(), { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch seed product');
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error('Réponse invalide du serveur pour la semence');
-      }
+      const res = await fetch(`/api/seeds/slug/${slug}`);
+      if (!res.ok) throw new Error('Seed not found');
       const { data } = await res.json();
       
       setProduct({
@@ -86,15 +98,15 @@ const SeedDetail = () => {
         description: data.description,
         category: data.category || 'Général',
         variety: data.variety || '',
-        price: data.price || 0,
+        price: Number(data.price) || Number(data.price_fcfa) || 0,
         unit: data.unit || 'kg',
-        images: [data.imageUrl || logoAk],
-        rating: data.rating || 0,
-        reviews: data.reviews || 0,
+        images: [data.imageUrl || data.image_url || logoAk],
+        rating: Number(data.rating) || 0,
+        reviews: Number(data.totalReviews) || Number(data.total_reviews) || 0,
         availability: data.availability || 'En stock',
-        harvestTime: data.harvestTime || '120-140 jours',
-        yield: data.yield || '8-12 tonnes/ha',
-        features: data.features || [],
+        harvestTime: data.harvestTime || data.harvest_time || '120-140 jours',
+        yield: data.yield || data.yield_info || '8-12 tonnes/ha',
+        features: Array.isArray(data.features) ? data.features : [],
         fullDescription: data.fullDescription || data.description,
         specifications: {
           origin: data.origin || 'Local',
@@ -109,403 +121,454 @@ const SeedDetail = () => {
           spacing: data.spacing || '75x25 cm',
           watering: data.watering || 'Régulier',
           fertilizer: data.fertilizer || 'NPK équilibré',
-          diseases: data.diseases || []
+          diseases: Array.isArray(data.diseases) ? data.diseases : []
         }
       });
-    } catch (error) {
-      console.error('Error fetching seed product:', error);
-      setProduct(null);
+    } catch (err) {
+      console.error('Error fetching seed:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les détails de la semence.",
+        variant: "destructive"
+      });
+      navigate('/seeds');
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug, navigate, toast]);
 
   useEffect(() => {
-    fetchProduct();
-  }, [id]);
+    fetchSeed();
+  }, [fetchSeed]);
 
-  // (mock data removed)
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-CF', {
-      style: 'currency',
-      currency: 'XAF',
-      minimumFractionDigits: 0,
-    }).format(price);
+  const logContact = async (type: 'whatsapp' | 'call') => {
+    try {
+      const user = JSON.parse(sessionStorage.getItem('akouma_auth_user') || '{}');
+      await fetch('/api/contact-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: user.fullName || 'Utilisateur Anonyme',
+          email: user.email || 'anonyme@akouma.tg',
+          subject: `Intérêt pour ${product?.name} (${type})`,
+          message: `L'utilisateur a cliqué sur le bouton ${type} pour le produit ${product?.name} (ID: ${product?.id}).`,
+          project_type: 'seeds'
+        })
+      });
+    } catch (err) {
+      console.error('Error logging contact:', err);
+    }
   };
 
-  const incrementQuantity = () => setQuantity(prev => prev + 1);
-  const decrementQuantity = () => setQuantity(prev => Math.max(1, prev - 1));
+  const handleWhatsApp = async () => {
+    await logContact('whatsapp');
+    const whatsapp = contactSettings?.whatsappNumber || "+22600000000";
+    const message = encodeURIComponent(`Bonjour AKOUMA, je suis intéressé par la semence : ${product?.name} (Réf: ${product?.id})`);
+    window.open(`https://wa.me/${whatsapp.replace(/\s+/g, '')}?text=${message}`, '_blank');
+  };
+
+  const handleCall = async () => {
+    await logContact('call');
+    const phone = contactSettings?.phone || contactSettings?.whatsappNumber || "+22600000000";
+    window.location.href = `tel:${phone.replace(/\s+/g, '')}`;
+  };
+
+  const toggleFavorite = () => {
+    if (!isLoggedIn) {
+      toast({
+        title: "Authentification requise",
+        description: "Veuillez vous connecter pour ajouter ce produit à vos favoris.",
+      });
+      navigate('/auth');
+      return;
+    }
+    setIsFavorite(!isFavorite);
+    toast({
+      title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
+      description: isFavorite ? "Le produit a été retiré de votre liste." : "Le produit a été ajouté à votre liste de favoris.",
+    });
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoggedIn) {
+      toast({ title: "Authentification requise", description: "Veuillez vous connecter pour laisser un avis." });
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/seeds/${product?.id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewForm),
+        credentials: 'include'
+      });
+
+      if (!res.ok) throw new Error('Failed to submit review');
+
+      toast({ title: "Merci !", description: "Votre avis a été publié avec succès." });
+      setReviewForm({ rating: 5, comment: '' });
+      
+      // Refresh seed data to show new rating/reviews
+      if (slug) {
+        const refreshRes = await fetch(`/api/seeds/slug/${slug}`);
+        const { data } = await refreshRes.json();
+        setProduct((prev) => prev ? { 
+          ...prev, 
+          rating: Number(data.rating), 
+          reviews: Number(data.totalReviews) 
+        } : null);
+      }
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      toast({ title: "Erreur", description: "Impossible de publier l'avis.", variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!product) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
+      <TitleManager 
+        title={`${product.name} - AKOUMA Agritech`}
+        description={product.description}
+        image={product.images[0]}
+      />
       <Header />
       
-      <div className="container mx-auto px-6 pt-8 pb-16">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-          <Link to="/" className="hover:text-primary">Accueil</Link>
-          <span>/</span>
-          <Link to="/seeds" className="hover:text-primary">Semences</Link>
-          <span>/</span>
-          <span className="text-foreground">{product?.name || 'Chargement...'}</span>
-        </div>
-
-        {/* Back Button */}
-        <Button variant="ghost" asChild className="mb-6">
-          <Link to="/seeds">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+      <main className="pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <Link to="/seeds" className="inline-flex items-center text-primary hover:underline mb-6 group">
+            <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
             Retour aux semences
           </Link>
-        </Button>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>Chargement du produit...</p>
-            </div>
-          </div>
-        ) : !product ? (
-          <div className="text-center py-12">
-            <p>Produit non trouvé</p>
-          </div>
-        ) : (
-        <>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Images */}
-          <div className="space-y-4">
-            <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-              <img
-                src={product.images[selectedImage]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-              <Badge 
-                className={`absolute top-4 right-4 ${
-                  product.availability === "En stock" ? "bg-green-500" :
-                  product.availability === "Pré-commande" ? "bg-yellow-500" : "bg-red-500"
-                }`}
-              >
-                {product.availability}
-              </Badge>
-            </div>
-            
-            {/* Thumbnail Images */}
-            <div className="flex gap-2">
-              {product.images.map((image, index) => (
-                <button
-                  key={`${product.id}-img-${index}-${image}`}
-                  onClick={() => setSelectedImage(index)}
-                  className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedImage === index ? "border-primary" : "border-border"
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt={`${product.name} ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Product Info */}
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">{product.name}</h1>
-              <p className="text-lg text-muted-foreground mb-4">{product.description}</p>
-              
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center gap-1">
-                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{product.rating}</span>
-                  <span className="text-muted-foreground">({product.reviews} avis)</span>
-                </div>
-                <Badge variant="secondary">{product.variety}</Badge>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-100">
+            {/* Image Section */}
+            <div className="space-y-6">
+              <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
+                <img 
+                  src={product.images[0]} 
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = logoAk;
+                  }}
+                />
               </div>
-
-              {/* Features */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {product.features.map((feature, index) => (
-                  <Badge key={`${product.id}-feature-${index}-${feature.slice(0, 15)}`} variant="outline" className="text-xs">
-                    {feature}
-                  </Badge>
+              <div className="grid grid-cols-4 gap-4">
+                {product.images.map((img, idx) => (
+                  <button 
+                    key={idx}
+                    className="aspect-square rounded-lg overflow-hidden border-2 border-slate-100 hover:border-primary transition-colors bg-slate-50"
+                  >
+                    <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Pricing */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-3xl font-bold text-primary">{formatPrice(product.price)}</p>
-                    <p className="text-sm text-muted-foreground">par {product.unit}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsFavorite(!isFavorite)}
-                    className={isFavorite ? "text-red-500 border-red-500" : ""}
-                  >
-                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-                  </Button>
+            {/* Content Section */}
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1">
+                  {product.category}
+                </Badge>
+                <div className="flex items-center text-amber-500">
+                  <Star className="w-4 h-4 fill-current" />
+                  <span className="ml-1 font-semibold">{product.rating.toFixed(1)}</span>
+                  <span className="ml-1 text-slate-400 text-sm">({product.reviews} avis)</span>
                 </div>
+              </div>
 
-                {/* Quantity Selector */}
-                <div className="flex items-center gap-4 mb-6">
-                  <span className="font-medium">Quantité:</span>
-                  <div className="flex items-center border rounded-lg">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={decrementQuantity}
-                      disabled={quantity <= 1}
-                      className="h-10 w-10"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                    <span className="px-4 py-2 min-w-[60px] text-center">{quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={incrementQuantity}
-                      className="h-10 w-10"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <span className="text-sm text-muted-foreground">{product.unit}</span>
-                </div>
-
-                {/* Total Price */}
-                <div className="bg-muted/50 rounded-lg p-4 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Total:</span>
-                    <span className="text-xl font-bold text-primary">
-                      {formatPrice(product.price * quantity)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  {/* Ajouter au panier - Commenté pour le moment
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">{product.name}</h1>
+              <div className="flex items-center gap-4 mb-4">
+                <p className="text-slate-500 text-lg">{product.variety}</p>
+                {isLoggedIn && (
                   <Button 
-                    onClick={handleAddToCart}
-                    disabled={product.availability === "Rupture"}
-                    className="w-full h-12"
-                    size="lg"
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={toggleFavorite}
+                    className={`rounded-full ${isFavorite ? 'text-red-500 hover:text-red-600 bg-red-50' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
                   >
-                    <Package className="w-5 h-5 mr-2" />
-                    {product.availability === "Pré-commande" ? "Pré-commander" : "Ajouter au panier"}
+                    <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
                   </Button>
-                  */}
-                  
-                  <Button 
-                    asChild
-                    className="w-full h-12"
-                    size="lg"
-                  >
-                    <Link to="/contact">
-                      <Mail className="w-5 h-5 mr-2" />
-                      Contactez-nous pour ce produit
-                    </Link>
-                  </Button>
-                  
-                  {/* Boutons CTA */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="h-12" 
-                      size="lg"
-                      onClick={() => {
-                        const phone = (contact?.whatsappNumber || contact?.phone || '').replace(/\D/g, '');
-                        const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent('Bonjour, je suis intéressé par ' + product.name)}` : undefined;
-                        if (url) window.open(url, '_blank');
-                      }}
-                    >
-                      <span className="mr-2">💬</span>
-                      WhatsApp
-                    </Button>
-                    
-                    <Button 
-                      variant="outline" 
-                      className="h-12" 
-                      size="lg"
-                      onClick={() => {
-                        const tel = contact?.phone ? `tel:${contact.phone.replace(/\s/g, '')}` : undefined;
-                        if (tel) window.open(tel, '_self');
-                      }}
-                    >
-                      <span className="mr-2">📞</span>
-                      Appeler
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                )}
+              </div>
 
-            {/* Quick Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <Clock className="w-6 h-6 text-primary mx-auto mb-2" />
-                  <p className="font-medium text-sm">Temps de récolte</p>
-                  <p className="text-xs text-muted-foreground">{product.harvestTime}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <TrendingUp className="w-6 h-6 text-primary mx-auto mb-2" />
-                  <p className="font-medium text-sm">Rendement</p>
-                  <p className="text-xs text-muted-foreground">{product.yield}</p>
-                </CardContent>
-              </Card>
+              <div className="flex items-baseline gap-2 mb-8">
+                <span className="text-4xl font-bold text-primary">{product.price.toLocaleString()} FCFA</span>
+                <span className="text-slate-400 font-medium">/ {product.unit}</span>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center text-slate-600">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3" />
+                  <span className="font-medium">Disponibilité :</span>
+                  <span className="ml-2 text-emerald-600 font-semibold">{product.availability}</span>
+                </div>
+                <div className="flex items-center text-slate-600">
+                  <Calendar className="w-5 h-5 text-primary/60 mr-3" />
+                  <span className="font-medium">Temps de récolte :</span>
+                  <span className="ml-2">{product.harvestTime}</span>
+                </div>
+                <div className="flex items-center text-slate-600">
+                  <TrendingUp className="w-5 h-5 text-primary/60 mr-3" />
+                  <span className="font-medium">Rendement estimé :</span>
+                  <span className="ml-2">{product.yield}</span>
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50 rounded-2xl mb-8 border border-slate-100">
+                <div 
+                  className="text-slate-700 leading-relaxed italic prose prose-slate max-w-none"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
+                />
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2 text-primary" />
+                  Contactez-nous pour ce produit
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button 
+                    size="lg" 
+                    className="flex-1 h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={handleWhatsApp}
+                  >
+                    <MessageSquare className="w-5 h-5 mr-2" />
+                    WhatsApp
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="flex-1 h-14 rounded-xl text-lg font-bold border-2"
+                    onClick={handleCall}
+                  >
+                    <Phone className="w-5 h-5 mr-2" />
+                    Appeler
+                  </Button>
+                </div>
+              </div>
+              <p className="text-center text-slate-400 text-sm mt-4 flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Paiement sécurisé & Qualité garantie
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Detailed Information Tabs */}
-        <div className="mt-16">
-          <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="specifications">Spécifications</TabsTrigger>
-              <TabsTrigger value="growing">Guide de culture</TabsTrigger>
-              <TabsTrigger value="reviews">Avis ({product.reviews})</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="description" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Description détaillée</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed mb-4">
-                    {product.fullDescription}
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <Shield className="w-8 h-8 text-primary" />
-                      <div>
-                        <p className="font-medium">Qualité garantie</p>
-                        <p className="text-sm text-muted-foreground">Certifié et testé</p>
+          {/* Detailed Info Tabs */}
+          <div className="mt-16">
+            <Tabs defaultValue="description" className="w-full">
+              <TabsList className="w-full justify-start bg-transparent border-b border-slate-200 rounded-none h-auto p-0 mb-8 overflow-x-auto">
+                <TabsTrigger 
+                  value="description" 
+                  className="px-8 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-bold text-lg transition-all"
+                >
+                  Description
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="specs" 
+                  className="px-8 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-bold text-lg transition-all"
+                >
+                  Spécifications
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="guide" 
+                  className="px-8 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-bold text-lg transition-all"
+                >
+                  Guide de culture
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="reviews" 
+                  className="px-8 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-bold text-lg transition-all"
+                >
+                  Avis ({product.reviews})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="description" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
+                <div className="prose prose-slate max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: product.fullDescription }} className="text-slate-600 leading-relaxed text-lg" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+                  {product.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-start p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-4 shrink-0">
+                        <Zap className="w-5 h-5 text-primary" />
                       </div>
+                      <span className="text-slate-700 font-medium">{feature}</span>
                     </div>
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <Truck className="w-8 h-8 text-primary" />
-                      <div>
-                        <p className="font-medium">Livraison rapide</p>
-                        <p className="text-sm text-muted-foreground">48h partout</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <Leaf className="w-8 h-8 text-primary" />
-                      <div>
-                        <p className="font-medium">Conseil expert</p>
-                        <p className="text-sm text-muted-foreground">Support technique</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="specifications" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Spécifications techniques</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(product.specifications).map(([key, value]) => (
-                      <div key={key} className="flex justify-between py-2 border-b border-border last:border-0">
-                        <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
-                        <span className="text-muted-foreground">{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="growing" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Guide de culture</CardTitle>
-                  <CardDescription>
-                    Conseils pour optimiser vos rendements avec cette variété
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="specs" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    {Object.entries(product.growingGuide).map(([key, value]) => (
-                      <div key={key}>
-                        <h4 className="font-medium mb-2 capitalize">
-                          {key.replace(/([A-Z])/g, ' $1')}:
-                        </h4>
-                        {Array.isArray(value) ? (
-                          <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                            {value.map((item, index) => (
-                              <li key={`${key}-item-${index}-${String(item).slice(0, 20)}`}>{item}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-muted-foreground">{value}</p>
-                        )}
-                      </div>
-                    ))}
+                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium flex items-center"><MapPin className="w-4 h-4 mr-2" /> Origine</span>
+                      <span className="text-slate-900 font-bold">{product.specifications.origin}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium flex items-center"><ShieldCheck className="w-4 h-4 mr-2" /> Pureté</span>
+                      <span className="text-slate-900 font-bold">{product.specifications.purity}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium flex items-center"><Sprout className="w-4 h-4 mr-2" /> Germination</span>
+                      <span className="text-slate-900 font-bold">{product.specifications.germination}</span>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="reviews" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Avis clients</CardTitle>
-                  <CardDescription>
-                    Ce que pensent nos agriculteurs de ce produit
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Mock reviews */}
-                    {[1, 2, 3].map((review) => (
-                      <div key={`review-${review}`} className="border-b border-border pb-4 last:border-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium flex items-center"><Droplets className="w-4 h-4 mr-2" /> Humidité</span>
+                      <span className="text-slate-900 font-bold">{product.specifications.moisture}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium flex items-center"><Truck className="w-4 h-4 mr-2" /> Conditionnement</span>
+                      <span className="text-slate-900 font-bold">{product.specifications.packaging}</span>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="guide" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  <div className="space-y-8">
+                    <div className="flex gap-6">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center shrink-0">
+                        <Waves className="w-7 h-7 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-lg mb-1">Type de sol</h4>
+                        <p className="text-slate-600">{product.growingGuide.soilType}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-6">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                        <Droplets className="w-7 h-7 text-amber-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-lg mb-1">Arrosage</h4>
+                        <p className="text-slate-600">{product.growingGuide.watering}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-6">
+                      <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center shrink-0">
+                        <ClipboardList className="w-7 h-7 text-purple-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-lg mb-1">Espacement</h4>
+                        <p className="text-slate-600">{product.growingGuide.spacing}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-8">
+                    <div className="flex gap-6">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
+                        <TrendingUp className="w-7 h-7 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-lg mb-1">Engrais recommandé</h4>
+                        <p className="text-slate-600">{product.growingGuide.fertilizer}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-6">
+                      <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-7 h-7 text-red-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-lg mb-1">Résistance</h4>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {product.growingGuide.diseases.map((disease, idx) => (
+                            <Badge key={idx} variant="secondary" className="bg-red-50 text-red-700 border-red-100">
+                              {disease}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="reviews" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                  <div className="lg:col-span-1 text-center lg:text-left p-8 bg-slate-50 rounded-2xl">
+                    <div className="text-6xl font-black text-slate-900 mb-2">{product.rating.toFixed(1)}</div>
+                    <div className="flex items-center justify-center lg:justify-start text-amber-500 mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`w-6 h-6 ${i < Math.floor(product.rating) ? 'fill-current' : 'text-slate-300'}`} />
+                      ))}
+                    </div>
+                    <p className="text-slate-500 font-medium">Basé sur {product.reviews} avis vérifiés</p>
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <h3 className="text-2xl font-bold text-slate-900 mb-8">Laissez un avis</h3>
+                    
+                    {!isLoggedIn ? (
+                      <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl text-center">
+                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <User className="w-6 h-6 text-amber-600" />
+                        </div>
+                        <h4 className="text-lg font-bold text-slate-900 mb-2">Authentification requise</h4>
+                        <p className="text-slate-600 mb-6">Vous devez être connecté à votre compte AKOUMA pour partager votre expérience avec cette semence.</p>
+                        <Button onClick={() => navigate('/auth')} className="rounded-xl px-8">
+                          Se connecter / S'inscrire
+                        </Button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSubmitReview} className="space-y-6">
+                        <div className="space-y-2">
+                          <Label className="text-slate-900 font-bold">Note</Label>
+                          <div className="flex gap-2">
                             {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={`review-${review}-star-${star}`}
-                                className="w-4 h-4 fill-yellow-400 text-yellow-400"
-                              />
+                              <button 
+                                key={star}
+                                type="button"
+                                onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                                className={`p-1 transition-transform active:scale-90 ${reviewForm.rating >= star ? 'text-amber-500' : 'text-slate-300'}`}
+                              >
+                                <Star className={`w-8 h-8 ${reviewForm.rating >= star ? 'fill-current' : ''}`} />
+                              </button>
                             ))}
                           </div>
-                          <span className="font-medium">Cultivateur#{review}</span>
                         </div>
-                        <p className="text-muted-foreground">
-                          Excellente variété, très bon rendement malgré la saison sèche. 
-                          Je recommande vivement cette semence.
-                        </p>
-                      </div>
-                    ))}
+                        <div className="space-y-2">
+                          <Label htmlFor="comment" className="text-slate-900 font-bold">Commentaire</Label>
+                          <Textarea 
+                            id="comment" 
+                            placeholder="Partagez votre expérience de culture..." 
+                            className="min-h-[150px] rounded-2xl border-slate-200 focus:ring-primary/20 bg-slate-50"
+                            value={reviewForm.comment}
+                            onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                          />
+                        </div>
+                        <Button type="submit" size="lg" className="rounded-xl px-12 font-bold shadow-lg shadow-primary/20">
+                          Publier l'avis
+                        </Button>
+                      </form>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
-        </>
-        )}
-      </div>
+      </main>
 
       <Footer />
     </div>
   );
-};
-
-export default SeedDetail;
+}

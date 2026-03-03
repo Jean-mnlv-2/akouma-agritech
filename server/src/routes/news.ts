@@ -15,6 +15,20 @@ newsRouter.get('/', async (req: Request, res: Response) => {
   res.json({ data: items });
 });
 
+newsRouter.get('/slug/:slug', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const item = await prisma.news.findUnique({ where: { slug } as any });
+    if (!item) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    res.json({ data: item });
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'Bad request';
+    res.status(400).json({ error });
+  }
+});
+
 newsRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -36,7 +50,7 @@ newsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response
   const { title, slug, content, excerpt, imageUrl, author, isPublished } = req.body || {};
   if (!title || !slug || !content) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.news.create({
-    data: { title, slug, content, excerpt, imageUrl, author, isPublished: Boolean(isPublished) },
+    data: { title, slug, content, excerpt, imageUrl, author, isPublished: Boolean(isPublished) } as any,
   });
   res.status(201).json({ data: created });
 });
@@ -46,7 +60,7 @@ newsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respon
   const { title, slug, content, excerpt, imageUrl, author, isPublished } = req.body || {};
   const updated = await prisma.news.update({
     where: { id },
-    data: { title, slug, content, excerpt, imageUrl, author, isPublished },
+    data: { title, slug, content, excerpt, imageUrl, author, isPublished } as any,
   });
   res.json({ data: updated });
 });

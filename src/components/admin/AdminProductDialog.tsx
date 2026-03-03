@@ -3,12 +3,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { slugify } from '@/lib/utils';
-// import ReactQuill from 'react-quill';
-// import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 
 interface Product {
@@ -193,9 +192,19 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
     setGalleryUrls((prev) => (prev || []).filter((u) => u !== url));
   };
 
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link', 'clean']
+    ],
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {product ? "Modifier le produit" : "Ajouter un produit"}
@@ -205,8 +214,8 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nom *</Label>
               <Input 
@@ -229,17 +238,19 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
               <Input id="slug" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} placeholder="genere-automatiquement" />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea 
-              id="description" 
-              value={formData.description} 
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
-              className="bg-white rounded" 
-              style={{ minHeight: 120 }} 
-            />
+          <div className="space-y-2 min-h-[250px] flex flex-col">
+            <Label>Description *</Label>
+            <div className="flex-1">
+              <ReactQuill 
+                theme="snow"
+                value={formData.description}
+                onChange={(content) => setFormData({ ...formData, description: content })}
+                modules={quillModules}
+                className="h-[150px] mb-12"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie *</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
@@ -259,7 +270,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
               <Input id="stock_quantity" type="number" value={formData.stock_quantity} onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="price_fcfa">Prix (FCFA) *</Label>
               <Input id="price_fcfa" type="number" value={formData.price_fcfa} onChange={(e) => setFormData({ ...formData, price_fcfa: parseInt(e.target.value) || 0 })} required />
@@ -269,7 +280,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
               <Input id="original_price_fcfa" type="number" value={formData.original_price_fcfa} onChange={(e) => setFormData({ ...formData, original_price_fcfa: parseInt(e.target.value) || 0 })} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="dimensions">Dimensions</Label>
               <Input id="dimensions" value={formData.dimensions} onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })} placeholder="ex: 50x30x20 cm" />
@@ -314,37 +325,41 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="features">Caractéristiques (HTML)</Label>
-              <Textarea 
-                id="features" 
-                value={formData.features} 
-                onChange={(e) => setFormData({ ...formData, features: e.target.value })} 
-                className="bg-white rounded" 
-                style={{ minHeight: 120 }} 
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 min-h-[250px] flex flex-col">
+              <Label>Caractéristiques</Label>
+              <div className="flex-1">
+                <ReactQuill 
+                  theme="snow"
+                  value={formData.features}
+                  onChange={(content) => setFormData({ ...formData, features: content })}
+                  modules={quillModules}
+                  className="h-[150px] mb-12"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="specifications">Spécifications (HTML)</Label>
-              <Textarea 
-                id="specifications" 
-                value={formData.specifications} 
-                onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} 
-                className="bg-white rounded" 
-                style={{ minHeight: 120 }} 
-              />
+            <div className="space-y-2 min-h-[250px] flex flex-col">
+              <Label>Spécifications</Label>
+              <div className="flex-1">
+                <ReactQuill 
+                  theme="snow"
+                  value={formData.specifications}
+                  onChange={(content) => setFormData({ ...formData, specifications: content })}
+                  modules={quillModules}
+                  className="h-[150px] mb-12"
+                />
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex items-center space-x-2"><Switch id="in_stock" checked={formData.in_stock} onCheckedChange={(checked) => setFormData({ ...formData, in_stock: checked })} /><Label htmlFor="in_stock">En stock</Label></div>
             <div className="flex items-center space-x-2"><Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} /><Label htmlFor="is_published">Publié</Label></div>
             <div className="flex items-center space-x-2"><Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} /><Label htmlFor="is_featured">Mis en avant</Label></div>
             <div className="flex items-center space-x-2"><Switch id="is_new" checked={formData.is_new} onCheckedChange={(checked) => setFormData({ ...formData, is_new: checked })} /><Label htmlFor="is_new">Nouveau</Label></div>
           </div>
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button type="submit">{product ? 'Modifier' : 'Créer'}</Button>
+            <Button type="submit">{product ? "Modifier" : "Créer"}</Button>
           </div>
         </form>
       </DialogContent>

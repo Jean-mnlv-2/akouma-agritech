@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Textarea } from '@/components/ui/textarea';
-// import ReactQuill from 'react-quill';
-// import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
@@ -68,7 +67,7 @@ export function AdminPartners() {
   };
 
   const upsertMutation = useMutation({
-    mutationFn: async (payload: { data: any; id?: number }) => {
+    mutationFn: async (payload: { data: Partial<PartnerRow>; id?: number }) => {
       if (payload.id) return api.request('PUT', `/api/partners/${payload.id}`, { body: payload.data });
       return api.request('POST', `/api/partners`, { body: payload.data });
     },
@@ -86,26 +85,34 @@ export function AdminPartners() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const payload = {
+    const payload: Partial<PartnerRow> = {
       name: form.name?.trim(),
       slug: form.slug || slugify(form.name || ''),
-      logo: form.logo || null,
-      logoUrl: (form as any).logoUrl || null,
-      imageUrl: (form as any).imageUrl || null,
-      type: form.type || null,
-      description: form.description || null,
-      year: form.year || null,
-      website: form.website || null,
-      contact: form.contact || null,
+      logo: form.logo || undefined,
+      logoUrl: form.logoUrl || undefined,
+      imageUrl: form.imageUrl || undefined,
+      type: form.type || undefined,
+      description: form.description || undefined,
+      year: form.year || undefined,
+      website: form.website || undefined,
+      contact: form.contact || undefined,
       order: Number(form.order ?? 0),
       isActive: Boolean(form.isActive),
-    } as any;
+    };
     if (!payload.name) { toast({ title: 'Validation', description: 'Le nom est requis.', variant: 'destructive' }); setLoading(false); return; }
     if (!payload.slug) { toast({ title: 'Validation', description: 'Le slug est requis.', variant: 'destructive' }); setLoading(false); return; }
     upsertMutation.mutate({ data: payload, id: editing?.id });
   };
 
-  const updateField = (key: keyof PartnerRow, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
+  const quillModules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['clean']
+    ],
+  };
+
+  const updateField = (key: keyof PartnerRow, value: string | number | boolean | undefined) => setForm((prev) => ({ ...prev, [key]: value }));
 
   // Upload function placeholder - will be connected to UI later
   void (async function _onUpload(e: React.ChangeEvent<HTMLInputElement>, key: 'logoUrl' | 'imageUrl') {
@@ -117,7 +124,7 @@ export function AdminPartners() {
       const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: formData });
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
-      updateField(key as any, data.url);
+      updateField(key, data.url);
       toast({ title: 'Fichier envoyé', description: 'Le fichier a été importé avec succès.' });
     } catch (err) {
       console.error(err);
@@ -169,23 +176,25 @@ export function AdminPartners() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <FileUpload label="Logo du partenaire" accept="image/*" value={(form as any).logoUrl || ''} onChange={(url) => updateField('logoUrl' as any, url)} />
+                <FileUpload label="Logo du partenaire" accept="image/*" value={form.logoUrl || ''} onChange={(url) => updateField('logoUrl', url)} />
               </div>
               <div>
-                <FileUpload label="Image du partenaire" accept="image/*" value={(form as any).imageUrl || ''} onChange={(url) => updateField('imageUrl' as any, url)} />
+                <FileUpload label="Image du partenaire" accept="image/*" value={form.imageUrl || ''} onChange={(url) => updateField('imageUrl', url)} />
               </div>
             </div>
-            <div>
+            <div className="space-y-2 min-h-[200px] flex flex-col">
               <Label>Description</Label>
-              <Textarea 
-                value={form.description || ''} 
-                onChange={(e) => updateField('description', e.target.value)} 
-                className="bg-white rounded" 
-                placeholder="Description du partenaire..."
-                rows={5}
-              />
+              <div className="flex-1">
+                <ReactQuill 
+                  theme="snow"
+                  value={form.description || ''}
+                  onChange={(content) => updateField('description', content)}
+                  modules={quillModules}
+                  className="h-[120px] mb-12"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4">
               <div>
                 <Label>Année</Label>
                 <Input value={form.year || ''} onChange={(e) => updateField('year', e.target.value)} placeholder="2024" />

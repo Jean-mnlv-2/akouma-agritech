@@ -64,25 +64,31 @@ export const AuthForm = () => {
       });
 
       if (authData?.user) {
-        const role = (authData.user as any).role || 'customer';
-        const isActive = (authData.user as any).isActive;
+        const user = authData.user;
+        const role = user.role || 'customer';
+        const isActive = user.isActive;
         
+        console.log("[AuthForm] Login success, user role:", role, "isActive:", isActive);
+
         if (isActive === false) {
           toast({ title: "Compte désactivé", description: "Votre compte est désactivé. Contactez l'administrateur.", variant: "destructive" });
           return;
         }
 
         // Store session info for AdminRoute to use immediately after redirect
-        sessionStorage.setItem('akouma_auth_user', JSON.stringify(authData.user));
+        sessionStorage.setItem('akouma_auth_user', JSON.stringify(user));
 
         if (role === 'admin') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
+          console.log("[AuthForm] Redirecting to /admin...");
           navigate('/admin', { replace: true });
         } else if (role === 'supervisor') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre espace superviseur" });
+          console.log("[AuthForm] Redirecting to /supervisor...");
           navigate('/supervisor', { replace: true });
         } else {
           toast({ title: "Connexion réussie", description: "Bienvenue !" });
+          console.log("[AuthForm] Redirecting to /...");
           navigate('/', { replace: true });
         }
       } else {

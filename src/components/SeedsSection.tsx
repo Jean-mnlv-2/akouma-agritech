@@ -7,9 +7,11 @@ import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
 import { useI18n } from '@/i18n/i18n';
 import DOMPurify from 'dompurify';
+import logoAk from '@/assets/logo-ak.png';
 
 interface SeedProduct {
   id: number;
+  slug: string;
   name: string;
   description: string;
   category: string;
@@ -39,18 +41,19 @@ const SeedsSection = () => {
         const record = item as Record<string, unknown>;
         return {
         id: Number(record.id),
+        slug: String(record.slug || record.id),
         name: String(record.name || ''),
         description: String(record.description || ''),
         category: String(record.category || ''),
         variety: String(record.variety || ''),
-        price: Number(record.price_fcfa) || 0,
+        price: Number(record.price ?? record.price_fcfa ?? 0),
         unit: String(record.unit || ''),
-        image: String(record.image_url || ''),
+        image: String(record.imageUrl || record.image_url || logoAk),
         rating: Number(record.rating) || 0,
-        reviews: Number(record.total_reviews) || 0,
+        reviews: Number(record.totalReviews) || Number(record.total_reviews) || 0,
         availability: String(record.availability || 'En stock') as 'En stock' | 'Rupture' | 'Pré-commande',
-        harvestTime: String(record.harvest_time || ''),
-        yield: String(record.yield_info || ''),
+        harvestTime: String(record.harvestTime || record.harvest_time || ''),
+        yield: String(record.yield || record.yield_info || ''),
         features: Array.isArray(record.features) ? (record.features as string[]) : [],
       };
       }) as SeedProduct[];
@@ -170,13 +173,12 @@ const SeedsSection = () => {
                   <h3 className="text-2xl font-bold text-foreground mb-4 group-hover:text-primary transition-colors">
                     {products[0].name}
                   </h3>
-                  <div className="text-muted-foreground mb-4 line-clamp-3">
-                    <div 
-                      dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(products[0].description) 
-                      }} 
-                    />
-                  </div>
+                  <div 
+                    className="text-muted-foreground mb-4 line-clamp-3 prose prose-sm prose-slate"
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(products[0].description) 
+                    }} 
+                  />
                   <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
                     <div>
                       <span className="font-medium text-foreground">{t('seeds.variety')}:</span>
@@ -195,7 +197,7 @@ const SeedsSection = () => {
                       <p className="text-sm text-muted-foreground">{t('seeds.per')} {products[0].unit}</p>
                     </div>
                     <Button variant="default" size="sm" asChild>
-                      <Link to={`/seeds/${products[0].id}`}>
+                      <Link to={`/seeds/${products[0].slug}`}>
                         {t('seeds.details')}
                         <ArrowRight className="w-4 h-4 ml-1" />
                       </Link>
@@ -251,13 +253,12 @@ const SeedsSection = () => {
                     </CardHeader>
 
                     <CardContent className="pt-0 space-y-3">
-                      <div className="text-sm text-muted-foreground line-clamp-2">
-                        <div 
-                          dangerouslySetInnerHTML={{ 
-                            __html: DOMPurify.sanitize(product.description) 
-                          }} 
-                        />
-                      </div>
+                      <div 
+                        className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem] prose prose-sm prose-slate"
+                        dangerouslySetInnerHTML={{ 
+                          __html: DOMPurify.sanitize(product.description) 
+                        }} 
+                      />
                       
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
@@ -283,7 +284,7 @@ const SeedsSection = () => {
                           asChild
                           className="focus-visible:ring-4 focus-visible:ring-primary/40 transition-transform duration-200 hover:scale-105"
                         >
-                          <Link to={`/seeds/${product.id}`}>
+                          <Link to={`/seeds/${product.slug}`}>
                             {t('seeds.details')}
                           </Link>
                         </Button>

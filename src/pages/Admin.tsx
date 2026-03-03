@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,6 @@ import {
   Calendar,
   Radio,
   Receipt,
-  Tag,
-  Eye,
   History
 } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
@@ -42,7 +40,6 @@ import { AdminDonationsContent } from '@/components/admin/AdminDonationsContent'
 import { AdminContactSettings } from '@/components/admin/AdminContactSettings';
 import { AdminUserManagement } from '@/components/admin/AdminUserManagement';
 import { AdminOrders } from '@/components/admin/AdminOrders';
-import { AdminPromoCodes } from '@/components/admin/AdminPromoCodes';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
@@ -86,8 +83,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, descripti
 
 const tabs = [
   { value: 'users', label: 'Utilisateurs', icon: Shield },
-  { value: 'orders', label: 'Commandes', icon: Receipt },
-  { value: 'promos', label: 'Codes promo', icon: Tag },
+  { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
   { value: 'courses', label: 'Cours', icon: BookOpen },
   { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
   { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
@@ -294,11 +290,15 @@ function AdminContent() {
         {/* Tabs */}
         <div className="admin-space-responsive-md">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="admin-tabs-scroll w-full overflow-x-auto overflow-y-hidden whitespace-nowrap flex-nowrap">
+            <TabsList className="flex flex-wrap h-auto w-full bg-muted/30 p-1 justify-start gap-1 mb-6 border border-border/50">
               {tabs.map((tab) => (
-                <TabsTrigger key={`trigger-${tab.value}`} value={tab.value} className="flex-shrink-0 min-w-fit px-3 py-2 flex items-center space-x-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                <TabsTrigger 
+                  key={`trigger-${tab.value}`} 
+                  value={tab.value} 
+                  className="px-3 py-2 flex items-center space-x-2 text-sm font-medium transition-all hover:bg-background/50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+                >
                   <tab.icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap">{tab.label}</span>
+                  <span>{tab.label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -306,7 +306,6 @@ function AdminContent() {
             <div className="mt-6">
               {activeTab === 'users' && <AdminUserManagement />}
               {activeTab === 'orders' && <AdminOrders />}
-              {activeTab === 'promos' && <AdminPromoCodes />}
               {activeTab === 'courses' && <AdminCourses />}
               {activeTab === 'course-previews' && <AdminCoursePreviews />}
               {activeTab === 'reminder-logs' && <AdminReminderLogs />}

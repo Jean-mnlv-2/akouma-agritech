@@ -67,7 +67,7 @@ liveStreamsRouter.post('/', authRequired, adminOnly, async (req: Request, res: R
       viewerCount,
     } as const;
 
-    const created = await prisma.liveStream.create({ data });
+    const created = await prisma.liveStream.create({ data: data as any });
 
     res.json({ data: created });
   } catch (e) {
@@ -113,7 +113,7 @@ liveStreamsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res:
       viewerCount,
     } as const;
 
-    const updated = await prisma.liveStream.update({ where: { id }, data });
+    const updated = await prisma.liveStream.update({ where: { id }, data: data as any });
     res.json({ data: updated });
   } catch (e) {
     if (env.isDevelopment()) {

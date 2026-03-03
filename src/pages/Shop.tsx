@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import logoAk from "@/assets/logo-ak.png";
 
 interface Product {
   id: string;
+  slug: string;
   name: string;
   description: string;
   price: number;
@@ -25,6 +27,29 @@ interface Product {
   isBestseller: boolean;
   rating: number;
   reviews: number;
+}
+
+interface RawShopProduct {
+  id: string | number;
+  slug?: string;
+  name?: string;
+  description?: string;
+  price?: number | string;
+  price_fcfa?: number | string;
+  originalPrice?: number | string;
+  original_price_fcfa?: number | string;
+  imageUrl?: string;
+  image_url?: string;
+  category?: string;
+  isActive?: boolean;
+  in_stock?: boolean;
+  isNew?: boolean;
+  is_new?: boolean;
+  isBestSeller?: boolean;
+  is_bestseller?: boolean;
+  rating?: number | string;
+  reviews?: number | string;
+  reviews_count?: number | string;
 }
 
 export default function Shop() {
@@ -51,8 +76,9 @@ export default function Shop() {
         }
         const body = await res.json();
         const items = Array.isArray(body) ? body : body.data;
-        const normalized = (items || []).map((item: any) => ({
+        const normalized = (items || []).map((item: RawShopProduct) => ({
           id: String(item.id),
+          slug: item.slug || String(item.id),
           name: item.name ?? '',
           description: item.description ?? '',
           price: Number(item.price ?? item.price_fcfa ?? 0),
@@ -74,7 +100,7 @@ export default function Shop() {
       }
     };
     fetchProducts();
-  }, [toast, t]);
+  }, [toast, t, apiBaseUrl]);
 
   const categories = [
     { id: 'all', name: t('shop.cat.all') },
@@ -271,13 +297,20 @@ export default function Shop() {
                         )}
                       </div>
                     </div>
-                    <Button 
-                      onClick={() => handleAddToCart(product)} 
-                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      {t('shop.add_to_cart')}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => handleAddToCart(product)} 
+                        className="flex-1 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        {t('shop.add_to_cart')}
+                      </Button>
+                      <Button asChild variant="outline" className="px-3">
+                        <Link to={`/shop/${product.slug}`}>
+                          Détails
+                        </Link>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );

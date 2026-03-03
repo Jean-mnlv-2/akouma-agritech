@@ -18,7 +18,6 @@ export default function AdminRoute({ children }: AdminRouteProps) {
     const verify = async () => {
       try {
         console.log("[AdminRoute] Checking authorization...");
-        // First check if we just logged in (sessionStorage has fresh data)
         const cachedUser = sessionStorage.getItem('akouma_auth_user');
         if (cachedUser) {
           try {

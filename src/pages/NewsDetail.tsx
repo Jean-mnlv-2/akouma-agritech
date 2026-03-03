@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,23 @@ import { ArrowLeft, Calendar, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+
+interface RawArticleData {
+  id: string;
+  title: string;
+  excerpt?: string;
+  description?: string;
+  content?: string;
+  author?: string;
+  author_name?: string;
+  createdAt?: string;
+  created_at?: string;
+  date?: string;
+  category?: string;
+  imageUrl?: string;
+  image_url?: string;
+  read_time?: number;
+}
 
 interface Article {
   id: string;
@@ -23,25 +40,26 @@ interface Article {
 
 interface RelatedArticle {
   id: string;
+  slug: string;
   title: string;
   image: string;
   date: string;
 }
 
 const NewsDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch article data from backend
-  const fetchArticle = async () => {
-    if (!id) return;
+  const fetchArticle = useCallback(async () => {
+    if (!slug) return;
     
     try {
       setLoading(true);
-      const res = await fetch(`/api/news/${id}`, { credentials: 'include' });
+      const res = await fetch(`/api/news/slug/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch article');
-      const { data } = await res.json();
+      const { data } = (await res.json()) as { data: RawArticleData };
       
       const normalized: Article = {
         id: data.id,
@@ -49,7 +67,7 @@ const NewsDetail = () => {
         excerpt: data.excerpt || data.description || '',
         content: data.content || '',
         author: data.author || data.author_name || 'AKOUMA Team',
-        date: data.createdAt || data.created_at || data.date,
+        date: data.createdAt || data.created_at || data.date || new Date().toISOString(),
         category: data.category || 'Général',
         image: data.imageUrl || data.image_url || '/logo-ak.png',
         readTime: String(data.read_time || 5) + ' min',
@@ -64,18 +82,19 @@ const NewsDetail = () => {
           const relBody = await relRes.json();
           const relItems = Array.isArray(relBody) ? relBody : relBody.data;
           const related: RelatedArticle[] = (relItems || [])
-            .filter((it: any) => String(it.id) !== String(normalized.id))
+            .filter((it: RawArticleData) => String(it.id) !== String(normalized.id))
             .slice(0, 4)
-            .map((it: any) => ({
+            .map((it: RawArticleData) => ({
               id: String(it.id),
+              slug: (it as any).slug || String(it.id),
               title: it.title,
               image: it.imageUrl || it.image_url || '/logo-ak.png',
-              date: it.createdAt || it.created_at || new Date().toISOString(),
+              date: it.createdAt || it.created_at || it.date || new Date().toISOString(),
             }));
           normalized.relatedArticles = related;
         }
-      } catch (_) {
-        // ignore related errors
+      } catch (err) {
+        console.warn('Error fetching related articles:', err);
       }
 
       setArticle(normalized);
@@ -85,11 +104,11 @@ const NewsDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug]);
 
   useEffect(() => {
     fetchArticle();
-  }, [id]);
+  }, [fetchArticle]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -243,7 +262,7 @@ const NewsDetail = () => {
                       return (
                         <Link 
                           key={related.id} 
-                          to={`/news/${related.id}`} 
+                          to={`/news/${related.slug}`} 
                           className="block group hover:bg-primary/5 p-3 rounded-lg transition-all duration-300"
                           style={{ transitionDelay: `${delay}ms` }}
                         >

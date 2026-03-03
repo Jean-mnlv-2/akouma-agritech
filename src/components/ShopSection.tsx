@@ -9,6 +9,7 @@ import { useI18n } from '@/i18n/i18n';
 
 interface Product {
   id: string;
+  slug: string;
   name: string;
   description: string;
   price: number;
@@ -25,7 +26,6 @@ interface Product {
 const ShopSection = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_currentIndex, setCurrentIndex] = useState(0);
   const { t } = useI18n();
 
@@ -37,6 +37,7 @@ const ShopSection = () => {
         const record = item as Record<string, unknown>;
         return {
           id: record.id as string,
+          slug: (record.slug as string) || String(record.id),
           name: record.name as string,
           description: record.description as string,
           price: (record.price_fcfa as number) || 0,
@@ -50,8 +51,7 @@ const ShopSection = () => {
           reviews: (record.reviews_count as number) || 0,
         };
       });
-      setProducts(normalizedProducts.slice(0, 8)); // Limiter à 8 produits
-      setLoading(false);
+      setProducts(normalizedProducts.slice(0, 8));
     },
     enabled: true,
   });
@@ -198,7 +198,7 @@ const ShopSection = () => {
                       )}
                     </div>
                     <Button variant="default" size="sm" asChild>
-                      <Link to={`/shop/${products[0].id}`}>
+                      <Link to={`/shop/${products[0].slug}`}>
                         <ShoppingCart className="w-4 h-4 mr-1" />
                         {t('shop.add_to_cart')}
                       </Link>
@@ -287,7 +287,7 @@ const ShopSection = () => {
                         className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200"
                         asChild
                       >
-                        <Link to={`/shop/${product.id}`}>
+                        <Link to={`/shop/${product.slug}`}>
                           <ShoppingCart className="w-4 h-4 mr-2" />
                           {product.inStock ? t('shop.add_to_cart') : t('shop.out_of_stock')}
                         </Link>

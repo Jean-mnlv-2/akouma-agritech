@@ -24,6 +24,7 @@ model User {
   reminderLogs     ReminderLog[]
   assignedTasks    Task[]                @relation("TaskAssignedTo")
   createdTasks     Task[]                @relation("TaskCreatedBy")
+  reviews          Review[]
 }
 
 model Country {
@@ -35,15 +36,53 @@ model Country {
 }
 
 model Seed {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  price       Decimal  @db.Decimal(12, 2)
-  stock       Int      @default(0)
-  imageUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  slug        String   @unique
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  description          String
+  category             String?  @default("Général")
+  variety              String?
+  price                Decimal  @db.Decimal(12, 2)
+  unit                 String?  @default("kg")
+  stock                Int      @default(0)
+  imageUrl             String?
+  availability         String?  @default("En stock")
+  harvestTime          String?
+  yield                String?
+  features             String[] @default([])
+  fullDescription      String?
+  origin               String?
+  purity               String?
+  germination          String?
+  moisture             String?
+  packaging            String?
+  soilType             String?
+  plantingDepth        String?
+  spacing              String?
+  watering             String?
+  fertilizer           String?
+  diseases             String[] @default([])
+  plantingInstructions String?
+  careInstructions     String?
+  rating               Decimal  @default(0) @db.Decimal(2, 1)
+  totalReviews         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  slug                 String   @unique
+  reviews              Review[]
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int
+  comment   String?
+  userId    String
+  seedId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  seed      Seed     @relation(fields: [seedId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seedId])
 }
 
 model Course {
@@ -392,6 +431,9 @@ model ContactSettings {
   xUrl           String?  @map("x_url") @db.VarChar(255)
   websiteUrl     String?  @map("website_url") @db.VarChar(255)
   telegramUrl    String?  @map("telegram_url") @db.VarChar(255)
+  supportEmail   String?  @map("support_email") @db.VarChar(255)
+  businessHours  String?  @map("business_hours") @db.Text
+  mapUrl         String?  @map("map_url") @db.Text
   updatedAt      DateTime @updatedAt @map("updated_at")
   createdAt      DateTime @default(now()) @map("created_at")
 

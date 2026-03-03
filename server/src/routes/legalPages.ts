@@ -13,14 +13,14 @@ legalPagesRouter.get('/', async (_req: Request, res: Response) => {
 legalPagesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   const { title, content, slug, isActive } = req.body || {};
   if (!title || !content || !slug) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.legalPage.create({ data: { title, content, slug, isActive: isActive ?? true } });
+  const created = await prisma.legalPage.create({ data: { title, content, slug, isActive: isActive ?? true } as any });
   res.status(201).json({ data: created });
 });
 
 legalPagesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { title, content, slug, isActive } = req.body || {};
-  const updated = await prisma.legalPage.update({ where: { id }, data: { title, content, slug, isActive } });
+  const updated = await prisma.legalPage.update({ where: { id }, data: { title, content, slug, isActive } as any });
   res.json({ data: updated });
 });
 
