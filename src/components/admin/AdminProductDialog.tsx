@@ -83,11 +83,11 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         gallery_urls: '',
         features: '',
         specifications: '',
-        in_stock: product.in_stock || true,
-        is_published: product.is_published || true,
-        is_featured: product.is_featured || false,
-        is_bestseller: product.is_bestseller || false,
-        is_new: product.is_new || false,
+        in_stock: !!product.in_stock,
+        is_published: !!product.is_published,
+        is_featured: !!product.is_featured,
+        is_bestseller: !!product.is_bestseller,
+        is_new: !!product.is_new,
         slug: (product as any).slug || slugify(product.name || '')
       });
       setGalleryUrls([]);
@@ -108,8 +108,8 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         gallery_urls: '',
         features: '',
         specifications: '',
-        in_stock: true,
-        is_published: true,
+        in_stock: false,
+        is_published: false,
         is_featured: false,
         is_bestseller: false,
         is_new: false,
@@ -137,7 +137,10 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
       stock: formData.stock_quantity || 0,
       imageUrl: formData.image_url || galleryUrls[0] || null,
       gallery: galleryUrls.length ? galleryUrls : undefined,
-      isActive: formData.is_published !== false,
+      isActive: formData.in_stock,
+      isPublished: formData.is_published,
+      isFeatured: formData.is_featured,
+      isNew: formData.is_new,
       slug,
       _ui: { features, specifications, original_price_fcfa: formData.original_price_fcfa, in_stock: formData.in_stock, is_featured: formData.is_featured, is_bestseller: formData.is_bestseller, is_new: formData.is_new, gallery_urls_legacy: formData.gallery_urls }
     };
@@ -352,10 +355,22 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center space-x-2"><Switch id="in_stock" checked={formData.in_stock} onCheckedChange={(checked) => setFormData({ ...formData, in_stock: checked })} /><Label htmlFor="in_stock">En stock</Label></div>
-            <div className="flex items-center space-x-2"><Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} /><Label htmlFor="is_published">Publié</Label></div>
-            <div className="flex items-center space-x-2"><Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} /><Label htmlFor="is_featured">Mis en avant</Label></div>
-            <div className="flex items-center space-x-2"><Switch id="is_new" checked={formData.is_new} onCheckedChange={(checked) => setFormData({ ...formData, is_new: checked })} /><Label htmlFor="is_new">Nouveau</Label></div>
+            <div className="flex items-center space-x-2">
+              <Switch id="in_stock" checked={formData.in_stock} onCheckedChange={(checked) => setFormData({ ...formData, in_stock: checked })} />
+              <Label htmlFor="in_stock">En stock</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} />
+              <Label htmlFor="is_published">Publié</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} />
+              <Label htmlFor="is_featured">Mis en avant</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_new" checked={formData.is_new} onCheckedChange={(checked) => setFormData({ ...formData, is_new: checked })} />
+              <Label htmlFor="is_new">Nouveau</Label>
+            </div>
           </div>
           <div className="flex justify-end space-x-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>

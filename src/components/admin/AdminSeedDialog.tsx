@@ -39,6 +39,8 @@ interface Seed {
   watering: string;
   fertilizer: string;
   diseases: string | string[];
+  isPublished?: boolean;
+  isFeatured?: boolean;
   is_published: boolean;
   is_featured: boolean;
   rating: number;
@@ -126,8 +128,8 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         watering: seed.watering || '',
         fertilizer: seed.fertilizer || '',
         diseases: Array.isArray(seed.diseases) ? seed.diseases.join(', ') : (seed.diseases || ''),
-        is_published: seed.is_published !== undefined ? seed.is_published : true,
-        is_featured: !!seed.is_featured,
+        is_published: seed.is_published ?? seed.isPublished ?? false,
+        is_featured: !!(seed.is_featured ?? seed.isFeatured),
         slug: seed.slug || slugify(seed.name || '')
       });
       setGalleryUrls(seed.image_url ? [seed.image_url] : []); // simplified for now
@@ -161,7 +163,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         watering: '',
         fertilizer: '',
         diseases: '',
-        is_published: true,
+        is_published: false,
         is_featured: false,
         slug: ''
       });

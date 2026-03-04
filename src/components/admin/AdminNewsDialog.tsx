@@ -90,7 +90,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
       category: formData.category || null,
       imageUrl: formData.image_url || null,
       isPublished: formData.is_published || false,
-      // is_featured/views_count non supportés côté modèle -> ignorer
+      isFeatured: formData.is_featured || false,
       slug,
     };
     onSave(payload);

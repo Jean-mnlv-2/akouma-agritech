@@ -110,7 +110,8 @@ export function AdminSeeds() {
         stock: seedData.stock_quantity ?? seedData.stock ?? 0,
         availability: seedData.availability || null,
         imageUrl: seedData.image_url ?? seedData.imageUrl ?? null,
-        isPublished: seedData.is_published ?? seedData.isPublished ?? true,
+        isPublished: seedData.is_published ?? seedData.isPublished ?? false,
+        isFeatured: seedData.is_featured ?? seedData.isFeatured ?? false,
         slug: seedData.slug || undefined,
         // New enriched fields
         harvestTime: seedData.harvest_time ?? seedData.harvestTime ?? null,

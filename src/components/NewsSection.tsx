@@ -32,7 +32,10 @@ const NewsSection = () => {
   useContentSync({
     contentType: 'news',
     onUpdate: (data) => {
-      const normalizedNews = (data as Record<string, unknown>[]).map((item) => ({
+      const rawItems = (data as Record<string, any>[]) || [];
+      const publishedItems = rawItems.filter(item => item.isPublished || item.is_published);
+      
+      const normalizedNews = publishedItems.map((item) => ({
         id: String(item.id),
         slug: (item.slug as string) || String(item.id),
         title: item.title as string,
@@ -40,12 +43,19 @@ const NewsSection = () => {
         content: item.content as string,
         author: item.author as string || item.author_name as string || 'AKOUMA Team',
         image: item.imageUrl as string || item.image_url as string || '/placeholder.svg',
-        featured: item.isPublished as boolean || item.is_featured as boolean || false,
+        featured: !!(item.isFeatured || item.is_featured),
         date: item.createdAt as string || item.created_at as string,
         category: item.category as string || 'Général',
         read_time: item.read_time as number || 5,
       }));
-      setNews(normalizedNews.slice(0, 6)); // Limiter à 6 actualités
+
+      const sortedNews = [...normalizedNews].sort((a, b) => {
+        if (a.featured && !b.featured) return -1;
+        if (!a.featured && b.featured) return 1;
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+
+      setNews(sortedNews.slice(0, 6));
       setLoading(false);
     },
     enabled: true,

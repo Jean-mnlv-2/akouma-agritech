@@ -102,8 +102,9 @@ const tabs = [
 ];
 
 function AdminContent() {
-  const [user, setUser] = useState<{ email?: string; role?: string } | null>(null);
+  const [user, setUser] = useState<{ email?: string; role?: string; allowedModules?: string[] } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
@@ -117,6 +118,92 @@ function AdminContent() {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await api.auth.getUser();
+        if (!isMounted) return;
+        
+        if (!user) {
+          navigate('/auth');
+          return;
+        }
+
+        setUser({ 
+          email: user.email, 
+          role: user.role,
+          allowedModules: user.allowedModules || [] 
+        });
+        
+        const isAuthorizedAdmin = user.role === 'admin';
+        const isAuthorizedSupervisor = user.role === 'supervisor';
+        
+        if (!isAuthorizedAdmin && !isAuthorizedSupervisor) {
+          toast({ title: "Accès refusé", description: "Vous n'avez pas les permissions pour accéder à cette page.", variant: "destructive" });
+          navigate('/auth');
+          return;
+        }
+
+        setIsAdmin(isAuthorizedAdmin);
+        setIsSupervisor(isAuthorizedSupervisor);
+        
+        // Si c'est un superviseur, on le redirige vers son premier module autorisé s'il n'est pas sur 'users'
+        if (isAuthorizedSupervisor && !isAuthorizedAdmin) {
+          const modules = user.allowedModules || [];
+          if (modules.length > 0 && !modules.includes('users')) {
+            setActiveTab(modules[0]);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error checking auth:', error);
+          navigate('/auth');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    checkAuth();
+    return () => { isMounted = false; };
+  }, [navigate, toast]);
+
+  // Filtrer les onglets selon les permissions
+  const visibleTabs = tabs.filter(tab => {
+    if (isAdmin) return true;
+    if (isSupervisor) {
+      return user?.allowedModules?.includes(tab.value);
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDashboardStats = async () => {
+      try {
+        const body = await api.request('GET', '/api/stats');
+        if (!isMounted) return;
+        const s = body?.data || {};
+        setStats({
+          totalUsers: Number(s.totalUsers || 0),
+          totalCourses: Number(s.totalCourses || 0),
+          totalNews: Number(s.totalNews || 0),
+          totalSeeds: Number(s.totalSeeds || 0),
+          totalProducts: Number(s.totalProducts || 0),
+          totalSubmissions: Number(s.totalSubmissions || 0),
+        });
+      } catch (error) {
+        if (isMounted) console.error('Error fetching dashboard stats:', error);
+      }
+    };
+
+    if (isAdmin || isSupervisor) { fetchDashboardStats(); }
+    return () => { isMounted = false; };
+  }, [isAdmin, isSupervisor]);
+
+  const handleLogout = async () => { await api.auth.signOut(); navigate('/'); };
 
   // Configuration des statistiques
   const statsConfig = [
@@ -164,68 +251,6 @@ function AdminContent() {
     }
   ];
 
-  useEffect(() => {
-    let isMounted = true;
-    const checkAuth = async () => {
-      try {
-        const { data: { user } } = await api.auth.getUser();
-        if (!isMounted) return;
-        
-        if (!user) {
-          navigate('/auth');
-          return;
-        }
-
-        setUser({ email: user.email, role: user.role });
-        const isAuthorized = user.role === 'admin' || user.role === 'supervisor';
-        
-        if (!isAuthorized) {
-          toast({ title: "Accès refusé", description: "Vous n'avez pas les permissions pour accéder à cette page.", variant: "destructive" });
-          navigate('/auth');
-          return;
-        }
-
-        setIsAdmin(true);
-      } catch (error) {
-        if (isMounted) {
-          console.error('Error checking auth:', error);
-          navigate('/auth');
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    checkAuth();
-    return () => { isMounted = false; };
-  }, [navigate, toast]);
-
-  useEffect(() => {
-    let isMounted = true;
-    const fetchDashboardStats = async () => {
-      try {
-        const body = await api.request('GET', '/api/stats');
-        if (!isMounted) return;
-        const s = body?.data || {};
-        setStats({
-          totalUsers: Number(s.totalUsers || 0),
-          totalCourses: Number(s.totalCourses || 0),
-          totalNews: Number(s.totalNews || 0),
-          totalSeeds: Number(s.totalSeeds || 0),
-          totalProducts: Number(s.totalProducts || 0),
-          totalSubmissions: Number(s.totalSubmissions || 0),
-        });
-      } catch (error) {
-        if (isMounted) console.error('Error fetching dashboard stats:', error);
-      }
-    };
-
-    if (isAdmin) { fetchDashboardStats(); }
-    return () => { isMounted = false; };
-  }, [isAdmin]);
-
-  const handleLogout = async () => { await api.auth.signOut(); navigate('/'); };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background" translate="no">
@@ -237,13 +262,31 @@ function AdminContent() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isSupervisor) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background" translate="no">
         <p className="text-muted-foreground">Accès non autorisé.</p>
       </div>
     );
   }
+
+  // Filtrer les statistiques pour les superviseurs
+  const visibleStats = statsConfig.filter(stat => {
+    if (isAdmin) return true;
+    if (isSupervisor) {
+      const moduleMap: Record<string, string> = {
+        "Utilisateurs": "users",
+        "Cours": "courses",
+        "Actualités": "news",
+        "Semences": "seeds",
+        "Produits": "products",
+        "Soumissions": "submissions"
+      };
+      const moduleKey = moduleMap[stat.title];
+      return user?.allowedModules?.includes(moduleKey);
+    }
+    return false;
+  });
 
   return (
     <div className="min-h-screen bg-background admin-responsive" translate="no">
@@ -257,7 +300,7 @@ function AdminContent() {
               <div className="flex items-center space-x-2 md:space-x-4">
                 <Crown className="admin-icon-responsive-lg text-primary flex-shrink-0" />
                 <div>
-                  <h1 className="admin-text-responsive-xl font-bold text-foreground">Dashboard Admin</h1>
+                  <h1 className="admin-text-responsive-xl font-bold text-foreground">Dashboard {isAdmin ? 'Admin' : 'Superviseur'}</h1>
                   <p className="admin-text-responsive-sm text-muted-foreground">Gérez votre plateforme AgriTech</p>
                 </div>
               </div>
@@ -283,14 +326,14 @@ function AdminContent() {
       <div className="container mx-auto px-4 py-6">
         {/* Dashboard Stats */}
         <div className="admin-grid-responsive admin-grid-responsive-6 mb-8">
-          {statsConfig.map((stat) => (<StatCard key={`stat-${stat.title}`} {...stat} className="admin-card-mobile" />))}
+          {visibleStats.map((stat) => (<StatCard key={`stat-${stat.title}`} {...stat} className="admin-card-mobile" />))}
         </div>
 
         {/* Tabs */}
         <div className="admin-space-responsive-md">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="flex flex-wrap h-auto w-full bg-muted/30 p-1 justify-start gap-1 mb-6 border border-border/50">
-              {tabs.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <TabsTrigger 
                   key={`trigger-${tab.value}`} 
                   value={tab.value} 
@@ -303,22 +346,22 @@ function AdminContent() {
             </TabsList>
 
             <div className="mt-6">
-              {activeTab === 'users' && <AdminUserManagement />}
-              {activeTab === 'orders' && <AdminOrders />}
-              {activeTab === 'courses' && <AdminCourses />}
-              {activeTab === 'course-previews' && <AdminCoursePreviews />}
-              {activeTab === 'reminder-logs' && <AdminReminderLogs />}
-              {activeTab === 'news' && <AdminNews />}
-              {activeTab === 'seeds' && <AdminSeeds />}
-              {activeTab === 'products' && <AdminProducts />}
-              {activeTab === 'legal' && <AdminLegalPages />}
-              {activeTab === 'partners' && <AdminPartners />}
-              {activeTab === 'donations-content' && <AdminDonationsContent />}
-              {activeTab === 'careers' && <AdminCareers />}
-              {activeTab === 'events' && <AdminEvents />}
-              {activeTab === 'livestreams' && <AdminLiveStreams />}
-              {activeTab === 'submissions' && <AdminSubmissions />}
-              {activeTab === 'contact-settings' && <AdminContactSettings />}
+              {(activeTab === 'users' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('users')))) && <AdminUserManagement />}
+              {(activeTab === 'orders' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('orders')))) && <AdminOrders />}
+              {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && <AdminCourses />}
+              {(activeTab === 'course-previews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-previews')))) && <AdminCoursePreviews />}
+              {(activeTab === 'reminder-logs' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reminder-logs')))) && <AdminReminderLogs />}
+              {(activeTab === 'news' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('news')))) && <AdminNews />}
+              {(activeTab === 'seeds' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('seeds')))) && <AdminSeeds />}
+              {(activeTab === 'products' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('products')))) && <AdminProducts />}
+              {(activeTab === 'legal' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('legal')))) && <AdminLegalPages />}
+              {(activeTab === 'partners' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('partners')))) && <AdminPartners />}
+              {(activeTab === 'donations-content' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('donations-content')))) && <AdminDonationsContent />}
+              {(activeTab === 'careers' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('careers')))) && <AdminCareers />}
+              {(activeTab === 'events' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('events')))) && <AdminEvents />}
+              {(activeTab === 'livestreams' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('livestreams')))) && <AdminLiveStreams />}
+              {(activeTab === 'submissions' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('submissions')))) && <AdminSubmissions />}
+              {(activeTab === 'contact-settings' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('contact-settings')))) && <AdminContactSettings />}
             </div>
           </Tabs>
         </div>

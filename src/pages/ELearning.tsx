@@ -76,6 +76,15 @@ const ELearning = () => {
 
   const [liveStreams, setLiveStreams] = useState<any[]>([]);
   const [_loadingStreams, setLoadingStreams] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await api.auth.getUser();
+      setCurrentUser(data?.user || null);
+    };
+    checkUser();
+  }, []);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -518,7 +527,14 @@ const ELearning = () => {
 
                     {/* Price & Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <span className="text-xl font-bold text-primary">{course.price === "Gratuit" || course.price === "0" ? t("elearning.free") : `${course.price} FCFA`}</span>
+                      <div className="flex flex-col">
+                        <span className="text-xl font-bold text-primary">
+                          {course.price === "Gratuit" || course.price === "0" ? "Mode Libre" : `${course.price} FCFA`}
+                        </span>
+                        {!currentUser && (course.price !== "Gratuit" && course.price !== "0") && (
+                          <span className="text-[10px] text-muted-foreground italic">Connectez-vous pour voir plus</span>
+                        )}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <Button variant="outline" size="sm" asChild className="hover:scale-105 transition-transform">
@@ -527,9 +543,17 @@ const ELearning = () => {
                           {t("elearning.view_program")}
                         </Link>
                       </Button>
-                      <Button size="sm" onClick={() => setShowEnrollPopup(true)} className="hover:scale-105 transition-transform">
-                        <UserPlus className="w-4 h-4 mr-1" />
-                        {t("elearning.enroll")}
+                      <Button 
+                        size="sm" 
+                        variant={currentUser ? "default" : "nature"}
+                        onClick={() => currentUser ? setShowEnrollPopup(true) : navigate('/auth')} 
+                        className="hover:scale-105 transition-transform"
+                      >
+                        {currentUser ? (
+                          <><UserPlus className="w-4 h-4 mr-1" />{t("elearning.enroll")}</>
+                        ) : (
+                          <><PlayCircle className="w-4 h-4 mr-1" />Démarrer</>
+                        )}
                       </Button>
                     </div>
                     {(course.isPreviewAvailable ?? false) && (
