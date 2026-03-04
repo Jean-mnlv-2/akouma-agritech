@@ -25,6 +25,7 @@ interface Product {
   is_copy_protected: boolean;
   rating: number;
   total_reviews: number;
+  gallery?: string[];
 }
 
 interface AdminProductDialogProps {
@@ -82,7 +83,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         warranty_info: (product as any).warranty_info || '',
         shipping_info: (product as any).shipping_info || '',
         image_url: (product as any).imageUrl || (product as any).image_url || '',
-        gallery_urls: Array.isArray((product as any).gallery) ? (product as any).gallery.join(',') : ((product as any).gallery_urls || ''),
+        gallery_urls: Array.isArray(product.gallery) ? product.gallery.join(',') : ((product as any).gallery_urls || ''),
         features: Array.isArray((product as any).features) ? (product as any).features.join(',') : ((product as any).features || ''),
         specifications: typeof (product as any).specifications === 'object' ? JSON.stringify((product as any).specifications) : ((product as any).specifications || ''),
         in_stock: !!product.in_stock,
@@ -93,7 +94,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         is_copy_protected: !!product.is_copy_protected,
         slug: (product as any).slug || slugify(product.name || '')
       });
-      setGalleryUrls(Array.isArray((product as any).gallery) ? (product as any).gallery : []);
+      setGalleryUrls(Array.isArray(product.gallery) ? product.gallery : []);
       setPreviewUrl((product as any).imageUrl || (product as any).image_url || null);
     } else {
       setFormData({

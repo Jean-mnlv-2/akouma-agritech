@@ -134,6 +134,7 @@ model ShopProduct {
   stock       Int      @default(0)
   category    String?
   imageUrl    String?
+  gallery     String[] @default([])
   isActive    Boolean  @default(true)
   isPublished Boolean  @default(false)
   isFeatured  Boolean  @default(false)

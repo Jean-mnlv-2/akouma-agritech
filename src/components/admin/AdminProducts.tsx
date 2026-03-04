@@ -17,6 +17,7 @@ interface ProductRow {
   price?: number;
   stock?: number;
   imageUrl?: string;
+  gallery?: string[];
   isActive?: boolean;
   // legacy for UI compatibility
   price_fcfa?: number;
@@ -116,6 +117,7 @@ export function AdminProducts() {
               <TableHead>Catégorie</TableHead>
               <TableHead>Prix</TableHead>
               <TableHead>Stock</TableHead>
+              <TableHead>Gallery</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -141,6 +143,9 @@ export function AdminProducts() {
                 <TableCell>{product.category}</TableCell>
                 <TableCell>{Number(product.price_fcfa ?? product.price ?? 0).toLocaleString()} FCFA</TableCell>
                 <TableCell>{product.stock_quantity ?? product.stock ?? 0}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{product.gallery?.length || 0} images</Badge>
+                </TableCell>
                 <TableCell>
                   <Badge variant={(product.is_published ?? product.isActive) ? 'default' : 'secondary'}>
                     {(product.is_published ?? product.isActive) ? 'Publié' : 'Brouillon'}
