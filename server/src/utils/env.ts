@@ -16,14 +16,14 @@ const DEFAULTS = {
   PORT: 4000,
   JWT_SECRET: 'dev_secret_change_me',
   DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/akouma?schema=public',
-  FRONTEND_ORIGIN: 'http://localhost:8080,http://localhost:5173',
+  FRONTEND_ORIGINS: 'http://localhost:8080,http://localhost:5173',
   DEFAULT_ADMIN_EMAIL: 'admin@akouma.test',
   DEFAULT_ADMIN_PASSWORD: 'Admin123!',
   DEFAULT_ADMIN_FULL_NAME: 'AKOUMA Admin',
 };
 
 function readEnv(key: string, fallback?: FallbackOptions): string {
-  const value = process.env[key];
+  const value = process.env[key] || process.env[key.replace(/S$/, '')];
   if (value && value.trim().length > 0) {
     return value.trim();
   }
@@ -47,9 +47,9 @@ function readNumber(key: string, defaultValue: number): number {
 }
 
 const PORT = readNumber('PORT', DEFAULTS.PORT);
-const FRONTEND_ORIGIN_RAW = readEnv('FRONTEND_ORIGIN', {
-  defaultValue: DEFAULTS.FRONTEND_ORIGIN,
-  description: DEFAULTS.FRONTEND_ORIGIN,
+const FRONTEND_ORIGIN_RAW = readEnv('FRONTEND_ORIGINS', {
+  defaultValue: DEFAULTS.FRONTEND_ORIGINS,
+  description: DEFAULTS.FRONTEND_ORIGINS,
 });
 
 const FRONTEND_ORIGINS = FRONTEND_ORIGIN_RAW.split(',')
