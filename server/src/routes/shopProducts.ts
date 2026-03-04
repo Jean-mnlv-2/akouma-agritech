@@ -47,11 +47,12 @@ shopProductsRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { name, slug, description, price, stock, category, imageUrl, isActive, isPublished, isFeatured, isNew, isCopyProtected } = req.body || {};
+  const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected } = req.body || {};
   if (!name || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.shopProduct.create({
     data: { 
       name, slug, description, price, stock: stock ?? 0, category, imageUrl, 
+      gallery: Array.isArray(gallery) ? gallery : [],
       isActive: isActive ?? true,
       isPublished: Boolean(isPublished),
       isFeatured: Boolean(isFeatured),
@@ -64,11 +65,13 @@ shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: 
 
 shopProductsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { name, slug, description, price, stock, category, imageUrl, isActive, isPublished, isFeatured, isNew, isCopyProtected } = req.body || {};
+  const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected } = req.body || {};
   const updated = await prisma.shopProduct.update({
     where: { id },
     data: { 
-      name, slug, description, price, stock, category, imageUrl, isActive,
+      name, slug, description, price, stock, category, imageUrl, 
+      gallery: Array.isArray(gallery) ? gallery : undefined,
+      isActive,
       isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
       isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured),
       isNew: isNew === undefined ? undefined : Boolean(isNew),
