@@ -11,10 +11,50 @@ contentSubmissionsRouter.get('/', authRequired, adminOnly, async (_req: Request,
 });
 
 contentSubmissionsRouter.post('/', async (req: Request, res: Response) => {
-  const { title, content, author, email } = req.body || {};
-  if (!title || !content || !author || !email) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.contentSubmission.create({ data: { title, content, author, email, status: 'pending' } });
-  res.status(201).json({ data: created });
+  const { 
+    title, description, content, name, author, email, phone, organization, 
+    content_type, contentType, category, duration, target_audience, targetAudience, 
+    file_url, fileUrl 
+  } = req.body || {};
+  
+  const finalTitle = title;
+  const finalContent = content || description;
+  const finalAuthor = author || name;
+  const finalEmail = email;
+  const finalPhone = phone;
+  const finalOrganization = organization;
+  const finalContentType = contentType || content_type;
+  const finalCategory = category;
+  const finalDuration = duration;
+  const finalTargetAudience = targetAudience || target_audience;
+  const finalFileUrl = fileUrl || file_url;
+
+  if (!finalTitle || !finalContent || !finalAuthor || !finalEmail) {
+    return res.status(400).json({ error: 'missing fields' });
+  }
+
+  try {
+    const created = await prisma.contentSubmission.create({ 
+      data: { 
+        title: finalTitle, 
+        content: finalContent, 
+        author: finalAuthor, 
+        email: finalEmail,
+        phone: finalPhone || null,
+        organization: finalOrganization || null,
+        contentType: finalContentType || null,
+        category: finalCategory || null,
+        duration: finalDuration || null,
+        targetAudience: finalTargetAudience || null,
+        fileUrl: finalFileUrl || null,
+        status: 'pending' 
+      } 
+    });
+    res.status(201).json({ data: created });
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'Bad request';
+    res.status(400).json({ error });
+  }
 });
 
 contentSubmissionsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
