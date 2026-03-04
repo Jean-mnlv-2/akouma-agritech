@@ -44,12 +44,18 @@ export function AdminReminderLogs() {
           </TableHeader>
           <TableBody>
             {logs.map((log: any) => (
-              <TableRow key={log.id}>
+              <TableRow 
+                key={log.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  alert(JSON.stringify(log, null, 2));
+                }}
+              >
                 <TableCell>{new Date(log.sentAt ?? log.createdAt).toLocaleString('fr-FR')}</TableCell>
                 <TableCell>{log.email}</TableCell>
                 <TableCell>{log.courseId ?? '—'}</TableCell>
                 <TableCell>{log.status}</TableCell>
-                <TableCell className="max-w-[300px]">{log.error ?? '—'}</TableCell>
+                <TableCell className="max-w-[300px] truncate">{log.error ?? '—'}</TableCell>
               </TableRow>
             ))}
             {logs.length === 0 && (

@@ -31,6 +31,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
+import AdminDetailsDialog from './AdminDetailsDialog';
 
 const userSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -567,11 +568,20 @@ export function AdminUserManagement() {
                 </TableHeader>
                 <TableBody>
                   {paginatedUsers.map((user: User) => (
-                    <TableRow key={user.id}>
+                    <TableRow 
+                      key={user.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => openDetailsDialog(user)}
+                    >
                       <TableCell>
-                        <Checkbox checked={selectedIds.has(user.id)} onCheckedChange={(c) => toggleSelectOne(user.id, c)} aria-label={`Sélectionner ${user.email}`} />
+                        <Checkbox 
+                          checked={selectedIds.has(user.id)} 
+                          onCheckedChange={(c) => toggleSelectOne(user.id, c)} 
+                          aria-label={`Sélectionner ${user.email}`} 
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </TableCell>
-                      <TableCell className="py-2 md:py-4 cursor-pointer hover:text-primary transition-colors" onClick={() => openDetailsDialog(user)}>
+                      <TableCell className="py-2 md:py-4">
                         <div className="flex items-center space-x-2 md:space-x-3">
                           <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 font-bold text-primary text-[10px] md:text-xs">
                             {user.first_name?.[0]}{user.last_name?.[0]}
@@ -593,14 +603,25 @@ export function AdminUserManagement() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end space-x-1 md:space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => openDetailsDialog(user)} className="text-primary hover:text-primary/80 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDetailsDialog(user);
+                            }} 
+                            className="text-primary hover:text-primary/80 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
+                          >
                             <Eye className="w-3 h-3 md:w-4 md:h-4" />
                             <span className="hidden md:inline ml-1">Détails</span>
                           </Button>
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => openEditDialog(user)} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(user);
+                            }} 
                             disabled={!isAdmin}
                             className="text-blue-600 hover:text-blue-700 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
                           >
@@ -610,7 +631,10 @@ export function AdminUserManagement() {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => deleteUser(user.id)} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteUser(user.id);
+                            }} 
                             disabled={!isAdmin}
                             className="text-destructive hover:text-destructive h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
                           >
@@ -646,6 +670,14 @@ export function AdminUserManagement() {
           )}
         </CardContent>
       </Card>
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={closeDetailsDialog}
+        title={`${viewingUser?.first_name || ''} ${viewingUser?.last_name || ''}`}
+        data={viewingUser}
+        type="user"
+      />
     </div>
   );
 }

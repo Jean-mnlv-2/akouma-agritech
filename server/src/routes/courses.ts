@@ -42,20 +42,24 @@ coursesRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 coursesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished } = req.body || {};
+  const { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished, isCopyProtected } = req.body || {};
   if (!title || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.course.create({
-    data: { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished: Boolean(isPublished) } as any,
+    data: { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished: Boolean(isPublished), isCopyProtected: Boolean(isCopyProtected) } as any,
   });
   res.status(201).json({ data: created });
 });
 
 coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished } = req.body || {};
+  const { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished, isCopyProtected } = req.body || {};
   const updated = await prisma.course.update({
     where: { id },
-    data: { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished } as any,
+    data: { 
+      title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, 
+      isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
+      isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
+    } as any,
   });
   res.json({ data: updated });
 });

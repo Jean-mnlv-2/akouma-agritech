@@ -162,11 +162,11 @@ const ShopSection = () => {
           <div className="mb-12">
             <div className="relative bg-card rounded-2xl overflow-hidden shadow-natural group hover:shadow-xl transition-all duration-300">
               <div className="grid md:grid-cols-2 gap-0">
-                <div className="relative h-64 md:h-auto">
+                <div className="relative h-64 md:h-auto bg-muted/30 flex items-center justify-center">
                   <img
                     src={products[0].image}
                     alt={products[0].name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                   <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -235,11 +235,11 @@ const ShopSection = () => {
                   style={{ scrollSnapAlign: 'start' }}
                 >
                   <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
-                    <div className="relative overflow-hidden rounded-t-lg">
+                    <div className="relative overflow-hidden rounded-t-lg bg-muted/30 aspect-[4/3] flex items-center justify-center">
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
                         {product.isNew && (

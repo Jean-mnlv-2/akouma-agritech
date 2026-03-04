@@ -10,6 +10,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
+import { useCopyProtection } from "@/hooks/use-copy-protection";
+import CopyProtectionDialog from "@/components/CopyProtectionDialog";
+import { api } from "@/integrations/api/client";
 
 interface Course {
   id: string;
@@ -26,6 +29,7 @@ interface Course {
   category: string;
   thumbnail: string;
   isLive?: boolean;
+  isCopyProtected: boolean;
   modules: CourseModule[];
   benefits: string[];
   requirements: string[];
@@ -44,6 +48,16 @@ const CourseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const { toast } = useToast();
+
+  const { isDialogOpen, closeDialog } = useCopyProtection(
+    !!course?.isCopyProtected,
+    {
+      title: course?.title || "",
+      imageUrl: course?.thumbnail,
+      excerpt: course?.description,
+      url: window.location.href,
+    }
+  );
 
   const fetchCourse = useCallback(async () => {
     if (!slug) return;
@@ -65,6 +79,7 @@ const CourseDetail = () => {
         category: data.category || 'Général',
         thumbnail: data.thumbnailUrl || data.imageUrl || '/logo-ak.png',
         isLive: !!data.isLive,
+        isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
         modules: Array.isArray(data.modules) ? data.modules.map((m: any, idx: number) => ({
           id: String(m.id ?? idx + 1),
           title: m.title ?? `Module ${idx + 1}`,
@@ -145,6 +160,20 @@ const CourseDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {course && (
+        <CopyProtectionDialog
+          isOpen={isDialogOpen}
+          onClose={closeDialog}
+          item={{
+            title: course.title,
+            imageUrl: course.thumbnail,
+            excerpt: course.description,
+            url: window.location.href,
+          }}
+        />
+      )}
+
       <div className="container mx-auto px-6 py-12">
         {/* Breadcrumb - Enhanced */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">

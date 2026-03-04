@@ -41,8 +41,10 @@ interface Seed {
   diseases: string | string[];
   isPublished?: boolean;
   isFeatured?: boolean;
+  isCopyProtected?: boolean;
   is_published: boolean;
   is_featured: boolean;
+  is_copy_protected: boolean;
   rating: number;
   total_reviews: number;
   slug: string;
@@ -86,6 +88,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
     diseases: '',
     is_published: true,
     is_featured: false,
+    is_copy_protected: false,
     slug: ''
   });
 
@@ -130,6 +133,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         diseases: Array.isArray(seed.diseases) ? seed.diseases.join(', ') : (seed.diseases || ''),
         is_published: seed.is_published ?? seed.isPublished ?? false,
         is_featured: !!(seed.is_featured ?? seed.isFeatured),
+        is_copy_protected: !!(seed.is_copy_protected ?? seed.isCopyProtected),
         slug: seed.slug || slugify(seed.name || '')
       });
       setGalleryUrls(seed.image_url ? [seed.image_url] : []); // simplified for now
@@ -165,6 +169,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         diseases: '',
         is_published: false,
         is_featured: false,
+        is_copy_protected: false,
         slug: ''
       });
       setGalleryUrls([]);
@@ -509,6 +514,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2"><Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} /><Label htmlFor="is_published">Publié</Label></div>
             <div className="flex items-center space-x-2"><Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} /><Label htmlFor="is_featured">Mis en avant</Label></div>
+            <div className="flex items-center space-x-2"><Switch id="is_copy_protected" checked={formData.is_copy_protected} onCheckedChange={(checked) => setFormData({ ...formData, is_copy_protected: checked })} /><Label htmlFor="is_copy_protected">Protéger la copie</Label></div>
           </div>
 
           <div className="flex justify-end space-x-2 border-t pt-4">

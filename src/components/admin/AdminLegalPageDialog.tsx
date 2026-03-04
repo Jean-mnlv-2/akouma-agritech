@@ -11,58 +11,51 @@ import 'react-quill/dist/quill.snow.css';
 interface LegalPage {
   id: string;
   title: string;
-  type: string;
-  version: string;
-  effective_date: string;
-  created_at: string;
-  content?: string;
+  type?: string;
+  version?: string;
+  effectiveDate?: string;
   slug?: string;
+  content?: string;
 }
 
 interface AdminLegalPageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  page: LegalPage | null;
-  onSave: (pageData: Partial<LegalPage>) => void;
+  onSave: (data: Partial<LegalPage>) => void;
+  page?: LegalPage | null;
 }
 
 export function AdminLegalPageDialog({ open, onOpenChange, page, onSave }: AdminLegalPageDialogProps) {
   const [formData, setFormData] = useState({
     title: '',
-    type: '',
     content: '',
+    slug: '',
+    type: 'legal',
     version: '1.0',
-    effective_date: new Date().toISOString().split('T')[0],
-    slug: ''
+    effectiveDate: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
     if (page) {
       setFormData({
         title: page.title || '',
-        type: page.type || '',
         content: page.content || '',
+        slug: page.slug || '',
+        type: page.type || 'legal',
         version: page.version || '1.0',
-        effective_date: page.effective_date ? new Date(page.effective_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        slug: page.slug || slugify(page.title || '')
+        effectiveDate: page.effectiveDate ? new Date(page.effectiveDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
       });
     } else {
-      setFormData({ title: '', type: '', content: '', version: '1.0', effective_date: new Date().toISOString().split('T')[0], slug: '' });
+      setFormData({
+        title: '', content: '', slug: '', type: 'legal', version: '1.0',
+        effectiveDate: new Date().toISOString().split('T')[0]
+      });
     }
   }, [page, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const slug = formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const payload = { 
-      title: formData.title, 
-      type: formData.type,
-      content: formData.content, 
-      version: formData.version,
-      effective_date: formData.effective_date,
-      slug 
-    };
-    onSave(payload);
+    onSave(formData);
   };
 
   const quillModules = {
@@ -132,10 +125,28 @@ export function AdminLegalPageDialog({ open, onOpenChange, page, onSave }: Admin
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="effective_date">Date d'effet</Label>
-              <Input id="effective_date" type="date" value={formData.effective_date} onChange={(e) => setFormData({ ...formData, effective_date: e.target.value })} />
+              <Label htmlFor="type">Type de page</Label>
+              <select 
+                id="type"
+                className="w-full flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.type} 
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              >
+                <option value="legal">Mentions Légales</option>
+                <option value="privacy">Confidentialité</option>
+                <option value="terms">Conditions d'utilisation</option>
+                <option value="cookies">Politique de Cookies</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="version">Version</Label>
+              <Input id="version" value={formData.version} onChange={(e) => setFormData({ ...formData, version: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="effectiveDate">Date d'effet</Label>
+              <Input id="effectiveDate" type="date" value={formData.effectiveDate} onChange={(e) => setFormData({ ...formData, effectiveDate: e.target.value })} />
             </div>
           </div>
 

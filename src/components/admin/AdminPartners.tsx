@@ -231,16 +231,38 @@ export function AdminPartners() {
         <CardContent>
           <div className="space-y-3">
             {partners.map((p) => (
-              <div key={p.id} className="p-3 border rounded-md flex items-start justify-between gap-3">
+              <div 
+                key={p.id} 
+                className="p-3 border rounded-md flex items-start justify-between gap-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => onEdit(p)}
+              >
                 <div>
                   <div className="font-medium">{p.logo || '🤝'} {p.name}</div>
                   <div className="text-xs text-muted-foreground">{p.type} {p.year ? `• ${p.year}` : ''}</div>
-                  {p.description && <div className="text-sm mt-1">{p.description}</div>}
+                  {p.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: p.description }} />}
                   <div className="text-xs text-muted-foreground mt-1">{p.website} {p.contact ? `• ${p.contact}` : ''}</div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => onEdit(p)}>Modifier</Button>
-                  <Button size="sm" variant="destructive" onClick={() => onDelete(p)}>Supprimer</Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(p);
+                    }}
+                  >
+                    Modifier
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(p);
+                    }}
+                  >
+                    Supprimer
+                  </Button>
                 </div>
               </div>
             ))}

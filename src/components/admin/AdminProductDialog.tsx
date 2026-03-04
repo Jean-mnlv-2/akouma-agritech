@@ -22,6 +22,7 @@ interface Product {
   is_featured: boolean;
   is_bestseller: boolean;
   is_new: boolean;
+  is_copy_protected: boolean;
   rating: number;
   total_reviews: number;
 }
@@ -30,7 +31,7 @@ interface AdminProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product | null;
-  onSave: (productData: any) => void;
+  onSave: (productData: Record<string, unknown>) => void;
 }
 
 export function AdminProductDialog({ open, onOpenChange, product, onSave }: AdminProductDialogProps) {
@@ -54,6 +55,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
     is_featured: false,
     is_bestseller: false,
     is_new: false,
+    is_copy_protected: false,
     slug: ''
   });
 
@@ -70,28 +72,29 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
     if (product) {
       setFormData({
         name: product.name || '',
-        description: '',
+        description: (product as any).description || '',
         category: product.category || '',
         price_fcfa: product.price_fcfa || 0,
         original_price_fcfa: product.original_price_fcfa || 0,
         stock_quantity: product.stock_quantity || 0,
-        dimensions: '',
-        weight_kg: 0,
-        warranty_info: '',
-        shipping_info: '',
-        image_url: '',
-        gallery_urls: '',
-        features: '',
-        specifications: '',
+        dimensions: (product as any).dimensions || '',
+        weight_kg: (product as any).weight_kg || 0,
+        warranty_info: (product as any).warranty_info || '',
+        shipping_info: (product as any).shipping_info || '',
+        image_url: (product as any).imageUrl || (product as any).image_url || '',
+        gallery_urls: Array.isArray((product as any).gallery) ? (product as any).gallery.join(',') : ((product as any).gallery_urls || ''),
+        features: Array.isArray((product as any).features) ? (product as any).features.join(',') : ((product as any).features || ''),
+        specifications: typeof (product as any).specifications === 'object' ? JSON.stringify((product as any).specifications) : ((product as any).specifications || ''),
         in_stock: !!product.in_stock,
         is_published: !!product.is_published,
         is_featured: !!product.is_featured,
         is_bestseller: !!product.is_bestseller,
         is_new: !!product.is_new,
+        is_copy_protected: !!product.is_copy_protected,
         slug: (product as any).slug || slugify(product.name || '')
       });
-      setGalleryUrls([]);
-      setPreviewUrl(null);
+      setGalleryUrls(Array.isArray((product as any).gallery) ? (product as any).gallery : []);
+      setPreviewUrl((product as any).imageUrl || (product as any).image_url || null);
     } else {
       setFormData({
         name: '',
@@ -113,6 +116,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         is_featured: false,
         is_bestseller: false,
         is_new: false,
+        is_copy_protected: false,
         slug: ''
       });
       setGalleryUrls([]);
@@ -141,6 +145,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
       isPublished: formData.is_published,
       isFeatured: formData.is_featured,
       isNew: formData.is_new,
+      isCopyProtected: formData.is_copy_protected,
       slug,
       _ui: { features, specifications, original_price_fcfa: formData.original_price_fcfa, in_stock: formData.in_stock, is_featured: formData.is_featured, is_bestseller: formData.is_bestseller, is_new: formData.is_new, gallery_urls_legacy: formData.gallery_urls }
     };
@@ -354,7 +359,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="flex items-center space-x-2">
               <Switch id="in_stock" checked={formData.in_stock} onCheckedChange={(checked) => setFormData({ ...formData, in_stock: checked })} />
               <Label htmlFor="in_stock">En stock</Label>
@@ -365,11 +370,15 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
             </div>
             <div className="flex items-center space-x-2">
               <Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} />
-              <Label htmlFor="is_featured">Mis en avant</Label>
+              <Label htmlFor="is_featured">Vedette</Label>
             </div>
             <div className="flex items-center space-x-2">
               <Switch id="is_new" checked={formData.is_new} onCheckedChange={(checked) => setFormData({ ...formData, is_new: checked })} />
               <Label htmlFor="is_new">Nouveau</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_copy_protected" checked={formData.is_copy_protected} onCheckedChange={(checked) => setFormData({ ...formData, is_copy_protected: checked })} />
+              <Label htmlFor="is_copy_protected">Protéger la copie</Label>
             </div>
           </div>
           <div className="flex justify-end space-x-2 border-t pt-4">

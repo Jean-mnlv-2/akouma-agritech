@@ -14,8 +14,9 @@ interface LegalPage {
   title: string;
   type?: string;
   version?: string;
+  effectiveDate?: string;
   effective_date?: string;
-  created_at?: string;
+  createdAt?: string;
   slug?: string;
   content?: string;
 }
@@ -63,7 +64,7 @@ export function AdminLegalPages() {
   };
 
   const upsertMutation = useMutation({
-    mutationFn: async (payload: { data: { title: string; content: string; slug?: string }; id?: string }) => {
+    mutationFn: async (payload: { data: Partial<LegalPage>; id?: string }) => {
       if (payload.id) return api.request('PUT', `/api/legal_pages/${payload.id}`, { body: payload.data });
       return api.request('POST', '/api/legal_pages', { body: payload.data });
     },
@@ -77,9 +78,9 @@ export function AdminLegalPages() {
       toast({ title: 'Erreur', description: `Impossible de ${editingPage ? 'modifier' : 'créer'} la page`, variant: 'destructive' });
     }
   });
-  const handleSave = (pageData: { title: string; content: string; slug?: string }) => {
+  const handleSave = (pageData: Partial<LegalPage>) => {
     const id = editingPage?.id;
-    upsertMutation.mutate({ data: { title: pageData.title, content: pageData.content, slug: pageData.slug }, id });
+    upsertMutation.mutate({ data: pageData, id });
   };
 
   if (isLoading) {
@@ -115,17 +116,35 @@ export function AdminLegalPages() {
           </TableHeader>
           <TableBody>
             {legalPages.map((page) => (
-              <TableRow key={page.id}>
+              <TableRow 
+                key={page.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleEdit(page)}
+              >
                 <TableCell className="font-medium">{page.title}</TableCell>
                 <TableCell>
                   <Badge variant="outline">{page.slug}</Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(page)}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(page);
+                      }}
+                    >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(page.id)}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(page.id);
+                      }}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>

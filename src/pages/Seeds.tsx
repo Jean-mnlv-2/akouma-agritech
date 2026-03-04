@@ -245,11 +245,11 @@ const Seeds = () => {
             <div key="seeds-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {filteredProducts.map((product) => (
                 <Card key={product.id} className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden">
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+                  <div className="relative overflow-hidden bg-muted/30 aspect-square flex items-center justify-center">
+                    <img 
+                      src={product.image} 
+                      alt={product.name} 
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <Badge 

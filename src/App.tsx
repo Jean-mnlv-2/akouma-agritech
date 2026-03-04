@@ -54,6 +54,7 @@ import NotFound from "./pages/NotFound";
 import LearningDashboard from "./pages/LearningDashboard";
 import CourseLearn from "./pages/CourseLearn";
 import ResetPassword from "./pages/ResetPassword";
+import CookieConsent from "@/components/CookieConsent";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -72,6 +73,7 @@ const App = () => (
             }}
           >
             <ScrollToTop />
+            <CookieConsent />
             <Suspense fallback={<LoadingSpinner size="large" text="Chargement..." />}>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -88,6 +90,7 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />
+                <Route path="/cookies" element={<Legal />} />
                 <Route path="/careers" element={<Careers />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/confirm" element={<AuthConfirm />} />

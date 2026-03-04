@@ -210,7 +210,11 @@ export function AdminOrders() {
                     </TableHeader>
                     <TableBody>
                       {orders.map((order) => (
-                        <TableRow key={order.id}>
+                        <TableRow 
+                          key={order.id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleViewOrder(order)}
+                        >
                           <TableCell className="font-medium">{order.orderNumber}</TableCell>
                           <TableCell>
                             <div className="flex flex-col">
@@ -231,7 +235,10 @@ export function AdminOrders() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleViewOrder(order)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewOrder(order);
+                              }}
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               Voir

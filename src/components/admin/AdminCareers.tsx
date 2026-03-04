@@ -4,14 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Briefcase, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Plus, Edit, Trash2, Briefcase, Eye, EyeOff, MapPin, Search, FileText } from 'lucide-react';
 import { CareerDialog } from './CareerDialog';
+import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 
-interface Career {
+export interface Career {
   id: number;
   title: string;
+  slug: string;
   description: string;
   requirements?: string;
   location: string;
@@ -27,7 +29,9 @@ interface Career {
 export const AdminCareers = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingCareer, setEditingCareer] = useState<Career | null>(null);
+  const [viewingCareer, setViewingCareer] = useState<Career | null>(null);
   const { toast } = useToast();
 
   const { data: careers = [], isLoading } = useQuery<Career[]>({
@@ -149,7 +153,14 @@ export const AdminCareers = () => {
               </TableHeader>
               <TableBody>
                 {careers.map((career) => (
-                  <TableRow key={career.id}>
+                  <TableRow 
+                    key={career.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setViewingCareer(career);
+                      setIsDetailsOpen(true);
+                    }}
+                  >
                     <TableCell className="font-medium">{career.title}</TableCell>
                     <TableCell>{career.department || '-'}</TableCell>
                     <TableCell><div className="flex items-center space-x-1"><MapPin className="w-4 h-4 text-muted-foreground" /><span>{career.location}</span></div></TableCell>
@@ -157,9 +168,36 @@ export const AdminCareers = () => {
                     <TableCell><Badge variant={career.isPublished ? 'default' : 'secondary'}>{career.isPublished ? 'Publié' : 'Brouillon'}</Badge></TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(career)}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="outline" size="sm" onClick={() => togglePublished(career)}>{career.isPublished ? (<EyeOff className="w-4 h-4" />) : (<Eye className="w-4 h-4" />)}</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDelete(career.id)}><Trash2 className="w-4 h-4" /></Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(career);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePublished(career);
+                          }}
+                        >
+                          {career.isPublished ? (<EyeOff className="w-4 h-4" />) : (<Eye className="w-4 h-4" />)}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(career.id);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -171,6 +209,14 @@ export const AdminCareers = () => {
       </Card>
 
       <CareerDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} career={editingCareer} onSave={handleSave} />
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title={viewingCareer?.title || ''}
+        data={viewingCareer as any}
+        type="career"
+      />
     </div>
   );
 };

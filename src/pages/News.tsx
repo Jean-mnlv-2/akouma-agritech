@@ -183,7 +183,7 @@ export default function News() {
                         <img 
                           src={item.image} 
                           alt={item.title} 
-                          className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+                          className="w-full h-64 object-contain bg-muted/30 group-hover:scale-105 transition-transform duration-500" 
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <Badge className="absolute top-4 left-4 bg-yellow-500 text-white shadow-lg">{t('news.featured')}</Badge>
@@ -235,7 +235,7 @@ export default function News() {
                     <img 
                       src={item.image} 
                       alt={item.title} 
-                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500" 
+                      className="w-full h-56 object-contain bg-muted/30 group-hover:scale-105 transition-transform duration-500" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <Badge className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm shadow-lg">{item.category}</Badge>
