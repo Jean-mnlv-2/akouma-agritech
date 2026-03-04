@@ -26,14 +26,14 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
-    "resend": "^6.9.2"
-  },
-  "devDependencies": {
+    "resend": "^6.9.2",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
-    "@types/morgan": "^1.9.9",
+    "@types/morgan": "^1.9.9"
+  },
+  "devDependencies": {
     "@types/node": "^22.5.5",
     "prisma": "^6.16.1",
     "ts-node-dev": "^2.0.0",
