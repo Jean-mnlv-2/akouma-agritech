@@ -228,15 +228,38 @@ export function AdminDonationsContent() {
           </div>
           <div className="space-y-2 mt-6">
             {impacts.map((i) => (
-              <div key={i.id} className="p-3 border rounded flex items-start justify-between gap-3 bg-slate-50">
+              <div 
+                key={i.id} 
+                className="p-3 border rounded flex items-start justify-between gap-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => { setImpactEditing(i); setImpactForm(i); }}
+              >
                 <div>
                   <div className="font-medium">{i.icon || '🎯'} {i.title}</div>
                   <div className="text-xs text-muted-foreground">{i.target} • {i.progress}%</div>
                   {i.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: i.description }} />}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { setImpactEditing(i); setImpactForm(i); }}>Modifier</Button>
-                  <Button size="sm" variant="destructive" onClick={() => deleteImpact(i)}>Supprimer</Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImpactEditing(i); 
+                      setImpactForm(i);
+                    }}
+                  >
+                    Modifier
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteImpact(i);
+                    }}
+                  >
+                    Supprimer
+                  </Button>
                 </div>
               </div>
             ))}
@@ -311,15 +334,43 @@ export function AdminDonationsContent() {
           </div>
           <div className="space-y-2 mt-6">
             {stories.map((s) => (
-              <div key={s.id} className="p-3 border rounded flex items-start justify-between gap-3 bg-slate-50">
-                <div>
-                  <div className="font-medium">{s.title} {s.year ? `• ${s.year}` : ''}</div>
-                  <div className="text-xs text-muted-foreground">{s.impact}</div>
-                  {s.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: s.description }} />}
+              <div 
+                key={s.id} 
+                className="p-3 border rounded flex items-start justify-between gap-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => { setStoryEditing(s); setStoryForm(s); }}
+              >
+                <div className="flex gap-3">
+                  {s.imageUrl && (
+                    <img src={s.imageUrl} alt={s.title} className="w-12 h-12 rounded object-cover flex-shrink-0" />
+                  )}
+                  <div>
+                    <div className="font-medium">{s.title} {s.year ? `• ${s.year}` : ''}</div>
+                    <div className="text-xs text-muted-foreground">{s.impact}</div>
+                    {s.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: s.description }} />}
+                  </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { setStoryEditing(s); setStoryForm(s); }}>Modifier</Button>
-                  <Button size="sm" variant="destructive" onClick={() => deleteStory(s)}>Supprimer</Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStoryEditing(s); 
+                      setStoryForm(s);
+                    }}
+                  >
+                    Modifier
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteStory(s);
+                    }}
+                  >
+                    Supprimer
+                  </Button>
                 </div>
               </div>
             ))}

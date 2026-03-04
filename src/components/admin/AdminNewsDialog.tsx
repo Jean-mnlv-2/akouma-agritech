@@ -23,6 +23,8 @@ interface NewsArticle {
   isPublished?: boolean;
   is_published?: boolean;
   is_featured?: boolean;
+  isCopyProtected?: boolean;
+  is_copy_protected?: boolean;
   createdAt?: string;
   created_at?: string;
   imageUrl?: string | null;
@@ -48,6 +50,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
     image_url: '',
     is_published: false,
     is_featured: false,
+    is_copy_protected: false,
     slug: ''
   });
 
@@ -67,12 +70,13 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
         image_url: news.imageUrl || news.image_url || '',
         is_published: news.isPublished ?? news.is_published ?? false,
         is_featured: news.is_featured || false,
+        is_copy_protected: news.isCopyProtected ?? news.is_copy_protected ?? false,
         slug: news.slug || slugify(news.title || '')
       });
       setPreviewUrl(news.imageUrl || news.image_url || null);
     } else {
       setFormData({
-        title: '', excerpt: '', content: '', author_name: '', author_bio: '', category: '', image_url: '', is_published: false, is_featured: false, slug: ''
+        title: '', excerpt: '', content: '', author_name: '', author_bio: '', category: '', image_url: '', is_published: false, is_featured: false, is_copy_protected: false, slug: ''
       });
       setPreviewUrl(null);
     }
@@ -91,6 +95,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
       imageUrl: formData.image_url || null,
       isPublished: formData.is_published || false,
       isFeatured: formData.is_featured || false,
+      isCopyProtected: formData.is_copy_protected || false,
       slug,
     };
     onSave(payload);
@@ -218,6 +223,10 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
             <div className="flex items-center space-x-2">
               <Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} />
               <Label htmlFor="is_featured">Mis en avant</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_copy_protected" checked={formData.is_copy_protected} onCheckedChange={(checked) => setFormData({ ...formData, is_copy_protected: checked })} />
+              <Label htmlFor="is_copy_protected">Protéger la copie</Label>
             </div>
           </div>
           <div className="flex justify-end space-x-2 border-t pt-4">

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { 
+import {
   Star, 
   MessageSquare, 
   Phone, 
@@ -23,7 +23,8 @@ import {
   Droplets, 
   Zap, 
   User,
-  Heart
+  Heart,
+  Share2
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -32,6 +33,8 @@ import { api } from '@/integrations/api/client';
 import logoAk from '@/assets/logo-ak.png';
 import { useContactSettings } from '@/hooks/use-contact-settings';
 import DOMPurify from 'dompurify';
+import { useCopyProtection } from "@/hooks/use-copy-protection";
+import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 
 interface SeedProduct {
   id: string;
@@ -49,6 +52,7 @@ interface SeedProduct {
   yield: string;
   features: string[];
   fullDescription: string;
+  isCopyProtected: boolean;
   specifications: {
     origin: string;
     purity: string;
@@ -72,6 +76,36 @@ export default function SeedDetail() {
   const { toast } = useToast();
   const [product, setProduct] = useState<SeedProduct | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = async () => {
+    if (isSharing) return;
+    
+    const shareData = {
+      title: product?.name || "AKOUMA Agritech",
+      text: `Découvrez la semence ${product?.name} (${product?.variety}) sur AKOUMA Agritech.`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        setIsSharing(true);
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Lien copié",
+          description: "Le lien de la semence a été copié.",
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Share error:', error);
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [isFavorite, setIsFavorite] = useState(false);
   
@@ -80,6 +114,16 @@ export default function SeedDetail() {
   // Check if user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
+  const { isDialogOpen, closeDialog } = useCopyProtection(
+    !!product?.isCopyProtected,
+    {
+      title: product?.name || "",
+      imageUrl: product?.images?.[0],
+      excerpt: product?.description,
+      url: window.location.href,
+    }
+  );
+
   useEffect(() => {
     const cachedUser = sessionStorage.getItem('akouma_auth_user');
     setIsLoggedIn(!!cachedUser);
@@ -91,6 +135,21 @@ export default function SeedDetail() {
     try {
       const { data } = await api.request('GET', `/api/seeds/slug/${slug}`);
       
+      let images = [data.imageUrl || data.image_url || logoAk];
+      if (Array.isArray(data.images)) {
+        images = data.images;
+      } else if (typeof data.images === 'string') {
+        try {
+          const parsed = JSON.parse(data.images);
+          if (Array.isArray(parsed)) images = parsed;
+        } catch {
+          images = data.images.split(',').map((u: string) => u.trim());
+        }
+      } else if (data.gallery) {
+        if (Array.isArray(data.gallery)) images = data.gallery;
+        else images = data.gallery.split(',').map((u: string) => u.trim());
+      }
+
       setProduct({
         id: data.id,
         name: data.name,
@@ -99,7 +158,7 @@ export default function SeedDetail() {
         variety: data.variety || '',
         price: Number(data.price) || Number(data.price_fcfa) || 0,
         unit: data.unit || 'kg',
-        images: [data.imageUrl || data.image_url || logoAk],
+        images: images,
         rating: Number(data.rating) || 0,
         reviews: Number(data.totalReviews) || Number(data.total_reviews) || 0,
         availability: data.availability || 'En stock',
@@ -107,6 +166,7 @@ export default function SeedDetail() {
         yield: data.yield || data.yield_info || '8-12 tonnes/ha',
         features: Array.isArray(data.features) ? data.features : [],
         fullDescription: data.fullDescription || data.description,
+        isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
         specifications: {
           origin: data.origin || 'Local',
           purity: data.purity || '99%',
@@ -242,6 +302,19 @@ export default function SeedDetail() {
       />
       <Header />
       
+      {product && (
+        <CopyProtectionDialog
+          isOpen={isDialogOpen}
+          onClose={closeDialog}
+          item={{
+            title: product.name,
+            imageUrl: product.images[0],
+            excerpt: product.description,
+            url: window.location.href,
+          }}
+        />
+      )}
+
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
           <Link to="/seeds" className="inline-flex items-center text-primary hover:underline mb-6 group">
@@ -252,11 +325,11 @@ export default function SeedDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-100">
             {/* Image Section */}
             <div className="space-y-6">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
+              <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative group">
                 <img 
                   src={product.images[0]} 
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
+                  className="w-full h-full object-contain transition-transform hover:scale-105 duration-500"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = logoAk;
@@ -267,9 +340,9 @@ export default function SeedDetail() {
                 {product.images.map((img, idx) => (
                   <button 
                     key={idx}
-                    className="aspect-square rounded-lg overflow-hidden border-2 border-slate-100 hover:border-primary transition-colors bg-slate-50"
+                    className="aspect-square rounded-lg overflow-hidden border-2 border-slate-100 hover:border-primary transition-colors bg-slate-50 flex items-center justify-center"
                   >
-                    <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain p-1" />
                   </button>
                 ))}
               </div>
@@ -281,7 +354,11 @@ export default function SeedDetail() {
                 <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1">
                   {product.category}
                 </Badge>
-                <div className="flex items-center text-amber-500">
+                <Button variant="ghost" size="sm" onClick={handleShare} className="text-slate-500 hover:text-primary gap-2 ml-auto">
+                  <Share2 className="w-4 h-4" />
+                  Partager
+                </Button>
+                <div className="flex items-center text-amber-500 ml-4">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="ml-1 font-semibold">{product.rating.toFixed(1)}</span>
                   <span className="ml-1 text-slate-400 text-sm">({product.reviews} avis)</span>

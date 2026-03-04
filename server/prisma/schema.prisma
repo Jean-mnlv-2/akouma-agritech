@@ -69,6 +69,7 @@ model Seed {
   totalReviews         Int      @default(0)
   isPublished          Boolean  @default(false)
   isFeatured           Boolean  @default(false)
+  isCopyProtected      Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   slug                 String   @unique
@@ -101,6 +102,7 @@ model Course {
   videoUrl           String?
   isPublished        Boolean               @default(false)
   isPreviewAvailable Boolean               @default(false)
+  isCopyProtected    Boolean               @default(false)
   languages          String[]              @default(["Français"])
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
@@ -118,6 +120,7 @@ model News {
   author      String?
   isPublished Boolean  @default(false)
   isFeatured  Boolean  @default(false)
+  isCopyProtected Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   slug        String   @unique
@@ -135,19 +138,23 @@ model ShopProduct {
   isPublished Boolean  @default(false)
   isFeatured  Boolean  @default(false)
   isNew       Boolean  @default(false)
+  isCopyProtected Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   slug        String   @unique
 }
 
 model LegalPage {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String
-  slug      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  title         String
+  content       String
+  slug          String   @unique
+  type          String?  @default("legal")
+  version       String?  @default("1.0")
+  effectiveDate DateTime? @default(now())
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Partnership {

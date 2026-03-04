@@ -257,11 +257,11 @@ export default function Shop() {
                   className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden"
                   style={{ transitionDelay: `${delay}ms` }}
                 >
-                  <div className="relative overflow-hidden">
+                  <div className="relative overflow-hidden bg-muted/30 aspect-square flex items-center justify-center">
                     <img 
                       src={product.image} 
                       alt={product.name} 
-                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500" 
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <div className="absolute top-3 left-3 flex flex-col gap-2">
@@ -275,10 +275,10 @@ export default function Shop() {
                     <Badge className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm shadow-lg">{product.category}</Badge>
                   </div>
                   <CardHeader className="pb-3 relative z-10">
-                    <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                    <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-1 mb-2">
                       {product.name}
                     </CardTitle>
-                    <CardDescription className="line-clamp-2 text-sm">{product.description}</CardDescription>
+                    <CardDescription className="line-clamp-2 text-sm min-h-[40px]">{product.description?.replace(/<[^>]*>/g, '')}</CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0 relative z-10">
                     <div className="flex items-center justify-between mb-4">

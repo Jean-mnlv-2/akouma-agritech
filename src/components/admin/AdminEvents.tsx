@@ -4,14 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Calendar, MapPin, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, MapPin, Eye, EyeOff, Search, FileText } from 'lucide-react';
 import { EventDialog } from './EventDialog';
+import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 
-interface Event {
+export interface Event {
   id: number;
   title: string;
+  slug: string;
   description?: string;
   date: string;
   location: string;
@@ -24,7 +26,9 @@ interface Event {
 export const AdminEvents = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
   const { toast } = useToast();
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
@@ -135,16 +139,50 @@ export const AdminEvents = () => {
               </TableHeader>
               <TableBody>
                 {events.map((event) => (
-                  <TableRow key={event.id}>
+                  <TableRow 
+                    key={event.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setViewingEvent(event);
+                      setIsDetailsOpen(true);
+                    }}
+                  >
                     <TableCell className="font-medium">{event.title}</TableCell>
                     <TableCell>{new Date(event.date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell>
                     <TableCell><div className="flex items-center space-x-1"><MapPin className="w-4 h-4 text-muted-foreground" /><span>{event.location}</span></div></TableCell>
                     <TableCell><Badge variant={event.isPublished ? 'default' : 'secondary'}>{event.isPublished ? 'Publié' : 'Brouillon'}</Badge></TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(event)}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="outline" size="sm" onClick={() => togglePublished(event)}>{event.isPublished ? (<EyeOff className="w-4 h-4" />) : (<Eye className="w-4 h-4" />)}</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDelete(event.id)}><Trash2 className="w-4 h-4" /></Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(event);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePublished(event);
+                          }}
+                        >
+                          {event.isPublished ? (<EyeOff className="w-4 h-4" />) : (<Eye className="w-4 h-4" />)}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(event.id);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -156,6 +194,14 @@ export const AdminEvents = () => {
       </Card>
 
       <EventDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} event={editingEvent} onSave={handleSave} />
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title={viewingEvent?.title || ''}
+        data={viewingEvent as any}
+        type="event"
+      />
     </div>
   );
 };

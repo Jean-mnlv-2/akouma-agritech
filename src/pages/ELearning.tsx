@@ -27,7 +27,7 @@ import { useI18n } from "@/i18n/i18n";
 import DOMPurify from 'dompurify';
 import countryList from 'react-select-country-list';
 import TitleManager from "@/components/TitleManager";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 
 interface UICourse {
@@ -49,6 +49,7 @@ interface UICourse {
 }
 
 const ELearning = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Tous");
   const [courses, setCourses] = useState<UICourse[]>([]);

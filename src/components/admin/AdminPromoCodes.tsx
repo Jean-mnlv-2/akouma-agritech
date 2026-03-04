@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Loader2, RefreshCw, Tag } from 'lucide-react';
 import { api } from '@/integrations/api/client';
 import { AdminPromoCodeDialog } from './AdminPromoCodeDialog';
+import AdminDetailsDialog from './AdminDetailsDialog';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +29,9 @@ export function AdminPromoCodes() {
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<PromoCode | null>(null);
+  const [viewingPromo, setViewingPromo] = useState<PromoCode | null>(null);
   const { toast } = useToast();
 
   const fetchPromoCodes = useCallback(async () => {
@@ -139,7 +142,14 @@ export function AdminPromoCodes() {
             </TableHeader>
             <TableBody>
               {promoCodes.map((promo) => (
-                <TableRow key={promo.id}>
+                <TableRow 
+                  key={promo.id}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    setViewingPromo(promo);
+                    setIsDetailsOpen(true);
+                  }}
+                >
                   <TableCell className="font-bold">
                     <div className="flex items-center">
                       <Tag className="w-4 h-4 mr-2 text-primary" />
@@ -164,14 +174,24 @@ export function AdminPromoCodes() {
                     <Badge 
                       variant={promo.isActive ? "default" : "secondary"}
                       className="cursor-pointer"
-                      onClick={() => handleToggle(promo.id, promo.isActive)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggle(promo.id, promo.isActive);
+                      }}
                     >
                       {promo.isActive ? 'Actif' : 'Inactif'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(promo)}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(promo);
+                        }}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
                     </div>
@@ -195,6 +215,14 @@ export function AdminPromoCodes() {
         onOpenChange={setDialogOpen}
         promo={editingPromo}
         onSave={handleSave}
+      />
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title={viewingPromo?.code || ''}
+        data={viewingPromo as any}
+        type="promo-code"
       />
     </div>
   );

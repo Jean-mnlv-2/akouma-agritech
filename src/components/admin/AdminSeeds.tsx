@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Search, Leaf } from 'lucide-react';
 import { AdminSeedDialog } from './AdminSeedDialog';
+import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 
@@ -56,7 +57,10 @@ interface Seed {
 export function AdminSeeds() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
+  const [viewingSeed, setViewingSeed] = useState<Seed | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
   const { data: seeds = [], isLoading } = useQuery<Seed[]>({
@@ -195,7 +199,14 @@ export function AdminSeeds() {
           </TableHeader>
           <TableBody>
             {seeds.map((seed) => (
-              <TableRow key={seed.id}>
+              <TableRow 
+                key={seed.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setViewingSeed(seed);
+                  setIsDetailsOpen(true);
+                }}
+              >
                 <TableCell>
                   {seed.image_url || seed.imageUrl ? (
                     <img src={(seed.image_url || seed.imageUrl)!} alt={seed.name} className="w-10 h-10 rounded object-cover" />
@@ -218,10 +229,24 @@ export function AdminSeeds() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(seed)}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(seed);
+                      }}
+                    >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(seed.id)}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(seed.id);
+                      }}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -238,6 +263,14 @@ export function AdminSeeds() {
       </CardContent>
 
       <AdminSeedDialog open={dialogOpen} onOpenChange={setDialogOpen} seed={editingSeed as any} onSave={handleSave} />
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title={viewingSeed?.name || ''}
+        data={viewingSeed}
+        type="seed"
+      />
     </Card>
   );
 }

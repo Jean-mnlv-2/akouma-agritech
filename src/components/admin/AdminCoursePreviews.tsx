@@ -255,15 +255,28 @@ export function AdminCoursePreviews() {
             </TableHeader>
             <TableBody>
               {pageItems.map((it: PreviewItem) => (
-                <TableRow key={it.id}>
+                <TableRow 
+                  key={it.id}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    alert(JSON.stringify(it, null, 2));
+                  }}
+                >
                   <TableCell>{it.previewType?.label || it.type}</TableCell>
-                  <TableCell>{it.title}</TableCell>
-                  <TableCell className="truncate max-w-[300px]">{it.url}</TableCell>
+                  <TableCell className="font-medium">{it.title}</TableCell>
+                  <TableCell className="max-w-xs truncate text-xs text-muted-foreground">{it.url}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" asChild><a target="_blank" href={it.url} rel="noreferrer">Ouvrir</a></Button>
-                      <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(it.id)}><Trash2 className="w-4 h-4" /></Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Supprimer cet élément ?')) deleteMutation.mutate(it.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

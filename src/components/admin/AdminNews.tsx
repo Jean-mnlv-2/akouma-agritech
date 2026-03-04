@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Search, FileText } from 'lucide-react';
 import { AdminNewsDialog } from './AdminNewsDialog';
+import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 
@@ -22,7 +23,10 @@ interface NewsArticle {
 export function AdminNews() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<NewsArticle | null>(null);
+  const [viewingNews, setViewingNews] = useState<NewsArticle | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
   const { data: news = [], isLoading } = useQuery<NewsArticle[]>({
@@ -107,7 +111,14 @@ export function AdminNews() {
           </TableHeader>
           <TableBody>
             {news.map((newsItem: any) => (
-              <TableRow key={newsItem.id}>
+              <TableRow 
+                key={newsItem.id} 
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setViewingNews(newsItem);
+                  setIsDetailsOpen(true);
+                }}
+              >
                 <TableCell>
                   {newsItem.imageUrl ? (
                     <img src={newsItem.imageUrl} alt={newsItem.title} className="w-10 h-10 rounded object-cover" />
@@ -124,10 +135,24 @@ export function AdminNews() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(newsItem)}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(newsItem);
+                      }}
+                    >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(newsItem.id)}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(newsItem.id);
+                      }}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -144,6 +169,14 @@ export function AdminNews() {
       </CardContent>
 
       <AdminNewsDialog open={dialogOpen} onOpenChange={setDialogOpen} news={editingNews as any} onSave={handleSave} />
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title={viewingNews?.title || ''}
+        data={viewingNews}
+        type="news"
+      />
     </Card>
   );
 }

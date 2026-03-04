@@ -26,6 +26,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import AdminDetailsDialog from '@/components/admin/AdminDetailsDialog';
 
 const liveStreamSchema = z.object({
   title: z.string().min(1, 'Titre requis'),
@@ -44,7 +45,7 @@ const liveStreamSchema = z.object({
 type LiveStreamFormData = z.infer<typeof liveStreamSchema>;
 
 interface LiveStream {
-  id: number;
+  id: number | string;
   title: string;
   slug: string;
   instructorName: string | null;
@@ -56,6 +57,7 @@ interface LiveStream {
   category: string | null;
   thumbnailUrl: string | null;
   streamUrl?: string | null;
+  videoUrl?: string | null;
   createdAt: string;
 }
 
@@ -66,7 +68,7 @@ export default function AdminLiveStreams() {
     queryFn: async () => {
       const res = await api.request('GET', '/api/live_streams');
       const list = Array.isArray(res) ? res : res.data;
-      const sorted = (list || []).slice().sort((a: any, b: any) => {
+      const sorted = (list || []).slice().sort((a: LiveStream, b: LiveStream) => {
         const aVal = a.scheduledTime ? new Date(a.scheduledTime).getTime() : 0;
         const bVal = b.scheduledTime ? new Date(b.scheduledTime).getTime() : 0;
         return aVal - bVal;
@@ -81,9 +83,9 @@ export default function AdminLiveStreams() {
     queryFn: async () => {
       const res = await api.request('GET', '/api/profiles');
       const { data } = Array.isArray(res) ? { data: res } : res;
-      const adminUsers = (data || []).filter((user: any) => 
+      const adminUsers = (data || []).filter((user: { role: string }) => 
         user.role === 'admin' || user.role === 'supervisor'
-      ).map((user: any) => ({
+      ).map((user: { id: string, fullName: string, email: string }) => ({
         id: user.id,
         fullName: user.fullName || user.email,
         email: user.email
@@ -94,8 +96,10 @@ export default function AdminLiveStreams() {
     refetchOnWindowFocus: false,
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingStream, setEditingStream] = useState<LiveStream | undefined>(undefined);
+  const [viewingStream, setViewingStream] = useState<LiveStream | undefined>(undefined);
   const { toast } = useToast();
 
   const form = useForm<LiveStreamFormData>({
@@ -118,7 +122,7 @@ export default function AdminLiveStreams() {
   useEffect(() => { /* initial effects no longer needed due to React Query */ }, []);
 
   const upsertMutation = useMutation({
-    mutationFn: async (payload: { data: LiveStreamFormData; id?: number }) => {
+    mutationFn: async (payload: { data: LiveStreamFormData; id?: number | string }) => {
       const d = payload.data;
       const mapped = {
         title: d.title.trim(),
@@ -158,7 +162,7 @@ export default function AdminLiveStreams() {
   };
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.request('DELETE', `/api/live_streams/${id}`),
+    mutationFn: async (id: number | string) => api.request('DELETE', `/api/live_streams/${id}`),
     onSuccess: () => {
       toast({ title: 'Live stream supprimé' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'live-streams'] });
@@ -168,7 +172,7 @@ export default function AdminLiveStreams() {
       toast({ title: 'Erreur', description: 'Impossible de supprimer le live stream', variant: 'destructive' });
     }
   });
-  const deleteLiveStream = (id: number) => {
+  const deleteLiveStream = (id: number | string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce live stream ?')) return;
     deleteMutation.mutate(id);
   };
@@ -391,8 +395,15 @@ export default function AdminLiveStreams() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {liveStreams.map((stream) => (
-                    <TableRow key={stream.id}>
+            {liveStreams.map((stream) => (
+              <TableRow 
+                key={stream.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setViewingStream(stream);
+                  setIsDetailsOpen(true);
+                }}
+              >
                       <TableCell className="py-2 md:py-4">
                         <div className="flex items-center space-x-2 md:space-x-3">
                           <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -444,11 +455,27 @@ export default function AdminLiveStreams() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end space-x-1 md:space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => openEditDialog(stream)} className="text-blue-600 hover:text-blue-700 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(stream);
+                            }} 
+                            className="text-blue-600 hover:text-blue-700 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
+                          >
                             <Edit className="w-3 h-3 md:w-4 md:h-4" />
                             <span className="hidden md:inline ml-1">Modifier</span>
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => deleteLiveStream(stream.id)} className="text-destructive hover:text-destructive h-8 w-8 md:h-9 md:w-auto p-0 md:px-3">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteLiveStream(stream.id);
+                            }} 
+                            className="text-destructive hover:text-destructive h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
+                          >
                             <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                             <span className="hidden md:inline ml-1">Supprimer</span>
                           </Button>
@@ -462,6 +489,14 @@ export default function AdminLiveStreams() {
           </div>
         </CardContent>
       </Card>
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title={viewingStream?.title || ''}
+        data={viewingStream}
+        type="livestream"
+      />
     </div>
   );
 }

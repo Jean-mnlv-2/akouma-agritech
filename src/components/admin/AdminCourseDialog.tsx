@@ -46,6 +46,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     is_published: false,
     is_featured: false,
     is_preview_available: false,
+    is_copy_protected: false,
     languages_csv: 'Français',
     slug: '',
     benefits_csv: '',
@@ -79,6 +80,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         is_published: course.is_published || false,
         is_featured: course.is_featured || false,
         is_preview_available: course.isPreviewAvailable ?? false,
+        is_copy_protected: (course as any).isCopyProtected ?? (course as any).is_copy_protected ?? false,
         languages_csv: Array.isArray(course.languages) ? (course.languages?.join(', ') || '') : '',
         slug: course.slug || slugify(course.title || ''),
         benefits_csv: Array.isArray(course.benefits) ? course.benefits.join('\n') : '',
@@ -105,6 +107,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         is_published: false,
         is_featured: false,
         is_preview_available: false,
+        is_copy_protected: false,
         languages_csv: 'Français',
         slug: '',
         benefits_csv: '',
@@ -149,6 +152,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       isPublished: formData.is_published || false,
       isFeatured: formData.is_featured || false,
       isPreviewAvailable: formData.is_preview_available || false,
+      isCopyProtected: formData.is_copy_protected || false,
       languages,
       benefits,
       requirements,
@@ -475,10 +479,23 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-8 border-t pt-4">
-            <div className="flex items-center space-x-2"><Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} /><Label htmlFor="is_published">Publié</Label></div>
-            <div className="flex items-center space-x-2"><Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} /><Label htmlFor="is_featured">Mis en avant</Label></div>
-            <div className="flex items-center space-x-2"><Switch id="is_preview_available" checked={formData.is_preview_available} onCheckedChange={(checked) => setFormData({ ...formData, is_preview_available: checked })} /><Label htmlFor="is_preview_available">Aperçu Gratuit</Label></div>
+          <div className="flex flex-wrap items-center gap-6 border-t pt-4">
+            <div className="flex items-center space-x-2">
+              <Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} />
+              <Label htmlFor="is_published">Publié</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} />
+              <Label htmlFor="is_featured">Vedette</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_preview_available" checked={formData.is_preview_available} onCheckedChange={(checked) => setFormData({ ...formData, is_preview_available: checked })} />
+              <Label htmlFor="is_preview_available">Aperçu disponible</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_copy_protected" checked={formData.is_copy_protected} onCheckedChange={(checked) => setFormData({ ...formData, is_copy_protected: checked })} />
+              <Label htmlFor="is_copy_protected">Protéger la copie</Label>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="languages_csv">Langues (séparées par des virgules)</Label>

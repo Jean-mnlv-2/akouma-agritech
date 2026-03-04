@@ -61,7 +61,7 @@ seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respons
     imageUrl, availability, harvestTime, yield: yield_info, features, 
     fullDescription, origin, purity, germination, moisture, packaging, 
     soilType, plantingDepth, spacing, watering, fertilizer, diseases,
-    plantingInstructions, careInstructions, isPublished, isFeatured 
+    plantingInstructions, careInstructions, isPublished, isFeatured, isCopyProtected 
   } = req.body || {};
   
   if (!name || !slug || !description || price == null) return res.status(400).json({ error: 'missing fields' });
@@ -76,7 +76,8 @@ seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respons
         soilType, plantingDepth, spacing, watering, fertilizer, diseases: diseases || [],
         plantingInstructions, careInstructions,
         isPublished: Boolean(isPublished),
-        isFeatured: Boolean(isFeatured)
+        isFeatured: Boolean(isFeatured),
+        isCopyProtected: Boolean(isCopyProtected)
       } as any
     });
     res.status(201).json({ data: created });
@@ -93,21 +94,22 @@ seedsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respo
     imageUrl, availability, harvestTime, yield: yield_info, features, 
     fullDescription, origin, purity, germination, moisture, packaging, 
     soilType, plantingDepth, spacing, watering, fertilizer, diseases,
-    plantingInstructions, careInstructions, isPublished, isFeatured 
+    plantingInstructions, careInstructions, isPublished, isFeatured, isCopyProtected 
   } = req.body || {};
   
   try {
     const updated = await prisma.seed.update({ 
       where: { id }, 
       data: { 
-        name, slug, description, price, stock,
+        name, slug, description, price, stock: stock ?? 0,
         category, variety, unit, imageUrl, availability,
         harvestTime, yield: yield_info, features: features || [],
         fullDescription, origin, purity, germination, moisture, packaging,
         soilType, plantingDepth, spacing, watering, fertilizer, diseases: diseases || [],
         plantingInstructions, careInstructions,
         isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
-        isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured)
+        isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured),
+        isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
       } as any
     });
     res.json({ data: updated });

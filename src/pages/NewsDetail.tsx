@@ -2,10 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, User } from "lucide-react";
+import { ArrowLeft, Calendar, User, Share2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useCopyProtection } from "@/hooks/use-copy-protection";
+import CopyProtectionDialog from "@/components/CopyProtectionDialog";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface RawArticleData {
   id: string;
@@ -22,6 +26,8 @@ interface RawArticleData {
   imageUrl?: string;
   image_url?: string;
   read_time?: number;
+  isCopyProtected?: boolean;
+  is_copy_protected?: boolean;
 }
 
 interface Article {
@@ -35,6 +41,7 @@ interface Article {
   image: string;
   readTime: string;
   tags: string[];
+  isCopyProtected: boolean;
   relatedArticles: RelatedArticle[];
 }
 
@@ -50,6 +57,52 @@ const NewsDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
+  const { toast } = useToast();
+
+  const handleShare = async () => {
+    if (isSharing) return;
+    
+    const shareData = {
+      title: article?.title || "AKOUMA Agritech",
+      text: article?.excerpt,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        setIsSharing(true);
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Lien copié",
+          description: "Le lien de l'article a été copié.",
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Share error:', error);
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const { isDialogOpen, closeDialog } = useCopyProtection(
+    !!article?.isCopyProtected,
+    {
+      title: article?.title || "",
+      imageUrl: article?.image,
+      excerpt: article?.excerpt,
+      date: article ? new Date(article.date).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }) : undefined,
+      url: window.location.href,
+    }
+  );
 
   // Fetch article data from backend
   const fetchArticle = useCallback(async () => {
@@ -72,6 +125,7 @@ const NewsDetail = () => {
         image: data.imageUrl || data.image_url || '/logo-ak.png',
         readTime: String(data.read_time || 5) + ' min',
         tags: [data.category || 'Général'],
+        isCopyProtected: data.isCopyProtected ?? data.is_copy_protected ?? false,
         relatedArticles: []
       };
 
@@ -149,6 +203,20 @@ const NewsDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
+      {article && (
+        <CopyProtectionDialog
+          isOpen={isDialogOpen}
+          onClose={closeDialog}
+          item={{
+            title: article.title,
+            imageUrl: article.image,
+            excerpt: article.excerpt,
+            date: formatDate(article.date),
+            url: window.location.href,
+          }}
+        />
+      )}
+
       <div className="container mx-auto px-6 py-12">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
@@ -171,12 +239,16 @@ const NewsDetail = () => {
             {/* Header - Enhanced */}
             <div className="bg-gradient-to-br from-primary/5 via-background to-accent/5 rounded-2xl p-8 border-2 border-border">
               <div className="flex items-center gap-3 mb-6 flex-wrap">
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
                   {article.category}
                 </Badge>
                 <span className="text-sm text-muted-foreground font-medium bg-card/50 px-3 py-1 rounded-lg">
                   {article.readTime} de lecture
                 </span>
+                <Button variant="outline" size="sm" onClick={handleShare} className="gap-2 ml-auto">
+                  <Share2 className="w-4 h-4" />
+                  Partager
+                </Button>
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent leading-tight">
                 {article.title}
@@ -195,11 +267,11 @@ const NewsDetail = () => {
             </div>
 
             {/* Featured image - Enhanced */}
-            <div className="aspect-video bg-muted rounded-2xl overflow-hidden border-2 border-border group">
+            <div className="aspect-video bg-muted/30 rounded-2xl overflow-hidden border-2 border-border group relative">
               <img 
                 src={article.image} 
                 alt={article.title} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             </div>

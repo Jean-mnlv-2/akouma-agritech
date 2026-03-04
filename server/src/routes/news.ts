@@ -47,13 +47,14 @@ newsRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 newsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { title, slug, content, excerpt, imageUrl, author, isPublished, isFeatured } = req.body || {};
+  const { title, slug, content, excerpt, imageUrl, author, isPublished, isFeatured, isCopyProtected } = req.body || {};
   if (!title || !slug || !content) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.news.create({
     data: { 
       title, slug, content, excerpt, imageUrl, author, 
       isPublished: Boolean(isPublished),
-      isFeatured: Boolean(isFeatured)
+      isFeatured: Boolean(isFeatured),
+      isCopyProtected: Boolean(isCopyProtected)
     } as any,
   });
   res.status(201).json({ data: created });
@@ -61,13 +62,14 @@ newsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response
 
 newsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { title, slug, content, excerpt, imageUrl, author, isPublished, isFeatured } = req.body || {};
+  const { title, slug, content, excerpt, imageUrl, author, isPublished, isFeatured, isCopyProtected } = req.body || {};
   const updated = await prisma.news.update({
     where: { id },
     data: { 
       title, slug, content, excerpt, imageUrl, author, 
       isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
-      isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured)
+      isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured),
+      isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
     } as any,
   });
   res.json({ data: updated });

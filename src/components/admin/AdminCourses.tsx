@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminCourseDialog } from './AdminCourseDialog';
+import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 
@@ -24,12 +25,13 @@ export interface Course {
   level?: string;
   is_published?: boolean;
   is_featured?: boolean;
+  isCopyProtected?: boolean;
   isPreviewAvailable?: boolean;
   languages?: string[];
   course_materials_url?: string;
   thumbnail_url?: string;
   video_url?: string;
-  modules?: any[];
+  modules?: unknown[];
   benefits?: string[];
   requirements?: string[];
   created_at?: string;
@@ -40,7 +42,9 @@ export interface Course {
 export function AdminCourses() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [viewingCourse, setViewingCourse] = useState<Course | null>(null);
   const { toast } = useToast();
 
   const { data: courses = [], isLoading } = useQuery<Course[]>({
@@ -129,8 +133,15 @@ export function AdminCourses() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {courses.map((course: any) => (
-              <TableRow key={course.id}>
+            {courses.map((course: Course) => (
+              <TableRow 
+                key={course.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setViewingCourse(course);
+                  setIsDetailsOpen(true);
+                }}
+              >
                 <TableCell>
                   {course.thumbnail_url ? (
                     <img src={course.thumbnail_url} alt={course.title} className="w-10 h-10 rounded object-cover" />
@@ -143,14 +154,14 @@ export function AdminCourses() {
                 <TableCell className="font-medium">{course.title}</TableCell>
                 <TableCell>{course.instructor_name}</TableCell>
                 <TableCell>{course.category}</TableCell>
-                <TableCell>{Number(course.price_fcfa ?? course.price ?? 0).toLocaleString()} FCFA</TableCell>
-                <TableCell>{course.duration_minutes ?? course.duration ?? 0} min</TableCell>
+                <TableCell>{Number(course.price_fcfa ?? 0).toLocaleString()} FCFA</TableCell>
+                <TableCell>{course.duration_minutes ?? 0} min</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Badge variant={(course.is_published ?? course.isPublished) ? 'default' : 'secondary'}>
-                      {(course.is_published ?? course.isPublished) ? 'Publié' : 'Brouillon'}
+                    <Badge variant={course.is_published ? 'default' : 'secondary'}>
+                      {course.is_published ? 'Publié' : 'Brouillon'}
                     </Badge>
-                    {(course.is_featured ?? course.isFeatured) && (<Badge variant="outline">Mis en avant</Badge>)}
+                    {course.is_featured && (<Badge variant="outline">Mis en avant</Badge>)}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -163,11 +174,21 @@ export function AdminCourses() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(course)}><Edit className="w-4 h-4" /></Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(course);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.stopPropagation();
                         try {
                           const next = !(course.isPreviewAvailable ?? false);
                           await api.request('PUT', `/api/courses/${course.id}`, { body: { isPreviewAvailable: next } });
@@ -180,7 +201,16 @@ export function AdminCourses() {
                     >
                       {(course.isPreviewAvailable ?? false) ? 'Désactiver Aperçu' : 'Activer Aperçu'}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(course.id)}><Trash2 className="w-4 h-4" /></Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(course.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -191,6 +221,14 @@ export function AdminCourses() {
       </CardContent>
 
       <AdminCourseDialog open={dialogOpen} onOpenChange={setDialogOpen} course={editingCourse} onSave={handleSave} />
+
+      <AdminDetailsDialog
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title={viewingCourse?.title || ''}
+        data={viewingCourse}
+        type="course"
+      />
     </Card>
   );
 }

@@ -1,16 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Star, ShoppingCart, Heart, Share2, Truck, Shield, Award } from "lucide-react";
 import DOMPurify from 'dompurify';
+import { useCopyProtection } from "@/hooks/use-copy-protection";
+import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import logoAk from "@/assets/logo-ak.png";
+import { useNavigate } from "react-router-dom";
 
 interface Product {
   id: string;
@@ -26,6 +29,7 @@ interface Product {
   inStock: boolean;
   isNew?: boolean;
   isBestSeller?: boolean;
+  isCopyProtected: boolean;
   specifications: { [key: string]: string };
   features: string[];
   gallery: string[];
@@ -38,16 +42,27 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   
   const { addToCart } = useCartContext();
   const { toast } = useToast();
   const navigate = useNavigate();
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
+  const { isDialogOpen, closeDialog } = useCopyProtection(
+    !!product?.isCopyProtected,
+    {
+      title: product?.name || "",
+      imageUrl: product?.image,
+      excerpt: product?.description,
+      url: window.location.href,
+    }
+  );
+
   const isLoggedIn = Boolean(sessionStorage.getItem('akouma_auth_user'));
 
   // Fetch product data from backend
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     if (!slug) return;
     
     try {
@@ -61,6 +76,25 @@ const ProductDetail = () => {
       }
       const { data } = await res.json();
       
+      const specs = typeof data.specifications === 'string' 
+        ? JSON.parse(data.specifications) 
+        : (data.specifications || {});
+
+      let gallery = [data.imageUrl || logoAk];
+      if (Array.isArray(data.gallery)) {
+        gallery = data.gallery;
+      } else if (typeof data.gallery === 'string') {
+        try {
+          const parsed = JSON.parse(data.gallery);
+          if (Array.isArray(parsed)) gallery = parsed;
+        } catch {
+          gallery = data.gallery.split(',').map((u: string) => u.trim());
+        }
+      } else if (data.gallery_urls) {
+        if (Array.isArray(data.gallery_urls)) gallery = data.gallery_urls;
+        else gallery = data.gallery_urls.split(',').map((u: string) => u.trim());
+      }
+
       setProduct({
         id: data.id,
         name: data.name,
@@ -75,9 +109,10 @@ const ProductDetail = () => {
         inStock: data.isActive || false,
         isNew: data.isNew || false,
         isBestSeller: data.isBestSeller || false,
-        specifications: data.specifications || {},
-        features: data.features || [],
-        gallery: data.gallery || [data.imageUrl || logoAk]
+        isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
+        specifications: specs,
+        features: Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? data.features.split(',').map((f: string) => f.trim()) : []),
+        gallery: gallery
       });
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -85,13 +120,13 @@ const ProductDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug, apiBaseUrl]);
 
   // (mock data removed)
 
   useEffect(() => {
     fetchProduct();
-  }, [slug]);
+  }, [fetchProduct]);
 
   const handleAddToCart = () => {
     if (product) {
@@ -118,6 +153,35 @@ const ProductDetail = () => {
       style: 'currency',
       currency: 'XOF'
     }).format(price);
+  };
+
+  const handleShare = async () => {
+    if (isSharing) return;
+    
+    const shareData = {
+      title: product?.name || "AKOUMA Agritech",
+      text: `Découvrez ${product?.name} sur AKOUMA Agritech : ${product?.description?.replace(/<[^>]*>/g, '').slice(0, 100)}...`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        setIsSharing(true);
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Lien copié",
+          description: "Le lien du produit a été copié dans votre presse-papier.",
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Share error:', error);
+      }
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   if (loading) {
@@ -151,6 +215,19 @@ const ProductDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
+      {product && (
+        <CopyProtectionDialog
+          isOpen={isDialogOpen}
+          onClose={closeDialog}
+          item={{
+            title: product.name,
+            imageUrl: product.image,
+            excerpt: product.description,
+            url: window.location.href,
+          }}
+        />
+      )}
+
       <div className="container mx-auto px-6 py-12">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
@@ -170,11 +247,11 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
           {/* Images */}
           <div className="space-y-4">
-            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+            <div className="aspect-square bg-muted/30 rounded-lg overflow-hidden border-2 border-border flex items-center justify-center relative group">
               <img 
                 src={product.gallery[selectedImage]} 
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
               />
             </div>
             <div className="grid grid-cols-4 gap-4">
@@ -182,11 +259,11 @@ const ProductDetail = () => {
                 <button
                   key={`${product.id}-gallery-${index}-${image}`}
                   onClick={() => setSelectedImage(index)}
-                  className={`aspect-square bg-muted rounded-lg overflow-hidden border-2 ${
-                    selectedImage === index ? 'border-primary' : 'border-transparent'
+                  className={`aspect-square bg-muted/30 rounded-lg overflow-hidden border-2 flex items-center justify-center transition-all ${
+                    selectedImage === index ? 'border-primary shadow-md scale-105' : 'border-transparent hover:border-muted-foreground/30'
                   }`}
                 >
-                  <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
+                  <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-contain p-1" />
                 </button>
               ))}
             </div>
@@ -195,10 +272,16 @@ const ProductDetail = () => {
           {/* Product info */}
           <div className="space-y-6">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                {product.isNew && <Badge variant="secondary">Nouveau</Badge>}
-                {product.isBestSeller && <Badge variant="destructive">Bestseller</Badge>}
-                <Badge variant="outline">{product.category}</Badge>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {product.isNew && <Badge variant="secondary">Nouveau</Badge>}
+                  {product.isBestSeller && <Badge variant="destructive">Bestseller</Badge>}
+                  <Badge variant="outline">{product.category}</Badge>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleShare} className="gap-2">
+                  <Share2 className="w-4 h-4" />
+                  Partager
+                </Button>
               </div>
               
               <h1 className="text-3xl font-bold text-foreground mb-4">{product.name}</h1>
@@ -287,7 +370,7 @@ const ProductDetail = () => {
                   <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current text-red-500' : ''}`} />
                 </Button>
                 
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" onClick={handleShare}>
                   <Share2 className="w-4 h-4" />
                 </Button>
               </div>
