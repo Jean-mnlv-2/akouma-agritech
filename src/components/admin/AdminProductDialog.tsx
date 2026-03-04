@@ -157,7 +157,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
       const url = data.url;
       setFormData({ ...formData, image_url: url });
       setPreviewUrl(url);
-    } catch (err) {
+    } catch {
       alert('Erreur lors de l\'upload de l\'image');
     }
     setUploading(false);
@@ -181,7 +181,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
       });
       const urls = await Promise.all(uploads);
       setGalleryUrls((prev) => Array.from(new Set([...(prev || []), ...urls])));
-    } catch (_e) {
+    } catch {
       alert('Erreur lors de l\'upload de la galerie');
     } finally {
       setGalleryUploading(false);

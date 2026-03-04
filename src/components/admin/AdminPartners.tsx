@@ -121,9 +121,7 @@ export function AdminPartners() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
+      const data = await api.request('POST', '/api/upload', { body: formData });
       updateField(key, data.url);
       toast({ title: 'Fichier envoyé', description: 'Le fichier a été importé avec succès.' });
     } catch (err) {

@@ -21,7 +21,6 @@ import {
   Calendar,
   Radio,
   Receipt,
-  Tag,
   Eye,
   History
 } from 'lucide-react';
@@ -205,9 +204,7 @@ function AdminContent() {
     let isMounted = true;
     const fetchDashboardStats = async () => {
       try {
-        const res = await fetch('/api/stats', { credentials: 'include' });
-        if (!res.ok) throw new Error('Failed to fetch stats');
-        const body = await res.json();
+        const body = await api.request('GET', '/api/stats');
         if (!isMounted) return;
         const s = body?.data || {};
         setStats({

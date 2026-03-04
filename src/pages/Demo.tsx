@@ -172,14 +172,6 @@ const Demo = () => {
                   <Input type="email" placeholder="votre@email.com" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
                 </div>
                 <div>
-                  <Label>Téléphone</Label>
-                  <Input placeholder="+237 XX XX XX XX" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
-                </div>
-                <div>
-                  <Label>Entreprise</Label>
-                  <Input placeholder="Votre entreprise" value={formData.company} onChange={(e) => handleInputChange("company", e.target.value)} />
-                </div>
-                <div>
                   <Label>Pays *</Label>
                   <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
                     <SelectTrigger>
@@ -193,6 +185,14 @@ const Demo = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Téléphone</Label>
+                  <Input placeholder="+237 XX XX XX XX" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
+                </div>
+                <div>
+                  <Label>Entreprise</Label>
+                  <Input placeholder="Votre entreprise" value={formData.company} onChange={(e) => handleInputChange("company", e.target.value)} />
                 </div>
                 <div>
                   <Label>Message</Label>

@@ -152,19 +152,15 @@ const ELearning = () => {
     }
     setIsRegistering(true);
     try {
-      const res = await fetch('/api/contact_messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      await api.request('POST', '/api/contact_messages', {
+        body: {
           name: registerForm.name,
           email: registerForm.email,
           phone: registerForm.phone || null,
           project_type: 'Inscription E-Learning',
           message: `Pays: ${registerForm.country || 'N/A'}. Activité: ${registerForm.activity || 'N/A'}`,
-        }),
+        }
       });
-      if (!res.ok) throw new Error(await res.text());
       toast({ title: t("elearning.register.success"), description: t("elearning.register.success_desc") });
       setRegisterForm({ name: '', email: '', country: '', phone: '', activity: '' });
     } catch {
@@ -700,6 +696,15 @@ const RegistrationForm = ({ form, setForm, countries, getDialCode, onSubmit, isL
       </select>
     </div>
     <div className="space-y-2">
+      <label className="text-sm font-medium">{t("elearning.register.phone")}</label>
+      <div className="flex space-x-2">
+        <div className="w-20 text-sm text-muted-foreground flex items-center justify-center border rounded-md bg-muted">
+          {form.country ? getDialCode(form.country) : '+XXX'}
+        </div>
+        <Input placeholder={t("elearning.register.phone_placeholder")} value={form.phone} onChange={e => setForm((f: any) => ({ ...f, phone: e.target.value }))} className="flex-1" />
+      </div>
+    </div>
+    <div className="space-y-2">
       <label className="text-sm font-medium">{t("elearning.register.activity")}</label>
       <select className="w-full border rounded px-3 py-2 bg-background text-sm" value={form.activity} onChange={e => setForm((f: any) => ({ ...f, activity: e.target.value }))}>
         <option value="">{t("elearning.register.activity_placeholder")}</option>
@@ -709,15 +714,6 @@ const RegistrationForm = ({ form, setForm, countries, getDialCode, onSubmit, isL
         <option value="researcher">{t("elearning.register.activity_researcher")}</option>
         <option value="other">{t("elearning.register.activity_other")}</option>
       </select>
-    </div>
-    <div className="space-y-2">
-      <label className="text-sm font-medium">{t("elearning.register.phone")}</label>
-      <div className="flex space-x-2">
-        <div className="w-20 text-sm text-muted-foreground flex items-center justify-center border rounded-md bg-muted">
-          {form.country ? getDialCode(form.country) : '+XXX'}
-        </div>
-        <Input placeholder={t("elearning.register.phone_placeholder")} value={form.phone} onChange={e => setForm((f: any) => ({ ...f, phone: e.target.value }))} className="flex-1" />
-      </div>
     </div>
     <Button className="w-full" onClick={onSubmit} disabled={isLoading}>
       {isLoading ? t("elearning.register.loading") : t("elearning.register.submit")}

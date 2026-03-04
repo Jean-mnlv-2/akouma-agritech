@@ -534,27 +534,6 @@ const Donations = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="phone">Téléphone</Label>
-                <Input
-                  id="phone"
-                  value={donationForm.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="+237 XXX XXX XXX"
-                />
-              </div>
-              <div>
-                <Label htmlFor="company">Entreprise/Organisation</Label>
-                <Input
-                  id="company"
-                  value={donationForm.company}
-                  onChange={(e) => handleInputChange("company", e.target.value)}
-                  placeholder="Nom de votre organisation"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
                 <Label htmlFor="country">Pays</Label>
                 <Select value={donationForm.country_id} onValueChange={(value) => handleInputChange("country_id", value)}>
                   <SelectTrigger>
@@ -568,6 +547,27 @@ const Donations = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="phone">Téléphone</Label>
+                <Input
+                  id="phone"
+                  value={donationForm.phone}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                  placeholder="+237 XXX XXX XXX"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="company">Entreprise/Organisation</Label>
+                <Input
+                  id="company"
+                  value={donationForm.company}
+                  onChange={(e) => handleInputChange("company", e.target.value)}
+                  placeholder="Nom de votre organisation"
+                />
               </div>
               <div>
                 <Label htmlFor="amount">Montant du Don *</Label>
