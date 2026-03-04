@@ -21,7 +21,7 @@ function signToken(payload: JwtPayload): string {
 function setAuthCookie(res: Response, token: string): void {
   res.cookie('auth_token', token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: env.isProduction() ? 'none' : 'lax',
     secure: env.isProduction(),
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',

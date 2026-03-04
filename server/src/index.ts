@@ -84,10 +84,19 @@ app.use(helmet({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
+const allowedOrigins = env.FRONTEND_ORIGINS.length > 0 
+    ? env.FRONTEND_ORIGINS 
+    : ['http://localhost:8080', 'http://localhost:5173'];
+
 app.use(cors({
-  origin: env.FRONTEND_ORIGINS.length > 0
-    ? env.FRONTEND_ORIGINS
-    : ['http://localhost:8080', 'http://localhost:5173'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
 }));
 // Fichiers statiques des uploads (autoriser chargement cross-origin)
@@ -119,7 +128,6 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 app.get('/favicon.ico', (_req: Request, res: Response) => {
-  // No favicon served by the backend; return 204 to stop repeated 404 logs
   res.status(204).end();
 });
 
@@ -194,7 +202,6 @@ app.use(errorHandler);
 async function ensureDefaultAdmin() {
   if (!env.DEFAULT_ADMIN_EMAIL || !env.DEFAULT_ADMIN_PASSWORD) {
     if (env.isDevelopment()) {
-      // eslint-disable-next-line no-console
       console.warn('[auth] Default admin credentials are not fully configured.');
     }
     return;
@@ -214,7 +221,6 @@ async function ensureDefaultAdmin() {
         isActive: true,
       },
     });
-    // eslint-disable-next-line no-console
     console.log(`[auth] Default admin user created (${email}).`);
     return;
   }
@@ -230,7 +236,6 @@ async function ensureDefaultAdmin() {
         isActive: true,
       },
     });
-    // eslint-disable-next-line no-console
     console.log(`[auth] Default admin password updated (${email}).`);
   }
 }
@@ -242,12 +247,10 @@ async function bootstrap() {
     initCronJobs();
     app.listen(env.PORT, () => {
       if (env.isDevelopment()) {
-        // eslint-disable-next-line no-console
         console.log(`[server] listening on http://localhost:${env.PORT}`);
       }
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('[server] Failed to start application:', error);
     process.exit(1);
   }
