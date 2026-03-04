@@ -23,19 +23,25 @@ interface ContactMessage {
 
 interface ContentSubmission {
   id: string;
-  name: string;
+  author: string;
+  name?: string;
   email: string;
   phone?: string;
   organization?: string;
-  content_type: string;
+  contentType: string;
+  content_type?: string;
   title: string;
-  description: string;
+  content: string;
+  description?: string;
   category: string;
   duration?: string;
+  targetAudience?: string;
   target_audience?: string;
+  fileUrl?: string;
   file_url?: string;
   status: string;
-  created_at: string;
+  createdAt: string;
+  created_at?: string;
 }
 
 interface DemoRequest {
@@ -181,23 +187,25 @@ export const AdminSubmissions = () => {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
                   <CardTitle className="text-lg">{submission.title}</CardTitle>
-                  <CardDescription>{submission.name} • {submission.email} • {submission.content_type}</CardDescription>
+                  <CardDescription>
+                    {(submission.author || submission.name)} • {submission.email} • {(submission.contentType || submission.content_type)}
+                  </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(submission.status)}
-                  <span className="text-sm text-muted-foreground">{new Date(submission.created_at).toLocaleDateString()}</span>
+                  <span className="text-sm text-muted-foreground">{new Date(submission.createdAt || submission.created_at || Date.now()).toLocaleDateString()}</span>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 mb-4">
                   <p><strong>Catégorie:</strong> {submission.category}</p>
                   {submission.duration && <p><strong>Durée:</strong> {submission.duration}</p>}
-                  {submission.target_audience && <p><strong>Public:</strong> {submission.target_audience}</p>}
+                  {(submission.targetAudience || submission.target_audience) && <p><strong>Public:</strong> {(submission.targetAudience || submission.target_audience)}</p>}
                   {submission.organization && <p><strong>Organisation:</strong> {submission.organization}</p>}
                 </div>
-                <p className="text-gray-700 mb-4">{submission.description}</p>
-                {submission.file_url && (
-                  <p className="text-sm text-blue-600 mb-4"><a href={submission.file_url} target="_blank" rel="noopener noreferrer">Voir le fichier/lien</a></p>
+                <p className="text-gray-700 mb-4">{(submission.content || submission.description)}</p>
+                {(submission.fileUrl || submission.file_url) && (
+                  <p className="text-sm text-blue-600 mb-4"><a href={(submission.fileUrl || submission.file_url)} target="_blank" rel="noopener noreferrer">Voir le fichier/lien</a></p>
                 )}
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => updateStatus('contentSubmissions', submission.id, 'processed')}>En cours de révision</Button>

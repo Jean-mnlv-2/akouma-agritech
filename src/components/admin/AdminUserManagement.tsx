@@ -21,9 +21,12 @@ import {
   CheckCircle, 
   XCircle, 
   Crown,
-  UserCheck,
-  UserX,
-  ShoppingCart
+  ShoppingCart,
+  Eye,
+  Calendar,
+  Mail,
+  Key,
+  Settings
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -34,6 +37,7 @@ const userSchema = z.object({
   firstName: z.string().min(2, 'Prénom minimum 2 caractères'),
   lastName: z.string().min(2, 'Nom minimum 2 caractères'),
   role: z.enum(['admin', 'supervisor', 'customer']),
+  allowedModules: z.array(z.string()).optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -46,18 +50,38 @@ type User = {
   role: 'admin' | 'supervisor' | 'customer';
   created_at: string;
   is_active: boolean;
+  allowed_modules?: string[];
+  temp_password?: string;
 };
+
+const MODULES = [
+  { id: 'users', label: 'Utilisateurs' },
+  { id: 'orders', label: 'Ventes & Promos' },
+  { id: 'courses', label: 'Cours' },
+  { id: 'news', label: 'Actualités' },
+  { id: 'seeds', label: 'Semences' },
+  { id: 'products', label: 'Produits' },
+  { id: 'partners', label: 'Partenaires' },
+  { id: 'careers', label: 'Emplois' },
+  { id: 'events', label: 'Événements' },
+  { id: 'livestreams', label: 'Live Streams' },
+  { id: 'submissions', label: 'Soumissions' },
+  { id: 'contact-settings', label: 'Contacts & Réseaux' },
+];
 
 const STATUS_FILTER = ['all', 'active', 'inactive'] as const;
 type StatusFilter = typeof STATUS_FILTER[number];
 
 export function AdminUserManagement() {
   const queryClient = useQueryClient();
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
+  const [viewingUser, setViewingUser] = useState<User | undefined>(undefined);
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,8 +89,18 @@ export function AdminUserManagement() {
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: { email: '', firstName: '', lastName: '', role: 'customer' },
+    defaultValues: { email: '', firstName: '', lastName: '', role: 'customer', allowedModules: [] },
   });
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data } = await api.auth.getUser();
+      if (data?.user) setCurrentUser({ id: data.user.id, role: data.user.role });
+    };
+    fetchSession();
+  }, []);
+
+  const isAdmin = currentUser?.role === 'admin';
 
   const { data, isLoading } = useQuery<User[]>({
     queryKey: ['admin', 'users'],
@@ -84,10 +118,18 @@ export function AdminUserManagement() {
 
   const createUserMutation = useMutation({
     mutationFn: async (payload: UserFormData) => {
-      return api.request('POST', '/api/profiles', { body: { email: payload.email, firstName: payload.firstName, lastName: payload.lastName, role: payload.role } });
+      return api.request('POST', '/api/profiles', { 
+        body: { 
+          email: payload.email, 
+          firstName: payload.firstName, 
+          lastName: payload.lastName, 
+          role: payload.role,
+          allowedModules: payload.allowedModules 
+        } 
+      });
     },
     onSuccess: () => {
-      toast({ title: 'Succès', description: 'Utilisateur créé avec succès.' });
+      toast({ title: 'Succès', description: 'Utilisateur créé avec succès. Les identifiants ont été envoyés par email.' });
       form.reset();
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -100,18 +142,19 @@ export function AdminUserManagement() {
   });
   const createUser = (data: UserFormData) => { setIsCreating(true); createUserMutation.mutate(data); };
 
-  const handleToggleClick = (user: User) => {
-    const willActivate = user.is_active === false;
-    if (!willActivate) {
-      const confirmed = confirm("Êtes-vous sûr de vouloir désactiver cet utilisateur ?\nIl ne pourra plus se connecter tant qu'il est inactif.");
-      if (!confirmed) return;
-    }
-    toggleUserStatus(user.id, willActivate);
-  };
+  const toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
 
   const updateUserMutation = useMutation({
     mutationFn: async (payload: { id: string; data: UserFormData }) => {
-      return api.request('PUT', `/api/profiles/${payload.id}`, { body: { firstName: payload.data.firstName, lastName: payload.data.lastName, email: payload.data.email, role: payload.data.role } });
+      return api.request('PUT', `/api/profiles/${payload.id}`, { 
+        body: { 
+          firstName: payload.data.firstName, 
+          lastName: payload.data.lastName, 
+          email: payload.data.email, 
+          role: payload.data.role,
+          allowedModules: payload.data.allowedModules
+        } 
+      });
     },
     onSuccess: () => {
       toast({ title: 'Succès', description: "Utilisateur mis à jour avec succès" });
@@ -154,7 +197,6 @@ export function AdminUserManagement() {
       toast({ title: 'Erreur', description: "Impossible de changer le statut de l'utilisateur", variant: 'destructive' });
     }
   });
-  const toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
 
   const filteredUsers: User[] = users.filter((u: User) => {
     if (statusFilter === 'active' && u.is_active === false) return false;
@@ -243,13 +285,29 @@ export function AdminUserManagement() {
   const getStatusIcon = (isActive: boolean = true) => isActive ? (<CheckCircle className="w-4 h-4 text-green-500" />) : (<XCircle className="w-4 h-4 text-red-500" />);
 
   const openEditDialog = (user: User) => {
+    if (!isAdmin) {
+      toast({ title: 'Accès refusé', description: 'Seul un administrateur peut modifier un utilisateur.', variant: 'destructive' });
+      return;
+    }
     setEditingUser(user);
     const formRole: UserFormData['role'] = user.role === 'admin' ? 'admin' : user.role === 'supervisor' ? 'supervisor' : 'customer';
-    form.reset({ email: user.email, firstName: user.first_name, lastName: user.last_name, role: formRole });
+    form.reset({ 
+      email: user.email, 
+      firstName: user.first_name, 
+      lastName: user.last_name, 
+      role: formRole,
+      allowedModules: user.allowed_modules || []
+    });
     setIsDialogOpen(true);
   };
 
+  const openDetailsDialog = (user: User) => {
+    setViewingUser(user);
+    setIsDetailsOpen(true);
+  };
+
   const closeDialog = () => { setEditingUser(undefined); form.reset(); setIsDialogOpen(false); };
+  const closeDetailsDialog = () => { setViewingUser(undefined); setIsDetailsOpen(false); };
 
   if (isLoading) {
     return (
@@ -289,12 +347,12 @@ export function AdminUserManagement() {
             <Input placeholder="Rechercher (nom, email)" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full" />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" disabled={!someVisibleSelectedBool} onClick={() => bulkToggle(true)}>Activer sélection</Button>
-            <Button variant="outline" disabled={!someVisibleSelectedBool} onClick={() => bulkToggle(false)}>Désactiver sélection</Button>
+            <Button variant="outline" disabled={!someVisibleSelectedBool || !isAdmin} onClick={() => bulkToggle(true)}>Activer sélection</Button>
+            <Button variant="outline" disabled={!someVisibleSelectedBool || !isAdmin} onClick={() => bulkToggle(false)}>Désactiver sélection</Button>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center space-x-2 w-full lg:w-auto">
+              <Button disabled={!isAdmin} className="flex items-center space-x-2 w-full lg:w-auto">
                 <UserPlus className="w-4 h-4" />
                 <span>Nouvel Utilisateur</span>
               </Button>
@@ -329,12 +387,157 @@ export function AdminUserManagement() {
                       <FormMessage />
                     </FormItem>
                   )} />
+
+                  {form.watch('role') === 'supervisor' && (
+                    <div className="space-y-3 pt-2">
+                      <FormLabel className="text-sm md:text-base font-semibold">Modules autorisés</FormLabel>
+                      <div className="grid grid-cols-2 gap-3 border rounded-lg p-3 bg-muted/30">
+                        {MODULES.map((module) => (
+                          <FormField
+                            key={module.id}
+                            control={form.control}
+                            name="allowedModules"
+                            render={({ field }) => {
+                              const currentModules = Array.isArray(field.value) ? field.value : [];
+                              return (
+                                <FormItem key={module.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={currentModules.includes(module.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...currentModules, module.id])
+                                          : field.onChange(currentModules.filter((value) => value !== module.id));
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-normal cursor-pointer">
+                                    {module.label}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </div>
+                  )}
+
                   <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4">
                     <Button type="button" variant="outline" onClick={closeDialog} className="w-full sm:w-auto">Annuler</Button>
                     <Button type="submit" disabled={isCreating} className="w-full sm:w-auto">{isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{editingUser ? 'Mettre à jour' : 'Créer'}</Button>
                   </div>
                 </form>
               </Form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center space-x-2 text-lg md:text-xl">
+                  <Eye className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                  <span>Détails de l'utilisateur</span>
+                </DialogTitle>
+                <DialogDescription>Consultez les informations complètes de cet utilisateur</DialogDescription>
+              </DialogHeader>
+              
+              {viewingUser && (
+                <div className="space-y-6 py-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                      {viewingUser.first_name?.[0]}{viewingUser.last_name?.[0]}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">{viewingUser.first_name} {viewingUser.last_name}</h3>
+                      <div className="flex items-center space-x-2 mt-1">
+                        {getRoleBadge(viewingUser.role)}
+                        <Badge variant="outline" className={`text-[10px] h-5 ${viewingUser.is_active !== false ? "text-green-600 border-green-200 bg-green-50" : "text-red-600 border-red-200 bg-red-50"}`}>
+                          {viewingUser.is_active !== false ? "Actif" : "Inactif"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="flex items-center space-x-3 text-sm">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground text-xs uppercase font-semibold">Email</span>
+                        <span>{viewingUser.email}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 text-sm">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground text-xs uppercase font-semibold">Membre depuis</span>
+                        <span>{new Date(viewingUser.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                      </div>
+                    </div>
+
+                    {isAdmin && viewingUser.temp_password && (
+                      <div className="flex items-center space-x-3 text-sm p-3 bg-primary/5 rounded-lg border border-primary/10">
+                        <Key className="w-4 h-4 text-primary" />
+                        <div className="flex flex-col flex-1">
+                          <span className="text-primary text-xs uppercase font-semibold">Identifiants de connexion</span>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="font-mono text-xs">Login: <strong>{viewingUser.email}</strong></span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="font-mono text-xs">Pass: <strong>{viewingUser.temp_password}</strong></span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 px-2 text-[10px]"
+                              onClick={() => {
+                                navigator.clipboard.writeText(viewingUser.temp_password!);
+                                toast({ title: "Copié", description: "Mot de passe copié dans le presse-papier" });
+                              }}
+                            >
+                              Copier
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isAdmin && !viewingUser.temp_password && viewingUser.role !== 'customer' && (
+                      <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-amber-700 text-xs italic">
+                        Le mot de passe temporaire n'est plus disponible pour cet utilisateur.
+                      </div>
+                    )}
+
+                    {viewingUser.role === 'supervisor' && (
+                      <div className="flex flex-col space-y-2 text-sm mt-2">
+                        <div className="flex items-center space-x-2">
+                          <Settings className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground text-xs uppercase font-semibold">Modules autorisés</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {viewingUser.allowed_modules && viewingUser.allowed_modules.length > 0 ? (
+                            viewingUser.allowed_modules.map(modId => {
+                              const mod = MODULES.find(m => m.id === modId);
+                              return (
+                                <Badge key={modId} variant="outline" className="text-[10px]">
+                                  {mod?.label || modId}
+                                </Badge>
+                              );
+                            })
+                          ) : (
+                            <span className="text-xs italic text-muted-foreground">Aucun module assigné</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={closeDetailsDialog}>Fermer</Button>
+                  </div>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
         </div>
@@ -368,16 +571,10 @@ export function AdminUserManagement() {
                       <TableCell>
                         <Checkbox checked={selectedIds.has(user.id)} onCheckedChange={(c) => toggleSelectOne(user.id, c)} aria-label={`Sélectionner ${user.email}`} />
                       </TableCell>
-                      <TableCell className="py-2 md:py-4">
+                      <TableCell className="py-2 md:py-4 cursor-pointer hover:text-primary transition-colors" onClick={() => openDetailsDialog(user)}>
                         <div className="flex items-center space-x-2 md:space-x-3">
-                          <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            {user.role === 'admin' ? (
-                              <Crown className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                            ) : user.role === 'supervisor' ? (
-                              <Shield className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                            ) : (
-                              <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                            )}
+                          <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 font-bold text-primary text-[10px] md:text-xs">
+                            {user.first_name?.[0]}{user.last_name?.[0]}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="font-medium text-sm md:text-base truncate">{user.first_name} {user.last_name}</div>
@@ -396,11 +593,30 @@ export function AdminUserManagement() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end space-x-1 md:space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => openEditDialog(user)} className="text-blue-600 hover:text-blue-700 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"><Edit className="w-3 h-3 md:w-4 md:h-4" /><span className="hidden md:inline ml-1">Modifier</span></Button>
-                          <Button variant="outline" size="sm" onClick={() => handleToggleClick(user)} className={`${user.is_active === false ? 'text-green-600 hover:text-green-700' : 'text-amber-600 hover:text-amber-700'} h-8 w-8 md:h-9 md:w-auto p-0 md:px-3`}>
-                            {user.is_active === false ? (<><UserCheck className="w-3 h-3 md:w-4 md:h-4" /><span className="hidden md:inline ml-1">Activer</span></>) : (<><UserX className="w-3 h-3 md:w-4 md:h-4" /><span className="hidden md:inline ml-1">Désactiver</span></>)}
+                          <Button variant="outline" size="sm" onClick={() => openDetailsDialog(user)} className="text-primary hover:text-primary/80 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3">
+                            <Eye className="w-3 h-3 md:w-4 md:h-4" />
+                            <span className="hidden md:inline ml-1">Détails</span>
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => deleteUser(user.id)} className="text-destructive hover:text-destructive h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"><Trash2 className="w-3 h-3 md:w-4 md:h-4" /><span className="hidden md:inline ml-1">Supprimer</span></Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => openEditDialog(user)} 
+                            disabled={!isAdmin}
+                            className="text-blue-600 hover:text-blue-700 h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
+                          >
+                            <Edit className="w-3 h-3 md:w-4 md:h-4" />
+                            <span className="hidden md:inline ml-1">Modifier</span>
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => deleteUser(user.id)} 
+                            disabled={!isAdmin}
+                            className="text-destructive hover:text-destructive h-8 w-8 md:h-9 md:w-auto p-0 md:px-3"
+                          >
+                            <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                            <span className="hidden md:inline ml-1">Supprimer</span>
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

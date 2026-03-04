@@ -12,6 +12,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 import { Plus, Trash, ListPlus } from 'lucide-react';
+import { api } from '@/integrations/api/client';
 
 interface Module {
   id: string;
@@ -164,9 +165,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: fd });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
+      const data = await api.request('POST', '/api/upload', { body: fd });
       const url: string = data.url;
       setFormData({ ...formData, thumbnail_url: url });
       setPreviewImageUrl(url);
@@ -184,9 +183,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: fd });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
+      const data = await api.request('POST', '/api/upload', { body: fd });
       const url: string = data.url;
       setFormData({ ...formData, video_url: url });
       setPreviewVideoUrl(url);

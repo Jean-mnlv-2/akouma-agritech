@@ -61,7 +61,7 @@ seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respons
     imageUrl, availability, harvestTime, yield: yield_info, features, 
     fullDescription, origin, purity, germination, moisture, packaging, 
     soilType, plantingDepth, spacing, watering, fertilizer, diseases,
-    plantingInstructions, careInstructions 
+    plantingInstructions, careInstructions, isPublished, isFeatured 
   } = req.body || {};
   
   if (!name || !slug || !description || price == null) return res.status(400).json({ error: 'missing fields' });
@@ -74,7 +74,9 @@ seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respons
         harvestTime, yield: yield_info, features: features || [],
         fullDescription, origin, purity, germination, moisture, packaging,
         soilType, plantingDepth, spacing, watering, fertilizer, diseases: diseases || [],
-        plantingInstructions, careInstructions
+        plantingInstructions, careInstructions,
+        isPublished: Boolean(isPublished),
+        isFeatured: Boolean(isFeatured)
       } as any
     });
     res.status(201).json({ data: created });
@@ -91,7 +93,7 @@ seedsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respo
     imageUrl, availability, harvestTime, yield: yield_info, features, 
     fullDescription, origin, purity, germination, moisture, packaging, 
     soilType, plantingDepth, spacing, watering, fertilizer, diseases,
-    plantingInstructions, careInstructions 
+    plantingInstructions, careInstructions, isPublished, isFeatured 
   } = req.body || {};
   
   try {
@@ -100,10 +102,12 @@ seedsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respo
       data: { 
         name, slug, description, price, stock,
         category, variety, unit, imageUrl, availability,
-        harvestTime, yield: yield_info, features,
+        harvestTime, yield: yield_info, features: features || [],
         fullDescription, origin, purity, germination, moisture, packaging,
-        soilType, plantingDepth, spacing, watering, fertilizer, diseases,
-        plantingInstructions, careInstructions
+        soilType, plantingDepth, spacing, watering, fertilizer, diseases: diseases || [],
+        plantingInstructions, careInstructions,
+        isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
+        isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured)
       } as any
     });
     res.json({ data: updated });

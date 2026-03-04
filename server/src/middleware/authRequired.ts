@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
 import { env } from '../utils/env';
+
+const prisma = new PrismaClient();
 
 interface JwtPayload {
   sub: string;
@@ -24,6 +27,21 @@ export function adminOnly(req: Request, res: Response, next: NextFunction) {
   if (!user) return res.status(401).json({ error: 'unauthorized' });
   if (user.role !== 'admin') return res.status(403).json({ error: 'forbidden' });
   next();
+}
+
+export async function adminOrSupervisorWithUsers(req: Request, res: Response, next: NextFunction) {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: 'unauthorized' });
+  if (user.role === 'admin') return next();
+  
+  if (user.role === 'supervisor') {
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (dbUser?.allowedModules.includes('users')) {
+      return next();
+    }
+  }
+  
+  return res.status(403).json({ error: 'forbidden' });
 }
 
 export function supervisorOnly(req: Request, res: Response, next: NextFunction) {

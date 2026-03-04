@@ -176,6 +176,26 @@ const ContactForm = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
+          <Label htmlFor="country">Pays</Label>
+          <Select 
+            value={formData.country_id} 
+            onValueChange={(value) => handleInputChange("country_id", value)}
+            disabled={isLoading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionnez votre pays" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {countries.map((country) => (
+                          <SelectItem key={country.code || country.id} value={country.id?.toString() || country.name}>
+                            {country.name} ({country.phoneCode})
+                          </SelectItem>
+                        ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
           <Label htmlFor="phone">Téléphone</Label>
           <Input
             id="phone"
@@ -185,37 +205,17 @@ const ContactForm = ({
             disabled={isLoading}
           />
         </div>
-        
-        <div>
-          <Label htmlFor="company">Entreprise/Organisation</Label>
-          <Input
-            id="company"
-            value={formData.company}
-            onChange={(e) => handleInputChange("company", e.target.value)}
-            placeholder="Nom de votre organisation"
-            disabled={isLoading}
-          />
-        </div>
       </div>
-
+      
       <div>
-        <Label htmlFor="country">Pays</Label>
-        <Select 
-          value={formData.country_id} 
-          onValueChange={(value) => handleInputChange("country_id", value)}
+        <Label htmlFor="company">Entreprise/Organisation</Label>
+        <Input
+          id="company"
+          value={formData.company}
+          onChange={(e) => handleInputChange("company", e.target.value)}
+          placeholder="Nom de votre organisation"
           disabled={isLoading}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionnez votre pays" />
-          </SelectTrigger>
-          <SelectContent className="max-h-60">
-            {countries.map((country) => (
-                        <SelectItem key={country.code || country.id} value={country.id?.toString() || country.name}>
-                          {country.name} ({country.phoneCode})
-                        </SelectItem>
-                      ))}
-          </SelectContent>
-        </Select>
+        />
       </div>
       
       <div>

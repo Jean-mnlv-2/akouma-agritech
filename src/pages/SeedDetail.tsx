@@ -28,6 +28,7 @@ import {
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TitleManager from '@/components/TitleManager';
+import { api } from '@/integrations/api/client';
 import logoAk from '@/assets/logo-ak.png';
 import { useContactSettings } from '@/hooks/use-contact-settings';
 import DOMPurify from 'dompurify';
@@ -88,9 +89,7 @@ export default function SeedDetail() {
     if (!slug) return;
     
     try {
-      const res = await fetch(`/api/seeds/slug/${slug}`);
-      if (!res.ok) throw new Error('Seed not found');
-      const { data } = await res.json();
+      const { data } = await api.request('GET', `/api/seeds/slug/${slug}`);
       
       setProduct({
         id: data.id,
@@ -141,19 +140,18 @@ export default function SeedDetail() {
     fetchSeed();
   }, [fetchSeed]);
 
-  const logContact = async (type: 'whatsapp' | 'call') => {
+  const logContact = async (type: string) => {
     try {
-      const user = JSON.parse(sessionStorage.getItem('akouma_auth_user') || '{}');
-      await fetch('/api/contact-messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: user.fullName || 'Utilisateur Anonyme',
+      const userStr = sessionStorage.getItem('akouma_auth_user');
+      const user = userStr ? JSON.parse(userStr) : {};
+      await api.request('POST', '/api/contact_messages', {
+        body: {
+          name: user.fullName || 'Utilisateur',
           email: user.email || 'anonyme@akouma.tg',
           subject: `Intérêt pour ${product?.name} (${type})`,
           message: `L'utilisateur a cliqué sur le bouton ${type} pour le produit ${product?.name} (ID: ${product?.id}).`,
           project_type: 'seeds'
-        })
+        }
       });
     } catch (err) {
       console.error('Error logging contact:', err);

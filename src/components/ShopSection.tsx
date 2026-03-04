@@ -33,25 +33,39 @@ const ShopSection = () => {
   useContentSync({
     contentType: 'shop_products',
     onUpdate: (data) => {
-      const normalizedProducts = (data as unknown[]).map((item) => {
-        const record = item as Record<string, unknown>;
+      const rawItems = (data as Record<string, any>[]) || [];
+      const publishedItems = rawItems.filter(item => item.isPublished || item.is_published);
+
+      const normalizedProducts = publishedItems.map((record) => {
         return {
-          id: record.id as string,
+          id: String(record.id),
           slug: (record.slug as string) || String(record.id),
           name: record.name as string,
           description: record.description as string,
-          price: (record.price_fcfa as number) || 0,
-          originalPrice: (record.original_price_fcfa as number) || 0,
-          image: (record.image_url as string) || '/placeholder.svg',
+          price: Number(record.price ?? record.price_fcfa ?? 0),
+          originalPrice: Number(record.original_price_fcfa || record.originalPrice || 0),
+          image: (record.imageUrl as string || record.image_url as string) || '/placeholder.svg',
           category: (record.category as string) || 'Général',
-          inStock: (record.in_stock as boolean) || false,
-          isNew: (record.is_new as boolean) || false,
-          isBestseller: (record.is_bestseller as boolean) || false,
-          rating: (record.rating as number) || 0,
-          reviews: (record.reviews_count as number) || 0,
+          inStock: !!(record.isActive ?? record.inStock ?? record.in_stock),
+          isNew: !!(record.isNew || record.is_new),
+          isFeatured: !!(record.isFeatured || record.is_featured),
+          isBestseller: !!(record.isBestseller || record.is_bestseller),
+          rating: Number(record.rating) || 0,
+          reviews: Number(record.reviews_count || record.totalReviews || 0),
+          createdAt: record.createdAt || record.created_at,
         };
       });
-      setProducts(normalizedProducts.slice(0, 8));
+
+      const sortedProducts = [...normalizedProducts].sort((a, b) => {
+        if (a.isFeatured && !b.isFeatured) return -1;
+        if (!a.isFeatured && b.isFeatured) return 1;
+        if (a.isNew && !b.isNew) return -1;
+        if (!a.isNew && b.isNew) return 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      setProducts(sortedProducts.slice(0, 8));
+      setLoading(false);
     },
     enabled: true,
   });

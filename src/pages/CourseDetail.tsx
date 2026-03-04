@@ -49,9 +49,7 @@ const CourseDetail = () => {
     if (!slug) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/courses/slug/${slug}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch course');
-      const { data } = await res.json();
+      const { data } = await api.request('GET', `/api/courses/slug/${slug}`);
       const normalized: Course = {
         id: data.id,
         title: data.title,
@@ -91,19 +89,15 @@ const CourseDetail = () => {
 
   const handleEnrollment = async (formData: any) => {
     try {
-      const res = await fetch('/api/contact_messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      await api.request('POST', '/api/contact_messages', {
+        body: {
           name: formData.name,
           email: formData.email,
           phone: formData.phone || null,
           project_type: `Inscription cours: ${course?.title}`,
           message: `Motivation: ${formData.motivation || '—'}. Expérience: ${formData.experience || '—'}`,
-        }),
+        }
       });
-      if (!res.ok) throw new Error(await res.text());
       setEnrolled(true);
       toast({ title: "Inscription réussie !", description: "Vous recevrez un email de confirmation." });
     } catch (err) {

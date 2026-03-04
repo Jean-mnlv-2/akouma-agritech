@@ -37,8 +37,10 @@ const SeedsSection = () => {
     contentType: 'seeds',
     enabled: true,
     onUpdate: (data) => {
-      const mapped = (data || []).map((item: unknown) => {
-        const record = item as Record<string, unknown>;
+      const rawItems = (data as Record<string, any>[]) || [];
+      const publishedItems = rawItems.filter(item => item.isPublished || item.is_published);
+
+      const mapped = publishedItems.map((record) => {
         return {
         id: Number(record.id),
         slug: String(record.slug || record.id),
@@ -55,9 +57,18 @@ const SeedsSection = () => {
         harvestTime: String(record.harvestTime || record.harvest_time || ''),
         yield: String(record.yield || record.yield_info || ''),
         features: Array.isArray(record.features) ? (record.features as string[]) : [],
+        featured: !!(record.isFeatured || record.is_featured),
+        createdAt: record.createdAt || record.created_at,
       };
-      }) as SeedProduct[];
-      setProducts(mapped.slice(0, 8));
+      }) as (SeedProduct & { featured: boolean; createdAt: string })[];
+
+      const sortedProducts = [...mapped].sort((a, b) => {
+        if (a.featured && !b.featured) return -1;
+        if (!a.featured && b.featured) return 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      setProducts(sortedProducts.slice(0, 8));
       setLoading(false);
     }
   });
