@@ -38,7 +38,9 @@ export class OrdersService {
     return `AKO-${timestamp}-${random}`;
   }
 
-  calculateShipping(subtotal: number, deliveryMethod: DeliveryMethod, partner?: { baseRate: Prisma.Decimal | null }): number {
+  calculateShipping(_subtotal: number, _deliveryMethod: DeliveryMethod, _partner?: { baseRate: Prisma.Decimal | null }): number {
+    return 0;
+    /* 
     if (deliveryMethod === 'PICKUP') return 0;
     if (partner?.baseRate != null) {
       const rate = Number(partner.baseRate);
@@ -49,6 +51,7 @@ export class OrdersService {
     if (!Number.isFinite(subtotal)) return 0;
     if (subtotal > 50000) return 0;
     return 5000;
+    */
   }
 
   calculateDiscountAmount(subtotal: number, promo: { discountType: DiscountType; discountValue: Prisma.Decimal }): number {
@@ -220,5 +223,35 @@ export class OrdersService {
     });
 
     return order;
+  }
+
+  async updateOrderPayment(orderId: number, status: 'paid' | 'failed' | 'pending', token?: string) {
+    return await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true }
+      });
+
+      if (!order) throw new Error('Commande introuvable');
+
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: status,
+          status: status === 'paid' ? 'processing' : undefined,
+        },
+      });
+
+      await this.createOrderEvent(
+        tx,
+        orderId,
+        'payment_update',
+        updated.status,
+        updated.paymentStatus,
+        `Statut paiement mis à jour via MoneyFusion: ${status}${token ? ` (Token: ${token})` : ''}`
+      );
+
+      return updated;
+    });
   }
 }

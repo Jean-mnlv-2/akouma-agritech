@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { moneyFusionClient, MoneyFusionPaymentData } from "@/integrations/moneyfusion/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -48,9 +49,9 @@ const Checkout = () => {
   };
 
   const subtotal = getCartTotal();
-  const shipping = subtotal > 50000 ? 0 : 5000;
+  const shipping = 0;
   const discount = useMemo(() => validatedPromo?.discountAmount ?? 0, [validatedPromo]);
-  const total = Math.max(0, subtotal - discount + shipping);
+  const total = Math.max(0, subtotal - discount);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -189,15 +190,44 @@ const Checkout = () => {
 
       const { data: order } = await response.json();
 
-      clearCart();
-      clearPromo();
+      // Intégration MoneyFusion
+      try {
+        const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL;
 
-      toast({
-        title: "Commande créée avec succès !",
-        description: `Votre commande #${order.orderNumber} a été enregistrée`,
-      });
+        const paymentData: MoneyFusionPaymentData = {
+          totalPrice: total,
+          article: items.map(item => ({ [item.name]: item.price })),
+          numeroSend: shippingPhone.replace(/\s+/g, ''),
+          nomclient: (await api.auth.getSession()).data?.session?.user?.fullName || "Client AKOUMA",
+          personal_Info: [{ userId: (await api.auth.getSession()).data?.session?.user?.id || 0, orderId: order.id }],
+          return_url: `${frontendUrl}/orders/${order.id}?payment=success`,
+          webhook_url: `${backendUrl}/api/payments/webhook/moneyfusion`
+        };
 
-      navigate(`/orders/${order.id}`);
+        const paymentResponse = await moneyFusionClient.makePayment(paymentData);
+
+        if (paymentResponse.statut && paymentResponse.url) {
+          clearCart();
+          clearPromo();
+          // Rediriger vers la page de paiement MoneyFusion
+          window.location.href = paymentResponse.url;
+          return;
+        } else {
+          throw new Error(paymentResponse.message || "Erreur lors de l'initialisation du paiement");
+        }
+      } catch (payError: any) {
+        console.error('Payment initialization error:', payError);
+        toast({
+          title: "Commande enregistrée, mais...",
+          description: "Une erreur est survenue lors de l'initialisation du paiement. Vous pourrez payer plus tard depuis votre historique.",
+          variant: "destructive",
+        });
+        clearCart();
+        clearPromo();
+        navigate(`/orders/${order.id}`);
+        return;
+      }
     } catch (error: any) {
       console.error('Order creation error:', error);
       toast({
@@ -403,7 +433,8 @@ const Checkout = () => {
                           <span>-{formatPrice(discount)} FCFA</span>
                         </div>
                       )}
-                      <div className="flex justify-between">
+                      {/* On masque la livraison pour le moment */}
+                      {/* <div className="flex justify-between">
                         <span className="text-muted-foreground">Livraison</span>
                         <span>
                           {shipping === 0 ? (
@@ -412,7 +443,7 @@ const Checkout = () => {
                             `${formatPrice(shipping)} FCFA`
                           )}
                         </span>
-                      </div>
+                      </div> */}
                       <div className="border-t pt-2 flex justify-between text-lg font-bold">
                         <span>Total</span>
                         <span className="text-primary">{formatPrice(total)} FCFA</span>

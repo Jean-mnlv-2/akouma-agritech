@@ -11,3 +11,5 @@ dist
 **/coverage
 **/build
 uploads
+create-test-user.*
+check-user.*

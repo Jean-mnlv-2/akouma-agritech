@@ -50,8 +50,8 @@ export const CartSummary = () => {
 
   const subtotal = getCartTotal();
   const discount = useMemo(() => (appliedPromo ? calculateDiscount(subtotal, appliedPromo) : 0), [appliedPromo, subtotal]);
-  const shipping = computeShippingFee(subtotal, deliveryMethod, deliveryPartner);
-  const total = Math.max(0, subtotal - discount + shipping);
+  const shipping = 0;
+  const total = Math.max(0, subtotal - discount);
   const itemsCount = getCartItemsCount();
 
   const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR').format(Math.max(0, Math.round(price)));
@@ -114,7 +114,8 @@ export const CartSummary = () => {
           <span>{formatPrice(subtotal)} FCFA</span>
         </div>
 
-        <div className="flex justify-between items-center">
+        {/* On masque la ligne de livraison car elle n'est pas encore intégrée dans le total */}
+        {/* <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Truck className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">Livraison</span>
@@ -128,7 +129,7 @@ export const CartSummary = () => {
               <span>{formatPrice(shipping)} FCFA</span>
             )}
           </div>
-        </div>
+        </div> */}
 
         <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg space-y-1">
           <div className="font-medium text-foreground">
