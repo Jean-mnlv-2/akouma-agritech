@@ -9,23 +9,34 @@ import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
+import { api } from '@/integrations/api/client';
 
 interface Product {
   id: string;
   name: string;
-  category: string;
-  price_fcfa: number;
-  original_price_fcfa: number;
-  stock_quantity: number;
-  in_stock: boolean;
-  is_published: boolean;
-  is_featured: boolean;
-  is_bestseller: boolean;
-  is_new: boolean;
-  is_copy_protected: boolean;
-  rating: number;
-  total_reviews: number;
+  category?: string;
+  description?: string;
+  price_fcfa?: number;
+  original_price_fcfa?: number;
+  stock_quantity?: number;
+  in_stock?: boolean;
+  is_published?: boolean;
+  is_featured?: boolean;
+  is_bestseller?: boolean;
+  is_new?: boolean;
+  is_copy_protected?: boolean;
+  rating?: number;
+  total_reviews?: number;
   gallery?: string[];
+  dimensions?: string;
+  weight_kg?: number;
+  warranty_info?: string;
+  shipping_info?: string;
+  imageUrl?: string;
+  image_url?: string;
+  features?: string[] | string;
+  specifications?: Record<string, unknown> | string;
+  slug?: string;
 }
 
 interface AdminProductDialogProps {
@@ -73,29 +84,29 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
     if (product) {
       setFormData({
         name: product.name || '',
-        description: (product as any).description || '',
+        description: product.description || '',
         category: product.category || '',
         price_fcfa: product.price_fcfa || 0,
         original_price_fcfa: product.original_price_fcfa || 0,
         stock_quantity: product.stock_quantity || 0,
-        dimensions: (product as any).dimensions || '',
-        weight_kg: (product as any).weight_kg || 0,
-        warranty_info: (product as any).warranty_info || '',
-        shipping_info: (product as any).shipping_info || '',
-        image_url: (product as any).imageUrl || (product as any).image_url || '',
-        gallery_urls: Array.isArray(product.gallery) ? product.gallery.join(',') : ((product as any).gallery_urls || ''),
-        features: Array.isArray((product as any).features) ? (product as any).features.join(',') : ((product as any).features || ''),
-        specifications: typeof (product as any).specifications === 'object' ? JSON.stringify((product as any).specifications) : ((product as any).specifications || ''),
+        dimensions: product.dimensions || '',
+        weight_kg: product.weight_kg || 0,
+        warranty_info: product.warranty_info || '',
+        shipping_info: product.shipping_info || '',
+        image_url: product.imageUrl || product.image_url || '',
+        gallery_urls: Array.isArray(product.gallery) ? product.gallery.join(',') : (product.image_url || ''),
+        features: Array.isArray(product.features) ? product.features.join(',') : (product.features || ''),
+        specifications: typeof product.specifications === 'object' ? JSON.stringify(product.specifications) : (product.specifications || ''),
         in_stock: !!product.in_stock,
         is_published: !!product.is_published,
         is_featured: !!product.is_featured,
         is_bestseller: !!product.is_bestseller,
         is_new: !!product.is_new,
         is_copy_protected: !!product.is_copy_protected,
-        slug: (product as any).slug || slugify(product.name || '')
+        slug: product.slug || slugify(product.name || '')
       });
       setGalleryUrls(Array.isArray(product.gallery) ? product.gallery : []);
-      setPreviewUrl((product as any).imageUrl || (product as any).image_url || null);
+      setPreviewUrl(product.imageUrl || product.image_url || null);
     } else {
       setFormData({
         name: '',
@@ -128,8 +139,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const features = formData.features ? formData.features.split(',').map(f => f.trim()) : [];
-    let specifications = {} as any;
+    let specifications: Record<string, unknown> = {};
     if (formData.specifications) {
       try { specifications = JSON.parse(formData.specifications); } catch { specifications = { description: formData.specifications }; }
     }
@@ -161,9 +171,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: fd });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
+      const data = await api.request('POST', '/api/upload', { body: fd });
       const url = data.url;
       setFormData({ ...formData, image_url: url });
       setPreviewUrl(url);
@@ -184,9 +192,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
       const uploads = toUpload.map(async (file) => {
         const fd = new FormData();
         fd.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: fd });
-        if (!res.ok) throw new Error('Upload failed');
-        const data = await res.json();
+        const data = await api.request('POST', '/api/upload', { body: fd });
         return data.url as string;
       });
       const urls = await Promise.all(uploads);

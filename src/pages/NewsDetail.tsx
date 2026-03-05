@@ -70,7 +70,7 @@ const NewsDetail = () => {
     };
 
     try {
-      if (navigator.share) {
+      if (typeof navigator.share !== 'undefined') {
         setIsSharing(true);
         await navigator.share(shareData);
       } else {

@@ -272,7 +272,7 @@ export default function Shop() {
                         <Badge className="bg-orange-500 text-white text-xs shadow-lg">Populaire</Badge>
                       )}
                     </div>
-                    <Badge className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm shadow-lg">{product.category}</Badge>
+                    <Badge variant="secondary" className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm shadow-lg text-foreground border-border/50">{product.category}</Badge>
                   </div>
                   <CardHeader className="pb-3 relative z-10">
                     <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-1 mb-2">

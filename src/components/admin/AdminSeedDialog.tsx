@@ -9,6 +9,7 @@ import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
+import { api } from '@/integrations/api/client';
 
 interface Seed {
   id: string;
@@ -21,7 +22,8 @@ interface Seed {
   stock_quantity: number;
   availability: string;
   image_url: string;
-  gallery_urls: string;
+  gallery?: string[];
+  gallery_urls?: string;
   planting_instructions: string;
   care_instructions: string;
   harvest_time: string;
@@ -113,7 +115,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         stock_quantity: seed.stock_quantity || 0,
         availability: seed.availability || 'En stock',
         image_url: seed.image_url || '',
-        gallery_urls: seed.gallery_urls || '',
+        gallery_urls: seed.gallery_urls || (Array.isArray(seed.gallery) ? seed.gallery.join(',') : ''),
         planting_instructions: seed.planting_instructions || '',
         care_instructions: seed.care_instructions || '',
         harvest_time: seed.harvest_time || '',
@@ -136,7 +138,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         is_copy_protected: !!(seed.is_copy_protected ?? seed.isCopyProtected),
         slug: seed.slug || slugify(seed.name || '')
       });
-      setGalleryUrls(seed.image_url ? [seed.image_url] : []); // simplified for now
+      setGalleryUrls(Array.isArray(seed.gallery) ? seed.gallery : []);
       setPreviewUrl(seed.image_url || null);
     } else {
       setFormData({
@@ -189,6 +191,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
       features,
       diseases,
       image_url: formData.image_url || galleryUrls[0] || '',
+      gallery: galleryUrls,
     });
   };
 
@@ -199,9 +202,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const resp = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
-      if (!resp.ok) throw new Error('Upload failed');
-      const data = await resp.json();
+      const data = await api.request('POST', '/api/upload', { body: fd });
       const url = data.url as string;
       setFormData({ ...formData, image_url: url });
       setPreviewUrl(url);
@@ -224,9 +225,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
       const uploads = toUpload.map(async (file) => {
         const fd = new FormData();
         fd.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: fd });
-        if (!res.ok) throw new Error('Upload failed');
-        const data = await res.json();
+        const data = await api.request('POST', '/api/upload', { body: fd });
         return data.url as string;
       });
       const urls = await Promise.all(uploads);

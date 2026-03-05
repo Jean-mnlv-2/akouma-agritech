@@ -58,7 +58,7 @@ seedsRouter.get('/:id', async (req: Request, res: Response) => {
 seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   const { 
     name, slug, description, price, stock, category, variety, unit, 
-    imageUrl, availability, harvestTime, yield: yield_info, features, 
+    imageUrl, gallery, availability, harvestTime, yield: yield_info, features, 
     fullDescription, origin, purity, germination, moisture, packaging, 
     soilType, plantingDepth, spacing, watering, fertilizer, diseases,
     plantingInstructions, careInstructions, isPublished, isFeatured, isCopyProtected 
@@ -70,7 +70,7 @@ seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respons
     const created = await prisma.seed.create({ 
       data: { 
         name, slug, description, price, stock: stock ?? 0,
-        category, variety, unit, imageUrl, availability,
+        category, variety, unit, imageUrl, gallery: gallery || [], availability,
         harvestTime, yield: yield_info, features: features || [],
         fullDescription, origin, purity, germination, moisture, packaging,
         soilType, plantingDepth, spacing, watering, fertilizer, diseases: diseases || [],
@@ -91,7 +91,7 @@ seedsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respo
   const id = Number(req.params.id);
   const { 
     name, slug, description, price, stock, category, variety, unit, 
-    imageUrl, availability, harvestTime, yield: yield_info, features, 
+    imageUrl, gallery, availability, harvestTime, yield: yield_info, features, 
     fullDescription, origin, purity, germination, moisture, packaging, 
     soilType, plantingDepth, spacing, watering, fertilizer, diseases,
     plantingInstructions, careInstructions, isPublished, isFeatured, isCopyProtected 
@@ -102,7 +102,7 @@ seedsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respo
       where: { id }, 
       data: { 
         name, slug, description, price, stock: stock ?? 0,
-        category, variety, unit, imageUrl, availability,
+        category, variety, unit, imageUrl, gallery: gallery === undefined ? undefined : (gallery || []), availability,
         harvestTime, yield: yield_info, features: features || [],
         fullDescription, origin, purity, germination, moisture, packaging,
         soilType, plantingDepth, spacing, watering, fertilizer, diseases: diseases || [],

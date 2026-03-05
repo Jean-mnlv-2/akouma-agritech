@@ -19,7 +19,8 @@ export const useCopyProtection = (isEnabled: boolean, _item: CopyProtectionItem)
         setIsDialogOpen(true);
         
         const selection = window.getSelection()?.toString();
-        const customContent = `Contenu protégé par AKOUMA Agritech\n\n${_item.title}\n${_item.url}\n\n${selection ? '--- Extrait sélectionné ---\n' + selection : ''}`;
+        const cleanTitle = _item.title.replace(/<[^>]*>/g, '');
+        const customContent = `Contenu protégé par AKOUMA Agritech\n\n${cleanTitle}\n${_item.url}\n\n${selection ? '--- Extrait sélectionné ---\n' + selection : ''}`;
         
         if (event.clipboardData) {
           event.clipboardData.setData('text/plain', customContent);

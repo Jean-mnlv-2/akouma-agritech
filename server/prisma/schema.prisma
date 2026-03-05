@@ -70,6 +70,7 @@ model Seed {
   isPublished          Boolean  @default(false)
   isFeatured           Boolean  @default(false)
   isCopyProtected      Boolean  @default(false)
+  gallery              String[] @default([])
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   slug                 String   @unique
