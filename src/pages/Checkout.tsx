@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { moneyFusionClient, MoneyFusionPaymentData } from "@/integrations/moneyfusion/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -189,15 +190,41 @@ const Checkout = () => {
 
       const { data: order } = await response.json();
 
-      clearCart();
-      clearPromo();
+      // Intégration MoneyFusion
+      try {
+        const paymentData: MoneyFusionPaymentData = {
+          totalPrice: total,
+          article: items.map(item => ({ [item.name]: item.price })),
+          numeroSend: shippingPhone.replace(/\s+/g, ''),
+          nomclient: (await api.auth.getSession()).data?.session?.user?.fullName || "Client AKOUMA",
+          personal_Info: [{ userId: (await api.auth.getSession()).data?.session?.user?.id || 0, orderId: order.id }],
+          return_url: `${window.location.origin}/orders/${order.id}?payment=success`,
+          webhook_url: `${import.meta.env.VITE_API_BASE_URL}/api/payments/webhook/moneyfusion`
+        };
 
-      toast({
-        title: "Commande créée avec succès !",
-        description: `Votre commande #${order.orderNumber} a été enregistrée`,
-      });
+        const paymentResponse = await moneyFusionClient.makePayment(paymentData);
 
-      navigate(`/orders/${order.id}`);
+        if (paymentResponse.statut && paymentResponse.url) {
+          clearCart();
+          clearPromo();
+          // Rediriger vers la page de paiement MoneyFusion
+          window.location.href = paymentResponse.url;
+          return;
+        } else {
+          throw new Error(paymentResponse.message || "Erreur lors de l'initialisation du paiement");
+        }
+      } catch (payError: any) {
+        console.error('Payment initialization error:', payError);
+        toast({
+          title: "Commande enregistrée, mais...",
+          description: "Une erreur est survenue lors de l'initialisation du paiement. Vous pourrez payer plus tard depuis votre historique.",
+          variant: "destructive",
+        });
+        clearCart();
+        clearPromo();
+        navigate(`/orders/${order.id}`);
+        return;
+      }
     } catch (error: any) {
       console.error('Order creation error:', error);
       toast({

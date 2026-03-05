@@ -20,6 +20,7 @@ const DEFAULTS = {
   DEFAULT_ADMIN_EMAIL: 'admin@akouma.test',
   DEFAULT_ADMIN_PASSWORD: 'Admin123!',
   DEFAULT_ADMIN_FULL_NAME: 'AKOUMA Admin',
+  MONEYFUSION_WEBHOOK_SECRET: 'dev_webhook_secret_12345',
 };
 
 function readEnv(key: string, fallback?: FallbackOptions): string {
@@ -94,6 +95,10 @@ export const env = {
   EMAIL_FROM: process.env.EMAIL_FROM || 'AKOUMA <noreply@akouma.com>',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
+  MONEYFUSION_WEBHOOK_SECRET: readEnv('MONEYFUSION_WEBHOOK_SECRET', {
+    defaultValue: DEFAULTS.MONEYFUSION_WEBHOOK_SECRET,
+    description: 'clé secrète pour les webhooks MoneyFusion',
+  }),
   validateSecrets: () => {
     if (isProduction) {
       if (JWT_SECRET.length < 32 || JWT_SECRET === DEFAULTS.JWT_SECRET) {

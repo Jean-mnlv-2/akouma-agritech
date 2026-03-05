@@ -48,6 +48,7 @@ import Supervisor from "./pages/Supervisor";
 import AgriConsulting from "./pages/AgriConsulting";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import OrderDetail from "./pages/OrderDetail";
 import Partnerships from "./pages/Partnerships";
 import Donations from "./pages/Donations";
 import NotFound from "./pages/NotFound";
@@ -104,7 +105,8 @@ const App = () => (
                 <Route path="/agri-consulting" element={<AgriConsulting />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
-                <Route path="/partners" element={<Partnerships />} />
+                <Route path="/orders/:id" element={<OrderDetail />} />
+                <Route path="/partnerships" element={<Partnerships />} />
                 <Route path="/donations" element={<Donations />} />
                 <Route path="/dashboard/learning" element={<LearningDashboard />} />
                 <Route path="/elearning/:id/learn" element={<CourseLearn />} />
