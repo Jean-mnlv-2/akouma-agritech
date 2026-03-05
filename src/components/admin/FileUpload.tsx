@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { api } from '@/integrations/api/client';
 
 interface FileUploadProps {
   label?: string;
@@ -17,7 +18,7 @@ interface FileUploadProps {
 export const FileUpload = ({ 
   label = "Image", 
   accept = "image/*", 
-  value, 
+  value,
   onChange, 
   endpoint = "/api/upload",
   className = ""
@@ -56,17 +57,10 @@ export const FileUpload = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
+      const result = await api.request('POST', endpoint, {
         body: formData,
-        credentials: 'include'
       });
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const result = await response.json();
       const imageUrl = result.url;
 
       setPreview(imageUrl);

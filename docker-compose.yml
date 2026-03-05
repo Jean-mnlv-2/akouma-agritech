@@ -33,6 +33,7 @@ services:
       db:
         condition: service_healthy
     volumes:
+      - ./server/prisma:/app/prisma
       - uploads:/app/uploads
     ports:
       - "4000:4000"

@@ -88,7 +88,7 @@ export default function SeedDetail() {
     };
 
     try {
-      if (navigator.share) {
+      if (typeof navigator.share !== 'undefined') {
         setIsSharing(true);
         await navigator.share(shareData);
       } else {
@@ -108,6 +108,7 @@ export default function SeedDetail() {
   };
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [isFavorite, setIsFavorite] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
   
   const { data: contactSettings } = useContactSettings();
   
@@ -136,18 +137,25 @@ export default function SeedDetail() {
       const { data } = await api.request('GET', `/api/seeds/slug/${slug}`);
       
       let images = [data.imageUrl || data.image_url || logoAk];
-      if (Array.isArray(data.images)) {
-        images = data.images;
-      } else if (typeof data.images === 'string') {
+      
+      // Handle gallery/images logic
+      if (Array.isArray(data.gallery) && data.gallery.length > 0) {
+        images = data.gallery;
+      } else if (typeof data.gallery === 'string' && data.gallery.length > 0) {
         try {
-          const parsed = JSON.parse(data.images);
-          if (Array.isArray(parsed)) images = parsed;
+          const parsed = JSON.parse(data.gallery);
+          if (Array.isArray(parsed) && parsed.length > 0) images = parsed;
         } catch {
-          images = data.images.split(',').map((u: string) => u.trim());
+          const split = data.gallery.split(',').map((u: string) => u.trim()).filter(Boolean);
+          if (split.length > 0) images = split;
         }
-      } else if (data.gallery) {
-        if (Array.isArray(data.gallery)) images = data.gallery;
-        else images = data.gallery.split(',').map((u: string) => u.trim());
+      } else if (Array.isArray(data.images) && data.images.length > 0) {
+        images = data.images;
+      }
+
+      const primaryImage = data.imageUrl || data.image_url;
+      if (primaryImage && !images.includes(primaryImage)) {
+        images = [primaryImage, ...images];
       }
 
       setProduct({
@@ -327,7 +335,7 @@ export default function SeedDetail() {
             <div className="space-y-6">
               <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative group">
                 <img 
-                  src={product.images[0]} 
+                  src={product.images[selectedImage]} 
                   alt={product.name}
                   className="w-full h-full object-contain transition-transform hover:scale-105 duration-500"
                   onError={(e) => {
@@ -336,16 +344,21 @@ export default function SeedDetail() {
                   }}
                 />
               </div>
-              <div className="grid grid-cols-4 gap-4">
-                {product.images.map((img, idx) => (
-                  <button 
-                    key={idx}
-                    className="aspect-square rounded-lg overflow-hidden border-2 border-slate-100 hover:border-primary transition-colors bg-slate-50 flex items-center justify-center"
-                  >
-                    <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain p-1" />
-                  </button>
-                ))}
-              </div>
+              {product.images.length > 1 && (
+                <div className="grid grid-cols-4 gap-4">
+                  {product.images.map((img, idx) => (
+                    <button 
+                      key={`${product.id}-gallery-${idx}-${img.slice(-10)}`}
+                      onClick={() => setSelectedImage(idx)}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all bg-slate-50 flex items-center justify-center ${
+                        selectedImage === idx ? 'border-primary shadow-md scale-105' : 'border-slate-100 hover:border-primary/50'
+                      }`}
+                    >
+                      <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain p-1" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Content Section */}

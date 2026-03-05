@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Loader2, Search, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminProductDialog } from './AdminProductDialog';
 import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +27,17 @@ interface ProductRow {
   is_featured?: boolean;
   is_bestseller?: boolean;
   is_new?: boolean;
+  is_copy_protected?: boolean;
+  original_price_fcfa?: number;
+  rating?: number;
+  total_reviews?: number;
+  dimensions?: string;
+  weight_kg?: number;
+  warranty_info?: string;
+  shipping_info?: string;
+  features?: string[] | string;
+  specifications?: Record<string, unknown> | string;
+  slug?: string;
 }
 
 export function AdminProducts() {
@@ -35,7 +46,6 @@ export function AdminProducts() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
   const [viewingProduct, setViewingProduct] = useState<ProductRow | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
   const { data: products = [], isLoading } = useQuery<ProductRow[]>({
@@ -123,7 +133,7 @@ export function AdminProducts() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product: any) => (
+            {products.map((product) => (
               <TableRow 
                 key={product.id}
                 className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -186,7 +196,7 @@ export function AdminProducts() {
         )}
       </CardContent>
 
-      <AdminProductDialog open={dialogOpen} onOpenChange={setDialogOpen} product={editingProduct as any} onSave={handleSave} />
+      <AdminProductDialog open={dialogOpen} onOpenChange={setDialogOpen} product={editingProduct} onSave={handleSave} />
 
       <AdminDetailsDialog
         isOpen={isDetailsOpen}

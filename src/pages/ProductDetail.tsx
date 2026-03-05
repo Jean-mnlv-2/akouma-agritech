@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Star, ShoppingCart, Heart, Share2, Truck, Shield, Award } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, Heart, Share2, Truck, Shield, Award, CheckCircle, Settings } from "lucide-react";
 import DOMPurify from 'dompurify';
 import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
@@ -81,18 +81,20 @@ const ProductDetail = () => {
         : (data.specifications || {});
 
       let gallery = [data.imageUrl || logoAk];
-      if (Array.isArray(data.gallery)) {
+      if (Array.isArray(data.gallery) && data.gallery.length > 0) {
         gallery = data.gallery;
       } else if (typeof data.gallery === 'string') {
         try {
           const parsed = JSON.parse(data.gallery);
-          if (Array.isArray(parsed)) gallery = parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) gallery = parsed;
         } catch {
-          gallery = data.gallery.split(',').map((u: string) => u.trim());
+          const split = data.gallery.split(',').map((u: string) => u.trim()).filter(Boolean);
+          if (split.length > 0) gallery = split;
         }
-      } else if (data.gallery_urls) {
-        if (Array.isArray(data.gallery_urls)) gallery = data.gallery_urls;
-        else gallery = data.gallery_urls.split(',').map((u: string) => u.trim());
+      }
+
+      if (data.imageUrl && !gallery.includes(data.imageUrl)) {
+        gallery = [data.imageUrl, ...gallery];
       }
 
       setProduct({
@@ -111,7 +113,7 @@ const ProductDetail = () => {
         isBestSeller: data.isBestSeller || false,
         isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
         specifications: specs,
-        features: Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? data.features.split(',').map((f: string) => f.trim()) : []),
+        features: Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? data.features.split(',').map((f: string) => f.trim()).filter(Boolean) : []),
         gallery: gallery
       });
     } catch (error) {
@@ -394,34 +396,67 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Informations Détaillées */}
+        <div className="mt-16 mb-8">
+          <h2 className="text-3xl font-bold text-foreground flex items-center gap-3">
+            <span className="w-8 h-1 bg-primary rounded-full"></span>
+            Informations détaillées
+          </h2>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Features */}
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Caractéristiques</h3>
-              <ul className="space-y-2">
+          <Card className="border-2 border-border/50 hover:border-primary/30 transition-colors duration-300">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold text-foreground">Caractéristiques</h3>
+              </div>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {product.features.map((feature, index) => (
-                  <li key={`${product.id}-feature-${index}-${feature.slice(0, 15)}`} className="flex items-center text-sm">
-                    <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                    {feature}
+                  <li 
+                    key={`${product.id}-feature-${index}-${feature.slice(0, 15)}`} 
+                    className="flex items-start text-sm p-3 rounded-xl bg-muted/30 border border-transparent hover:border-primary/20 hover:bg-muted/50 transition-all group"
+                  >
+                    <div className="mt-1 w-2 h-2 bg-primary rounded-full mr-3 shrink-0 group-hover:scale-125 transition-transform"></div>
+                    <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                      {feature.replace(/<[^>]*>/g, '')}
+                    </span>
                   </li>
                 ))}
+                {product.features.length === 0 && (
+                  <li className="text-sm text-muted-foreground italic">Aucune caractéristique spécifiée</li>
+                )}
               </ul>
             </CardContent>
           </Card>
 
           {/* Specifications */}
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Spécifications techniques</h3>
-              <div className="space-y-3">
+          <Card className="border-2 border-border/50 hover:border-primary/30 transition-colors duration-300">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Settings className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold text-foreground">Spécifications techniques</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
                 {Object.entries(product.specifications).map(([key, value]) => (
-                  <div key={key} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{key}:</span>
-                    <span className="font-medium">{value}</span>
+                  <div 
+                    key={key} 
+                    className="flex items-center justify-between py-3 border-b border-border/50 last:border-0"
+                  >
+                    <span className="text-sm font-medium text-muted-foreground">{key}</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {String(value).replace(/<[^>]*>/g, '')}
+                    </span>
                   </div>
                 ))}
+                {Object.keys(product.specifications).length === 0 && (
+                  <div className="text-sm text-muted-foreground italic text-center py-4">Aucune spécification technique disponible</div>
+                )}
               </div>
             </CardContent>
           </Card>
