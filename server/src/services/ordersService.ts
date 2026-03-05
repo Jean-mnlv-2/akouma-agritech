@@ -38,7 +38,9 @@ export class OrdersService {
     return `AKO-${timestamp}-${random}`;
   }
 
-  calculateShipping(subtotal: number, deliveryMethod: DeliveryMethod, partner?: { baseRate: Prisma.Decimal | null }): number {
+  calculateShipping(_subtotal: number, _deliveryMethod: DeliveryMethod, _partner?: { baseRate: Prisma.Decimal | null }): number {
+    return 0;
+    /* 
     if (deliveryMethod === 'PICKUP') return 0;
     if (partner?.baseRate != null) {
       const rate = Number(partner.baseRate);
@@ -49,6 +51,7 @@ export class OrdersService {
     if (!Number.isFinite(subtotal)) return 0;
     if (subtotal > 50000) return 0;
     return 5000;
+    */
   }
 
   calculateDiscountAmount(subtotal: number, promo: { discountType: DiscountType; discountValue: Prisma.Decimal }): number {

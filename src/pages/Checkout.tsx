@@ -49,9 +49,9 @@ const Checkout = () => {
   };
 
   const subtotal = getCartTotal();
-  const shipping = subtotal > 50000 ? 0 : 5000;
+  const shipping = 0;
   const discount = useMemo(() => validatedPromo?.discountAmount ?? 0, [validatedPromo]);
-  const total = Math.max(0, subtotal - discount + shipping);
+  const total = Math.max(0, subtotal - discount);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -192,14 +192,17 @@ const Checkout = () => {
 
       // Intégration MoneyFusion
       try {
+        const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL;
+
         const paymentData: MoneyFusionPaymentData = {
           totalPrice: total,
           article: items.map(item => ({ [item.name]: item.price })),
           numeroSend: shippingPhone.replace(/\s+/g, ''),
           nomclient: (await api.auth.getSession()).data?.session?.user?.fullName || "Client AKOUMA",
           personal_Info: [{ userId: (await api.auth.getSession()).data?.session?.user?.id || 0, orderId: order.id }],
-          return_url: `${window.location.origin}/orders/${order.id}?payment=success`,
-          webhook_url: `${import.meta.env.VITE_API_BASE_URL}/api/payments/webhook/moneyfusion`
+          return_url: `${frontendUrl}/orders/${order.id}?payment=success`,
+          webhook_url: `${backendUrl}/api/payments/webhook/moneyfusion`
         };
 
         const paymentResponse = await moneyFusionClient.makePayment(paymentData);
@@ -430,7 +433,8 @@ const Checkout = () => {
                           <span>-{formatPrice(discount)} FCFA</span>
                         </div>
                       )}
-                      <div className="flex justify-between">
+                      {/* On masque la livraison pour le moment */}
+                      {/* <div className="flex justify-between">
                         <span className="text-muted-foreground">Livraison</span>
                         <span>
                           {shipping === 0 ? (
@@ -439,7 +443,7 @@ const Checkout = () => {
                             `${formatPrice(shipping)} FCFA`
                           )}
                         </span>
-                      </div>
+                      </div> */}
                       <div className="border-t pt-2 flex justify-between text-lg font-bold">
                         <span>Total</span>
                         <span className="text-primary">{formatPrice(total)} FCFA</span>

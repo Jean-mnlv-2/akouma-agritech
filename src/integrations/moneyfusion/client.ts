@@ -2,8 +2,23 @@ import axios from "axios";
 
 const MONEYFUSION_TOKEN = import.meta.env.VITE_MONEYFUSION_TOKEN;
 const MONEYFUSION_BASE_URL = import.meta.env.VITE_MONEYFUSION_API_URL;
-const MONEYFUSION_API_URL = `${MONEYFUSION_BASE_URL}${MONEYFUSION_TOKEN}/pay/`;
 const MONEYFUSION_NOTIF_URL = import.meta.env.VITE_MONEYFUSION_NOTIF_URL;
+
+const getPaymentUrl = () => {
+  if (!MONEYFUSION_BASE_URL || !MONEYFUSION_TOKEN) {
+    console.error("MoneyFusion configuration missing:", {
+      baseUrl: MONEYFUSION_BASE_URL,
+      token: MONEYFUSION_TOKEN
+    });
+
+    return "/error-missing-moneyfusion-config";
+  }
+  
+  const base = MONEYFUSION_BASE_URL.endsWith('/') ? MONEYFUSION_BASE_URL : `${MONEYFUSION_BASE_URL}/`;
+  return `${base}${MONEYFUSION_TOKEN}/pay/`;
+};
+
+const MONEYFUSION_API_URL = getPaymentUrl();
 
 export interface PaymentItem {
   [key: string]: number;

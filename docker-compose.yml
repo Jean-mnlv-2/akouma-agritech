@@ -43,6 +43,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        VITE_MONEYFUSION_TOKEN: ${VITE_MONEYFUSION_TOKEN}
+        VITE_MONEYFUSION_API_URL: ${VITE_MONEYFUSION_API_URL}
+        VITE_MONEYFUSION_NOTIF_URL: ${VITE_MONEYFUSION_NOTIF_URL}
+        VITE_FRONTEND_URL: ${VITE_FRONTEND_URL}
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL}
       # Ne pas définir VITE_API_BASE_URL pour utiliser le proxy Nginx automatiquement
       # Le client API détecte le port 8080 et utilise window.location.origin
     depends_on:
