@@ -140,15 +140,16 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
       category: formData.category || null,
       price: formData.price_fcfa || 0,
       stock: formData.stock_quantity || 0,
-      imageUrl: formData.image_url || galleryUrls[0] || null,
-      gallery: galleryUrls.length ? galleryUrls : undefined,
+      imageUrl: formData.image_url || null,
+      gallery: galleryUrls.length ? galleryUrls : [],
       isActive: formData.in_stock,
       isPublished: formData.is_published,
       isFeatured: formData.is_featured,
       isNew: formData.is_new,
       isCopyProtected: formData.is_copy_protected,
       slug,
-      _ui: { features, specifications, original_price_fcfa: formData.original_price_fcfa, in_stock: formData.in_stock, is_featured: formData.is_featured, is_bestseller: formData.is_bestseller, is_new: formData.is_new, gallery_urls_legacy: formData.gallery_urls }
+      features: formData.features ? formData.features.split(',').map(f => f.trim()).filter(Boolean) : [],
+      specifications: specifications
     };
     onSave(payload);
   };

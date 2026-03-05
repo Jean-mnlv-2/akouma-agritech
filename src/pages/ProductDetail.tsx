@@ -81,18 +81,20 @@ const ProductDetail = () => {
         : (data.specifications || {});
 
       let gallery = [data.imageUrl || logoAk];
-      if (Array.isArray(data.gallery)) {
+      if (Array.isArray(data.gallery) && data.gallery.length > 0) {
         gallery = data.gallery;
       } else if (typeof data.gallery === 'string') {
         try {
           const parsed = JSON.parse(data.gallery);
-          if (Array.isArray(parsed)) gallery = parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) gallery = parsed;
         } catch {
-          gallery = data.gallery.split(',').map((u: string) => u.trim());
+          const split = data.gallery.split(',').map((u: string) => u.trim()).filter(Boolean);
+          if (split.length > 0) gallery = split;
         }
-      } else if (data.gallery_urls) {
-        if (Array.isArray(data.gallery_urls)) gallery = data.gallery_urls;
-        else gallery = data.gallery_urls.split(',').map((u: string) => u.trim());
+      }
+
+      if (data.imageUrl && !gallery.includes(data.imageUrl)) {
+        gallery = [data.imageUrl, ...gallery];
       }
 
       setProduct({
@@ -111,7 +113,7 @@ const ProductDetail = () => {
         isBestSeller: data.isBestSeller || false,
         isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
         specifications: specs,
-        features: Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? data.features.split(',').map((f: string) => f.trim()) : []),
+        features: Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? data.features.split(',').map((f: string) => f.trim()).filter(Boolean) : []),
         gallery: gallery
       });
     } catch (error) {

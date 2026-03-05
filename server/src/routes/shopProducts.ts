@@ -47,7 +47,7 @@ shopProductsRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected } = req.body || {};
+  const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected, features, specifications } = req.body || {};
   if (!name || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.shopProduct.create({
     data: { 
@@ -57,7 +57,9 @@ shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: 
       isPublished: Boolean(isPublished),
       isFeatured: Boolean(isFeatured),
       isNew: Boolean(isNew),
-      isCopyProtected: Boolean(isCopyProtected)
+      isCopyProtected: Boolean(isCopyProtected),
+      features: Array.isArray(features) ? features : [],
+      specifications: specifications || {}
     } as any,
   });
   res.status(201).json({ data: created });
@@ -65,7 +67,7 @@ shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: 
 
 shopProductsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected } = req.body || {};
+  const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected, features, specifications } = req.body || {};
   const updated = await prisma.shopProduct.update({
     where: { id },
     data: { 
@@ -75,7 +77,9 @@ shopProductsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res
       isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
       isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured),
       isNew: isNew === undefined ? undefined : Boolean(isNew),
-      isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
+      isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected),
+      features: Array.isArray(features) ? features : undefined,
+      specifications: specifications || undefined
     } as any,
   });
   res.json({ data: updated });
