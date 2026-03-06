@@ -1,13 +1,21 @@
-
+// Détection automatique de l'URL de base selon l'environnement
 function getApiBaseUrl(): string {
+  // En priorité: variable d'environnement
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL as string;
   }
   
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  // En production Render: utiliser l'URL du backend directement
+  if (window.location.hostname.includes('onrender.com')) {
+    // Si on est sur le frontend akouma.onrender.com, pointer vers le backend
+    if (window.location.hostname === 'akouma.onrender.com') {
+      return 'https://akouma-backend.onrender.com';
+    }
+    // Sinon, utiliser l'origine actuelle
     return window.location.origin;
   }
   
+  // En développement: fallback vers localhost
   return 'http://localhost:4000';
 }
 
@@ -41,7 +49,6 @@ async function http(method: string, path: string, options?: { params?: Record<st
       body,
     });
     
-    // Log détaillé pour débugger
     console.log(`[API] Response status: ${res.status}, Content-Type: ${res.headers.get("content-type")}`);
     
     if (!res.ok) {
@@ -63,7 +70,13 @@ async function http(method: string, path: string, options?: { params?: Record<st
       throw new Error(`Response non-JSON: ${text.substring(0, 100)}`);
     }
     
-    return res.json();
+    const jsonText = await res.text();
+    if (!jsonText.trim().startsWith('{') && !jsonText.trim().startsWith('[')) {
+      console.error(`[API] Contenu invalide pour ${method} ${path}:`, jsonText.substring(0, 200));
+      throw new Error(`Contenu invalide: ${jsonText.substring(0, 100)}`);
+    }
+    
+    return JSON.parse(jsonText);
   } catch (error) {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       const key = `api_error_${method}_${path}`;
