@@ -1,5 +1,17 @@
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '';
+function getApiBaseUrl(): string {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL as string;
+  }
+  
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return window.location.origin;
+  }
+  
+  return 'http://localhost:4000';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function http(method: string, path: string, options?: { params?: Record<string, any>; body?: any; headers?: Record<string, string> }) {
   try {
@@ -28,6 +40,9 @@ async function http(method: string, path: string, options?: { params?: Record<st
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
+      if (text && !text.trim().startsWith('{') && !text.trim().startsWith('[')) {
+        console.error(`[API] Response non-JSON pour ${method} ${path}:`, text.substring(0, 200));
+      }
       if (res.status !== 401 && res.status !== 403 && res.status !== 404) {
         console.warn(`[API] ${method} ${path}: ${res.status}`);
       }
@@ -60,7 +75,7 @@ function createTableQuery(table: string) {
         pendingOrder = { column: col, ascending: opts?.ascending !== false };
         return {
           range: async (_from: number, _to: number) => {
-            // Non utilisé actuellement. On ignore et retourne liste entière.
+
             const params: any = {};
             if (pendingOrder) {
               params.orderBy = pendingOrder.column;
@@ -80,7 +95,7 @@ function createTableQuery(table: string) {
       eq: (col: string, val: any) => ({
         select: () => ({
           single: async () => {
-            // Suppose clé primaire: id
+
             const id = col === 'id' ? val : val;
             const res = await http('PUT', `/api/${table}/${id}`, { body: values });
             return { data: res.data, error: null };
