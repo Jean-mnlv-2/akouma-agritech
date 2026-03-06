@@ -41,7 +41,6 @@ async function http(method: string, path: string, options?: { params?: Record<st
       body,
     });
     
-    // Log détaillé pour débugger
     console.log(`[API] Response status: ${res.status}, Content-Type: ${res.headers.get("content-type")}`);
     
     if (!res.ok) {
