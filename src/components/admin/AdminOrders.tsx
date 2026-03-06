@@ -407,29 +407,15 @@ export function AdminOrders() {
                         selectedOrder.events
                           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                           .map((event) => (
-                            <div key={event.id} className="border border-border rounded-lg p-3 bg-muted/20">
+                            <div key={event.id} className="border border-border rounded-lg p-3">
                               <div className="flex justify-between text-sm">
-                                <span className="font-bold text-primary">{event.type.toUpperCase()}</span>
-                                <span className="text-muted-foreground italic text-xs">{formatDate(event.createdAt)}</span>
+                                <span className="font-medium">{event.type}</span>
+                                <span className="text-muted-foreground">{formatDate(event.createdAt)}</span>
                               </div>
-                              <div className="text-sm mt-2 space-y-1">
-                                {event.status && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">Statut commande:</span>
-                                    {getStatusBadge(event.status)}
-                                  </div>
-                                )}
-                                {event.paymentStatus && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">Statut paiement:</span>
-                                    {getPaymentStatusBadge(event.paymentStatus)}
-                                  </div>
-                                )}
-                                {event.note && (
-                                  <div className="mt-1 p-2 bg-background rounded border border-dashed text-xs">
-                                    {event.note}
-                                  </div>
-                                )}
+                              <div className="text-sm mt-1 text-muted-foreground space-y-1">
+                                {event.status && <div>Statut: {event.status}</div>}
+                                {event.paymentStatus && <div>Paiement: {event.paymentStatus}</div>}
+                                {event.note && <div>Note: {event.note}</div>}
                               </div>
                             </div>
                           ))

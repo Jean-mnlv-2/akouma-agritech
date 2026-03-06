@@ -29,12 +29,10 @@ export interface CartDeliveryPartner {
 }
 
 export const computeShippingFee = (
-  _subtotal: number,
-  _method: DeliveryMethodChoice,
-  _partner?: CartDeliveryPartner | null,
+  subtotal: number,
+  method: DeliveryMethodChoice,
+  partner?: CartDeliveryPartner | null,
 ) => {
-  return 0;
-  /*
   if (method === 'PICKUP') {
     return 0;
   }
@@ -48,7 +46,6 @@ export const computeShippingFee = (
     return 0;
   }
   return subtotal > 50000 ? 0 : 5000;
-  */
 };
 
 interface StoredCart {
