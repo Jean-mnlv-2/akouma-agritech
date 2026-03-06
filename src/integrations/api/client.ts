@@ -32,24 +32,38 @@ async function http(method: string, path: string, options?: { params?: Record<st
       body = JSON.stringify(body);
     }
 
+    console.log(`[API] ${method} ${url.toString()}`);
+
     const res = await fetch(url.toString(), {
       method,
       headers,
       credentials: "include",
       body,
     });
+    
+    // Log détaillé pour débugger
+    console.log(`[API] Response status: ${res.status}, Content-Type: ${res.headers.get("content-type")}`);
+    
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       if (text && !text.trim().startsWith('{') && !text.trim().startsWith('[')) {
         console.error(`[API] Response non-JSON pour ${method} ${path}:`, text.substring(0, 200));
+        console.error(`[API] Headers:`, Object.fromEntries(res.headers.entries()));
       }
       if (res.status !== 401 && res.status !== 403 && res.status !== 404) {
         console.warn(`[API] ${method} ${path}: ${res.status}`);
       }
       throw new Error(text || `HTTP ${res.status}`);
     }
+    
     const contentType = res.headers.get("content-type") || "";
-    return contentType.includes("application/json") ? res.json() : res.text();
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error(`[API] Response non-JSON (${contentType}):`, text.substring(0, 200));
+      throw new Error(`Response non-JSON: ${text.substring(0, 100)}`);
+    }
+    
+    return res.json();
   } catch (error) {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       const key = `api_error_${method}_${path}`;
