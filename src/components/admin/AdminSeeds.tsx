@@ -60,7 +60,7 @@ export function AdminSeeds() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
   const [viewingSeed, setViewingSeed] = useState<Seed | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [_searchQuery, _setSearchQuery] = useState('');
   const { toast } = useToast();
 
   const { data: seeds = [], isLoading } = useQuery<Seed[]>({

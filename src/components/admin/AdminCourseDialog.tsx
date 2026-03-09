@@ -85,7 +85,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         slug: course.slug || slugify(course.title || ''),
         benefits_csv: Array.isArray(course.benefits) ? course.benefits.join('\n') : '',
         requirements_csv: Array.isArray(course.requirements) ? course.requirements.join('\n') : '',
-        modules: Array.isArray(course.modules) ? course.modules : []
+        modules: Array.isArray(course.modules) ? (course.modules as Module[]) : []
       });
       setPreviewImageUrl(course.thumbnail_url || null);
       setPreviewVideoUrl(course.video_url || null);

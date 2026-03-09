@@ -26,7 +26,7 @@ export function AdminNews() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<NewsArticle | null>(null);
   const [viewingNews, setViewingNews] = useState<NewsArticle | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [_searchQuery, _setSearchQuery] = useState('');
   const { toast } = useToast();
 
   const { data: news = [], isLoading } = useQuery<NewsArticle[]>({

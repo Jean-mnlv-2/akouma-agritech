@@ -143,7 +143,7 @@ export function AdminUserManagement() {
   });
   const createUser = (data: UserFormData) => { setIsCreating(true); createUserMutation.mutate(data); };
 
-  const toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
+  const _toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
 
   const updateUserMutation = useMutation({
     mutationFn: async (payload: { id: string; data: UserFormData }) => {
