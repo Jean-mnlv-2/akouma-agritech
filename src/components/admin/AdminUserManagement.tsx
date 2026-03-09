@@ -143,6 +143,7 @@ export function AdminUserManagement() {
   });
   const createUser = (data: UserFormData) => { setIsCreating(true); createUserMutation.mutate(data); };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
 
   const updateUserMutation = useMutation({
