@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Loader2, Search, Leaf } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminSeedDialog } from './AdminSeedDialog';
 import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -60,7 +60,7 @@ export function AdminSeeds() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
   const [viewingSeed, setViewingSeed] = useState<Seed | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [_searchQuery, _setSearchQuery] = useState('');
   const { toast } = useToast();
 
   const { data: seeds = [], isLoading } = useQuery<Seed[]>({

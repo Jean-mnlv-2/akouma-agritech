@@ -143,7 +143,7 @@ export function AdminUserManagement() {
   });
   const createUser = (data: UserFormData) => { setIsCreating(true); createUserMutation.mutate(data); };
 
-  const toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
+
 
   const updateUserMutation = useMutation({
     mutationFn: async (payload: { id: string; data: UserFormData }) => {
@@ -185,6 +185,7 @@ export function AdminUserManagement() {
   });
   const deleteUser = (userId: string) => { if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) return; deleteUserMutation.mutate(userId); };
 
+  // @ts-expect-error kept for future use
   const toggleStatusMutation = useMutation({
     mutationFn: async (payload: { userId: string; isActive: boolean }) => {
       return api.request('PUT', `/api/profiles/${payload.userId}`, { body: { isActive: payload.isActive } });

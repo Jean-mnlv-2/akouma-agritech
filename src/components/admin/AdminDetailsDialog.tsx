@@ -42,14 +42,24 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
     return <span className="text-foreground">{String(value)}</span>;
   };
 
-  const getFields = () => {
+  interface FieldDef {
+    label: string;
+    key: string;
+    value?: unknown;
+    transform?: (v: unknown) => string;
+    isImage?: boolean;
+    isGallery?: boolean;
+    isJson?: boolean;
+  }
+
+  const getFields = (): FieldDef[] => {
     switch (type) {
       case 'news':
         return [
           { label: 'Titre', key: 'title' },
           { label: 'Auteur', key: 'author' },
           { label: 'Catégorie', key: 'category' },
-          { label: 'Date', key: 'date', transform: (v: any) => new Date(v).toLocaleDateString() },
+          { label: 'Date', key: 'date', transform: (v: unknown) => new Date(v as string).toLocaleDateString() },
           { label: 'Résumé', key: 'excerpt' },
           { label: 'Contenu', key: 'content' },
           { label: 'Image', key: 'imageUrl', isImage: true },
@@ -84,9 +94,9 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
           { label: 'Nom complet', key: 'fullName', value: `${data.first_name || ''} ${data.last_name || ''}` },
           { label: 'Email', key: 'email' },
           { label: 'Rôle', key: 'role' },
-          { label: 'Statut', key: 'is_active', transform: (v: any) => v !== false ? 'Actif' : 'Inactif' },
+          { label: 'Statut', key: 'is_active', transform: (v: unknown) => (v as boolean) !== false ? 'Actif' : 'Inactif' },
           { label: 'Modules autorisés', key: 'allowed_modules' },
-          { label: 'Dernière connexion', key: 'last_login', transform: (v: any) => v ? new Date(v).toLocaleString() : 'Jamais' },
+          { label: 'Dernière connexion', key: 'last_login', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : 'Jamais' },
         ];
       case 'promo-code':
         return [
@@ -94,7 +104,7 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
           { label: 'Description', key: 'description' },
           { label: 'Type de remise', key: 'discountType' },
           { label: 'Valeur de remise', key: 'discountValue', transform: (v: unknown) => data.discountType === 'PERCENTAGE' ? `${v}%` : `${Number(v).toLocaleString()} FCFA` },
-          { label: 'Utilisations max', key: 'maxUses', transform: (v: unknown) => v || 'Illimité' },
+          { label: 'Utilisations max', key: 'maxUses', transform: (v: unknown) => String(v || 'Illimité') },
           { label: 'Nombre d\'utilisations', key: 'usesCount' },
           { label: 'Valide du', key: 'validFrom', transform: (v: unknown) => v ? new Date(v as string).toLocaleDateString() : 'N/A' },
           { label: 'Valide jusqu\'au', key: 'validUntil', transform: (v: unknown) => v ? new Date(v as string).toLocaleDateString() : 'N/A' },
@@ -132,7 +142,7 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
                   <div key={idx} className="md:col-span-2 space-y-2">
                     <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{field.label}</span>
                     <div className="aspect-video relative rounded-lg overflow-hidden border bg-muted/30 flex items-center justify-center">
-                      <img src={value} alt="Preview" className="max-h-full object-contain" />
+                      <img src={String(value)} alt="Preview" className="max-h-full object-contain" />
                     </div>
                   </div>
                 );
