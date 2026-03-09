@@ -164,13 +164,8 @@ const Checkout = () => {
         };
       });
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+      const result = await api.request('POST', '/api/orders', {
+        body: {
           items: orderItems,
           shippingAddress,
           shippingCity,
@@ -179,15 +174,10 @@ const Checkout = () => {
           paymentMethod,
           notes,
           promoCode: validatedPromo?.code || appliedPromo?.code || null,
-        }),
+        },
       });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        throw new Error(error?.error || 'Failed to create order');
-      }
-
-      const { data: order } = await response.json();
+      const order = result.data;
 
       clearCart();
       clearPromo();
