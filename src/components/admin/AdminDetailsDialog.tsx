@@ -142,7 +142,7 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
                   <div key={idx} className="md:col-span-2 space-y-2">
                     <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{field.label}</span>
                     <div className="aspect-video relative rounded-lg overflow-hidden border bg-muted/30 flex items-center justify-center">
-                      <img src={value} alt="Preview" className="max-h-full object-contain" />
+                      <img src={String(value)} alt="Preview" className="max-h-full object-contain" />
                     </div>
                   </div>
                 );

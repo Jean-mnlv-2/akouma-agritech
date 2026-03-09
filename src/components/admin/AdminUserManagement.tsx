@@ -143,8 +143,9 @@ export function AdminUserManagement() {
   });
   const createUser = (data: UserFormData) => { setIsCreating(true); createUserMutation.mutate(data); };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  const toggleUserStatus = (userId: string, makeActive: boolean) => { toggleStatusMutation.mutate({ userId, isActive: makeActive }); };
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   const updateUserMutation = useMutation({
     mutationFn: async (payload: { id: string; data: UserFormData }) => {
