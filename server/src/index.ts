@@ -44,6 +44,7 @@ import { statsRouter } from './routes/stats';
 import { ordersRouter } from './routes/orders';
 import { promoCodesRouter } from './routes/promoCodes';
 import { deliveryPartnersRouter } from './routes/deliveryPartners';
+import { paymentsRouter } from './routes/payments';
 
 const app = express();
 const prisma = new PrismaClient();
