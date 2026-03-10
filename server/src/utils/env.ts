@@ -90,8 +90,12 @@ export const env = {
   DEFAULT_ADMIN_FULL_NAME,
   DEFAULT_ADMIN_FORCE_RESET,
   API_PUBLIC_URL: process.env.API_PUBLIC_URL ?? `http://localhost:${PORT}`,
+  FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:8080',
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   EMAIL_FROM: process.env.EMAIL_FROM || 'AKOUMA <noreply@akouma.com>',
+  MONEYFUSION_API_URL: process.env.MONEYFUSION_API_URL || '',
+  MONEYFUSION_TOKEN: process.env.MONEYFUSION_TOKEN || '',
+  MONEYFUSION_NOTIF_URL: process.env.MONEYFUSION_NOTIF_URL || '',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
   validateSecrets: () => {
