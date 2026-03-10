@@ -36,6 +36,7 @@ import { useContactSettings } from '@/hooks/use-contact-settings';
 import DOMPurify from 'dompurify';
 import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
+import { useCartContext } from "@/context/CartContext";
 
 interface SeedProduct {
   id: string;
