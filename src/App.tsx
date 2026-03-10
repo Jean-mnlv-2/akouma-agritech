@@ -54,6 +54,7 @@ import NotFound from "./pages/NotFound";
 import LearningDashboard from "./pages/LearningDashboard";
 import CourseLearn from "./pages/CourseLearn";
 import ResetPassword from "./pages/ResetPassword";
+import OrderDetail from "./pages/OrderDetail";
 import CookieConsent from "@/components/CookieConsent";
 const queryClient = new QueryClient();
 
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/agri-consulting" element={<AgriConsulting />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/partners" element={<Partnerships />} />
                 <Route path="/donations" element={<Donations />} />
                 <Route path="/dashboard/learning" element={<LearningDashboard />} />
