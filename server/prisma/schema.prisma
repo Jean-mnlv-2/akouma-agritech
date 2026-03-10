@@ -473,6 +473,7 @@ model Order {
   status            String           @default("pending")
   paymentStatus     String           @default("pending")
   paymentMethod     String?
+  paymentRef        String?
   deliveryMethod    DeliveryMethod   @default(PICKUP)
   subtotal          Decimal          @db.Decimal(12, 2)
   shipping          Decimal          @default(0) @db.Decimal(12, 2)

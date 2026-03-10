@@ -24,7 +24,8 @@ import {
   Zap, 
   User,
   Heart,
-  Share2
+  Share2,
+  ShoppingCart
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -35,6 +36,7 @@ import { useContactSettings } from '@/hooks/use-contact-settings';
 import DOMPurify from 'dompurify';
 import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
+import { useCartContext } from "@/context/CartContext";
 
 interface SeedProduct {
   id: string;
@@ -74,6 +76,7 @@ export default function SeedDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addToCart } = useCartContext();
   const [product, setProduct] = useState<SeedProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
@@ -421,6 +424,31 @@ export default function SeedDetail() {
                   className="text-slate-700 leading-relaxed italic prose prose-slate max-w-none"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
                 />
+              </div>
+
+              {/* Add to Cart */}
+              <div className="mb-6">
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20"
+                  disabled={product.availability === 'Rupture'}
+                  onClick={() => {
+                    addToCart({
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: product.images[0] || logoAk,
+                      inStock: product.availability !== 'Rupture',
+                    });
+                    toast({
+                      title: "Semence ajoutée au panier",
+                      description: `${product.name} ajouté avec succès`,
+                    });
+                  }}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  {product.availability === 'Rupture' ? 'Rupture de stock' : 'Ajouter au panier'}
+                </Button>
               </div>
 
               <div className="mb-6">
