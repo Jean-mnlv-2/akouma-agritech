@@ -425,6 +425,31 @@ export default function SeedDetail() {
                 />
               </div>
 
+              {/* Add to Cart */}
+              <div className="mb-6">
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20"
+                  disabled={product.availability === 'Rupture'}
+                  onClick={() => {
+                    addToCart({
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: product.images[0] || logoAk,
+                      inStock: product.availability !== 'Rupture',
+                    });
+                    toast({
+                      title: "Semence ajoutée au panier",
+                      description: `${product.name} ajouté avec succès`,
+                    });
+                  }}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  {product.availability === 'Rupture' ? 'Rupture de stock' : 'Ajouter au panier'}
+                </Button>
+              </div>
+
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
                   <MessageSquare className="w-5 h-5 mr-2 text-primary" />
