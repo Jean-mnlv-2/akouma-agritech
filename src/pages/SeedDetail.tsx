@@ -76,6 +76,7 @@ export default function SeedDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addToCart } = useCartContext();
   const [product, setProduct] = useState<SeedProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
