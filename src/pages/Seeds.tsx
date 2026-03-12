@@ -61,6 +61,8 @@ const Seeds = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [products, setProducts] = useState<SeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCartContext();
+  const { toast } = useToast();
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   const { t } = useI18n();
