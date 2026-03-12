@@ -55,6 +55,7 @@ import LearningDashboard from "./pages/LearningDashboard";
 import CourseLearn from "./pages/CourseLearn";
 import ResetPassword from "./pages/ResetPassword";
 import OrderDetail from "./pages/OrderDetail";
+import Orders from "./pages/Orders";
 import CookieConsent from "@/components/CookieConsent";
 const queryClient = new QueryClient();
 
