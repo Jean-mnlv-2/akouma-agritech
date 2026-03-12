@@ -133,7 +133,7 @@ const NewsDetail = () => {
 
       // Fetch related articles by same category (excluding current)
       try {
-        const relRes = await fetch(`/api/news?category=${encodeURIComponent(normalized.category)}&limit=4`, { credentials: 'include' });
+        const relRes = await fetch(`${apiBaseUrl}/api/news?category=${encodeURIComponent(normalized.category)}&limit=4`, { credentials: 'include' });
         if (relRes.ok) {
           const relBody = await relRes.json();
           const relItems = Array.isArray(relBody) ? relBody : relBody.data;
