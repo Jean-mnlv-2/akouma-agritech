@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Leaf, Star, Package, Truck, Shield, RefreshCw } from "lucide-react";
+import { Search, Leaf, Star, Package, Truck, Shield, RefreshCw, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 import DOMPurify from 'dompurify';
 import TitleManager from "@/components/TitleManager";
 import { useI18n } from "@/i18n/i18n";
+import { useCartContext } from "@/context/CartContext";
+import { useToast } from "@/hooks/use-toast";
 import logoAk from "@/assets/logo-ak.png";
 
 interface SeedProduct {

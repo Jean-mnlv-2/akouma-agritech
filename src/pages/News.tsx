@@ -34,6 +34,8 @@ export default function News() {
   const { toast } = useToast();
   const { t } = useI18n();
 
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
+
   useEffect(() => {
     const fetchNews = async () => {
       try {
@@ -42,7 +44,8 @@ export default function News() {
         if (selectedCategory !== 'all') params.set('category', selectedCategory);
         params.set('page', String(page));
         params.set('pageSize', String(pageSize));
-        const res = await fetch(`/api/news?${params.toString()}`, { credentials: 'include' });
+        const url = new URL(`/api/news?${params.toString()}`, apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load news');
         const body = await res.json();
         const items = Array.isArray(body) ? body : body.data;
