@@ -104,13 +104,15 @@ const NewsDetail = () => {
     }
   );
 
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+
   // Fetch article data from backend
   const fetchArticle = useCallback(async () => {
     if (!slug) return;
     
     try {
       setLoading(true);
-      const res = await fetch(`/api/news/slug/${slug}`, { credentials: 'include' });
+      const res = await fetch(`${apiBaseUrl}/api/news/slug/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch article');
       const { data } = (await res.json()) as { data: RawArticleData };
       
