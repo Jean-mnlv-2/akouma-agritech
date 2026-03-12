@@ -333,7 +333,7 @@ const Seeds = () => {
                               name: product.name,
                               price: product.price,
                               image: product.image,
-                              type: 'seed',
+                              inStock: product.availability !== "Rupture",
                             });
                             toast({ title: "Ajouté au panier", description: product.name });
                           }}
