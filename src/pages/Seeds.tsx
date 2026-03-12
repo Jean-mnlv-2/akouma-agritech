@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Leaf, Star, Package, Truck, Shield, RefreshCw } from "lucide-react";
+import { Search, Leaf, Star, Package, Truck, Shield, RefreshCw, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 import DOMPurify from 'dompurify';
 import TitleManager from "@/components/TitleManager";
 import { useI18n } from "@/i18n/i18n";
+import { useCartContext } from "@/context/CartContext";
+import { useToast } from "@/hooks/use-toast";
 import logoAk from "@/assets/logo-ak.png";
 
 interface SeedProduct {
@@ -59,6 +61,8 @@ const Seeds = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [products, setProducts] = useState<SeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCartContext();
+  const { toast } = useToast();
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   const { t } = useI18n();
@@ -318,17 +322,38 @@ const Seeds = () => {
                         </p>
                         <p className="text-sm text-muted-foreground">{t("seeds.per")} {product.unit}</p>
                       </div>
-                      <Button 
-                        size="sm"
-                        disabled={product.availability === "Rupture"}
-                        asChild
-                        className="focus-visible:ring-4 focus-visible:ring-primary/40 transition-transform duration-200 hover:scale-105"
-                        aria-label={t("seeds.details.aria")}
-                      >
-                        <Link to={`/seeds/${product.slug}`}>
-                          {t("seeds.details")}
-                        </Link>
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          disabled={product.availability === "Rupture"}
+                          onClick={async () => {
+                            await addToCart({
+                              id: String(product.id),
+                              name: product.name,
+                              price: product.price,
+                              image: product.image,
+                              inStock: product.availability !== "Rupture",
+                            });
+                            toast({ title: "Ajouté au panier", description: product.name });
+                          }}
+                          className="focus-visible:ring-4 focus-visible:ring-primary/40"
+                          aria-label={`Ajouter ${product.name} au panier`}
+                        >
+                          <ShoppingCart className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          size="sm"
+                          disabled={product.availability === "Rupture"}
+                          asChild
+                          className="focus-visible:ring-4 focus-visible:ring-primary/40 transition-transform duration-200 hover:scale-105"
+                          aria-label={t("seeds.details.aria")}
+                        >
+                          <Link to={`/seeds/${product.slug}`}>
+                            {t("seeds.details")}
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
