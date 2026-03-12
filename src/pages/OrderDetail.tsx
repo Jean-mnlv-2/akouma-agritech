@@ -114,6 +114,15 @@ const OrderDetail = () => {
     fetchOrder();
   }, [fetchOrder]);
 
+  // Auto-refresh every 10s when payment is pending or failed
+  useEffect(() => {
+    if (!order || (order.paymentStatus !== "pending" && order.paymentStatus !== "failed")) return;
+    const interval = setInterval(() => {
+      fetchOrder();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [order?.paymentStatus, fetchOrder]);
+
   useEffect(() => {
     if (paymentParam === "success") {
       toast({
