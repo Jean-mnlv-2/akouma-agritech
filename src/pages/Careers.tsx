@@ -148,12 +148,6 @@ const Careers = () => {
     return new Date(deadline).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  /** Strip HTML and return plain text for display */
-  const stripHtml = (html: string) => {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    return doc.body.textContent || '';
-  };
-
   if (isLoading) {
     return <LoadingSpinner size="large" text="Chargement des opportunités de carrière..." />;
   }
