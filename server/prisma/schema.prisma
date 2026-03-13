@@ -424,19 +424,40 @@ model Event {
 }
 
 model Career {
-  id                  Int       @id @default(autoincrement())
+  id                  Int              @id @default(autoincrement())
   title               String
   description         String
   requirements        String?
   location            String
-  employmentType      String    @default("full-time")
+  employmentType      String           @default("full-time")
   department          String?
   salaryRange         String?
-  isPublished         Boolean   @default(false)
+  isPublished         Boolean          @default(false)
   applicationDeadline DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  slug                String    @unique
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  slug                String           @unique
+  applications        JobApplication[]
+}
+
+model JobApplication {
+  id          Int      @id @default(autoincrement())
+  careerId    Int?
+  careerTitle String
+  fullName    String
+  email       String
+  phone       String?
+  message     String?
+  cvUrl       String?
+  attachments String[] @default([])
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  career      Career?  @relation(fields: [careerId], references: [id], onDelete: SetNull)
+
+  @@index([careerId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 /// Contact and social settings (singleton)

@@ -68,13 +68,20 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    // Accepter seulement les images
-    if (file.mimetype.startsWith('image/')) {
+    // Accepter images et documents
+    const allowedMimes = [
+      'image/', 'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+    if (allowedMimes.some(m => file.mimetype.startsWith(m))) {
       cb(null, true);
     } else {
-      cb(new Error('Seules les images sont autorisées'));
+      cb(new Error('Type de fichier non autorisé'));
     }
   }
 });
