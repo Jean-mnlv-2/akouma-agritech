@@ -139,7 +139,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
         if (quill) {
           const range = quill.getSelection(true);
           quill.insertEmbed(range.index, 'image', url);
-          quill.setSelection(range.index + 1);
+          quill.setSelection(range.index + 1, 0);
         }
       } catch (err) {
         console.error('Inline image upload error:', err);
