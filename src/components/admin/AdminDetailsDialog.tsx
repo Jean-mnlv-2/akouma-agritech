@@ -92,11 +92,13 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
       case 'user':
         return [
           { label: 'Nom complet', key: 'fullName', value: `${data.first_name || ''} ${data.last_name || ''}` },
-          { label: 'Email', key: 'email' },
+          { label: 'Email (Login)', key: 'email' },
+          { label: 'Mot de passe temporaire', key: 'temp_password', transform: (v: unknown) => v ? String(v) : 'Non disponible (déjà changé ou non généré)' },
           { label: 'Rôle', key: 'role' },
           { label: 'Statut', key: 'is_active', transform: (v: unknown) => (v as boolean) !== false ? 'Actif' : 'Inactif' },
           { label: 'Modules autorisés', key: 'allowed_modules' },
           { label: 'Dernière connexion', key: 'last_login', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : 'Jamais' },
+          { label: 'Créé le', key: 'created_at', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : '' },
         ];
       case 'promo-code':
         return [

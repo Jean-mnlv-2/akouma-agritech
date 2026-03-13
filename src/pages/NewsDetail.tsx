@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, User, Share2 } from "lucide-react";
+import { ArrowLeft, Calendar, User, Share2, Clock } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -40,7 +39,6 @@ interface Article {
   category: string;
   image: string;
   readTime: string;
-  tags: string[];
   isCopyProtected: boolean;
   relatedArticles: RelatedArticle[];
 }
@@ -51,6 +49,7 @@ interface RelatedArticle {
   title: string;
   image: string;
   date: string;
+  excerpt: string;
 }
 
 const NewsDetail = () => {
@@ -62,28 +61,21 @@ const NewsDetail = () => {
 
   const handleShare = async () => {
     if (isSharing) return;
-    
     const shareData = {
       title: article?.title || "AKOUMA Agritech",
       text: article?.excerpt,
       url: window.location.href,
     };
-
     try {
       if (typeof navigator.share !== 'undefined') {
         setIsSharing(true);
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        toast({
-          title: "Lien copié",
-          description: "Le lien de l'article a été copié.",
-        });
+        toast({ title: "Lien copié", description: "Le lien de l'article a été copié." });
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error('Share error:', error);
-      }
+      if ((error as Error).name !== 'AbortError') console.error('Share error:', error);
     } finally {
       setIsSharing(false);
     }
@@ -95,27 +87,21 @@ const NewsDetail = () => {
       title: article?.title || "",
       imageUrl: article?.image,
       excerpt: article?.excerpt,
-      date: article ? new Date(article.date).toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }) : undefined,
+      date: article ? new Date(article.date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) : undefined,
       url: window.location.href,
     }
   );
 
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
-  // Fetch article data from backend
   const fetchArticle = useCallback(async () => {
     if (!slug) return;
-    
     try {
       setLoading(true);
       const res = await fetch(`${apiBaseUrl}/api/news/slug/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch article');
       const { data } = (await res.json()) as { data: RawArticleData };
-      
+
       const normalized: Article = {
         id: data.id,
         title: data.title,
@@ -126,28 +112,26 @@ const NewsDetail = () => {
         category: data.category || 'Général',
         image: data.imageUrl || data.image_url || '/logo-ak.png',
         readTime: String(data.read_time || 5) + ' min',
-        tags: [data.category || 'Général'],
         isCopyProtected: data.isCopyProtected ?? data.is_copy_protected ?? false,
         relatedArticles: []
       };
 
-      // Fetch related articles by same category (excluding current)
       try {
-        const relRes = await fetch(`${apiBaseUrl}/api/news?category=${encodeURIComponent(normalized.category)}&limit=4`, { credentials: 'include' });
+        const relRes = await fetch(`${apiBaseUrl}/api/news?is_published=true`, { credentials: 'include' });
         if (relRes.ok) {
           const relBody = await relRes.json();
           const relItems = Array.isArray(relBody) ? relBody : relBody.data;
-          const related: RelatedArticle[] = (relItems || [])
+          normalized.relatedArticles = (relItems || [])
             .filter((it: RawArticleData) => String(it.id) !== String(normalized.id))
-            .slice(0, 4)
+            .slice(0, 3)
             .map((it: RawArticleData) => ({
               id: String(it.id),
               slug: (it as any).slug || String(it.id),
               title: it.title,
               image: it.imageUrl || it.image_url || '/logo-ak.png',
               date: it.createdAt || it.created_at || it.date || new Date().toISOString(),
+              excerpt: it.excerpt || it.description || '',
             }));
-          normalized.relatedArticles = related;
         }
       } catch (err) {
         console.warn('Error fetching related articles:', err);
@@ -160,19 +144,12 @@ const NewsDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [slug, apiBaseUrl]);
 
-  useEffect(() => {
-    fetchArticle();
-  }, [fetchArticle]);
+  useEffect(() => { fetchArticle(); }, [fetchArticle]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
 
   if (loading) {
     return (
@@ -192,9 +169,7 @@ const NewsDetail = () => {
         <Header />
         <div className="container mx-auto px-6 py-12 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Article introuvable</h1>
-          <Link to="/news" className="text-primary hover:underline">
-            Retour aux actualités
-          </Link>
+          <Link to="/news" className="text-primary hover:underline">Retour aux actualités</Link>
         </div>
         <Footer />
       </div>
@@ -204,7 +179,7 @@ const NewsDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       {article && (
         <CopyProtectionDialog
           isOpen={isDialogOpen}
@@ -219,148 +194,120 @@ const NewsDetail = () => {
         />
       )}
 
-      <div className="container mx-auto px-6 py-12">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+      {/* Hero image - full width, large */}
+      <div className="w-full bg-muted/20">
+        <div className="max-w-5xl mx-auto">
+          <div className="aspect-[21/9] md:aspect-[2.5/1] w-full overflow-hidden">
+            <img
+              src={article.image}
+              alt={article.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+
+      <article className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
+        {/* Breadcrumb + back */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-6 mb-4 flex-wrap">
           <Link to="/" className="hover:text-primary">Accueil</Link>
           <span>/</span>
           <Link to="/news" className="hover:text-primary">Actualités</Link>
           <span>/</span>
-          <span className="text-foreground">{article.title}</span>
+          <span className="text-foreground truncate max-w-[200px]">{article.title}</span>
         </div>
 
-        {/* Back button */}
-        <Link to="/news" className="inline-flex items-center text-primary hover:text-primary/80 mb-8">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+        <Link to="/news" className="inline-flex items-center text-primary hover:text-primary/80 text-sm mb-6">
+          <ArrowLeft className="w-4 h-4 mr-1" />
           Retour aux actualités
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Article content - Enhanced */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Header - Enhanced */}
-            <div className="bg-gradient-to-br from-primary/5 via-background to-accent/5 rounded-2xl p-8 border-2 border-border">
-              <div className="flex items-center gap-3 mb-6 flex-wrap">
-                <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
-                  {article.category}
-                </Badge>
-                <span className="text-sm text-muted-foreground font-medium bg-card/50 px-3 py-1 rounded-lg">
-                  {article.readTime} de lecture
-                </span>
-                <Button variant="outline" size="sm" onClick={handleShare} className="gap-2 ml-auto">
-                  <Share2 className="w-4 h-4" />
-                  Partager
-                </Button>
-              </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent leading-tight">
-                {article.title}
-              </h1>
-              <div className="flex items-center gap-6 mb-6 text-sm text-muted-foreground flex-wrap">
-                <div className="flex items-center gap-2 bg-card/50 px-4 py-2 rounded-lg">
+        {/* Article header */}
+        <header className="mb-8">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-xs">
+              {article.category}
+            </Badge>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              {article.readTime} de lecture
+            </span>
+          </div>
+
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight mb-6">
+            {article.title}
+          </h1>
+
+          {article.excerpt && (
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              {article.excerpt}
+            </p>
+          )}
+
+          <div className="flex items-center justify-between flex-wrap gap-4 pb-6 border-b border-border">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-primary" />
-                  <span className="font-medium">{article.author}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-card/50 px-4 py-2 rounded-lg">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  <span className="font-medium">{formatDate(article.date)}</span>
-                </div>
+                <span className="font-medium">{article.author}</span>
               </div>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">{article.excerpt}</p>
-            </div>
-
-            {/* Featured image - Enhanced */}
-            <div className="aspect-video bg-muted/30 rounded-2xl overflow-hidden border-2 border-border group relative">
-              <img 
-                src={article.image} 
-                alt={article.title} 
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            </div>
-
-            {/* Article content - Enhanced */}
-            <div 
-              className="prose prose-lg max-w-none bg-card/50 rounded-2xl p-8 border-2 border-border"
-              dangerouslySetInnerHTML={{ __html: article.content }}
-            />
-
-            {/* Tags - Enhanced */}
-            <div className="pt-8 border-t-2 border-border">
-              <h4 className="font-bold text-xl mb-4 text-foreground">Tags</h4>
-              <div className="flex flex-wrap gap-3">
-                {article.tags.map((tag, index) => (
-                  <Badge 
-                    key={`tag-${index}-${tag}`} 
-                    variant="secondary" 
-                    className="bg-primary/10 text-primary border border-primary/20 hover:scale-105 transition-transform cursor-pointer"
-                  >
-                    {tag}
-                  </Badge>
-                ))}
+              <div className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                <span>{formatDate(article.date)}</span>
               </div>
             </div>
+            <Button variant="outline" size="sm" onClick={handleShare} className="gap-2">
+              <Share2 className="w-4 h-4" />
+              Partager
+            </Button>
           </div>
+        </header>
 
-          {/* Sidebar - Enhanced */}
-          <div className="space-y-6">
-            {/* Author info - Enhanced */}
-            <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500 sticky top-24">
-              <CardContent className="p-6">
-                <h4 className="font-bold text-xl mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  À propos de l'auteur
-                </h4>
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-lg">
-                    <User className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-lg mb-2">{article.author}</h5>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {article.author === 'AKOUMA Team' ? "Équipe éditoriale AKOUMA." : "Auteur invité - expert en innovation agricole."}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Article body - rich content with inline images supported via HTML */}
+        <div
+          className="prose prose-lg max-w-none dark:prose-invert
+            prose-headings:text-foreground prose-p:text-foreground/85 prose-p:leading-relaxed
+            prose-a:text-primary prose-strong:text-foreground
+            prose-img:rounded-xl prose-img:shadow-md prose-img:mx-auto prose-img:my-8
+            prose-blockquote:border-primary/40 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:px-4
+            prose-li:text-foreground/85"
+          dangerouslySetInnerHTML={{ __html: article.content }}
+        />
 
-            {/* Related articles - Enhanced */}
-            {article.relatedArticles.length > 0 && (
-              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
-                <CardContent className="p-6">
-                  <h4 className="font-bold text-xl mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    Articles connexes
-                  </h4>
-                  <div className="space-y-4">
-                    {article.relatedArticles.map((related, index) => {
-                      const delay = index * 50;
-                      return (
-                        <Link 
-                          key={related.id} 
-                          to={`/news/${related.slug}`} 
-                          className="block group hover:bg-primary/5 p-3 rounded-lg transition-all duration-300"
-                          style={{ transitionDelay: `${delay}ms` }}
-                        >
-                          <div className="flex gap-3">
-                            <div className="w-20 h-20 bg-muted rounded-xl overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform duration-300 border-2 border-border">
-                              <img src={related.image} alt={related.title} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h5 className="font-semibold text-sm group-hover:text-primary transition-colors line-clamp-2 mb-1">
-                                {related.title}
-                              </h5>
-                              <p className="text-xs text-muted-foreground">{formatDate(related.date)}</p>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+        {/* Related articles */}
+        {article.relatedArticles.length > 0 && (
+          <section className="mt-16 pt-8 border-t border-border">
+            <h2 className="text-2xl font-bold text-foreground mb-8">
+              À lire aussi
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {article.relatedArticles.map((related) => (
+                <Link
+                  key={related.id}
+                  to={`/news/${related.slug}`}
+                  className="group block rounded-xl overflow-hidden border border-border bg-card hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="aspect-[16/9] overflow-hidden bg-muted">
+                    <img
+                      src={related.image}
+                      alt={related.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                      {related.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{related.excerpt}</p>
+                    <span className="text-xs text-muted-foreground">{formatDate(related.date)}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </article>
 
       <Footer />
     </div>

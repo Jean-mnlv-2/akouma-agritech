@@ -6,7 +6,6 @@ import { Leaf, Star, Package, ChevronLeft, ChevronRight, ArrowRight } from 'luci
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
 import { useI18n } from '@/i18n/i18n';
-import DOMPurify from 'dompurify';
 import logoAk from '@/assets/logo-ak.png';
 
 interface SeedProduct {
@@ -184,12 +183,9 @@ const SeedsSection = () => {
                   <h3 className="text-2xl font-bold text-foreground mb-4 group-hover:text-primary transition-colors">
                     {products[0].name}
                   </h3>
-                  <div 
-                    className="text-muted-foreground mb-4 line-clamp-3 prose prose-sm prose-slate"
-                    dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(products[0].description) 
-                    }} 
-                  />
+                  <p className="text-muted-foreground mb-4 line-clamp-3">
+                    {products[0].description.replace(/<[^>]*>/g, '').trim()}
+                  </p>
                   <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
                     <div>
                       <span className="font-medium text-foreground">{t('seeds.variety')}:</span>
@@ -264,12 +260,9 @@ const SeedsSection = () => {
                     </CardHeader>
 
                     <CardContent className="pt-0 space-y-3">
-                      <div 
-                        className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem] prose prose-sm prose-slate"
-                        dangerouslySetInnerHTML={{ 
-                          __html: DOMPurify.sanitize(product.description) 
-                        }} 
-                      />
+                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                        {product.description.replace(/<[^>]*>/g, '').trim()}
+                      </p>
                       
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
