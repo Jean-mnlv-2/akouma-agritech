@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { useRef } from 'react';
 import { api } from '@/integrations/api/client';
 
 interface NewsArticle {
@@ -57,6 +56,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(formData.image_url || null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const quillRef = useRef<ReactQuill | null>(null);
 
   useEffect(() => {
     if (news) {
@@ -85,7 +85,6 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const slug = formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    // Map to Prisma fields
     const payload = {
       title: formData.title,
       excerpt: formData.excerpt || null,
@@ -110,24 +109,62 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
       fd.append('file', file);
       const data = await api.request('POST', '/api/upload', { body: fd });
       const url = data.url;
-      setFormData({ ...formData, image_url: url });
+      setFormData(prev => ({ ...prev, image_url: url }));
       setPreviewUrl(url);
     } catch (err) {
       console.error('Image upload error:', err);
-      alert('Erreur lors de l\'upload de l\'image');
+      alert("Erreur lors de l'upload de l'image");
     }
     setUploading(false);
   };
 
-  const quillModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['link', 'image', 'clean']
-    ],
+  // Handler for inserting images inline in Quill editor
+  const imageHandler = () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const data = await api.request('POST', '/api/upload', { body: fd });
+        const url = data.url;
+
+        const quill = quillRef.current?.getEditor();
+        if (quill) {
+          const range = quill.getSelection(true);
+          quill.insertEmbed(range.index, 'image', url);
+          quill.setSelection(range.index + 1);
+        }
+      } catch (err) {
+        console.error('Inline image upload error:', err);
+        alert("Erreur lors de l'upload de l'image dans l'éditeur");
+      }
+    };
   };
+
+  const quillModules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }],
+        ['blockquote', 'code-block'],
+        ['link', 'image', 'video'],
+        ['clean']
+      ],
+      handlers: {
+        image: imageHandler,
+      },
+    },
+  }), []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -137,7 +174,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
             {news ? "Modifier l'actualité" : "Ajouter une actualité"}
           </DialogTitle>
           <DialogDescription>
-            Publiez ou modifiez un article d'actualité pour la plateforme.
+            Publiez ou modifiez un article d'actualité. Utilisez le bouton image dans la barre d'outils pour insérer des images entre les paragraphes.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-2">
@@ -151,9 +188,9 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
                   const newTitle = e.target.value;
                   const newSlug = slugify(newTitle);
                   if (!formData.slug || formData.slug === slugify(formData.title)) {
-                    setFormData({ ...formData, title: newTitle, slug: newSlug });
+                    setFormData(prev => ({ ...prev, title: newTitle, slug: newSlug }));
                   } else {
-                    setFormData({ ...formData, title: newTitle });
+                    setFormData(prev => ({ ...prev, title: newTitle }));
                   }
                 }} 
                 required 
@@ -161,7 +198,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
             </div>
             <div className="space-y-2">
               <Label htmlFor="slug">Slug (URL)</Label>
-              <Input id="slug" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} placeholder="genere-automatiquement" />
+              <Input id="slug" value={formData.slug} onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))} placeholder="genere-automatiquement" />
             </div>
           </div>
           <div className="space-y-2">
@@ -169,18 +206,19 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
             <Textarea 
               id="excerpt" 
               value={formData.excerpt} 
-              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })} 
+              onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))} 
               className="bg-white rounded" 
               placeholder="Court résumé de l'article..."
             />
           </div>
           <div className="space-y-2 min-h-[300px] flex flex-col">
-            <Label>Contenu de l'article *</Label>
+            <Label>Contenu de l'article * <span className="text-xs text-muted-foreground ml-2">(Cliquez sur l'icône image pour insérer des images dans le texte)</span></Label>
             <div className="flex-1">
               <ReactQuill 
+                ref={quillRef}
                 theme="snow"
                 value={formData.content}
-                onChange={(content) => setFormData({ ...formData, content })}
+                onChange={(content) => setFormData(prev => ({ ...prev, content }))}
                 modules={quillModules}
                 className="h-[250px] mb-12"
               />
@@ -189,11 +227,11 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
               <Label htmlFor="author_name">Nom de l'auteur *</Label>
-              <Input id="author_name" value={formData.author_name} onChange={(e) => setFormData({ ...formData, author_name: e.target.value })} required />
+              <Input id="author_name" value={formData.author_name} onChange={(e) => setFormData(prev => ({ ...prev, author_name: e.target.value }))} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie *</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+              <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner une catégorie" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Agriculture">Agriculture</SelectItem>
@@ -207,25 +245,25 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="image_upload">Image de l'article</Label>
+            <Label htmlFor="image_upload">Image de couverture</Label>
             <div className="flex items-center gap-3">
               <Input id="image_upload" type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} ref={imageInputRef} className="hidden" />
-              <Button type="button" variant="outline" onClick={() => imageInputRef.current?.click()} disabled={uploading}>{uploading ? 'Upload...' : 'Remplacer l\'image'}</Button>
+              <Button type="button" variant="outline" onClick={() => imageInputRef.current?.click()} disabled={uploading}>{uploading ? 'Upload...' : previewUrl ? "Remplacer l'image" : "Ajouter une image"}</Button>
             </div>
             {uploading && <div className="text-xs text-muted-foreground">Upload en cours...</div>}
             {previewUrl && (<div className="mt-2"><img src={previewUrl} alt="Aperçu" className="w-32 h-32 object-cover rounded border" /></div>)}
           </div>
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2">
-              <Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })} />
+              <Switch id="is_published" checked={formData.is_published} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_published: checked }))} />
               <Label htmlFor="is_published">Publié</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })} />
+              <Switch id="is_featured" checked={formData.is_featured} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))} />
               <Label htmlFor="is_featured">Mis en avant</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch id="is_copy_protected" checked={formData.is_copy_protected} onCheckedChange={(checked) => setFormData({ ...formData, is_copy_protected: checked })} />
+              <Switch id="is_copy_protected" checked={formData.is_copy_protected} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_copy_protected: checked }))} />
               <Label htmlFor="is_copy_protected">Protéger la copie</Label>
             </div>
           </div>

@@ -269,7 +269,7 @@ const ShopSection = () => {
                         {product.name}
                       </CardTitle>
                       <CardDescription className="line-clamp-2">
-                        {product.description}
+                        {product.description?.replace(/<[^>]*>/g, '').trim()}
                       </CardDescription>
                     </CardHeader>
 
