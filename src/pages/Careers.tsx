@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MapPin, Clock, Users, Briefcase, Send, Loader2 } from "lucide-react";
+import { MapPin, Clock, Users, Briefcase, Send, Loader2, Upload, FileText } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,7 +34,11 @@ const Careers = () => {
   const [loadingCareers, setLoadingCareers] = useState(true);
   const [isApplyOpen, setIsApplyOpen] = useState(false);
   const [applyTitle, setApplyTitle] = useState("");
+  const [applyCareerId, setApplyCareerId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingCv, setUploadingCv] = useState(false);
+  const [cvFileName, setCvFileName] = useState("");
+  const cvInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const [applyForm, setApplyForm] = useState({
@@ -42,6 +46,7 @@ const Careers = () => {
     email: "",
     phone: "",
     message: "",
+    cvUrl: "",
   });
 
   useEffect(() => {
@@ -54,7 +59,6 @@ const Careers = () => {
       try {
         const res = await api.request('GET', '/api/careers');
         const items = Array.isArray(res) ? res : res.data;
-        // Filter published careers client-side
         const published = (items || []).filter((c: Career) => c.isPublished);
         setCareers(published);
       } catch (error) {
@@ -64,14 +68,40 @@ const Careers = () => {
         setLoadingCareers(false);
       }
     };
-
     fetchCareers();
   }, []);
 
-  const handleApply = (careerTitle: string) => {
+  const handleApply = (careerTitle: string, careerId?: number) => {
     setApplyTitle(careerTitle);
-    setApplyForm({ name: "", email: "", phone: "", message: "" });
+    setApplyCareerId(careerId || null);
+    setApplyForm({ name: "", email: "", phone: "", message: "", cvUrl: "" });
+    setCvFileName("");
     setIsApplyOpen(true);
+  };
+
+  const handleCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Erreur", description: "Le fichier est trop volumineux (max 10 Mo)", variant: "destructive" });
+      return;
+    }
+
+    setUploadingCv(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const data = await api.request('POST', '/api/upload', { body: fd });
+      setApplyForm(f => ({ ...f, cvUrl: data.url }));
+      setCvFileName(file.name);
+      toast({ title: "Fichier uploadé", description: file.name });
+    } catch (err) {
+      console.error('CV upload error:', err);
+      toast({ title: "Erreur", description: "Impossible d'uploader le fichier", variant: "destructive" });
+    } finally {
+      setUploadingCv(false);
+    }
   };
 
   const handleSubmitApplication = async (e: React.FormEvent) => {
@@ -82,13 +112,15 @@ const Careers = () => {
     }
     setIsSubmitting(true);
     try {
-      await api.request('POST', '/api/contact_messages', {
+      await api.request('POST', '/api/job-applications', {
         body: {
-          name: applyForm.name,
+          careerId: applyCareerId,
+          careerTitle: applyTitle,
+          fullName: applyForm.name,
           email: applyForm.email,
           phone: applyForm.phone || null,
-          project_type: `Candidature: ${applyTitle}`,
-          message: applyForm.message || `Candidature pour le poste: ${applyTitle}`,
+          message: applyForm.message || null,
+          cvUrl: applyForm.cvUrl || null,
         },
       });
       toast({ title: "Candidature envoyée !", description: "Nous examinerons votre candidature rapidement." });
@@ -152,7 +184,6 @@ const Careers = () => {
                   </p>
                 </CardContent>
               </Card>
-
               <Card className="text-center hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-tech rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -166,7 +197,6 @@ const Careers = () => {
                   </p>
                 </CardContent>
               </Card>
-
               <Card className="text-center hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-nature rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -190,17 +220,8 @@ const Careers = () => {
                 <div className="space-y-6">
                   {[1, 2, 3].map((i) => (
                     <Card key={`career-skeleton-${i}`} className="animate-pulse">
-                      <CardHeader>
-                        <div className="h-6 bg-muted rounded w-1/3 mb-2"></div>
-                        <div className="flex gap-2">
-                          <div className="h-5 bg-muted rounded w-20"></div>
-                          <div className="h-5 bg-muted rounded w-24"></div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-4 bg-muted rounded w-full mb-2"></div>
-                        <div className="h-4 bg-muted rounded w-3/4"></div>
-                      </CardContent>
+                      <CardHeader><div className="h-6 bg-muted rounded w-1/3 mb-2"></div></CardHeader>
+                      <CardContent><div className="h-4 bg-muted rounded w-full mb-2"></div></CardContent>
                     </Card>
                   ))}
                 </div>
@@ -214,20 +235,9 @@ const Careers = () => {
                             <CardTitle className="text-xl mb-2">{career.title}</CardTitle>
                             <div className="flex flex-wrap gap-2">
                               {career.department && <Badge variant="secondary">{career.department}</Badge>}
-                              <Badge variant="outline" className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {career.location}
-                              </Badge>
-                              <Badge variant="outline" className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {getEmploymentTypeLabel(career.employmentType)}
-                              </Badge>
-                              {career.salaryRange && (
-                                <Badge variant="outline" className="flex items-center gap-1">
-                                  <Users className="w-3 h-3" />
-                                  {career.salaryRange}
-                                </Badge>
-                              )}
+                              <Badge variant="outline" className="flex items-center gap-1"><MapPin className="w-3 h-3" />{career.location}</Badge>
+                              <Badge variant="outline" className="flex items-center gap-1"><Clock className="w-3 h-3" />{getEmploymentTypeLabel(career.employmentType)}</Badge>
+                              {career.salaryRange && <Badge variant="outline">{career.salaryRange}</Badge>}
                             </div>
                             {career.applicationDeadline && (
                               <div className="mt-2 text-sm text-muted-foreground">
@@ -236,9 +246,8 @@ const Careers = () => {
                               </div>
                             )}
                           </div>
-                          <Button variant="hero" onClick={() => handleApply(career.title)}>
-                            <Send className="w-4 h-4 mr-2" />
-                            Postuler
+                          <Button variant="hero" onClick={() => handleApply(career.title, career.id)}>
+                            <Send className="w-4 h-4 mr-2" />Postuler
                           </Button>
                         </div>
                       </CardHeader>
@@ -260,9 +269,7 @@ const Careers = () => {
                     <div className="text-center py-8">
                       <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-semibold mb-2">Aucune offre d'emploi disponible</h3>
-                      <p className="text-muted-foreground">
-                        Consultez cette page régulièrement pour découvrir de nouvelles opportunités.
-                      </p>
+                      <p className="text-muted-foreground">Consultez cette page régulièrement pour découvrir de nouvelles opportunités.</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -276,16 +283,11 @@ const Careers = () => {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-muted-foreground mb-6">
-                  Vous ne trouvez pas le poste qui vous correspond ?
-                  Envoyez-nous votre candidature spontanée !
+                  Vous ne trouvez pas le poste qui vous correspond ? Envoyez-nous votre candidature spontanée !
                 </p>
                 <Button variant="hero" size="lg" onClick={() => handleApply('Candidature spontanée')}>
-                  <Send className="w-4 h-4 mr-2" />
-                  Envoyer ma candidature
+                  <Send className="w-4 h-4 mr-2" />Envoyer ma candidature
                 </Button>
-                <p className="text-sm text-muted-foreground mt-4">
-                  careers@akouma.bf | +226 25 XX XX XX
-                </p>
               </CardContent>
             </Card>
           </div>
@@ -313,10 +315,38 @@ const Careers = () => {
               <Input id="apply-phone" value={applyForm.phone} onChange={(e) => setApplyForm(f => ({ ...f, phone: e.target.value }))} placeholder="+226 XX XX XX XX" />
             </div>
             <div>
+              <Label>CV / Pièces jointes</Label>
+              <div className="mt-1">
+                <input
+                  ref={cvInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={handleCvUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => cvInputRef.current?.click()}
+                  disabled={uploadingCv}
+                >
+                  {uploadingCv ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Upload en cours...</>
+                  ) : cvFileName ? (
+                    <><FileText className="w-4 h-4 mr-2" />{cvFileName}</>
+                  ) : (
+                    <><Upload className="w-4 h-4 mr-2" />Joindre votre CV (PDF, DOC, Image)</>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">Formats acceptés : PDF, DOC, DOCX, JPG, PNG — Max 10 Mo</p>
+              </div>
+            </div>
+            <div>
               <Label htmlFor="apply-message">Motivation / Message</Label>
               <Textarea id="apply-message" value={applyForm.message} onChange={(e) => setApplyForm(f => ({ ...f, message: e.target.value }))} placeholder="Parlez-nous de vous et de votre motivation..." rows={4} />
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || uploadingCv}>
               {isSubmitting ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours...</>
               ) : (

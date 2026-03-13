@@ -39,6 +39,7 @@ import { genericRouter } from './routes/generic';
 import { profilesRouter } from './routes/profiles';
 import { userRolesRouter } from './routes/userRoles';
 import { careersRouter } from './routes/careers';
+import { jobApplicationsRouter } from './routes/jobApplications';
 import { eventsRouter } from './routes/events';
 import { statsRouter } from './routes/stats';
 import { ordersRouter } from './routes/orders';
@@ -67,13 +68,20 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    // Accepter seulement les images
-    if (file.mimetype.startsWith('image/')) {
+    // Accepter images et documents
+    const allowedMimes = [
+      'image/', 'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+    if (allowedMimes.some(m => file.mimetype.startsWith(m))) {
       cb(null, true);
     } else {
-      cb(new Error('Seules les images sont autorisées'));
+      cb(new Error('Type de fichier non autorisé'));
     }
   }
 });
@@ -168,6 +176,7 @@ app.use('/api/profiles', profilesRouter);
 app.use('/api/users', profilesRouter);
 app.use('/api/user_roles', userRolesRouter);
 app.use('/api/careers', careersRouter);
+app.use('/api/job-applications', jobApplicationsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/orders', ordersRouter);

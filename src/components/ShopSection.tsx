@@ -198,7 +198,7 @@ const ShopSection = () => {
                     {products[0].name}
                   </h3>
                   <p className="text-muted-foreground mb-6 line-clamp-3">
-                    {products[0].description}
+                    {products[0].description?.replace(/<[^>]*>/g, '').trim()}
                   </p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -269,7 +269,7 @@ const ShopSection = () => {
                         {product.name}
                       </CardTitle>
                       <CardDescription className="line-clamp-2">
-                        {product.description}
+                        {product.description?.replace(/<[^>]*>/g, '').trim()}
                       </CardDescription>
                     </CardHeader>
 

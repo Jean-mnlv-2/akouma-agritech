@@ -90,5 +90,39 @@ export const emailService = {
     } catch (error) {
       console.error('[EMAIL] Erreur lors de l\'envoi de l\'e-mail de bienvenue :', error);
     }
+  },
+
+  async sendJobApplicationNotification(data: { fullName: string; email: string; phone?: string; careerTitle: string; message?: string; cvUrl?: string }) {
+    const adminEmail = env.DEFAULT_ADMIN_EMAIL || env.EMAIL_FROM;
+    
+    if (!resend) {
+      console.warn('[EMAIL] Resend API Key non configurée. Nouvelle candidature de', data.fullName, 'pour', data.careerTitle);
+      return;
+    }
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: adminEmail,
+        subject: `Nouvelle candidature : ${data.careerTitle} - ${data.fullName}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+            <h1 style="color: #10b981; margin-top: 0;">📋 Nouvelle candidature reçue</h1>
+            <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <p><strong>Poste :</strong> ${data.careerTitle}</p>
+              <p><strong>Nom :</strong> ${data.fullName}</p>
+              <p><strong>Email :</strong> <a href="mailto:${data.email}">${data.email}</a></p>
+              ${data.phone ? `<p><strong>Téléphone :</strong> ${data.phone}</p>` : ''}
+            </div>
+            ${data.message ? `<div style="margin: 16px 0;"><h3>Message / Motivation :</h3><p>${data.message}</p></div>` : ''}
+            ${data.cvUrl ? `<p><strong>CV :</strong> <a href="${data.cvUrl}" style="color: #10b981;">Télécharger le CV</a></p>` : ''}
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 14px; color: #6b7280;">Connectez-vous au <a href="${env.FRONTEND_ORIGINS[0]}/admin">dashboard admin</a> pour gérer cette candidature.</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error('[EMAIL] Erreur envoi notification candidature:', error);
+    }
   }
 };
