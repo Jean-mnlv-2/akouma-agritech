@@ -169,6 +169,7 @@ app.use('/api/profiles', profilesRouter);
 app.use('/api/users', profilesRouter);
 app.use('/api/user_roles', userRolesRouter);
 app.use('/api/careers', careersRouter);
+app.use('/api/job-applications', jobApplicationsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/orders', ordersRouter);
