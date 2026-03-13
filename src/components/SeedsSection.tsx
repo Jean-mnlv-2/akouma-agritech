@@ -184,12 +184,9 @@ const SeedsSection = () => {
                   <h3 className="text-2xl font-bold text-foreground mb-4 group-hover:text-primary transition-colors">
                     {products[0].name}
                   </h3>
-                  <div 
-                    className="text-muted-foreground mb-4 line-clamp-3 prose prose-sm prose-slate"
-                    dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(products[0].description) 
-                    }} 
-                  />
+                  <p className="text-muted-foreground mb-4 line-clamp-3">
+                    {products[0].description.replace(/<[^>]*>/g, '').trim()}
+                  </p>
                   <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
                     <div>
                       <span className="font-medium text-foreground">{t('seeds.variety')}:</span>

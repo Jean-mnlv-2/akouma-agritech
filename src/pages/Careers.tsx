@@ -52,19 +52,14 @@ const Careers = () => {
   useEffect(() => {
     const fetchCareers = async () => {
       try {
-        const { data, error } = await api
-          .from('careers')
-          .select('*')
-          .eq('isPublished', true)
-          .order('createdAt', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching careers:', error);
-        } else {
-          setCareers(data || []);
-        }
+        const res = await api.request('GET', '/api/careers');
+        const items = Array.isArray(res) ? res : res.data;
+        // Filter published careers client-side
+        const published = (items || []).filter((c: Career) => c.isPublished);
+        setCareers(published);
       } catch (error) {
         console.error('Error fetching careers:', error);
+        setCareers([]);
       } finally {
         setLoadingCareers(false);
       }
@@ -87,19 +82,15 @@ const Careers = () => {
     }
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/contact_messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      await api.request('POST', '/api/contact_messages', {
+        body: {
           name: applyForm.name,
           email: applyForm.email,
           phone: applyForm.phone || null,
           project_type: `Candidature: ${applyTitle}`,
           message: applyForm.message || `Candidature pour le poste: ${applyTitle}`,
-        }),
+        },
       });
-      if (!res.ok) throw new Error(await res.text());
       toast({ title: "Candidature envoyée !", description: "Nous examinerons votre candidature rapidement." });
       setIsApplyOpen(false);
     } catch (err) {
@@ -122,8 +113,7 @@ const Careers = () => {
   };
 
   const formatDeadline = (deadline: string) => {
-    const date = new Date(deadline);
-    return date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+    return new Date(deadline).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   if (isLoading) {
@@ -133,7 +123,7 @@ const Careers = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       <section className="pt-8 pb-16">
         <div className="container mx-auto px-6">
           <div className="max-w-6xl mx-auto">
@@ -142,7 +132,7 @@ const Careers = () => {
                 Rejoignez <span className="text-primary">AKOUMA</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-                Participez à la révolution agricole africaine. Construisons ensemble l'avenir 
+                Participez à la révolution agricole africaine. Construisons ensemble l'avenir
                 de l'agriculture connectée et durable.
               </p>
             </div>
@@ -162,7 +152,7 @@ const Careers = () => {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card className="text-center hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-tech rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -176,7 +166,7 @@ const Careers = () => {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card className="text-center hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-nature rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -195,7 +185,7 @@ const Careers = () => {
             {/* Job Listings */}
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-center mb-8">Postes Disponibles</h2>
-              
+
               {loadingCareers ? (
                 <div className="space-y-6">
                   {[1, 2, 3].map((i) => (
@@ -286,7 +276,7 @@ const Careers = () => {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-muted-foreground mb-6">
-                  Vous ne trouvez pas le poste qui vous correspond ? 
+                  Vous ne trouvez pas le poste qui vous correspond ?
                   Envoyez-nous votre candidature spontanée !
                 </p>
                 <Button variant="hero" size="lg" onClick={() => handleApply('Candidature spontanée')}>
