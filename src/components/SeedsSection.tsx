@@ -6,7 +6,6 @@ import { Leaf, Star, Package, ChevronLeft, ChevronRight, ArrowRight } from 'luci
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
 import { useI18n } from '@/i18n/i18n';
-import DOMPurify from 'dompurify';
 import logoAk from '@/assets/logo-ak.png';
 
 interface SeedProduct {
