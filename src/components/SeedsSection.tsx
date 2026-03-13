@@ -264,12 +264,9 @@ const SeedsSection = () => {
                     </CardHeader>
 
                     <CardContent className="pt-0 space-y-3">
-                      <div 
-                        className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem] prose prose-sm prose-slate"
-                        dangerouslySetInnerHTML={{ 
-                          __html: DOMPurify.sanitize(product.description) 
-                        }} 
-                      />
+                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                        {product.description.replace(/<[^>]*>/g, '').trim()}
+                      </p>
                       
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
