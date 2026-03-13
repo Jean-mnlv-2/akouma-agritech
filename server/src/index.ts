@@ -39,6 +39,7 @@ import { genericRouter } from './routes/generic';
 import { profilesRouter } from './routes/profiles';
 import { userRolesRouter } from './routes/userRoles';
 import { careersRouter } from './routes/careers';
+import { jobApplicationsRouter } from './routes/jobApplications';
 import { eventsRouter } from './routes/events';
 import { statsRouter } from './routes/stats';
 import { ordersRouter } from './routes/orders';
