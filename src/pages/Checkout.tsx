@@ -220,16 +220,6 @@ const Checkout = () => {
         navigate(`/orders/${order.id}`);
         return;
       }
-
-      clearCart();
-      clearPromo();
-
-      toast({
-        title: "Commande créée avec succès !",
-        description: `Votre commande #${order.orderNumber} a été enregistrée. Le paiement sera finalisé ultérieurement.`,
-      });
-
-      navigate(`/orders/${order.id}`);
     } catch (error: any) {
       console.error('Order creation error:', error);
       toast({
