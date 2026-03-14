@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Trash2, FileText, ExternalLink, Eye } from 'lucide-react';
+import { Loader2, Trash2, FileText, ExternalLink, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,10 +25,13 @@ interface JobApplication {
   career?: { title: string; department?: string } | null;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function AdminJobApplications() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [viewingApp, setViewingApp] = useState<JobApplication | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: applications = [], isLoading } = useQuery<JobApplication[]>({
     queryKey: ['admin', 'job-applications'],
@@ -38,6 +41,12 @@ export function AdminJobApplications() {
     },
     staleTime: 30000,
   });
+
+  const totalPages = Math.max(1, Math.ceil(applications.length / ITEMS_PER_PAGE));
+  const paginatedApps = applications.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) =>
@@ -88,74 +97,122 @@ export function AdminJobApplications() {
               <p className="text-muted-foreground">Aucune candidature reçue</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Candidat</TableHead>
-                  <TableHead>Poste</TableHead>
-                  <TableHead>CV</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {applications.map((app) => (
-                  <TableRow key={app.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewingApp(app)}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{app.fullName}</p>
-                        <p className="text-sm text-muted-foreground">{app.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{app.careerTitle}</TableCell>
-                    <TableCell>
-                      {app.cvUrl ? (
-                        <a href={app.cvUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:underline flex items-center gap-1">
-                          <ExternalLink className="w-4 h-4" /> CV
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(app.status)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(app.createdAt).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={app.status}
-                          onValueChange={(value) => updateStatusMutation.mutate({ id: app.id, status: value })}
-                        >
-                          <SelectTrigger className="w-[140px] h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">En attente</SelectItem>
-                            <SelectItem value="reviewing">En examen</SelectItem>
-                            <SelectItem value="accepted">Acceptée</SelectItem>
-                            <SelectItem value="rejected">Refusée</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" size="sm" onClick={() => setViewingApp(app)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm('Supprimer cette candidature ?')) deleteMutation.mutate(app.id);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Candidat</TableHead>
+                    <TableHead>Poste</TableHead>
+                    <TableHead>CV</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedApps.map((app) => (
+                    <TableRow key={app.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewingApp(app)}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{app.fullName}</p>
+                          <p className="text-sm text-muted-foreground">{app.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{app.careerTitle}</TableCell>
+                      <TableCell>
+                        {app.cvUrl ? (
+                          <a href={app.cvUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:underline flex items-center gap-1">
+                            <ExternalLink className="w-4 h-4" /> CV
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(app.status)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(app.createdAt).toLocaleDateString('fr-FR')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Select
+                            value={app.status}
+                            onValueChange={(value) => updateStatusMutation.mutate({ id: app.id, status: value })}
+                          >
+                            <SelectTrigger className="w-[140px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">En attente</SelectItem>
+                              <SelectItem value="reviewing">En examen</SelectItem>
+                              <SelectItem value="accepted">Acceptée</SelectItem>
+                              <SelectItem value="rejected">Refusée</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button variant="outline" size="sm" onClick={() => setViewingApp(app)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm('Supprimer cette candidature ?')) deleteMutation.mutate(app.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Page {currentPage} sur {totalPages} ({applications.length} résultats)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Précédent
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .map((page, idx, arr) => (
+                        <span key={page}>
+                          {idx > 0 && arr[idx - 1] !== page - 1 && (
+                            <span className="px-1 text-muted-foreground">…</span>
+                          )}
+                          <Button
+                            variant={currentPage === page ? 'default' : 'outline'}
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        </span>
+                      ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Suivant
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

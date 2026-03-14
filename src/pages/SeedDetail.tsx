@@ -38,6 +38,14 @@ import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { useCartContext } from "@/context/CartContext";
 
+interface ReviewData {
+  id: number;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  user: { fullName?: string; avatarUrl?: string };
+}
+
 interface SeedProduct {
   id: string;
   name: string;
@@ -49,6 +57,7 @@ interface SeedProduct {
   images: string[];
   rating: number;
   reviews: number;
+  reviewsList: ReviewData[];
   availability: string;
   harvestTime: string;
   yield: string;
@@ -83,39 +92,31 @@ export default function SeedDetail() {
 
   const handleShare = async () => {
     if (isSharing) return;
-    
     const shareData = {
       title: product?.name || "AKOUMA Agritech",
       text: `Découvrez la semence ${product?.name} (${product?.variety}) sur AKOUMA Agritech.`,
       url: window.location.href,
     };
-
     try {
       if (typeof navigator.share !== 'undefined') {
         setIsSharing(true);
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        toast({
-          title: "Lien copié",
-          description: "Le lien de la semence a été copié.",
-        });
+        toast({ title: "Lien copié", description: "Le lien de la semence a été copié." });
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error('Share error:', error);
-      }
+      if ((error as Error).name !== 'AbortError') console.error('Share error:', error);
     } finally {
       setIsSharing(false);
     }
   };
+
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   
   const { data: contactSettings } = useContactSettings();
-  
-  // Check if user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const { isDialogOpen, closeDialog } = useCopyProtection(
@@ -135,13 +136,10 @@ export default function SeedDetail() {
 
   const fetchSeed = useCallback(async () => {
     if (!slug) return;
-    
     try {
       const { data } = await api.request('GET', `/api/seeds/slug/${slug}`);
       
       let images = [data.imageUrl || data.image_url || logoAk];
-      
-      // Handle gallery/images logic
       if (Array.isArray(data.gallery) && data.gallery.length > 0) {
         images = data.gallery;
       } else if (typeof data.gallery === 'string' && data.gallery.length > 0) {
@@ -161,6 +159,8 @@ export default function SeedDetail() {
         images = [primaryImage, ...images];
       }
 
+      const reviewsList: ReviewData[] = Array.isArray(data.reviews) ? data.reviews : [];
+
       setProduct({
         id: data.id,
         name: data.name,
@@ -169,9 +169,10 @@ export default function SeedDetail() {
         variety: data.variety || '',
         price: Number(data.price) || Number(data.price_fcfa) || 0,
         unit: data.unit || 'kg',
-        images: images,
+        images,
         rating: Number(data.rating) || 0,
         reviews: Number(data.totalReviews) || Number(data.total_reviews) || 0,
+        reviewsList,
         availability: data.availability || 'En stock',
         harvestTime: data.harvestTime || data.harvest_time || '120-140 jours',
         yield: data.yield || data.yield_info || '8-12 tonnes/ha',
@@ -196,11 +197,7 @@ export default function SeedDetail() {
       });
     } catch (err) {
       console.error('Error fetching seed:', err);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les détails de la semence.",
-        variant: "destructive"
-      });
+      toast({ title: "Erreur", description: "Impossible de charger les détails de la semence.", variant: "destructive" });
       navigate('/seeds');
     } finally {
       setLoading(false);
@@ -244,10 +241,7 @@ export default function SeedDetail() {
 
   const toggleFavorite = () => {
     if (!isLoggedIn) {
-      toast({
-        title: "Authentification requise",
-        description: "Veuillez vous connecter pour ajouter ce produit à vos favoris.",
-      });
+      toast({ title: "Authentification requise", description: "Veuillez vous connecter pour ajouter ce produit à vos favoris." });
       navigate('/auth');
       return;
     }
@@ -266,28 +260,12 @@ export default function SeedDetail() {
     }
 
     try {
-      const res = await fetch(`/api/seeds/${product?.id}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reviewForm),
-        credentials: 'include'
+      await api.request('POST', `/api/seeds/${product?.id}/reviews`, {
+        body: reviewForm,
       });
-
-      if (!res.ok) throw new Error('Failed to submit review');
-
       toast({ title: "Merci !", description: "Votre avis a été publié avec succès." });
       setReviewForm({ rating: 5, comment: '' });
-      
-      // Refresh seed data to show new rating/reviews
-      if (slug) {
-        const refreshRes = await fetch(`/api/seeds/slug/${slug}`);
-        const { data } = await refreshRes.json();
-        setProduct((prev) => prev ? { 
-          ...prev, 
-          rating: Number(data.rating), 
-          reviews: Number(data.totalReviews) 
-        } : null);
-      }
+      fetchSeed();
     } catch (err) {
       console.error('Error submitting review:', err);
       toast({ title: "Erreur", description: "Impossible de publier l'avis.", variant: "destructive" });
@@ -296,7 +274,7 @@ export default function SeedDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -305,7 +283,7 @@ export default function SeedDetail() {
   if (!product) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <TitleManager 
         title={`${product.name} - AKOUMA Agritech`}
         description={product.description}
@@ -333,18 +311,15 @@ export default function SeedDetail() {
             Retour aux semences
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-card rounded-3xl p-6 md:p-10 shadow-sm border border-border">
             {/* Image Section */}
             <div className="space-y-6">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative group">
+              <div className="aspect-square rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center relative group">
                 <img 
                   src={product.images[selectedImage]} 
                   alt={product.name}
                   className="w-full h-full object-contain transition-transform hover:scale-105 duration-500"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = logoAk;
-                  }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = logoAk; }}
                 />
               </div>
               {product.images.length > 1 && (
@@ -353,8 +328,8 @@ export default function SeedDetail() {
                     <button 
                       key={`${product.id}-gallery-${idx}-${img.slice(-10)}`}
                       onClick={() => setSelectedImage(idx)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all bg-slate-50 flex items-center justify-center ${
-                        selectedImage === idx ? 'border-primary shadow-md scale-105' : 'border-slate-100 hover:border-primary/50'
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all bg-muted flex items-center justify-center ${
+                        selectedImage === idx ? 'border-primary shadow-md scale-105' : 'border-border hover:border-primary/50'
                       }`}
                     >
                       <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain p-1" />
@@ -370,26 +345,26 @@ export default function SeedDetail() {
                 <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1">
                   {product.category}
                 </Badge>
-                <Button variant="ghost" size="sm" onClick={handleShare} className="text-slate-500 hover:text-primary gap-2 ml-auto">
+                <Button variant="ghost" size="sm" onClick={handleShare} className="text-muted-foreground hover:text-primary gap-2 ml-auto">
                   <Share2 className="w-4 h-4" />
                   Partager
                 </Button>
                 <div className="flex items-center text-amber-500 ml-4">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="ml-1 font-semibold">{product.rating.toFixed(1)}</span>
-                  <span className="ml-1 text-slate-400 text-sm">({product.reviews} avis)</span>
+                  <span className="ml-1 text-muted-foreground text-sm">({product.reviews} avis)</span>
                 </div>
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">{product.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">{product.name}</h1>
               <div className="flex items-center gap-4 mb-4">
-                <p className="text-slate-500 text-lg">{product.variety}</p>
+                <p className="text-muted-foreground text-lg">{product.variety}</p>
                 {isLoggedIn && (
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={toggleFavorite}
-                    className={`rounded-full ${isFavorite ? 'text-red-500 hover:text-red-600 bg-red-50' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                    className={`rounded-full ${isFavorite ? 'text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10' : 'text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'}`}
                   >
                     <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
                   </Button>
@@ -398,30 +373,30 @@ export default function SeedDetail() {
 
               <div className="flex items-baseline gap-2 mb-8">
                 <span className="text-4xl font-bold text-primary">{product.price.toLocaleString()} FCFA</span>
-                <span className="text-slate-400 font-medium">/ {product.unit}</span>
+                <span className="text-muted-foreground font-medium">/ {product.unit}</span>
               </div>
 
               <div className="space-y-4 mb-8">
-                <div className="flex items-center text-slate-600">
+                <div className="flex items-center text-foreground">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3" />
                   <span className="font-medium">Disponibilité :</span>
-                  <span className="ml-2 text-emerald-600 font-semibold">{product.availability}</span>
+                  <span className="ml-2 text-emerald-600 dark:text-emerald-400 font-semibold">{product.availability}</span>
                 </div>
-                <div className="flex items-center text-slate-600">
+                <div className="flex items-center text-muted-foreground">
                   <Calendar className="w-5 h-5 text-primary/60 mr-3" />
                   <span className="font-medium">Temps de récolte :</span>
                   <span className="ml-2">{product.harvestTime}</span>
                 </div>
-                <div className="flex items-center text-slate-600">
+                <div className="flex items-center text-muted-foreground">
                   <TrendingUp className="w-5 h-5 text-primary/60 mr-3" />
                   <span className="font-medium">Rendement estimé :</span>
                   <span className="ml-2">{product.yield}</span>
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-50 rounded-2xl mb-8 border border-slate-100">
+              <div className="p-6 bg-muted/50 rounded-2xl mb-8 border border-border">
                 <div 
-                  className="text-slate-700 leading-relaxed italic prose prose-slate max-w-none"
+                  className="text-muted-foreground leading-relaxed italic prose prose-sm dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
                 />
               </div>
@@ -440,10 +415,7 @@ export default function SeedDetail() {
                       image: product.images[0] || logoAk,
                       inStock: product.availability !== 'Rupture',
                     });
-                    toast({
-                      title: "Semence ajoutée au panier",
-                      description: `${product.name} ajouté avec succès`,
-                    });
+                    toast({ title: "Semence ajoutée au panier", description: `${product.name} ajouté avec succès` });
                   }}
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
@@ -452,7 +424,7 @@ export default function SeedDetail() {
               </div>
 
               <div className="mb-6">
-                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
+                <h3 className="text-lg font-bold text-foreground mb-4 flex items-center">
                   <MessageSquare className="w-5 h-5 mr-2 text-primary" />
                   Contactez-nous pour ce produit
                 </h3>
@@ -476,7 +448,7 @@ export default function SeedDetail() {
                   </Button>
                 </div>
               </div>
-              <p className="text-center text-slate-400 text-sm mt-4 flex items-center justify-center">
+              <p className="text-center text-muted-foreground text-sm mt-4 flex items-center justify-center">
                 <ShieldCheck className="w-4 h-4 mr-2" />
                 Paiement sécurisé & Qualité garantie
               </p>
@@ -486,7 +458,7 @@ export default function SeedDetail() {
           {/* Detailed Info Tabs */}
           <div className="mt-16">
             <Tabs defaultValue="description" className="w-full">
-              <TabsList className="w-full justify-start bg-transparent border-b border-slate-200 rounded-none h-auto p-0 mb-8 overflow-x-auto">
+              <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none h-auto p-0 mb-8 overflow-x-auto">
                 <TabsTrigger 
                   value="description" 
                   className="px-8 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-bold text-lg transition-all"
@@ -513,101 +485,103 @@ export default function SeedDetail() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="description" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
-                <div className="prose prose-slate max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: product.fullDescription }} className="text-slate-600 leading-relaxed text-lg" />
+              <TabsContent value="description" className="bg-card rounded-3xl p-8 md:p-12 shadow-sm border border-border focus-visible:outline-none">
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.fullDescription) }} className="text-muted-foreground leading-relaxed" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-                  {product.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start p-4 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-4 shrink-0">
-                        <Zap className="w-5 h-5 text-primary" />
+                {product.features.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+                    {product.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-start p-4 rounded-xl bg-muted/50 border border-border">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-4 shrink-0">
+                          <Zap className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="text-foreground font-medium">{feature}</span>
                       </div>
-                      <span className="text-slate-700 font-medium">{feature}</span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
-              <TabsContent value="specs" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
+              <TabsContent value="specs" className="bg-card rounded-3xl p-8 md:p-12 shadow-sm border border-border focus-visible:outline-none">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                      <span className="text-slate-500 font-medium flex items-center"><MapPin className="w-4 h-4 mr-2" /> Origine</span>
-                      <span className="text-slate-900 font-bold">{product.specifications.origin}</span>
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><MapPin className="w-4 h-4 mr-2" /> Origine</span>
+                      <span className="text-foreground font-bold">{product.specifications.origin}</span>
                     </div>
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                      <span className="text-slate-500 font-medium flex items-center"><ShieldCheck className="w-4 h-4 mr-2" /> Pureté</span>
-                      <span className="text-slate-900 font-bold">{product.specifications.purity}</span>
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><ShieldCheck className="w-4 h-4 mr-2" /> Pureté</span>
+                      <span className="text-foreground font-bold">{product.specifications.purity}</span>
                     </div>
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                      <span className="text-slate-500 font-medium flex items-center"><Sprout className="w-4 h-4 mr-2" /> Germination</span>
-                      <span className="text-slate-900 font-bold">{product.specifications.germination}</span>
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><Sprout className="w-4 h-4 mr-2" /> Germination</span>
+                      <span className="text-foreground font-bold">{product.specifications.germination}</span>
                     </div>
                   </div>
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                      <span className="text-slate-500 font-medium flex items-center"><Droplets className="w-4 h-4 mr-2" /> Humidité</span>
-                      <span className="text-slate-900 font-bold">{product.specifications.moisture}</span>
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><Droplets className="w-4 h-4 mr-2" /> Humidité</span>
+                      <span className="text-foreground font-bold">{product.specifications.moisture}</span>
                     </div>
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                      <span className="text-slate-500 font-medium flex items-center"><Truck className="w-4 h-4 mr-2" /> Conditionnement</span>
-                      <span className="text-slate-900 font-bold">{product.specifications.packaging}</span>
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><Truck className="w-4 h-4 mr-2" /> Conditionnement</span>
+                      <span className="text-foreground font-bold">{product.specifications.packaging}</span>
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="guide" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
+              <TabsContent value="guide" className="bg-card rounded-3xl p-8 md:p-12 shadow-sm border border-border focus-visible:outline-none">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                   <div className="space-y-8">
                     <div className="flex gap-6">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center shrink-0">
-                        <Waves className="w-7 h-7 text-emerald-600" />
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+                        <Waves className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 text-lg mb-1">Type de sol</h4>
-                        <p className="text-slate-600">{product.growingGuide.soilType}</p>
+                        <h4 className="font-bold text-foreground text-lg mb-1">Type de sol</h4>
+                        <p className="text-muted-foreground">{product.growingGuide.soilType}</p>
                       </div>
                     </div>
                     <div className="flex gap-6">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
-                        <Droplets className="w-7 h-7 text-amber-600" />
+                      <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <Droplets className="w-7 h-7 text-amber-600 dark:text-amber-400" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 text-lg mb-1">Arrosage</h4>
-                        <p className="text-slate-600">{product.growingGuide.watering}</p>
+                        <h4 className="font-bold text-foreground text-lg mb-1">Arrosage</h4>
+                        <p className="text-muted-foreground">{product.growingGuide.watering}</p>
                       </div>
                     </div>
                     <div className="flex gap-6">
-                      <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center shrink-0">
-                        <ClipboardList className="w-7 h-7 text-purple-600" />
+                      <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+                        <ClipboardList className="w-7 h-7 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 text-lg mb-1">Espacement</h4>
-                        <p className="text-slate-600">{product.growingGuide.spacing}</p>
+                        <h4 className="font-bold text-foreground text-lg mb-1">Espacement</h4>
+                        <p className="text-muted-foreground">{product.growingGuide.spacing}</p>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-8">
                     <div className="flex gap-6">
-                      <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center shrink-0">
-                        <TrendingUp className="w-7 h-7 text-blue-600" />
+                      <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+                        <TrendingUp className="w-7 h-7 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 text-lg mb-1">Engrais recommandé</h4>
-                        <p className="text-slate-600">{product.growingGuide.fertilizer}</p>
+                        <h4 className="font-bold text-foreground text-lg mb-1">Engrais recommandé</h4>
+                        <p className="text-muted-foreground">{product.growingGuide.fertilizer}</p>
                       </div>
                     </div>
                     <div className="flex gap-6">
-                      <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-                        <ShieldCheck className="w-7 h-7 text-red-600" />
+                      <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-500/10 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-7 h-7 text-red-600 dark:text-red-400" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 text-lg mb-1">Résistance</h4>
+                        <h4 className="font-bold text-foreground text-lg mb-1">Résistance</h4>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {product.growingGuide.diseases.map((disease, idx) => (
-                            <Badge key={idx} variant="secondary" className="bg-red-50 text-red-700 border-red-100">
+                            <Badge key={idx} variant="secondary" className="bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-100 dark:border-red-500/20">
                               {disease}
                             </Badge>
                           ))}
@@ -618,28 +592,56 @@ export default function SeedDetail() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="reviews" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 focus-visible:outline-none">
+              <TabsContent value="reviews" className="bg-card rounded-3xl p-8 md:p-12 shadow-sm border border-border focus-visible:outline-none">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                  <div className="lg:col-span-1 text-center lg:text-left p-8 bg-slate-50 rounded-2xl">
-                    <div className="text-6xl font-black text-slate-900 mb-2">{product.rating.toFixed(1)}</div>
+                  <div className="lg:col-span-1 text-center lg:text-left p-8 bg-muted/50 rounded-2xl">
+                    <div className="text-6xl font-black text-foreground mb-2">{product.rating.toFixed(1)}</div>
                     <div className="flex items-center justify-center lg:justify-start text-amber-500 mb-4">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`w-6 h-6 ${i < Math.floor(product.rating) ? 'fill-current' : 'text-slate-300'}`} />
+                        <Star key={i} className={`w-6 h-6 ${i < Math.floor(product.rating) ? 'fill-current' : 'text-muted-foreground/30'}`} />
                       ))}
                     </div>
-                    <p className="text-slate-500 font-medium">Basé sur {product.reviews} avis vérifiés</p>
+                    <p className="text-muted-foreground font-medium">Basé sur {product.reviews} avis vérifiés</p>
                   </div>
 
-                  <div className="lg:col-span-2">
-                    <h3 className="text-2xl font-bold text-slate-900 mb-8">Laissez un avis</h3>
+                  <div className="lg:col-span-2 space-y-8">
+                    {/* Existing reviews */}
+                    {product.reviewsList.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-foreground">Avis des clients</h3>
+                        {product.reviewsList.map((review) => (
+                          <div key={review.id} className="p-4 bg-muted/30 rounded-xl border border-border">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <User className="w-4 h-4 text-primary" />
+                                </div>
+                                <span className="font-medium text-foreground">{review.user?.fullName || 'Utilisateur'}</span>
+                              </div>
+                              <div className="flex items-center text-amber-500">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-current' : 'text-muted-foreground/30'}`} />
+                                ))}
+                              </div>
+                            </div>
+                            {review.comment && <p className="text-muted-foreground text-sm">{review.comment}</p>}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {new Date(review.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <h3 className="text-xl font-bold text-foreground">Laissez un avis</h3>
                     
                     {!isLoggedIn ? (
-                      <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl text-center">
-                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <User className="w-6 h-6 text-amber-600" />
+                      <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-6 rounded-2xl text-center">
+                        <div className="w-12 h-12 bg-amber-100 dark:bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <User className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                         </div>
-                        <h4 className="text-lg font-bold text-slate-900 mb-2">Authentification requise</h4>
-                        <p className="text-slate-600 mb-6">Vous devez être connecté à votre compte AKOUMA pour partager votre expérience avec cette semence.</p>
+                        <h4 className="text-lg font-bold text-foreground mb-2">Authentification requise</h4>
+                        <p className="text-muted-foreground mb-6">Connectez-vous pour partager votre expérience avec cette semence.</p>
                         <Button onClick={() => navigate('/auth')} className="rounded-xl px-8">
                           Se connecter / S'inscrire
                         </Button>
@@ -647,14 +649,14 @@ export default function SeedDetail() {
                     ) : (
                       <form onSubmit={handleSubmitReview} className="space-y-6">
                         <div className="space-y-2">
-                          <Label className="text-slate-900 font-bold">Note</Label>
+                          <Label className="text-foreground font-bold">Note</Label>
                           <div className="flex gap-2">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <button 
                                 key={star}
                                 type="button"
                                 onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                                className={`p-1 transition-transform active:scale-90 ${reviewForm.rating >= star ? 'text-amber-500' : 'text-slate-300'}`}
+                                className={`p-1 transition-transform active:scale-90 ${reviewForm.rating >= star ? 'text-amber-500' : 'text-muted-foreground/30'}`}
                               >
                                 <Star className={`w-8 h-8 ${reviewForm.rating >= star ? 'fill-current' : ''}`} />
                               </button>
@@ -662,11 +664,11 @@ export default function SeedDetail() {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="comment" className="text-slate-900 font-bold">Commentaire</Label>
+                          <Label htmlFor="comment" className="text-foreground font-bold">Commentaire</Label>
                           <Textarea 
                             id="comment" 
                             placeholder="Partagez votre expérience de culture..." 
-                            className="min-h-[150px] rounded-2xl border-slate-200 focus:ring-primary/20 bg-slate-50"
+                            className="min-h-[150px] rounded-2xl"
                             value={reviewForm.comment}
                             onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
                           />
