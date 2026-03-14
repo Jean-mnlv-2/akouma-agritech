@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -32,20 +32,22 @@ interface AdminPromoCodeDialogProps {
   onSave: (data: Partial<PromoCode>) => void;
 }
 
-export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: AdminPromoCodeDialogProps) {
-  const [formData, setFormData] = useState<Partial<PromoCode>>({
-    code: '',
-    description: '',
-    discountType: 'PERCENTAGE',
-    discountValue: 0,
-    maxUses: null,
-    validFrom: null,
-    validUntil: null,
-    isActive: true,
-  });
+const defaultFormData: Partial<PromoCode> = {
+  code: '',
+  description: '',
+  discountType: 'PERCENTAGE',
+  discountValue: 0,
+  maxUses: null,
+  validFrom: null,
+  validUntil: null,
+  isActive: true,
+};
 
-  // Sync with promo prop
-  useState(() => {
+export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: AdminPromoCodeDialogProps) {
+  const [formData, setFormData] = useState<Partial<PromoCode>>(defaultFormData);
+
+  useEffect(() => {
+    if (!open) return;
     if (promo) {
       setFormData({
         code: promo.code,
@@ -58,47 +60,9 @@ export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: Admi
         isActive: promo.isActive,
       });
     } else {
-      setFormData({
-        code: '',
-        description: '',
-        discountType: 'PERCENTAGE',
-        discountValue: 0,
-        maxUses: null,
-        validFrom: null,
-        validUntil: null,
-        isActive: true,
-      });
+      setFormData({ ...defaultFormData });
     }
-  });
-
-  // Re-sync when promo or open changes
-  useState(() => {
-    if (open) {
-      if (promo) {
-        setFormData({
-          code: promo.code,
-          description: promo.description || '',
-          discountType: promo.discountType,
-          discountValue: promo.discountValue,
-          maxUses: promo.maxUses,
-          validFrom: promo.validFrom,
-          validUntil: promo.validUntil,
-          isActive: promo.isActive,
-        });
-      } else {
-        setFormData({
-          code: '',
-          description: '',
-          discountType: 'PERCENTAGE',
-          discountValue: 0,
-          maxUses: null,
-          validFrom: null,
-          validUntil: null,
-          isActive: true,
-        });
-      }
-    }
-  });
+  }, [open, promo]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

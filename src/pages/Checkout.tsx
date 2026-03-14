@@ -198,22 +198,28 @@ const Checkout = () => {
           // Redirect to Money Fusion payment page
           window.location.href = paymentUrl;
           return;
+        } else {
+          console.warn('[Checkout] No paymentUrl in response:', paymentResult);
+          toast({
+            title: "Commande créée",
+            description: `Commande #${order.orderNumber} enregistrée. Le lien de paiement n'a pas été reçu — veuillez réessayer depuis votre commande.`,
+          });
+          navigate(`/orders/${order.id}`);
+          return;
         }
-      } catch (paymentError) {
+      } catch (paymentError: any) {
         console.error('Payment initiation error:', paymentError);
         // Order was created but payment failed to initiate
-        // Continue to order page
+        clearCart();
+        clearPromo();
+        toast({
+          title: "Commande créée — Paiement en attente",
+          description: paymentError?.message || `Le paiement n'a pas pu être initié. Vous pouvez payer depuis la page de votre commande.`,
+          variant: "destructive",
+        });
+        navigate(`/orders/${order.id}`);
+        return;
       }
-
-      clearCart();
-      clearPromo();
-
-      toast({
-        title: "Commande créée avec succès !",
-        description: `Votre commande #${order.orderNumber} a été enregistrée. Le paiement sera finalisé ultérieurement.`,
-      });
-
-      navigate(`/orders/${order.id}`);
     } catch (error: any) {
       console.error('Order creation error:', error);
       toast({

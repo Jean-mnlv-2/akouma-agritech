@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Star as StarIcon } from 'lucide-react';
 import { api } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,6 +45,7 @@ import { AdminOrders } from '@/components/admin/AdminOrders';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
+import { AdminReviews } from '@/components/admin/AdminReviews';
 
 interface DashboardStats {
   totalUsers: number;
@@ -98,6 +100,7 @@ const tabs = [
   { value: 'events', label: 'Événements', icon: Calendar },
   { value: 'livestreams', label: 'Live Streams', icon: Radio },
   { value: 'submissions', label: 'Soumissions', icon: FileText },
+  { value: 'reviews', label: 'Avis Clients', icon: StarIcon },
   { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
 ];
 
@@ -361,6 +364,7 @@ function AdminContent() {
               {(activeTab === 'events' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('events')))) && <AdminEvents />}
               {(activeTab === 'livestreams' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('livestreams')))) && <AdminLiveStreams />}
               {(activeTab === 'submissions' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('submissions')))) && <AdminSubmissions />}
+              {(activeTab === 'reviews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reviews')))) && <AdminReviews />}
               {(activeTab === 'contact-settings' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('contact-settings')))) && <AdminContactSettings />}
             </div>
           </Tabs>
