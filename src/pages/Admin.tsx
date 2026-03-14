@@ -45,6 +45,7 @@ import { AdminOrders } from '@/components/admin/AdminOrders';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
+import { AdminReviews } from '@/components/admin/AdminReviews';
 
 interface DashboardStats {
   totalUsers: number;
