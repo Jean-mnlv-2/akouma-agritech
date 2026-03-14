@@ -184,6 +184,7 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/promo-codes', promoCodesRouter);
 app.use('/api/delivery-partners', deliveryPartnersRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/reviews', reviewsRouter);
 app.use('/api/course_preview_types', coursePreviewTypesRouter);
 app.use('/api/course_preview_items', coursePreviewItemsRouter);
 app.use('/api/reminder_logs', reminderLogsRouter);
