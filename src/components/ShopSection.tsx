@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Star, Package, ChevronLeft, ChevronRight, ArrowRight, Zap } from 'lucide-react';
+import { ShoppingCart, Star, Package, ArrowRight, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
 import { useI18n } from '@/i18n/i18n';
