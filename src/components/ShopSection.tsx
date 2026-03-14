@@ -26,7 +26,7 @@ interface Product {
 const ShopSection = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [_currentIndex, setCurrentIndex] = useState(0);
+  const [_currentIndex, _setCurrentIndex] = useState(0);
   const { t } = useI18n();
 
   // Utiliser le hook de synchronisation pour les produits
