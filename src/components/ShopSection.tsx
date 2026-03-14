@@ -226,79 +226,67 @@ const ShopSection = () => {
 
         {/* Horizontal Scroll Products */}
         {products.length > 1 && (
-          <div className="relative">
-            <div className="flex overflow-x-auto scrollbar-hide gap-6 pb-4" style={{ scrollSnapType: 'x mandatory' }}>
-              {products.slice(1).map((product) => (
-                <div
-                  key={product.id}
-                  className="flex-shrink-0 w-80"
-                  style={{ scrollSnapAlign: 'start' }}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+            {products.slice(1).map((product, index) => {
+              const delay = index * 50;
+              return (
+                <Card 
+                  key={product.id} 
+                  className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden"
+                  style={{ transitionDelay: `${delay}ms` }}
                 >
-                  <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
-                    <div className="relative overflow-hidden rounded-t-lg bg-muted/30 aspect-[4/3] flex items-center justify-center">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {product.isNew && (
-                          <Badge className="bg-green-500 text-white text-xs">
-                            Nouveau
-                          </Badge>
-                        )}
-                        {product.isBestseller && (
-                          <Badge className="bg-orange-500 text-white text-xs">
-                            <Zap className="w-3 h-3 mr-1" />
-                            Populaire
-                          </Badge>
-                        )}
-                      </div>
-                      <Badge className="absolute top-2 right-2">
-                        {product.category}
-                      </Badge>
-                      {!product.inStock && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <Badge variant="destructive">Rupture de stock</Badge>
-                        </div>
+                  <div className="relative overflow-hidden bg-muted/30 aspect-square flex items-center justify-center">
+                    <img 
+                      src={product.image} 
+                      alt={product.name} 
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="absolute top-3 left-3 flex flex-col gap-2">
+                      {product.isNew && (
+                        <Badge className="bg-green-500 text-white text-xs shadow-lg">Nouveau</Badge>
+                      )}
+                      {product.isBestseller && (
+                        <Badge className="bg-orange-500 text-white text-xs shadow-lg">
+                          <Zap className="w-3 h-3 mr-1" />
+                          Populaire
+                        </Badge>
                       )}
                     </div>
-
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">
-                        {product.name}
-                      </CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {product.description?.replace(/<[^>]*>/g, '').trim()}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="pt-0">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">{product.rating}</span>
-                          <span className="text-sm text-muted-foreground">({product.reviews})</span>
-                        </div>
-                        <Package className="w-4 h-4 text-muted-foreground" />
+                    <Badge variant="secondary" className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm shadow-lg text-foreground border-border/50">{product.category}</Badge>
+                    {!product.inStock && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <Badge variant="destructive">Rupture de stock</Badge>
                       </div>
-
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xl font-bold text-primary">
-                            {formatPrice(product.price)}
-                          </span>
-                          {product.originalPrice > product.price && (
-                            <span className="text-sm text-muted-foreground line-through">
-                              {formatPrice(product.originalPrice)}
-                            </span>
-                          )}
-                        </div>
+                    )}
+                  </div>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-1 mb-2">
+                      {product.name}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2 text-sm min-h-[40px]">{product.description?.replace(/<[^>]*>/g, '').trim()}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-semibold">{product.rating}</span>
+                        <span className="text-sm text-muted-foreground">({product.reviews})</span>
                       </div>
-
+                      <Package className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl font-bold text-primary">{formatPrice(product.price)}</span>
+                        {product.originalPrice > product.price && (
+                          <span className="text-sm text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
                       <Button
                         disabled={!product.inStock}
-                        className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200"
+                        className="flex-1 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300"
                         asChild
                       >
                         <Link to={`/shop/${product.slug}`}>
@@ -306,33 +294,16 @@ const ShopSection = () => {
                           {product.inStock ? t('shop.add_to_cart') : t('shop.out_of_stock')}
                         </Link>
                       </Button>
-                    </CardContent>
-                  </Card>
-                </div>
-              ))}
-            </div>
-
-            {/* Navigation arrows */}
-            {products.length > 4 && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-background/80 backdrop-blur-sm"
-                  onClick={prevSlide}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-background/80 backdrop-blur-sm"
-                  onClick={nextSlide}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </>
-            )}
+                      <Button asChild variant="outline" className="px-3">
+                        <Link to={`/shop/${product.slug}`}>
+                          Détails
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
