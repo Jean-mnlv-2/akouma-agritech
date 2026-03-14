@@ -82,13 +82,6 @@ const ShopSection = () => {
     return () => clearTimeout(timeout);
   }, [loading]);
 
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % Math.max(1, products.length - 3));
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + Math.max(1, products.length - 3)) % Math.max(1, products.length - 3));
-  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fr-CF', {
