@@ -46,7 +46,8 @@ import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
 import { AdminReviews } from '@/components/admin/AdminReviews';
-
+import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
+import { AdminNotifications } from '@/components/admin/AdminNotifications';
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
