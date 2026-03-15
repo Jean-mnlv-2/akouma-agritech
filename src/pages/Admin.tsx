@@ -46,7 +46,8 @@ import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
 import { AdminReviews } from '@/components/admin/AdminReviews';
-
+import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
+import { AdminNotifications } from '@/components/admin/AdminNotifications';
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
@@ -85,6 +86,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, descripti
 };
 
 const tabs = [
+  { value: 'dashboard', label: 'Tableau de bord', icon: Receipt },
   { value: 'users', label: 'Utilisateurs', icon: Shield },
   { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
   { value: 'courses', label: 'Cours', icon: BookOpen },
@@ -110,7 +112,7 @@ function AdminContent() {
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalCourses: 0,
@@ -317,6 +319,7 @@ function AdminContent() {
                 </Badge>
               </div>
               <div className="admin-btn-group-mobile">
+                <AdminNotifications />
                 <Button variant="outline" onClick={() => setPasswordDialogOpen(true)} className="admin-btn-mobile flex items-center space-x-1 md:space-x-2"><Lock className="admin-icon-responsive-sm" /><span className="hidden sm:inline">Mot de passe</span></Button>
                 <Button variant="outline" onClick={handleLogout} className="admin-btn-mobile flex items-center space-x-1 md:space-x-2"><LogOut className="admin-icon-responsive-sm" /><span className="hidden sm:inline">Déconnexion</span></Button>
               </div>
@@ -349,6 +352,7 @@ function AdminContent() {
             </TabsList>
 
             <div className="mt-6">
+              {(activeTab === 'dashboard' && (isAdmin || isSupervisor)) && <AdminDashboardCharts />}
               {(activeTab === 'users' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('users')))) && <AdminUserManagement />}
               {(activeTab === 'orders' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('orders')))) && <AdminOrders />}
               {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && <AdminCourses />}
