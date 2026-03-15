@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star as StarIcon } from 'lucide-react';
+import { Star as StarIcon, BarChart3 } from 'lucide-react';
 import { api } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
