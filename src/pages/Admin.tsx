@@ -86,6 +86,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, descripti
 };
 
 const tabs = [
+  { value: 'dashboard', label: 'Tableau de bord', icon: Receipt },
   { value: 'users', label: 'Utilisateurs', icon: Shield },
   { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
   { value: 'courses', label: 'Cours', icon: BookOpen },
