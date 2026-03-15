@@ -44,7 +44,7 @@ export function AdminDashboardCharts() {
   useEffect(() => {
     let mounted = true;
     api.request('GET', '/api/stats/charts')
-      .then(res => { if (mounted) setData(res.data); })
+      .then((res: { data: ChartStats }) => { if (mounted) setData(res.data); })
       .catch(console.error)
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
