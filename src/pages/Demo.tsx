@@ -101,8 +101,8 @@ const Demo = () => {
 
   const handleDownloadBrochure = () => {
     const link = document.createElement('a');
-    link.href = '/demo-brochure-akouma.pdf';
-    link.download = 'AKOUMA-Brochure-Solutions.pdf';
+    link.href = '/demo-brochure-bia.pdf';
+    link.download = 'BIA-Brochure-Solutions.pdf';
     link.click();
   };
 
@@ -118,7 +118,7 @@ const Demo = () => {
 
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
-            Découvrez AKOUMA en Action
+            Découvrez BIA en Action
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Choisissez le type de démonstration qui vous intéresse et voyez comment 
@@ -238,7 +238,7 @@ const Demo = () => {
                   </DialogTrigger>
                   <DialogContent className="max-w-4xl">
                     <DialogHeader>
-                      <DialogTitle>Démonstration Interactive AKOUMA</DialogTitle>
+                      <DialogTitle>Démonstration Interactive BIA</DialogTitle>
                     </DialogHeader>
                     <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
                       <div className="text-center">

@@ -66,7 +66,7 @@ const Services = () => {
           <div className="relative rounded-2xl overflow-hidden shadow-natural">
             <img 
               src={servicesImage} 
-              alt="Technologies agricoles AKOUMA" 
+              alt="Technologies agricoles BIA" 
               className="w-full h-64 md:h-96 object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent"></div>

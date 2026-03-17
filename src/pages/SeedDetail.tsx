@@ -93,8 +93,8 @@ export default function SeedDetail() {
   const handleShare = async () => {
     if (isSharing) return;
     const shareData = {
-      title: product?.name || "AKOUMA Agritech",
-      text: `Découvrez la semence ${product?.name} (${product?.variety}) sur AKOUMA Agritech.`,
+      title: product?.name || "BIA Agritech",
+      text: `Découvrez la semence ${product?.name} (${product?.variety}) sur BIA Agritech.`,
       url: window.location.href,
     };
     try {
@@ -130,7 +130,7 @@ export default function SeedDetail() {
   );
 
   useEffect(() => {
-    const cachedUser = sessionStorage.getItem('akouma_auth_user');
+    const cachedUser = sessionStorage.getItem('bia_auth_user');
     setIsLoggedIn(!!cachedUser);
   }, []);
 
@@ -210,12 +210,12 @@ export default function SeedDetail() {
 
   const logContact = async (type: string) => {
     try {
-      const userStr = sessionStorage.getItem('akouma_auth_user');
+      const userStr = sessionStorage.getItem('bia_auth_user');
       const user = userStr ? JSON.parse(userStr) : {};
       await api.request('POST', '/api/contact_messages', {
         body: {
           name: user.fullName || 'Utilisateur',
-          email: user.email || 'anonyme@akouma.tg',
+          email: user.email || 'anonyme@bia.tg',
           subject: `Intérêt pour ${product?.name} (${type})`,
           message: `L'utilisateur a cliqué sur le bouton ${type} pour le produit ${product?.name} (ID: ${product?.id}).`,
           project_type: 'seeds'
@@ -229,7 +229,7 @@ export default function SeedDetail() {
   const handleWhatsApp = async () => {
     await logContact('whatsapp');
     const whatsapp = contactSettings?.whatsappNumber || "+22600000000";
-    const message = encodeURIComponent(`Bonjour AKOUMA, je suis intéressé par la semence : ${product?.name} (Réf: ${product?.id})`);
+    const message = encodeURIComponent(`Bonjour BIA, je suis intéressé par la semence : ${product?.name} (Réf: ${product?.id})`);
     window.open(`https://wa.me/${whatsapp.replace(/\s+/g, '')}?text=${message}`, '_blank');
   };
 
@@ -285,7 +285,7 @@ export default function SeedDetail() {
   return (
     <div className="min-h-screen bg-background">
       <TitleManager 
-        title={`${product.name} - AKOUMA Agritech`}
+        title={`${product.name} - BIA Agritech`}
         description={product.description}
         image={product.images[0]}
       />

@@ -90,7 +90,7 @@ const CourseLearn = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title="Formation en cours - AKOUMA E-Learning" description="Suivez votre formation" canonical={window.location.origin + `/elearning/${id}/learn`} image={logoAk} />
+      <TitleManager title="Formation en cours - BIA E-Learning" description="Suivez votre formation" canonical={window.location.origin + `/elearning/${id}/learn`} image={logoAk} />
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 py-6">
@@ -160,7 +160,7 @@ const CourseLearn = () => {
           <div className="lg:col-span-3 order-1 lg:order-2">
             {showCertificate ? (
               <CertificateGenerator data={{
-                studentName: "Apprenant AKOUMA",
+                studentName: "Apprenant BIA",
                 courseName: "Agriculture Moderne & IoT",
                 completionDate: new Date().toISOString(),
                 score: quizScore || 85,

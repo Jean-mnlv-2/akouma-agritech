@@ -343,7 +343,7 @@ const AgriConsulting = () => {
                       </div>
                       <div>
                         <p className="font-medium">Email direct</p>
-                        <p className="text-sm text-muted-foreground">{contact?.email || 'contact@akouma.cm'}</p>
+                        <p className="text-sm text-muted-foreground">{contact?.email || 'contact@bia.cm'}</p>
                       </div>
                     </div>
 
