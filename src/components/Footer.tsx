@@ -20,11 +20,11 @@ const Footer = () => {
             <div className="flex items-center space-x-2 mb-4 md:mb-6">
               <img 
                 src="/logo-ak.png"
-                alt="AKOUMA Logo" 
+                alt="BIA Logo" 
                 className="w-10 h-10 md:w-14 md:h-14"
               />
               <span className="text-2xl md:text-3xl font-bold text-primary">
-                AKOUMA
+                BIA
               </span>
             </div>
             <p className="text-muted-foreground mb-4 md:mb-6 leading-relaxed text-base">
