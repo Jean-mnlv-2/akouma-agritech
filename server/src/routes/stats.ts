@@ -56,17 +56,17 @@ statsRouter.get('/charts', async (req: Request, res: Response) => {
 
     const [orders, reviews, applications] = await Promise.all([
       prisma.order.findMany({
-        where: { createdAt: { gte: thirtyDaysAgo } },
+        where: { createdAt: { gte: since } },
         select: { id: true, total: true, status: true, createdAt: true },
         orderBy: { createdAt: 'asc' },
       }),
       prisma.review.findMany({
-        where: { createdAt: { gte: thirtyDaysAgo } },
+        where: { createdAt: { gte: since } },
         select: { id: true, rating: true, createdAt: true },
         orderBy: { createdAt: 'asc' },
       }),
       prisma.jobApplication.findMany({
-        where: { createdAt: { gte: thirtyDaysAgo } },
+        where: { createdAt: { gte: since } },
         select: { id: true, createdAt: true },
         orderBy: { createdAt: 'asc' },
       }),
@@ -74,9 +74,9 @@ statsRouter.get('/charts', async (req: Request, res: Response) => {
 
     // Group by day
     const dayMap: Record<string, { orders: number; revenue: number; reviews: number; applications: number }> = {};
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < days; i++) {
       const d = new Date();
-      d.setDate(d.getDate() - (29 - i));
+      d.setDate(d.getDate() - (days - 1 - i));
       const key = d.toISOString().slice(0, 10);
       dayMap[key] = { orders: 0, revenue: 0, reviews: 0, applications: 0 };
     }

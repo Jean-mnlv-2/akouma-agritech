@@ -8,7 +8,7 @@ const CookieConsent = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem("akouma_cookie_consent");
+    const consent = localStorage.getItem("bia_cookie_consent");
     if (!consent) {
       const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);
@@ -16,13 +16,13 @@ const CookieConsent = () => {
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem("akouma_cookie_consent", "accepted");
-    localStorage.setItem("akouma_cookie_timestamp", new Date().toISOString());
+    localStorage.setItem("bia_cookie_consent", "accepted");
+    localStorage.setItem("bia_cookie_timestamp", new Date().toISOString());
     setIsVisible(false);
   };
 
   const handleDecline = () => {
-    localStorage.setItem("akouma_cookie_consent", "declined");
+    localStorage.setItem("bia_cookie_consent", "declined");
     setIsVisible(false);
   };
 
