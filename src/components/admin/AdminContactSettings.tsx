@@ -148,8 +148,8 @@ export function AdminContactSettings() {
           <CardContent className="space-y-4">
             <Field label="Téléphone" value={localSettings.phone} onChange={(v) => handleChange('phone', v)} placeholder="+237 6XX XX XX XX" icon={Phone} />
             <Field label="WhatsApp" value={localSettings.whatsappNumber} onChange={(v) => handleChange('whatsappNumber', v)} placeholder="+237 6XX XX XX XX" icon={Phone} />
-            <Field label="Email" type="email" value={localSettings.email} onChange={(v) => handleChange('email', v)} placeholder="contact@akouma.cm" icon={Mail} />
-            <Field label="Site Web" type="url" value={localSettings.websiteUrl} onChange={(v) => handleChange('websiteUrl', v)} placeholder="https://www.akouma.cm" icon={Globe} />
+            <Field label="Email" type="email" value={localSettings.email} onChange={(v) => handleChange('email', v)} placeholder="contact@bia.cm" icon={Mail} />
+            <Field label="Site Web" type="url" value={localSettings.websiteUrl} onChange={(v) => handleChange('websiteUrl', v)} placeholder="https://www.bia.cm" icon={Globe} />
           </CardContent>
         </Card>
 

@@ -18,7 +18,7 @@ interface CertificateGeneratorProps {
 
 const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-    `https://akouma-agritech.lovable.app/verify-certificate/${data.certificateNumber}`
+    `https://bia-agritech.lovable.app/verify-certificate/${data.certificateNumber}`
   )}`;
 
   const handleDownloadPDF = () => {
@@ -30,7 +30,7 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Certificat AKOUMA - ${data.certificateNumber}</title>
+        <title>Certificat BIA - ${data.certificateNumber}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600&display=swap');
           * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -73,8 +73,8 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
           <div class="corner corner-bl"></div>
           <div class="corner corner-br"></div>
           <div class="header">
-            <img src="${logoAk}" alt="AKOUMA" class="logo" crossorigin="anonymous" />
-            <div class="org-name">AKOUMA</div>
+            <img src="${logoAk}" alt="BIA" class="logo" crossorigin="anonymous" />
+            <div class="org-name">BIA</div>
             <div class="cert-title">CERTIFICAT DE RÉUSSITE</div>
             <div class="subtitle">Certificate of Achievement</div>
           </div>
@@ -89,7 +89,7 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
           </div>
           <div class="footer">
             <div class="signature">
-              <div class="sig-line">Directeur Académique<br/>AKOUMA E-Learning</div>
+              <div class="sig-line">Directeur Académique<br/>BIA E-Learning</div>
             </div>
             <div class="qr">
               <img src="${qrCodeUrl}" alt="QR Code" />

@@ -20,7 +20,7 @@ const buildContactInfo = (contact?: { city?: string | null; addressLine1?: strin
   {
     icon: Mail,
     title: "contact.email.title",
-    details: [contact?.email || "contact@akouma.cm"]
+    details: [contact?.email || "contact@bia.cm"]
   },
   {
     icon: Clock,
@@ -148,8 +148,8 @@ const Contact = () => {
               size="lg"
               onClick={() => {
                 const link = document.createElement('a');
-                link.href = '/brochure-akouma.pdf';
-                link.download = 'AKOUMA-Brochure.pdf';
+                link.href = '/brochure-bia.pdf';
+                link.download = 'BIA-Brochure.pdf';
                 link.click();
               }}
             >

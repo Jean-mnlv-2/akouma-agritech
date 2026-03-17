@@ -98,7 +98,7 @@ const About = () => {
         <div className="absolute inset-0">
           <img 
             src={heroAgritech} 
-            alt="À propos d'AKOUMA"
+            alt="À propos d'BIA"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/60"></div>
@@ -111,13 +111,13 @@ const About = () => {
           <div className="max-w-4xl">
             <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border-2 border-primary/30 hover:scale-105 transition-transform">
               <Sprout className="w-4 h-4 mr-2" />
-              À propos d'AKOUMA
+              À propos d'BIA
             </Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
               Mettre la <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">technologie</span> au service de la terre
             </h1>
             <p className="text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
-              AKOUMA accompagne les producteurs, coopératives et territoires dans la transition 
+              BIA accompagne les producteurs, coopératives et territoires dans la transition 
               vers une agriculture moderne, résiliente et connectée.
             </p>
           </div>
@@ -279,7 +279,7 @@ const About = () => {
               Rejoignez l'Agriculture du Futur
             </h2>
             <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-              Découvrez comment AKOUMA peut transformer votre exploitation agricole 
+              Découvrez comment BIA peut transformer votre exploitation agricole 
               avec nos solutions innovantes et notre accompagnement personnalisé.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

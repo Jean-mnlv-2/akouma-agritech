@@ -55,7 +55,7 @@ export default function News() {
           title: item.title ?? '',
           excerpt: item.excerpt ?? item.description ?? '',
           content: item.content ?? '',
-          author: item.author || item.author_name || 'AKOUMA Team',
+          author: item.author || item.author_name || 'BIA Team',
           image: item.imageUrl || item.image_url,
           featured: Boolean(item.isPublished ?? item.is_featured ?? false),
           date: item.createdAt || item.created_at || new Date().toISOString(),

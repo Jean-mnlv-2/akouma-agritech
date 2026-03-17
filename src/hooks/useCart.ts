@@ -57,7 +57,7 @@ interface StoredCart {
   };
 }
 
-const STORAGE_KEY = 'akouma-cart';
+const STORAGE_KEY = 'bia-cart';
 
 export const useCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);

@@ -60,7 +60,7 @@ const Legal = () => {
                 {legalPage ? legalPage.title : 'Mentions Légales'}
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Informations légales sur AKOUMA et nos services.
+                Informations légales sur BIA et nos services.
               </p>
             </div>
 

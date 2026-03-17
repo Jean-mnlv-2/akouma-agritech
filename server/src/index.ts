@@ -131,7 +131,7 @@ app.head('/', (_req: Request, res: Response) => {
 });
 app.get('/', (_req: Request, res: Response) => {
   res.json({
-    name: 'AKOUMA API',
+    name: 'BIA API',
     status: 'running',
     health: '/health',
     time: new Date().toISOString(),

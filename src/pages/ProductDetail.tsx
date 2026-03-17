@@ -59,7 +59,7 @@ const ProductDetail = () => {
     }
   );
 
-  const isLoggedIn = Boolean(sessionStorage.getItem('akouma_auth_user'));
+  const isLoggedIn = Boolean(sessionStorage.getItem('bia_auth_user'));
 
   // Fetch product data from backend
   const fetchProduct = useCallback(async () => {
@@ -161,8 +161,8 @@ const ProductDetail = () => {
     if (isSharing) return;
     
     const shareData = {
-      title: product?.name || "AKOUMA Agritech",
-      text: `Découvrez ${product?.name} sur AKOUMA Agritech : ${product?.description?.replace(/<[^>]*>/g, '').slice(0, 100)}...`,
+      title: product?.name || "BIA Agritech",
+      text: `Découvrez ${product?.name} sur BIA Agritech : ${product?.description?.replace(/<[^>]*>/g, '').slice(0, 100)}...`,
       url: window.location.href,
     };
 

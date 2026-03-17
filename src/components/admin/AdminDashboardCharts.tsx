@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { api } from '@/integrations/api/client';
-import { Loader2, TrendingUp, DollarSign, Star, ShoppingCart } from 'lucide-react';
+import { Loader2, TrendingUp, DollarSign, Star, ShoppingCart, Download, FileSpreadsheet } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface ChartStats {
   chartData: { date: string; orders: number; revenue: number; reviews: number; applications: number }[];
@@ -37,18 +39,76 @@ const chartConfig = {
   applications: { label: 'Candidatures', color: 'hsl(var(--chart-4, 280 65% 60%))' },
 };
 
+type PeriodDays = '7' | '30' | '90';
+
 export function AdminDashboardCharts() {
   const [data, setData] = useState<ChartStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<PeriodDays>('30');
+  const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    api.request('GET', '/api/stats/charts')
-      .then((res: { data: ChartStats }) => { if (mounted) setData(res.data); })
+  const fetchData = useCallback((days: PeriodDays) => {
+    setLoading(true);
+    api.request('GET', '/api/stats/charts', { params: { days } })
+      .then((res: { data: ChartStats }) => setData(res.data))
       .catch(console.error)
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchData(period); }, [period, fetchData]);
+
+  const handlePeriodChange = (val: string) => {
+    if (val) setPeriod(val as PeriodDays);
+  };
+
+  const exportCSV = () => {
+    if (!data) return;
+    const header = 'Date,Commandes,Revenus,Avis,Candidatures\n';
+    const rows = data.chartData.map(r => `${r.date},${r.orders},${r.revenue},${r.reviews},${r.applications}`).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `statistiques-bia-${period}j.csv`;
+    link.click();
+  };
+
+  const exportPDF = async () => {
+    if (!data || exporting) return;
+    setExporting(true);
+    try {
+      const res = await api.request('GET', '/api/stats/export-pdf', { params: { days: period } });
+      // If server returns a PDF URL or base64
+      if (res.url) {
+        window.open(res.url, '_blank');
+      } else {
+        // Fallback: generate a simple printable page
+        const win = window.open('', '_blank');
+        if (!win) return;
+        win.document.write(`
+          <html><head><title>Statistiques BIA - ${period} jours</title>
+          <style>body{font-family:system-ui;padding:40px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}.summary{display:flex;gap:20px;margin-bottom:20px}.card{padding:16px;border:1px solid #ddd;border-radius:8px;flex:1;text-align:center}.card h3{margin:0;font-size:24px}.card p{margin:4px 0 0;color:#666}</style></head><body>
+          <h1>Statistiques BIA Agritech — ${period} derniers jours</h1>
+          <div class="summary">
+            <div class="card"><h3>${data.totalOrders30d}</h3><p>Commandes</p></div>
+            <div class="card"><h3>${data.totalRevenue30d.toLocaleString('fr-FR')} FCFA</h3><p>Revenus</p></div>
+            <div class="card"><h3>${data.avgRating}/5</h3><p>Note moyenne</p></div>
+            <div class="card"><h3>${data.totalReviews30d}</h3><p>Avis</p></div>
+          </div>
+          <table><thead><tr><th>Date</th><th>Commandes</th><th>Revenus (FCFA)</th><th>Avis</th><th>Candidatures</th></tr></thead><tbody>
+          ${data.chartData.map(r => `<tr><td>${r.date}</td><td>${r.orders}</td><td>${r.revenue.toLocaleString('fr-FR')}</td><td>${r.reviews}</td><td>${r.applications}</td></tr>`).join('')}
+          </tbody></table>
+          </body></html>
+        `);
+        win.document.close();
+        win.print();
+      }
+    } catch {
+      // Fallback to CSV
+      exportCSV();
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -71,8 +131,27 @@ export function AdminDashboardCharts() {
     fill: STATUS_COLORS[status] || 'hsl(var(--muted))',
   }));
 
+  const periodLabel = period === '7' ? '7 jours' : period === '30' ? '30 jours' : '90 jours';
+
   return (
     <div className="space-y-6">
+      {/* Period filter & Export */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <ToggleGroup type="single" value={period} onValueChange={handlePeriodChange} className="bg-muted rounded-lg p-1">
+          <ToggleGroupItem value="7" className="text-sm px-4">7j</ToggleGroupItem>
+          <ToggleGroupItem value="30" className="text-sm px-4">30j</ToggleGroupItem>
+          <ToggleGroupItem value="90" className="text-sm px-4">90j</ToggleGroupItem>
+        </ToggleGroup>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportCSV}>
+            <FileSpreadsheet className="w-4 h-4 mr-1" /> Excel/CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPDF} disabled={exporting}>
+            <Download className="w-4 h-4 mr-1" /> PDF
+          </Button>
+        </div>
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
@@ -81,7 +160,7 @@ export function AdminDashboardCharts() {
               <ShoppingCart className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Commandes (30j)</p>
+              <p className="text-sm text-muted-foreground">Commandes ({periodLabel})</p>
               <p className="text-2xl font-bold">{data.totalOrders30d}</p>
             </div>
           </CardContent>
@@ -92,7 +171,7 @@ export function AdminDashboardCharts() {
               <DollarSign className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Revenus (30j)</p>
+              <p className="text-sm text-muted-foreground">Revenus ({periodLabel})</p>
               <p className="text-2xl font-bold">{data.totalRevenue30d.toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span></p>
             </div>
           </CardContent>
@@ -114,7 +193,7 @@ export function AdminDashboardCharts() {
               <TrendingUp className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Avis (30j)</p>
+              <p className="text-sm text-muted-foreground">Avis ({periodLabel})</p>
               <p className="text-2xl font-bold">{data.totalReviews30d}</p>
             </div>
           </CardContent>
@@ -123,11 +202,10 @@ export function AdminDashboardCharts() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Orders & Revenue chart */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Commandes & Revenus</CardTitle>
-            <CardDescription>Évolution sur les 30 derniers jours</CardDescription>
+            <CardDescription>Évolution sur les {periodLabel}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -142,11 +220,10 @@ export function AdminDashboardCharts() {
           </CardContent>
         </Card>
 
-        {/* Reviews & Applications line chart */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Avis & Candidatures</CardTitle>
-            <CardDescription>Tendance sur 30 jours</CardDescription>
+            <CardDescription>Tendance sur {periodLabel}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -162,12 +239,11 @@ export function AdminDashboardCharts() {
           </CardContent>
         </Card>
 
-        {/* Order status pie */}
         {pieData.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Statut des commandes</CardTitle>
-              <CardDescription>Répartition sur 30 jours</CardDescription>
+              <CardDescription>Répartition sur {periodLabel}</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-center">
               <ChartContainer config={chartConfig} className="h-[250px] w-full max-w-[300px]">
@@ -184,11 +260,10 @@ export function AdminDashboardCharts() {
           </Card>
         )}
 
-        {/* Revenue chart */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Revenus quotidiens</CardTitle>
-            <CardDescription>En FCFA sur 30 jours</CardDescription>
+            <CardDescription>En FCFA sur {periodLabel}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">

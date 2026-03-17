@@ -114,7 +114,7 @@ const PWAInstallButton = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5" />
-              Installer AKOUMA
+              Installer BIA
             </DialogTitle>
             <DialogDescription>
               Profitez d'une meilleure expérience en installant notre application sur votre appareil.
@@ -135,7 +135,7 @@ const PWAInstallButton = () => {
               <h4 className="font-medium mb-2">Sur ordinateur (Chrome/Edge):</h4>
               <ol className="text-sm space-y-1 text-muted-foreground">
                 <li>1. Cliquez sur l'icône d'installation dans la barre d'adresse</li>
-                <li>2. Ou utilisez le menu "Installer AKOUMA"</li>
+                <li>2. Ou utilisez le menu "Installer BIA"</li>
               </ol>
             </div>
           </div>

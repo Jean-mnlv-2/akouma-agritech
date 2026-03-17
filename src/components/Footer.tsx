@@ -20,11 +20,11 @@ const Footer = () => {
             <div className="flex items-center space-x-2 mb-4 md:mb-6">
               <img 
                 src="/logo-ak.png"
-                alt="AKOUMA Logo" 
+                alt="BIA Logo" 
                 className="w-10 h-10 md:w-14 md:h-14"
               />
               <span className="text-2xl md:text-3xl font-bold text-primary">
-                AKOUMA
+                BIA
               </span>
             </div>
             <p className="text-muted-foreground mb-4 md:mb-6 leading-relaxed text-base">
@@ -121,7 +121,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground text-sm md:text-base">{contact?.email || 'contact@akouma.cm'}</span>
+                <span className="text-muted-foreground text-sm md:text-base">{contact?.email || 'contact@bia.cm'}</span>
               </div>
             </div>
           </div>
@@ -149,7 +149,7 @@ const Footer = () => {
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
             <p className="text-muted-foreground text-sm md:text-base">
-              © {currentYear} AKOUMA. {t("footer.rights")}
+              © {currentYear} BIA. {t("footer.rights")}
             </p>
             <div className="flex space-x-4 md:space-x-6 text-sm md:text-base">
               <a href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">

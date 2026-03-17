@@ -15,8 +15,8 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col">
       <TitleManager
-        title={t("auth.meta.title") || "Connexion - AKOUMA"}
-        description={t("auth.meta.desc") || "Connectez-vous à votre compte AKOUMA"}
+        title={t("auth.meta.title") || "Connexion - BIA"}
+        description={t("auth.meta.desc") || "Connectez-vous à votre compte BIA"}
         canonical={window.location.origin + '/auth'}
         image="/logo-ak.png"
       />

@@ -16,10 +16,10 @@ export const emailService = {
       await resend.emails.send({
         from: env.EMAIL_FROM,
         to: email,
-        subject: 'Réinitialisation de votre mot de passe - AKOUMA',
+        subject: 'Réinitialisation de votre mot de passe - BIA',
         html: `
           <h1>Réinitialisation de mot de passe</h1>
-          <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte AKOUMA.</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte BIA.</p>
           <p>Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :</p>
           <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px;">Réinitialiser mon mot de passe</a>
           <p>Ce lien expirera dans 1 heure.</p>
@@ -42,7 +42,7 @@ export const emailService = {
       await resend.emails.send({
         from: env.EMAIL_FROM,
         to: data.email,
-        subject: `Rappel d'apprentissage : ${data.courseTitle} - AKOUMA`,
+        subject: `Rappel d'apprentissage : ${data.courseTitle} - BIA`,
         html: `
           <h1>Bonjour ${data.userName} !</h1>
           <p>C'est le moment idéal pour continuer votre formation sur <strong>${data.courseTitle}</strong>.</p>
@@ -70,11 +70,11 @@ export const emailService = {
       await resend.emails.send({
         from: env.EMAIL_FROM,
         to: email,
-        subject: 'Bienvenue sur AKOUMA - Vos identifiants de superviseur',
+        subject: 'Bienvenue sur BIA - Vos identifiants de superviseur',
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
             <h1 style="color: #10b981; margin-top: 0;">Bienvenue, ${fullName} !</h1>
-            <p>Votre compte de <strong>superviseur</strong> a été créé avec succès sur la plateforme AKOUMA Agritech.</p>
+            <p>Votre compte de <strong>superviseur</strong> a été créé avec succès sur la plateforme BIA Agritech.</p>
             <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 24px 0;">
               <p style="margin: 0; color: #374151;"><strong>Identifiants de connexion :</strong></p>
               <p style="margin: 8px 0 0 0;">Email : <code style="background: #eee; padding: 2px 4px; border-radius: 4px;">${email}</code></p>

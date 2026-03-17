@@ -126,7 +126,7 @@ export const CareerDialog = ({ open, onOpenChange, career, onSave }: CareerDialo
             {career ? "Modifier l'offre" : "Nouvelle offre d'emploi"}
           </DialogTitle>
           <DialogDescription>
-            Publiez une opportunité de carrière chez AKOUMA.
+            Publiez une opportunité de carrière chez BIA.
           </DialogDescription>
         </DialogHeader>
 

@@ -76,7 +76,7 @@ export const AuthForm = () => {
         }
 
         // Store session info for AdminRoute to use immediately after redirect
-        sessionStorage.setItem('akouma_auth_user', JSON.stringify(user));
+        sessionStorage.setItem('bia_auth_user', JSON.stringify(user));
 
         if (role === 'admin') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
@@ -233,7 +233,7 @@ export const AuthForm = () => {
         <CardHeader className="px-4 md:px-6 pt-6 pb-4">
           <CardTitle className="text-xl md:text-2xl text-center flex items-center justify-center space-x-2">
             <Shield className="w-5 h-5 md:w-6 md:h-6 text-primary flex-shrink-0" />
-            <span>Mon compte AKOUMA</span>
+            <span>Mon compte BIA</span>
           </CardTitle>
           <CardDescription className="text-center text-sm md:text-base">
             Connectez-vous pour suivre vos commandes ou administrer la plateforme
