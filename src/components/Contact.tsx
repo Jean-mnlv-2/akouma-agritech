@@ -20,7 +20,7 @@ const buildContactInfo = (contact?: { city?: string | null; addressLine1?: strin
   {
     icon: Mail,
     title: "contact.email.title",
-    details: [contact?.email || "contact@akouma.cm"]
+    details: [contact?.email || "contact@bia.cm"]
   },
   {
     icon: Clock,
