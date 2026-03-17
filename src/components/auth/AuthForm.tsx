@@ -76,7 +76,7 @@ export const AuthForm = () => {
         }
 
         // Store session info for AdminRoute to use immediately after redirect
-        sessionStorage.setItem('akouma_auth_user', JSON.stringify(user));
+        sessionStorage.setItem('bia_auth_user', JSON.stringify(user));
 
         if (role === 'admin') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
