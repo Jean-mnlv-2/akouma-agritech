@@ -114,7 +114,7 @@ const PWAInstallButton = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5" />
-              Installer AKOUMA
+              Installer BIA
             </DialogTitle>
             <DialogDescription>
               Profitez d'une meilleure expérience en installant notre application sur votre appareil.
