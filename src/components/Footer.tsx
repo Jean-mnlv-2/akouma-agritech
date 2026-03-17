@@ -149,7 +149,7 @@ const Footer = () => {
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
             <p className="text-muted-foreground text-sm md:text-base">
-              © {currentYear} AKOUMA. {t("footer.rights")}
+              © {currentYear} BIA. {t("footer.rights")}
             </p>
             <div className="flex space-x-4 md:space-x-6 text-sm md:text-base">
               <a href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
