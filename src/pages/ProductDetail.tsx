@@ -59,7 +59,7 @@ const ProductDetail = () => {
     }
   );
 
-  const isLoggedIn = Boolean(sessionStorage.getItem('akouma_auth_user'));
+  const isLoggedIn = Boolean(sessionStorage.getItem('bia_auth_user'));
 
   // Fetch product data from backend
   const fetchProduct = useCallback(async () => {
