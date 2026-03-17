@@ -47,7 +47,7 @@ const CookieConsent = () => {
                 </button>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                AKOUMA Agritech utilise des cookies pour améliorer votre expérience, analyser le trafic et vous proposer des contenus adaptés. En cliquant sur "Accepter", vous consentez à notre utilisation des cookies.
+                BIA Agritech utilise des cookies pour améliorer votre expérience, analyser le trafic et vous proposer des contenus adaptés. En cliquant sur "Accepter", vous consentez à notre utilisation des cookies.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Button onClick={handleAccept} className="flex-1">

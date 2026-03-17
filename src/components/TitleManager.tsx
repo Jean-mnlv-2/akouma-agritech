@@ -37,7 +37,7 @@ export function TitleManager({ title, description, image, canonical, noIndex }: 
     const computedTitle = title ? `${title} | ${siteName}` : siteName;
     document.title = computedTitle;
     
-    // Ajouter le favicon avec le logo AKOUMA
+    // Ajouter le favicon avec le logo BIA
     const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
     if (!favicon) {
       const link = document.createElement('link');

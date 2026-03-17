@@ -148,8 +148,8 @@ const Contact = () => {
               size="lg"
               onClick={() => {
                 const link = document.createElement('a');
-                link.href = '/brochure-akouma.pdf';
-                link.download = 'AKOUMA-Brochure.pdf';
+                link.href = '/brochure-bia.pdf';
+                link.download = 'BIA-Brochure.pdf';
                 link.click();
               }}
             >

@@ -161,8 +161,8 @@ const ProductDetail = () => {
     if (isSharing) return;
     
     const shareData = {
-      title: product?.name || "AKOUMA Agritech",
-      text: `Découvrez ${product?.name} sur AKOUMA Agritech : ${product?.description?.replace(/<[^>]*>/g, '').slice(0, 100)}...`,
+      title: product?.name || "BIA Agritech",
+      text: `Découvrez ${product?.name} sur BIA Agritech : ${product?.description?.replace(/<[^>]*>/g, '').slice(0, 100)}...`,
       url: window.location.href,
     };
 
