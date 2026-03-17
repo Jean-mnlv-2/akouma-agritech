@@ -48,10 +48,11 @@ statsRouter.get('/', async (_req: Request, res: Response) => {
 });
 
 // Time-series stats for charts (last 30 days)
-statsRouter.get('/charts', async (_req: Request, res: Response) => {
+statsRouter.get('/charts', async (req: Request, res: Response) => {
   try {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const days = Math.min(Math.max(parseInt(req.query.days as string) || 30, 1), 365);
+    const since = new Date();
+    since.setDate(since.getDate() - days);
 
     const [orders, reviews, applications] = await Promise.all([
       prisma.order.findMany({
