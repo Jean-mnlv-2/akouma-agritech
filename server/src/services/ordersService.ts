@@ -217,12 +217,27 @@ export class OrdersService {
       );
 
       if (promoRecord) {
+        // Increment usage count
         await tx.promoCode.update({
           where: { id: promoRecord.id },
           data: {
             usesCount: { increment: 1 },
           },
         });
+
+        // Calculate and credit cashback to the promo owner
+        if (promoRecord.cashbackPercent > 0 && promoRecord.ownerEmail) {
+          const cashbackAmount = Math.round((computedSubtotal * promoRecord.cashbackPercent) / 100);
+          if (cashbackAmount > 0) {
+            await tx.promoCode.update({
+              where: { id: promoRecord.id },
+              data: {
+                cashbackBalance: { increment: cashbackAmount },
+                totalCashbackEarned: { increment: cashbackAmount },
+              },
+            });
+          }
+        }
       }
 
       return created;
