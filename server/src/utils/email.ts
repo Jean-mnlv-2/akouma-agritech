@@ -124,5 +124,45 @@ export const emailService = {
     } catch (error) {
       console.error('[EMAIL] Erreur envoi notification candidature:', error);
     }
+  },
+
+  async sendPromoCashbackNotification(data: {
+    ownerEmail: string;
+    ownerName: string;
+    promoCode: string;
+    cashbackAmount: number;
+    newBalance: number;
+    orderNumber: string;
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configuré. Notification cashback pour', data.ownerEmail, '- montant:', data.cashbackAmount);
+      return;
+    }
+
+    const formatPrice = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n));
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.ownerEmail,
+        subject: `KILIMO - Votre code promo ${data.promoCode} a été utilisé !`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+            <h1 style="color: #10b981; margin-top: 0;">🎉 Bonne nouvelle, ${data.ownerName} !</h1>
+            <p>Votre code promo <strong>${data.promoCode}</strong> a été utilisé pour la commande <strong>#${data.orderNumber}</strong>.</p>
+            <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #bbf7d0;">
+              <p style="margin: 0; font-size: 18px; font-weight: bold; color: #166534;">+ ${formatPrice(data.cashbackAmount)} FCFA de cashback</p>
+              <p style="margin: 8px 0 0 0; color: #15803d;">Solde disponible : <strong>${formatPrice(data.newBalance)} FCFA</strong></p>
+            </div>
+            <p>Vous pouvez utiliser ce solde lors de vos prochains achats sur KILIMO pour bénéficier de réductions automatiques.</p>
+            <a href="${env.FRONTEND_ORIGINS[0]}/shop" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Visiter la boutique</a>
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 13px; color: #6b7280; margin-bottom: 0;">Cet e-mail est envoyé automatiquement par KILIMO Agritech.</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error('[EMAIL] Erreur envoi notification cashback:', error);
+    }
   }
 };

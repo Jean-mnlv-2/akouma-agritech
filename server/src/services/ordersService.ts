@@ -243,6 +243,22 @@ export class OrdersService {
       return created;
     });
 
+    // Send cashback notification to promo owner asynchronously
+    const promoData = await this.prisma.$transaction(async (tx: any) => {
+      const o = await tx.order.findUnique({ where: { id: order.id }, include: { promoCode: true } });
+      return o?.promoCode;
+    });
+    if (promoData?.ownerEmail && Number(promoData.cashbackPercent) > 0) {
+      emailService.sendPromoCashbackNotification({
+        ownerEmail: promoData.ownerEmail,
+        ownerName: promoData.ownerName || 'Partenaire',
+        promoCode: promoData.code,
+        cashbackAmount: Math.round((computedSubtotal * Number(promoData.cashbackPercent)) / 100),
+        newBalance: Number(promoData.cashbackBalance),
+        orderNumber: order.orderNumber,
+      }).catch((err: any) => logger.error('[OrdersService] Failed to send cashback notification:', err));
+    }
+
     return order;
   }
 
