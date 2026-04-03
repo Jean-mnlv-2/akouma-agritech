@@ -39,6 +39,9 @@ promoCodesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Re
       validFrom,
       validUntil,
       isActive = true,
+      ownerEmail,
+      ownerName,
+      cashbackPercent,
     } = req.body || {};
 
     if (!code || typeof code !== 'string') {
@@ -58,6 +61,9 @@ promoCodesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Re
         validFrom: validFrom ? new Date(validFrom) : null,
         validUntil: validUntil ? new Date(validUntil) : null,
         isActive: Boolean(isActive),
+        ownerEmail: ownerEmail ? String(ownerEmail).trim() : null,
+        ownerName: ownerName ? String(ownerName).trim() : null,
+        cashbackPercent: cashbackPercent != null ? Number(cashbackPercent) : 0,
       },
     });
 
