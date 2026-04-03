@@ -23,6 +23,11 @@ interface PromoCode {
   validFrom?: string | null;
   validUntil?: string | null;
   isActive: boolean;
+  ownerEmail?: string | null;
+  ownerName?: string | null;
+  cashbackPercent?: number;
+  cashbackBalance?: number;
+  totalCashbackEarned?: number;
 }
 
 interface AdminPromoCodeDialogProps {
@@ -41,6 +46,9 @@ const defaultFormData: Partial<PromoCode> = {
   validFrom: null,
   validUntil: null,
   isActive: true,
+  ownerEmail: '',
+  ownerName: '',
+  cashbackPercent: 0,
 };
 
 export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: AdminPromoCodeDialogProps) {
@@ -58,6 +66,9 @@ export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: Admi
         validFrom: promo.validFrom,
         validUntil: promo.validUntil,
         isActive: promo.isActive,
+        ownerEmail: promo.ownerEmail || '',
+        ownerName: promo.ownerName || '',
+        cashbackPercent: Number(promo.cashbackPercent) || 0,
       });
     } else {
       setFormData({ ...defaultFormData });
@@ -69,14 +80,16 @@ export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: Admi
     onSave(formData);
   };
 
+  const formatPrice = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{promo ? 'Modifier le Code Promo' : 'Créer un Code Promo'}</DialogTitle>
             <DialogDescription>
-              Configurez les détails de la réduction et les conditions d'utilisation.
+              Configurez les détails de la réduction, les conditions d'utilisation et le système d'affiliation.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -140,6 +153,7 @@ export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: Admi
               />
             </div>
             
+            {/* Date fields */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">Valide du</Label>
               <div className="col-span-3">
@@ -195,6 +209,61 @@ export function AdminPromoCodeDialog({ open, onOpenChange, promo, onSave }: Admi
                 </Popover>
               </div>
             </div>
+
+            {/* Affiliate Section */}
+            <div className="col-span-full border-t pt-4 mt-2">
+              <h4 className="text-sm font-semibold text-foreground mb-3">🤝 Programme d'affiliation (optionnel)</h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                Le propriétaire du code reçoit un pourcentage en cashback à chaque utilisation de son code. Ce solde est utilisable comme réduction lors de ses propres achats.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ownerName" className="text-right text-sm">Nom affilié</Label>
+              <Input
+                id="ownerName"
+                value={formData.ownerName || ''}
+                onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                className="col-span-3"
+                placeholder="Nom du propriétaire du code"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ownerEmail" className="text-right text-sm">Email affilié</Label>
+              <Input
+                id="ownerEmail"
+                type="email"
+                value={formData.ownerEmail || ''}
+                onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })}
+                className="col-span-3"
+                placeholder="email@exemple.com"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cashbackPercent" className="text-right text-sm">Cashback %</Label>
+              <Input
+                id="cashbackPercent"
+                type="number"
+                value={formData.cashbackPercent || 0}
+                onChange={(e) => setFormData({ ...formData, cashbackPercent: Number(e.target.value) })}
+                className="col-span-3"
+                placeholder="Ex: 5 pour 5%"
+                min={0}
+                max={50}
+                step={0.5}
+              />
+            </div>
+
+            {promo && (Number(promo.cashbackBalance) > 0 || Number(promo.totalCashbackEarned) > 0) && (
+              <div className="col-span-full bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+                <p className="text-muted-foreground">
+                  💰 Cashback cumulé : <strong className="text-foreground">{formatPrice(Number(promo.totalCashbackEarned))} FCFA</strong>
+                </p>
+                <p className="text-muted-foreground">
+                  🏦 Solde disponible : <strong className="text-primary">{formatPrice(Number(promo.cashbackBalance))} FCFA</strong>
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="active" className="text-right">Actif</Label>
