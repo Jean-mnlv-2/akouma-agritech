@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import * as deliveryService from './deliveryService';
 import { logger } from '../utils/logger';
+import { emailService } from '../utils/email';
 
 export type DeliveryMethod = 'PICKUP' | 'DELIVERY';
 export const DeliveryMethod: { PICKUP: 'PICKUP'; DELIVERY: 'DELIVERY' } = {
