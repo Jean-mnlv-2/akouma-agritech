@@ -90,6 +90,9 @@ promoCodesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: 
       validFrom,
       validUntil,
       isActive,
+      ownerEmail,
+      ownerName,
+      cashbackPercent,
     } = req.body || {};
 
     const data: any = {};
