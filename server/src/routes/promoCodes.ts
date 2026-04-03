@@ -39,6 +39,9 @@ promoCodesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Re
       validFrom,
       validUntil,
       isActive = true,
+      ownerEmail,
+      ownerName,
+      cashbackPercent,
     } = req.body || {};
 
     if (!code || typeof code !== 'string') {
@@ -58,6 +61,9 @@ promoCodesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Re
         validFrom: validFrom ? new Date(validFrom) : null,
         validUntil: validUntil ? new Date(validUntil) : null,
         isActive: Boolean(isActive),
+        ownerEmail: ownerEmail ? String(ownerEmail).trim() : null,
+        ownerName: ownerName ? String(ownerName).trim() : null,
+        cashbackPercent: cashbackPercent != null ? Number(cashbackPercent) : 0,
       },
     });
 
@@ -84,6 +90,9 @@ promoCodesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: 
       validFrom,
       validUntil,
       isActive,
+      ownerEmail,
+      ownerName,
+      cashbackPercent,
     } = req.body || {};
 
     const data: any = {};
@@ -105,6 +114,9 @@ promoCodesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: 
     if (validFrom !== undefined) data.validFrom = validFrom ? new Date(validFrom) : null;
     if (validUntil !== undefined) data.validUntil = validUntil ? new Date(validUntil) : null;
     if (isActive !== undefined) data.isActive = Boolean(isActive);
+    if (ownerEmail !== undefined) data.ownerEmail = ownerEmail ? String(ownerEmail).trim() : null;
+    if (ownerName !== undefined) data.ownerName = ownerName ? String(ownerName).trim() : null;
+    if (cashbackPercent !== undefined) data.cashbackPercent = Number(cashbackPercent) || 0;
 
     const updated = await prismaAny.promoCode.update({
       where: { id },

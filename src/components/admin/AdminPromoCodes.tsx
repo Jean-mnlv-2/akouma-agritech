@@ -23,6 +23,11 @@ interface PromoCode {
   validUntil?: string | null;
   isActive: boolean;
   createdAt: string;
+  ownerEmail?: string | null;
+  ownerName?: string | null;
+  cashbackPercent?: number;
+  cashbackBalance?: number;
+  totalCashbackEarned?: number;
 }
 
 export function AdminPromoCodes() {
@@ -135,6 +140,8 @@ export function AdminPromoCodes() {
                 <TableHead>Code</TableHead>
                 <TableHead>Réduction</TableHead>
                 <TableHead>Utilisations</TableHead>
+                <TableHead>Affilié</TableHead>
+                <TableHead>Cashback</TableHead>
                 <TableHead>Validité</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -160,6 +167,23 @@ export function AdminPromoCodes() {
                   <TableCell>
                     <span className="font-medium">{promo.usesCount}</span>
                     {promo.maxUses ? <span className="text-muted-foreground"> / {promo.maxUses}</span> : <span className="text-muted-foreground text-xs ml-1">(Illimité)</span>}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {promo.ownerName || promo.ownerEmail ? (
+                      <span className="text-foreground">{promo.ownerName || promo.ownerEmail}</span>
+                    ) : (
+                      <span className="text-muted-foreground italic">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {Number(promo.cashbackPercent) > 0 ? (
+                      <div>
+                        <span className="font-medium text-primary">{new Intl.NumberFormat('fr-FR').format(Math.round(Number(promo.cashbackBalance)))} FCFA</span>
+                        <span className="text-muted-foreground text-xs block">{promo.cashbackPercent}%</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground italic">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">
                     {promo.validUntil ? (
@@ -200,7 +224,7 @@ export function AdminPromoCodes() {
               ))}
               {promoCodes.length === 0 && !loading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Aucun code promo trouvé. Cliquez sur "Nouveau Code" pour commencer.
                   </TableCell>
                 </TableRow>

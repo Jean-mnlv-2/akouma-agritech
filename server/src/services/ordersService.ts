@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import * as deliveryService from './deliveryService';
 import { logger } from '../utils/logger';
+import { emailService } from '../utils/email';
 
 export type DeliveryMethod = 'PICKUP' | 'DELIVERY';
 export const DeliveryMethod: { PICKUP: 'PICKUP'; DELIVERY: 'DELIVERY' } = {
@@ -43,7 +44,7 @@ export class OrdersService {
   generateOrderNumber(): string {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `AKO-${timestamp}-${random}`;
+    return `KLM-${timestamp}-${random}`;
   }
 
   calculateShipping(subtotal: number, deliveryMethod: DeliveryMethod, partner?: { baseRate: any | null }): number {
@@ -148,13 +149,13 @@ export class OrdersService {
     const shippingAmount = this.calculateShipping(computedSubtotal, payload.deliveryMethod, deliveryPartnerRecord || undefined);
 
     const order = await this.prisma.$transaction(async (tx: any) => {
-      let promoRecord: { id: number; code: string } | null = null;
+      let promoRecord: { id: number; code: string; cashbackPercent: number; ownerEmail: string | null; ownerName: string | null } | null = null;
       let discountAmount = 0;
 
       if (payload.promoCode) {
         const resolved = await this.resolvePromoCode(tx, payload.promoCode, computedSubtotal);
         promoRecord = resolved.promo
-          ? { id: resolved.promo.id, code: resolved.promo.code }
+          ? { id: resolved.promo.id, code: resolved.promo.code, cashbackPercent: Number(resolved.promo.cashbackPercent || 0), ownerEmail: resolved.promo.ownerEmail || null, ownerName: resolved.promo.ownerName || null }
           : null;
         discountAmount = resolved.discountAmount;
       }
@@ -216,16 +217,47 @@ export class OrdersService {
       );
 
       if (promoRecord) {
+        // Increment usage count
         await tx.promoCode.update({
           where: { id: promoRecord.id },
           data: {
             usesCount: { increment: 1 },
           },
         });
+
+        // Calculate and credit cashback to the promo owner
+        if (promoRecord.cashbackPercent > 0 && promoRecord.ownerEmail) {
+          const cashbackAmount = Math.round((computedSubtotal * promoRecord.cashbackPercent) / 100);
+          if (cashbackAmount > 0) {
+            await tx.promoCode.update({
+              where: { id: promoRecord.id },
+              data: {
+                cashbackBalance: { increment: cashbackAmount },
+                totalCashbackEarned: { increment: cashbackAmount },
+              },
+            });
+          }
+        }
       }
 
       return created;
     });
+
+    // Send cashback notification to promo owner asynchronously
+    const promoData = await this.prisma.$transaction(async (tx: any) => {
+      const o = await tx.order.findUnique({ where: { id: order.id }, include: { promoCode: true } });
+      return o?.promoCode;
+    });
+    if (promoData?.ownerEmail && Number(promoData.cashbackPercent) > 0) {
+      emailService.sendPromoCashbackNotification({
+        ownerEmail: promoData.ownerEmail,
+        ownerName: promoData.ownerName || 'Partenaire',
+        promoCode: promoData.code,
+        cashbackAmount: Math.round((computedSubtotal * Number(promoData.cashbackPercent)) / 100),
+        newBalance: Number(promoData.cashbackBalance),
+        orderNumber: order.orderNumber,
+      }).catch((err: any) => logger.error('[OrdersService] Failed to send cashback notification:', err));
+    }
 
     return order;
   }
