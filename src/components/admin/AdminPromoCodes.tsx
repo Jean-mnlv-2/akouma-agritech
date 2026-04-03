@@ -169,6 +169,23 @@ export function AdminPromoCodes() {
                     {promo.maxUses ? <span className="text-muted-foreground"> / {promo.maxUses}</span> : <span className="text-muted-foreground text-xs ml-1">(Illimité)</span>}
                   </TableCell>
                   <TableCell className="text-sm">
+                    {promo.ownerName || promo.ownerEmail ? (
+                      <span className="text-foreground">{promo.ownerName || promo.ownerEmail}</span>
+                    ) : (
+                      <span className="text-muted-foreground italic">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {Number(promo.cashbackPercent) > 0 ? (
+                      <div>
+                        <span className="font-medium text-primary">{new Intl.NumberFormat('fr-FR').format(Math.round(Number(promo.cashbackBalance)))} FCFA</span>
+                        <span className="text-muted-foreground text-xs block">{promo.cashbackPercent}%</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground italic">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm">
                     {promo.validUntil ? (
                       <span className={cn(new Date(promo.validUntil) < new Date() ? "text-destructive font-medium" : "")}>
                         jusqu'au {format(new Date(promo.validUntil), 'dd/MM/yyyy')}
