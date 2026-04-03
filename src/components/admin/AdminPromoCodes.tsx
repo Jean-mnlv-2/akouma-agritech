@@ -224,7 +224,7 @@ export function AdminPromoCodes() {
               ))}
               {promoCodes.length === 0 && !loading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Aucun code promo trouvé. Cliquez sur "Nouveau Code" pour commencer.
                   </TableCell>
                 </TableRow>
