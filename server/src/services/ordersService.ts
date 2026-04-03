@@ -149,13 +149,13 @@ export class OrdersService {
     const shippingAmount = this.calculateShipping(computedSubtotal, payload.deliveryMethod, deliveryPartnerRecord || undefined);
 
     const order = await this.prisma.$transaction(async (tx: any) => {
-      let promoRecord: { id: number; code: string } | null = null;
+      let promoRecord: { id: number; code: string; cashbackPercent: number; ownerEmail: string | null; ownerName: string | null } | null = null;
       let discountAmount = 0;
 
       if (payload.promoCode) {
         const resolved = await this.resolvePromoCode(tx, payload.promoCode, computedSubtotal);
         promoRecord = resolved.promo
-          ? { id: resolved.promo.id, code: resolved.promo.code }
+          ? { id: resolved.promo.id, code: resolved.promo.code, cashbackPercent: Number(resolved.promo.cashbackPercent || 0), ownerEmail: resolved.promo.ownerEmail || null, ownerName: resolved.promo.ownerName || null }
           : null;
         discountAmount = resolved.discountAmount;
       }
