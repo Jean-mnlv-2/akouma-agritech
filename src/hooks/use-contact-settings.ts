@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 export type ContactSettings = {
   id?: number;
+  companyName?: string | null;
   whatsappNumber?: string | null;
   phone?: string | null;
   email?: string | null;
