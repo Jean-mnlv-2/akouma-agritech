@@ -20,7 +20,7 @@ export const useCopyProtection = (isEnabled: boolean, _item: CopyProtectionItem)
         
         const selection = window.getSelection()?.toString();
         const cleanTitle = _item.title.replace(/<[^>]*>/g, '');
-        const customContent = `Contenu protégé par BIA Agritech\n\n${cleanTitle}\n${_item.url}\n\n${selection ? '--- Extrait sélectionné ---\n' + selection : ''}`;
+        const customContent = `Contenu protégé par KILIMO Agritech\n\n${cleanTitle}\n${_item.url}\n\n${selection ? '--- Extrait sélectionné ---\n' + selection : ''}`;
         
         if (event.clipboardData) {
           event.clipboardData.setData('text/plain', customContent);

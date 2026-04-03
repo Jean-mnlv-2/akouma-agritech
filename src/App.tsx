@@ -61,7 +61,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="bia-ui-theme">
+    <ThemeProvider defaultTheme="light" storageKey="KILIMO-ui-theme">
       <CartProvider>
         <TooltipProvider>
           <div className="stable-ui-container">

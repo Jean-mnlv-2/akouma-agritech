@@ -161,7 +161,7 @@ const Careers = () => {
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-                Rejoignez <span className="text-primary">BIA</span>
+                Rejoignez <span className="text-primary">KILIMO</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
                 Participez à la révolution agricole africaine. Construisons ensemble l'avenir

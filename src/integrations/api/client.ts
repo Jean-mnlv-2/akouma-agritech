@@ -7,9 +7,9 @@ function getApiBaseUrl(): string {
   
   // En production Render: utiliser l'URL du backend directement
   if (window.location.hostname.includes('onrender.com')) {
-    // Si on est sur le frontend bia.onrender.com, pointer vers le backend
-    if (window.location.hostname === 'bia.onrender.com') {
-      return 'https://bia-backend.onrender.com';
+    // Si on est sur le frontend kilimo.onrender.com, pointer vers le backend
+    if (window.location.hostname === 'kilimo.onrender.com') {
+      return 'https://kilimo-backend.onrender.com';
     }
     // Sinon, utiliser l'origine actuelle
     return window.location.origin;

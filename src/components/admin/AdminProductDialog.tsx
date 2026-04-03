@@ -226,7 +226,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
             {product ? "Modifier le produit" : "Ajouter un produit"}
           </DialogTitle>
           <DialogDescription>
-            Gérez les articles de la boutique BIA.
+            Gérez les articles de la boutique.
           </DialogDescription>
         </DialogHeader>
 

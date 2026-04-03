@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Lock, Shield, Eye, EyeOff } from 'lucide-react';
 
-const ADMIN_SECRET_KEY = 'BIA_ADMIN_2024_SECURE';
+const ADMIN_SECRET_KEY = 'KILIMO_ADMIN_2024_SECURE';
 
 export default function AdminAccess() {
   const [secretKey, setSecretKey] = useState('');

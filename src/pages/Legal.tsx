@@ -60,7 +60,7 @@ const Legal = () => {
                 {legalPage ? legalPage.title : 'Mentions Légales'}
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Informations légales sur BIA et nos services.
+                Informations légales sur KILIMO et nos services.
               </p>
             </div>
 

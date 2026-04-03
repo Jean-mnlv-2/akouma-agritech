@@ -41,7 +41,7 @@ const NewsSection = () => {
         title: item.title as string,
         excerpt: item.excerpt as string,
         content: item.content as string,
-        author: item.author as string || item.author_name as string || 'BIA Team',
+        author: item.author as string || item.author_name as string || 'KILIMO Team',
         image: item.imageUrl as string || item.image_url as string || '/placeholder.svg',
         featured: !!(item.isFeatured || item.is_featured),
         date: item.createdAt as string || item.created_at as string,

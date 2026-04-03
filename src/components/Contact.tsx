@@ -20,7 +20,7 @@ const buildContactInfo = (contact?: { city?: string | null; addressLine1?: strin
   {
     icon: Mail,
     title: "contact.email.title",
-    details: [contact?.email || "contact@bia.cm"]
+    details: [contact?.email || "contact@KILIMO.cm"]
   },
   {
     icon: Clock,
@@ -148,8 +148,8 @@ const Contact = () => {
               size="lg"
               onClick={() => {
                 const link = document.createElement('a');
-                link.href = '/brochure-bia.pdf';
-                link.download = 'BIA-Brochure.pdf';
+                link.href = '/brochure-KILIMO.pdf';
+                link.download = 'KILIMO-Brochure.pdf';
                 link.click();
               }}
             >

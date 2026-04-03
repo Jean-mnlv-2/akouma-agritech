@@ -107,7 +107,7 @@ const ELearning = () => {
           rating: Number(c.rating ?? 4.5),
           isCertifying: Boolean(c.isCertifying ?? c.is_certifying ?? true),
           thumbnail: String(c.thumbnailUrl ?? c.image_url ?? courseThumbnail),
-          instructor: String(c.instructor ?? c.instructorName ?? 'BIA Team'),
+          instructor: String(c.instructor ?? c.instructorName ?? 'KILIMO Team'),
           isPreviewAvailable: Boolean(c.isPreviewAvailable ?? c.is_preview_available ?? false),
           languages: Array.isArray(c.languages) ? c.languages : [],
         })));

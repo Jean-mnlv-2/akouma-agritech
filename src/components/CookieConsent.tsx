@@ -8,7 +8,7 @@ const CookieConsent = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem("bia_cookie_consent");
+    const consent = localStorage.getItem("KILIMO_cookie_consent");
     if (!consent) {
       const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);
@@ -16,13 +16,13 @@ const CookieConsent = () => {
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem("bia_cookie_consent", "accepted");
-    localStorage.setItem("bia_cookie_timestamp", new Date().toISOString());
+    localStorage.setItem("KILIMO_cookie_consent", "accepted");
+    localStorage.setItem("KILIMO_cookie_timestamp", new Date().toISOString());
     setIsVisible(false);
   };
 
   const handleDecline = () => {
-    localStorage.setItem("bia_cookie_consent", "declined");
+    localStorage.setItem("KILIMO_cookie_consent", "declined");
     setIsVisible(false);
   };
 
@@ -47,7 +47,7 @@ const CookieConsent = () => {
                 </button>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                BIA Agritech utilise des cookies pour améliorer votre expérience, analyser le trafic et vous proposer des contenus adaptés. En cliquant sur "Accepter", vous consentez à notre utilisation des cookies.
+                KILIMO Agritech utilise des cookies pour améliorer votre expérience, analyser le trafic et vous proposer des contenus adaptés. En cliquant sur "Accepter", vous consentez à notre utilisation des cookies.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Button onClick={handleAccept} className="flex-1">

@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { authRequired } from '../middleware/authRequired';
 import { env } from '../utils/env';
+import { OrdersService } from '../services/ordersService';
 
 const prisma = new PrismaClient();
+const ordersService = new OrdersService(prisma);
 export const paymentsRouter = Router();
 
 type AuthenticatedRequest = Request & {
@@ -53,7 +55,7 @@ paymentsRouter.post('/initiate', authRequired, async (req: Request, res: Respons
       return res.status(500).json({ error: 'Configuration de paiement manquante' });
     }
 
-    const articles = order.items.map((item) => ({
+    const articles = order.items.map((item: any) => ({
       nom: item.name,
       montant: Number(item.price) * item.quantity,
     }));
@@ -153,7 +155,7 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
 
     const isPaid = statut === 'paid' || statut === 'successful' || statut === 'success';
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.order.update({
         where: { id: order.id },
         data: {
@@ -174,6 +176,14 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
     });
 
     console.log(`[payments] Order #${order.orderNumber} payment ${isPaid ? 'confirmed' : 'failed'}`);
+
+    // Trigger post-payment processing asynchronously
+    if (isPaid) {
+      ordersService.processPostPayment(order.id).catch((err) => {
+        console.error(`[payments] Error in processPostPayment for order ${order.id}:`, err);
+      });
+    }
+
     res.json({ status: 'ok' });
   } catch (e) {
     console.error('[payments] Webhook error:', e);

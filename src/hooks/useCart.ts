@@ -57,7 +57,7 @@ interface StoredCart {
   };
 }
 
-const STORAGE_KEY = 'bia-cart';
+const STORAGE_KEY = 'kilimo-cart';
 
 export const useCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);

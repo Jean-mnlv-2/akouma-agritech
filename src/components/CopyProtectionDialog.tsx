@@ -37,8 +37,8 @@ const CopyProtectionDialog: React.FC<CopyProtectionDialogProps> = ({
     if (isSharing) return;
     
     const shareData = {
-      title: cleanTitle || "BIA Agritech",
-      text: `Découvrez ce contenu sur BIA Agritech : ${displayDescription.slice(0, 100)}...`,
+      title: cleanTitle || "APP_NAME",
+      text: `Découvrez ce contenu sur APP_NAME : ${displayDescription.slice(0, 100)}...`,
       url: item.url,
     };
 
@@ -75,7 +75,7 @@ const CopyProtectionDialog: React.FC<CopyProtectionDialogProps> = ({
 
         <DialogHeader className="space-y-4">
           <DialogTitle className="text-2xl font-bold border-b-2 border-primary inline-block pb-1">
-            Contenu protégé par BIA Agritech
+            Contenu protégé par KILIMO Agritech
           </DialogTitle>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Ce contenu est protégé par le droit d'auteur. Cependant, si vous souhaitez partager ces informations, vous pouvez utiliser les éléments ci-dessous :

@@ -16,6 +16,7 @@ import {
   Sprout,
   Newspaper,
   Package,
+  Truck,
   Shield,
   Crown,
   Briefcase,
@@ -42,6 +43,7 @@ import { AdminDonationsContent } from '@/components/admin/AdminDonationsContent'
 import { AdminContactSettings } from '@/components/admin/AdminContactSettings';
 import { AdminUserManagement } from '@/components/admin/AdminUserManagement';
 import { AdminOrders } from '@/components/admin/AdminOrders';
+import { AdminDeliveries } from '@/components/admin/AdminDeliveries';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
@@ -89,6 +91,7 @@ const tabs = [
   { value: 'dashboard', label: 'Tableau de bord', icon: Receipt },
   { value: 'users', label: 'Utilisateurs', icon: Shield },
   { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
+  { value: 'deliveries', label: 'Livraisons', icon: Truck },
   { value: 'courses', label: 'Cours', icon: BookOpen },
   { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
   { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
@@ -295,7 +298,7 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen bg-background admin-responsive" translate="no">
-      <TitleManager title="Administration" description="Dashboard d'administration BIA Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/logo-ak.png" />
+      <TitleManager title="Administration" description="Dashboard d'administration KILIMO Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/logo-ak.png" />
       
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
@@ -355,6 +358,7 @@ function AdminContent() {
               {(activeTab === 'dashboard' && (isAdmin || isSupervisor)) && <AdminDashboardCharts />}
               {(activeTab === 'users' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('users')))) && <AdminUserManagement />}
               {(activeTab === 'orders' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('orders')))) && <AdminOrders />}
+              {(activeTab === 'deliveries' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('deliveries')))) && <AdminDeliveries />}
               {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && <AdminCourses />}
               {(activeTab === 'course-previews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-previews')))) && <AdminCoursePreviews />}
               {(activeTab === 'reminder-logs' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reminder-logs')))) && <AdminReminderLogs />}

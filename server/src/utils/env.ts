@@ -15,11 +15,11 @@ const isDevelopment = NODE_ENV === 'development';
 const DEFAULTS = {
   PORT: 4000,
   JWT_SECRET: 'dev_secret_change_me',
-  DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/bia?schema=public',
+  DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/kilimo?schema=public',
   FRONTEND_ORIGINS: 'http://localhost:8080,http://localhost:5173',
-  DEFAULT_ADMIN_EMAIL: 'admin@bia.test',
+  DEFAULT_ADMIN_EMAIL: 'admin@kilimo.test',
   DEFAULT_ADMIN_PASSWORD: 'Admin123!',
-  DEFAULT_ADMIN_FULL_NAME: 'BIA Admin',
+  DEFAULT_ADMIN_FULL_NAME: 'KILIMO Admin',
 };
 
 function readEnv(key: string, fallback?: FallbackOptions): string {
@@ -92,10 +92,13 @@ export const env = {
   API_PUBLIC_URL: process.env.API_PUBLIC_URL ?? `http://localhost:${PORT}`,
   FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:8080',
   RESEND_API_KEY: process.env.RESEND_API_KEY,
-  EMAIL_FROM: process.env.EMAIL_FROM || 'BIA <noreply@bia.com>',
+  EMAIL_FROM: process.env.EMAIL_FROM || 'KILIMO <noreply@kilimo.com>',
   MONEYFUSION_API_URL: process.env.MONEYFUSION_API_URL || '',
   MONEYFUSION_TOKEN: process.env.MONEYFUSION_TOKEN || '',
   MONEYFUSION_NOTIF_URL: process.env.MONEYFUSION_NOTIF_URL || '',
+  DELIVERY_API_URL: process.env.DELIVERY_API_URL || '',
+  DELIVERY_API_PUBLIC_KEY: process.env.DELIVERY_API_PUBLIC_KEY || '',
+  DELIVERY_API_SECRET_KEY: process.env.DELIVERY_API_SECRET_KEY || '',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
   validateSecrets: () => {

@@ -68,7 +68,7 @@ export function AdminDashboardCharts() {
     const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `statistiques-bia-${period}j.csv`;
+    link.download = `statistiques-KILIMO-${period}j.csv`;
     link.click();
   };
 
@@ -82,17 +82,21 @@ export function AdminDashboardCharts() {
         window.open(res.url, '_blank');
       } else {
         // Fallback: generate a simple printable page
+        const totalOrdersForPeriod = data.chartData.reduce((acc, cur) => acc + cur.orders, 0);
+        const totalRevenueForPeriod = data.chartData.reduce((acc, cur) => acc + cur.revenue, 0);
+        const totalReviewsForPeriod = data.chartData.reduce((acc, cur) => acc + cur.reviews, 0);
+
         const win = window.open('', '_blank');
         if (!win) return;
         win.document.write(`
-          <html><head><title>Statistiques BIA - ${period} jours</title>
+          <html><head><title>Statistiques KILIMO - ${period} jours</title>
           <style>body{font-family:system-ui;padding:40px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}.summary{display:flex;gap:20px;margin-bottom:20px}.card{padding:16px;border:1px solid #ddd;border-radius:8px;flex:1;text-align:center}.card h3{margin:0;font-size:24px}.card p{margin:4px 0 0;color:#666}</style></head><body>
-          <h1>Statistiques BIA Agritech — ${period} derniers jours</h1>
+          <h1>Statistiques KILIMO Agritech — ${period} derniers jours</h1>
           <div class="summary">
-            <div class="card"><h3>${data.totalOrders30d}</h3><p>Commandes</p></div>
-            <div class="card"><h3>${data.totalRevenue30d.toLocaleString('fr-FR')} FCFA</h3><p>Revenus</p></div>
+            <div class="card"><h3>${totalOrdersForPeriod}</h3><p>Commandes</p></div>
+            <div class="card"><h3>${totalRevenueForPeriod.toLocaleString('fr-FR')} FCFA</h3><p>Revenus</p></div>
             <div class="card"><h3>${data.avgRating}/5</h3><p>Note moyenne</p></div>
-            <div class="card"><h3>${data.totalReviews30d}</h3><p>Avis</p></div>
+            <div class="card"><h3>${totalReviewsForPeriod}</h3><p>Avis</p></div>
           </div>
           <table><thead><tr><th>Date</th><th>Commandes</th><th>Revenus (FCFA)</th><th>Avis</th><th>Candidatures</th></tr></thead><tbody>
           ${data.chartData.map(r => `<tr><td>${r.date}</td><td>${r.orders}</td><td>${r.revenue.toLocaleString('fr-FR')}</td><td>${r.reviews}</td><td>${r.applications}</td></tr>`).join('')}
@@ -161,7 +165,7 @@ export function AdminDashboardCharts() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Commandes ({periodLabel})</p>
-              <p className="text-2xl font-bold">{data.totalOrders30d}</p>
+              <p className="text-2xl font-bold">{data.chartData.reduce((s, i) => s + i.orders, 0)}</p>
             </div>
           </CardContent>
         </Card>
@@ -172,7 +176,7 @@ export function AdminDashboardCharts() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Revenus ({periodLabel})</p>
-              <p className="text-2xl font-bold">{data.totalRevenue30d.toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span></p>
+              <p className="text-2xl font-bold">{data.chartData.reduce((s, i) => s + i.revenue, 0).toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span></p>
             </div>
           </CardContent>
         </Card>
@@ -194,7 +198,7 @@ export function AdminDashboardCharts() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Avis ({periodLabel})</p>
-              <p className="text-2xl font-bold">{data.totalReviews30d}</p>
+              <p className="text-2xl font-bold">{data.chartData.reduce((s, i) => s + i.reviews, 0)}</p>
             </div>
           </CardContent>
         </Card>

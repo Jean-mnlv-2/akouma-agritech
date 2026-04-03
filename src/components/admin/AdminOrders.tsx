@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, Loader2, Package, User, MapPin, Phone, Tag, List } from 'lucide-react';
+import { Eye, Loader2, Package, User, MapPin, Phone, Tag, List, Truck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,8 @@ interface Order {
   shippingCountry?: string;
   shippingPhone?: string;
   notes?: string;
+  deliveryId?: string;
+  deliveryStatus?: string;
   createdAt: string;
   updatedAt: string;
   promoCode?: {
@@ -95,7 +97,7 @@ export function AdminOrders() {
       const res = await api.request('PUT', `/api/orders/${args.orderId}`, { body: { status: args.status, paymentStatus: args.paymentStatus } });
       return Array.isArray(res) ? res : res;
     },
-    onSuccess: (res: any) => {
+    onSuccess: (res: { data?: Order }) => {
       toast({ title: 'Succès', description: 'Statut de la commande mis à jour' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
       const updated = res?.data;
@@ -215,7 +217,17 @@ export function AdminOrders() {
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => handleViewOrder(order)}
                         >
-                          <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{order.orderNumber}</span>
+                              {order.deliveryId && (
+                                <div className="flex items-center gap-1 mt-1 text-[10px] text-primary font-semibold">
+                                  <Truck className="w-3 h-3" />
+                                  <span>LIVRAISON</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className="flex flex-col">
                               <span className="font-medium">{order.user?.fullName || 'N/A'}</span>
@@ -389,6 +401,29 @@ export function AdminOrders() {
                     {selectedOrder.notes && (
                       <div className="mt-2 p-3 bg-muted rounded-lg">
                         <span className="font-medium">Notes:</span> {selectedOrder.notes}
+                      </div>
+                    )}
+
+                    {selectedOrder.deliveryId && (
+                      <div className="mt-4 p-4 bg-primary/5 border border-primary/10 rounded-lg space-y-2">
+                        <div className="flex items-center gap-2 font-semibold text-primary">
+                          <Truck className="w-5 h-5" />
+                          <span>Informations de livraison</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground font-medium">ID Livraison:</span>
+                            <div className="font-mono">{selectedOrder.deliveryId}</div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground font-medium">Statut:</span>
+                            <div>
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                                {selectedOrder.deliveryStatus}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </CardContent>

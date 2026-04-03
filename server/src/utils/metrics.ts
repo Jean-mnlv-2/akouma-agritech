@@ -4,12 +4,12 @@ type Summary = {
 };
 
 const requestsTotal = {
-  name: 'bia_requests_total',
+  name: 'KILIMO_requests_total',
   help: 'Total number of HTTP requests processed',
 };
 
 const requestDurationMs = {
-  name: 'bia_request_duration_ms',
+  name: 'KILIMO_request_duration_ms',
   help: 'Total duration of HTTP requests in milliseconds',
 };
 

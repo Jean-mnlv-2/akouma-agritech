@@ -194,7 +194,7 @@ const LearningDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title="Mon Espace E-Learning - BIA" description="Tableau de bord de votre apprentissage" canonical={window.location.origin + "/dashboard/learning"} image={logoAk} />
+      <TitleManager title="Mon Espace E-Learning - KILIMO" description="Tableau de bord de votre apprentissage" canonical={window.location.origin + "/dashboard/learning"} image={logoAk} />
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 py-8">

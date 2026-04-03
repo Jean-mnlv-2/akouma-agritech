@@ -14,7 +14,7 @@ export const useOffline = () => {
 
   useEffect(() => {
     // Load offline content from localStorage
-    const stored = localStorage.getItem('bia-offline-content');
+    const stored = localStorage.getItem('kilimo-offline-content');
     if (stored) {
       setOfflineContent(JSON.parse(stored));
     }
@@ -40,13 +40,13 @@ export const useOffline = () => {
 
     const updated = [...offlineContent.filter(item => item.id !== content.id), newContent];
     setOfflineContent(updated);
-    localStorage.setItem('bia-offline-content', JSON.stringify(updated));
+    localStorage.setItem('KILIMO-offline-content', JSON.stringify(updated));
   };
 
   const removeOfflineContent = (id: string) => {
     const updated = offlineContent.filter(item => item.id !== id);
     setOfflineContent(updated);
-    localStorage.setItem('bia-offline-content', JSON.stringify(updated));
+    localStorage.setItem('kilimo-offline-content', JSON.stringify(updated));
   };
 
   const isContentOffline = (id: string) => {

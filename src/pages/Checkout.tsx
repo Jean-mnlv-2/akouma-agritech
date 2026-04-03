@@ -104,14 +104,15 @@ const Checkout = () => {
             description: data.description,
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
           console.warn('Promo validation failed:', error);
+          const err = error as { message?: string; error?: string };
           setValidatedPromo(null);
           clearPromo();
           toast({
             title: "Code promo invalide",
-            description: error?.message || error?.error || "La réduction est expirée",
+            description: err?.message || err?.error || "La réduction est expirée",
             variant: "destructive",
           });
         }
@@ -207,24 +208,26 @@ const Checkout = () => {
           navigate(`/orders/${order.id}`);
           return;
         }
-      } catch (paymentError: any) {
+      } catch (paymentError: unknown) {
         console.error('Payment initiation error:', paymentError);
+        const err = paymentError as { message?: string };
         // Order was created but payment failed to initiate
         clearCart();
         clearPromo();
         toast({
           title: "Commande créée — Paiement en attente",
-          description: paymentError?.message || `Le paiement n'a pas pu être initié. Vous pouvez payer depuis la page de votre commande.`,
+          description: err?.message || `Le paiement n'a pas pu être initié. Vous pouvez payer depuis la page de votre commande.`,
           variant: "destructive",
         });
         navigate(`/orders/${order.id}`);
         return;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Order creation error:', error);
+      const err = error as { message?: string };
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de créer la commande",
+        description: err.message || "Impossible de créer la commande",
         variant: "destructive",
       });
     } finally {

@@ -33,11 +33,11 @@ function upsertLink(rel: string, href: string) {
 
 export function TitleManager({ title, description, image, canonical, noIndex }: TitleManagerProps) {
   useEffect(() => {
-    const siteName = 'BIA Agritech';
+    const siteName = 'KILIMO';
     const computedTitle = title ? `${title} | ${siteName}` : siteName;
     document.title = computedTitle;
     
-    // Ajouter le favicon avec le logo BIA
+    // Ajouter le favicon avec le logo KILIMO
     const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
     if (!favicon) {
       const link = document.createElement('link');

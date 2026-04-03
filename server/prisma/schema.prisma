@@ -510,6 +510,8 @@ model Order {
   promoCodeId       Int?
   deliveryPartnerId Int?
   deliveryPartner   DeliveryPartner? @relation(fields: [deliveryPartnerId], references: [id])
+  deliveryId        String?          @unique
+  deliveryStatus    String?          @default("pending")
   promoCode         PromoCode?       @relation(fields: [promoCodeId], references: [id])
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   events            OrderEvent[]

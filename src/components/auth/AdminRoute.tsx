@@ -18,7 +18,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
     const verify = async () => {
       try {
         console.log("[AdminRoute] Checking authorization...");
-        const cachedUser = sessionStorage.getItem('bia_auth_user');
+        const cachedUser = sessionStorage.getItem('kilimo_auth_user');
         if (cachedUser) {
           try {
             const user = JSON.parse(cachedUser);
@@ -27,12 +27,12 @@ export default function AdminRoute({ children }: AdminRouteProps) {
               setAuthorized(true);
               setLoading(false);
               // Clear cache after use, future checks will use cookie/session
-              sessionStorage.removeItem('bia_auth_user');
+              sessionStorage.removeItem('kilimo_auth_user');
               return;
             }
           } catch (e) {
             console.error("[AdminRoute] Cache parse error:", e);
-            sessionStorage.removeItem('bia_auth_user');
+            sessionStorage.removeItem('kilimo_auth_user');
           }
         }
 

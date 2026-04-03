@@ -1,4 +1,12 @@
-import { DeliveryMethod, Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+import * as deliveryService from './deliveryService';
+import { logger } from '../utils/logger';
+
+export type DeliveryMethod = 'PICKUP' | 'DELIVERY';
+export const DeliveryMethod: { PICKUP: 'PICKUP'; DELIVERY: 'DELIVERY' } = {
+  PICKUP: 'PICKUP',
+  DELIVERY: 'DELIVERY',
+};
 
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 
@@ -38,7 +46,7 @@ export class OrdersService {
     return `AKO-${timestamp}-${random}`;
   }
 
-  calculateShipping(subtotal: number, deliveryMethod: DeliveryMethod, partner?: { baseRate: Prisma.Decimal | null }): number {
+  calculateShipping(subtotal: number, deliveryMethod: DeliveryMethod, partner?: { baseRate: any | null }): number {
     if (deliveryMethod === 'PICKUP') return 0;
     if (partner?.baseRate != null) {
       const rate = Number(partner.baseRate);
@@ -51,7 +59,7 @@ export class OrdersService {
     return 5000;
   }
 
-  calculateDiscountAmount(subtotal: number, promo: { discountType: DiscountType; discountValue: Prisma.Decimal }): number {
+  calculateDiscountAmount(subtotal: number, promo: { discountType: DiscountType; discountValue: any }): number {
     const amount = Number(promo.discountValue);
     if (promo.discountType === 'PERCENTAGE') {
       const rate = Math.min(Math.max(amount, 0), 100);
@@ -60,7 +68,7 @@ export class OrdersService {
     return Math.min(subtotal, Math.max(amount, 0));
   }
 
-  private async resolvePromoCode(tx: Prisma.TransactionClient, code: string, subtotal: number) {
+  private async resolvePromoCode(tx: any, code: string, subtotal: number) {
     if (!code) {
       return { promo: null as null, discountAmount: 0 };
     }
@@ -96,7 +104,7 @@ export class OrdersService {
   }
 
   private async createOrderEvent(
-    tx: Prisma.TransactionClient,
+    tx: any,
     orderId: number,
     type: string,
     status?: string | null,
@@ -120,7 +128,7 @@ export class OrdersService {
       throw new Error('Le panier est vide.');
     }
 
-    let deliveryPartnerRecord: { id: number; name: string; baseRate: Prisma.Decimal | null } | null = null;
+    let deliveryPartnerRecord: { id: number; name: string; baseRate: any | null } | null = null;
     let deliveryPartnerNumericId: number | null = null;
 
     if (payload.deliveryMethod === DeliveryMethod.DELIVERY) {
@@ -139,7 +147,7 @@ export class OrdersService {
 
     const shippingAmount = this.calculateShipping(computedSubtotal, payload.deliveryMethod, deliveryPartnerRecord || undefined);
 
-    const order = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const order = await this.prisma.$transaction(async (tx: any) => {
       let promoRecord: { id: number; code: string } | null = null;
       let discountAmount = 0;
 
@@ -220,5 +228,68 @@ export class OrdersService {
     });
 
     return order;
+  }
+
+  async processPostPayment(orderId: number) {
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true, user: true },
+      });
+
+      if (!order) {
+        logger.error(`[OrdersService] Order not found for post-payment processing: ${orderId}`);
+        return;
+      }
+
+      if (order.paymentStatus !== 'paid') {
+        logger.warn(`[OrdersService] Order ${order.orderNumber} is not paid, skipping delivery creation`);
+        return;
+      }
+
+      if (order.deliveryMethod !== DeliveryMethod.DELIVERY) {
+        logger.info(`[OrdersService] Order ${order.orderNumber} is PICKUP, no delivery to create`);
+        return;
+      }
+
+      if (order.deliveryId) {
+        logger.info(`[OrdersService] Order ${order.orderNumber} already has a delivery ID: ${order.deliveryId}`);
+        return;
+      }
+
+      logger.info(`[OrdersService] Creating delivery for order ${order.orderNumber}`);
+
+      // Create delivery directly
+      const delivery = await deliveryService.createDelivery({
+        commandeId: String(order.id),
+        pickAddressId: process.env.DELIVERY_PICK_ADDRESS_ID || 'warehouse_default', 
+        dropAddressId: order.shippingAddress || 'customer_address_missing',
+        distanceKm: 0,
+        etaMinutes: 30,
+      });
+
+      // 3. Update order with delivery info
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          deliveryId: delivery.id,
+          deliveryStatus: delivery.status,
+        },
+      });
+
+      await this.createOrderEvent(
+        this.prisma as any,
+        order.id,
+        'delivery_created',
+        order.status,
+        order.paymentStatus,
+        `Livraison créée avec l'ID: ${delivery.id}`,
+      );
+
+      logger.info(`[OrdersService] Delivery created successfully for order ${order.orderNumber}: ${delivery.id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[OrdersService] Failed to process post-payment for order ${orderId}: ${message}`);
+    }
   }
 }

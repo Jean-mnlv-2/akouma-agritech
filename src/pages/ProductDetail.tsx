@@ -59,7 +59,7 @@ const ProductDetail = () => {
     }
   );
 
-  const isLoggedIn = Boolean(sessionStorage.getItem('bia_auth_user'));
+  const isLoggedIn = Boolean(sessionStorage.getItem('kilimo_auth_user'));
 
   // Fetch product data from backend
   const fetchProduct = useCallback(async () => {
@@ -161,8 +161,8 @@ const ProductDetail = () => {
     if (isSharing) return;
     
     const shareData = {
-      title: product?.name || "BIA Agritech",
-      text: `Découvrez ${product?.name} sur BIA Agritech : ${product?.description?.replace(/<[^>]*>/g, '').slice(0, 100)}...`,
+      title: product?.name || "KILIMO Agritech",
+      text: `Découvrez ${product?.name} sur KILIMO Agritech : ${product?.description?.replace(/<[^>]*>/g, '').slice(0, 100)}...`,
       url: window.location.href,
     };
 

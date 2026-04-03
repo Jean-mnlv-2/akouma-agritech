@@ -58,6 +58,8 @@ interface Order {
   shippingCountry?: string | null;
   shippingPhone?: string | null;
   notes?: string | null;
+  deliveryId?: string | null;
+  deliveryStatus?: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
@@ -121,7 +123,7 @@ const OrderDetail = () => {
       fetchOrder();
     }, 10000);
     return () => clearInterval(interval);
-  }, [order?.paymentStatus, fetchOrder]);
+  }, [order, fetchOrder]);
 
   useEffect(() => {
     if (paymentParam === "success") {
@@ -341,6 +343,38 @@ const OrderDetail = () => {
                   ))}
                 </CardContent>
               </Card>
+
+              {/* Delivery Info */}
+              {order.deliveryId && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                      <Truck className="w-5 h-5" />
+                      Suivi de livraison
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Statut actuel</p>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 px-3 py-1">
+                          {order.deliveryStatus || 'En attente'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Identifiant de suivi</p>
+                        <p className="font-mono text-sm font-semibold">{order.deliveryId}</p>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-background/50 rounded-lg border text-sm text-muted-foreground flex items-start gap-3">
+                      <Clock className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                      <p>
+                        Votre commande est en cours de préparation pour la livraison. Vous recevrez une notification dès qu'un livreur sera en route.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Timeline */}
               {order.events.length > 0 && (

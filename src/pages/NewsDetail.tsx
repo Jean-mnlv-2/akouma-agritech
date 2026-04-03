@@ -62,7 +62,7 @@ const NewsDetail = () => {
   const handleShare = async () => {
     if (isSharing) return;
     const shareData = {
-      title: article?.title || "BIA Agritech",
+      title: article?.title || "KILIMO Agritech",
       text: article?.excerpt,
       url: window.location.href,
     };
@@ -107,7 +107,7 @@ const NewsDetail = () => {
         title: data.title,
         excerpt: data.excerpt || data.description || '',
         content: data.content || '',
-        author: data.author || data.author_name || 'BIA Team',
+        author: data.author || data.author_name || 'KILIMO Team',
         date: data.createdAt || data.created_at || data.date || new Date().toISOString(),
         category: data.category || 'Général',
         image: data.imageUrl || data.image_url || '/logo-ak.png',

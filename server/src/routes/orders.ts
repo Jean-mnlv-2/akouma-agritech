@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient, DeliveryMethod, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
-import { OrdersService, NormalizedOrderItem } from '../services/ordersService';
+import { OrdersService, NormalizedOrderItem, DeliveryMethod } from '../services/ordersService';
 
 const prisma = new PrismaClient();
 const ordersService = new OrdersService(prisma);
@@ -251,6 +251,13 @@ ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Resp
 
       return order;
     });
+
+    // Trigger post-payment processing if payment status was updated to 'paid'
+    if (paymentStatus === 'paid') {
+      ordersService.processPostPayment(updated.id).catch((err) => {
+        console.error(`[orders] Error in processPostPayment for order ${updated.id}:`, err);
+      });
+    }
 
     res.json({ data: updated });
   } catch (e) {

@@ -96,7 +96,7 @@ export const EnhancedNewsletterForm = () => {
       <CardHeader className="text-center">
         <CardTitle className="flex items-center justify-center space-x-2">
           <Mail className="w-6 h-6 text-primary" />
-          <span>Newsletter BIA</span>
+          <span>Newsletter</span>
         </CardTitle>
         <CardDescription>
           Restez informé des dernières innovations en agriculture et agritech
