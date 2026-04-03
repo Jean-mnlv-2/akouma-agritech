@@ -23,6 +23,11 @@ interface PromoCode {
   validUntil?: string | null;
   isActive: boolean;
   createdAt: string;
+  ownerEmail?: string | null;
+  ownerName?: string | null;
+  cashbackPercent?: number;
+  cashbackBalance?: number;
+  totalCashbackEarned?: number;
 }
 
 export function AdminPromoCodes() {
