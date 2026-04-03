@@ -114,6 +114,9 @@ promoCodesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: 
     if (validFrom !== undefined) data.validFrom = validFrom ? new Date(validFrom) : null;
     if (validUntil !== undefined) data.validUntil = validUntil ? new Date(validUntil) : null;
     if (isActive !== undefined) data.isActive = Boolean(isActive);
+    if (ownerEmail !== undefined) data.ownerEmail = ownerEmail ? String(ownerEmail).trim() : null;
+    if (ownerName !== undefined) data.ownerName = ownerName ? String(ownerName).trim() : null;
+    if (cashbackPercent !== undefined) data.cashbackPercent = Number(cashbackPercent) || 0;
 
     const updated = await prismaAny.promoCode.update({
       where: { id },
