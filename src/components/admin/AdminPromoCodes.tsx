@@ -140,6 +140,8 @@ export function AdminPromoCodes() {
                 <TableHead>Code</TableHead>
                 <TableHead>Réduction</TableHead>
                 <TableHead>Utilisations</TableHead>
+                <TableHead>Affilié</TableHead>
+                <TableHead>Cashback</TableHead>
                 <TableHead>Validité</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
