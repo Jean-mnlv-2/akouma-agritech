@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/integrations/api/client";
 import { useCountries } from "@/hooks/use-countries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, Lock, ArrowLeft, MapPin } from "lucide-react";
+import { CreditCard, Lock, ArrowLeft, MapPin, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -31,6 +31,11 @@ const Checkout = () => {
     description?: string | null;
   } | null>(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
+
+  // Cashback state
+  const [cashbackBalance, setCashbackBalance] = useState(0);
+  const [cashbackToUse, setCashbackToUse] = useState(0);
+  const [loadingCashback, setLoadingCashback] = useState(false);
   
   const { countries, updatePhoneWithCode } = useCountries();
   
@@ -50,7 +55,7 @@ const Checkout = () => {
   const subtotal = getCartTotal();
   const shipping = subtotal > 50000 ? 0 : 5000;
   const discount = useMemo(() => validatedPromo?.discountAmount ?? 0, [validatedPromo]);
-  const total = Math.max(0, subtotal - discount + shipping);
+  const total = Math.max(0, subtotal - discount - cashbackToUse + shipping);
 
   useEffect(() => {
     const checkAuth = async () => {
