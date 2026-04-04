@@ -160,8 +160,22 @@ const Checkout = () => {
     }
 
     setSubmitting(true);
+    setLoadingCashback(true);
 
     try {
+      // Deduct cashback if used
+      if (cashbackToUse > 0) {
+        try {
+          await api.request('POST', '/api/promo-codes/use-cashback', { body: { amount: cashbackToUse } });
+        } catch (cbErr: unknown) {
+          const e = cbErr as { message?: string };
+          toast({ title: "Erreur cashback", description: e?.message || "Impossible d'utiliser le cashback", variant: "destructive" });
+          setSubmitting(false);
+          setLoadingCashback(false);
+          return;
+        }
+      }
+      setLoadingCashback(false);
       const orderItems = items.map(item => {
         const productId = Number(item.id);
         if (!Number.isFinite(productId)) {
