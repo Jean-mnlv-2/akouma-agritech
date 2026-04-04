@@ -197,6 +197,12 @@ const Header = () => {
                       <span className="max-w-[100px] truncate">{userName?.split(' ')[0] || 'Mon compte'}</span>
                     </Link>
                   </Button>
+                  <Button variant="ghost" size="sm" className="text-xs" asChild>
+                    <Link to="/orders">Commandes</Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-xs" asChild>
+                    <Link to="/my-cashback">Cashback</Link>
+                  </Button>
                   <Button variant="outline" size="sm" className="text-xs" onClick={handleLogout}>
                     {t("header.logout") || "Déconnexion"}
                   </Button>
