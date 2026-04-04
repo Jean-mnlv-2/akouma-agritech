@@ -110,7 +110,7 @@ const NewsDetail = () => {
         author: data.author || data.author_name || 'KILIMO Team',
         date: data.createdAt || data.created_at || data.date || new Date().toISOString(),
         category: data.category || 'Général',
-        image: data.imageUrl || data.image_url || '/logo-ak.png',
+        image: data.imageUrl || data.image_url || '/kilimo-logo.png',
         readTime: String(data.read_time || 5) + ' min',
         isCopyProtected: data.isCopyProtected ?? data.is_copy_protected ?? false,
         relatedArticles: []
@@ -128,7 +128,7 @@ const NewsDetail = () => {
               id: String(it.id),
               slug: (it as any).slug || String(it.id),
               title: it.title,
-              image: it.imageUrl || it.image_url || '/logo-ak.png',
+              image: it.imageUrl || it.image_url || '/kilimo-logo.png',
               date: it.createdAt || it.created_at || it.date || new Date().toISOString(),
               excerpt: it.excerpt || it.description || '',
             }));

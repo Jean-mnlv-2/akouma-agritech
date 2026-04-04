@@ -6,7 +6,7 @@ import { Leaf, Star, Package, ChevronLeft, ChevronRight, ArrowRight } from 'luci
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
 import { useI18n } from '@/i18n/i18n';
-import logoAk from '@/assets/logo-ak.png';
+import kilimoLogo from '@/assets/kilimo-logo.png';
 
 interface SeedProduct {
   id: number;
@@ -49,7 +49,7 @@ const SeedsSection = () => {
         variety: String(record.variety || ''),
         price: Number(record.price ?? record.price_fcfa ?? 0),
         unit: String(record.unit || ''),
-        image: String(record.imageUrl || record.image_url || logoAk),
+        image: String(record.imageUrl || record.image_url || kilimoLogo),
         rating: Number(record.rating) || 0,
         reviews: Number(record.totalReviews) || Number(record.total_reviews) || 0,
         availability: String(record.availability || 'En stock') as 'En stock' | 'Rupture' | 'Pré-commande',

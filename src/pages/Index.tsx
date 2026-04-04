@@ -30,7 +30,7 @@ const Index = () => {
         title={t("index.title")}
         description={t("index.description")}
         canonical={window.location.origin + '/'}
-        image="/logo-ak.png"
+        image="/kilimo-logo.png"
       />
       <Header />
       <main>

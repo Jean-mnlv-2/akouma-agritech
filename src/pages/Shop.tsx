@@ -11,7 +11,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n/i18n';
 import { useCartContext } from '@/context/CartContext';
-import logoAk from "@/assets/logo-ak.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
 
 interface Product {
   id: string;
@@ -83,7 +83,7 @@ export default function Shop() {
           description: item.description ?? '',
           price: Number(item.price ?? item.price_fcfa ?? 0),
           originalPrice: Number(item.originalPrice ?? item.original_price_fcfa ?? 0),
-          image: item.imageUrl ?? item.image_url ?? logoAk,
+          image: item.imageUrl ?? item.image_url ?? kilimoLogo,
           category: item.category ?? 'Général',
           inStock: Boolean(item.isActive ?? item.in_stock ?? false),
           isNew: Boolean(item.isNew ?? item.is_new ?? false),
@@ -153,7 +153,7 @@ export default function Shop() {
         <TitleManager
           title={t('shop.meta.title')}
           description={t('shop.meta.desc')}
-          image={logoAk}
+          image={kilimoLogo}
         />
         <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -169,14 +169,14 @@ export default function Shop() {
       <TitleManager
         title={t('shop.meta.title')}
         description={t('shop.meta.desc')}
-        image={logoAk}
+        image={kilimoLogo}
       />
       <Header />
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img 
-            src={logoAk}
+            src={kilimoLogo}
             alt={t('shop.hero.alt')}
             className="w-full h-full object-cover"
           />

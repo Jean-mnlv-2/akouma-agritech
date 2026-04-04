@@ -12,7 +12,7 @@ import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import logoAk from "@/assets/logo-ak.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
 import { useNavigate } from "react-router-dom";
 
 interface Product {
@@ -80,7 +80,7 @@ const ProductDetail = () => {
         ? JSON.parse(data.specifications) 
         : (data.specifications || {});
 
-      let gallery = [data.imageUrl || logoAk];
+      let gallery = [data.imageUrl || kilimoLogo];
       if (Array.isArray(data.gallery) && data.gallery.length > 0) {
         gallery = data.gallery;
       } else if (typeof data.gallery === 'string') {
@@ -104,7 +104,7 @@ const ProductDetail = () => {
         longDescription: data.longDescription || data.description,
         price: data.price || 0,
         originalPrice: data.originalPrice,
-        image: data.imageUrl || logoAk,
+        image: data.imageUrl || kilimoLogo,
         category: data.category || 'Général',
         rating: data.rating || 0,
         reviews: data.reviews || 0,

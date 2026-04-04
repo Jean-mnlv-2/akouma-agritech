@@ -16,7 +16,7 @@ import {
   BookOpen, Clock, Play, CheckCircle, 
   Trophy, Calendar, Target, Settings, Bell, Zap, CalendarDays
 } from "lucide-react";
-import logoAk from "@/assets/logo-ak.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -194,7 +194,7 @@ const LearningDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title="Mon Espace E-Learning - KILIMO" description="Tableau de bord de votre apprentissage" canonical={window.location.origin + "/dashboard/learning"} image={logoAk} />
+      <TitleManager title="Mon Espace E-Learning - KILIMO" description="Tableau de bord de votre apprentissage" canonical={window.location.origin + "/dashboard/learning"} image={kilimoLogo} />
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 py-8">

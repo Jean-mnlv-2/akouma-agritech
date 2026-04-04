@@ -224,7 +224,7 @@ const Donations = () => {
       <TitleManager 
         title="Dons"
         description="Votre don contribue directement à révolutionner l'agriculture africaine. Chaque contribution fait une différence réelle dans la vie des agriculteurs."
-        image="/logo-ak.png"
+        image="/kilimo-logo.png"
       />
       <Header />
       

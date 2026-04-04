@@ -31,7 +31,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TitleManager from '@/components/TitleManager';
 import { api } from '@/integrations/api/client';
-import logoAk from '@/assets/logo-ak.png';
+import kilimoLogo from '@/assets/kilimo-logo.png';
 import { useContactSettings } from '@/hooks/use-contact-settings';
 import DOMPurify from 'dompurify';
 import { useCopyProtection } from "@/hooks/use-copy-protection";
@@ -139,7 +139,7 @@ export default function SeedDetail() {
     try {
       const { data } = await api.request('GET', `/api/seeds/slug/${slug}`);
       
-      let images = [data.imageUrl || data.image_url || logoAk];
+      let images = [data.imageUrl || data.image_url || kilimoLogo];
       if (Array.isArray(data.gallery) && data.gallery.length > 0) {
         images = data.gallery;
       } else if (typeof data.gallery === 'string' && data.gallery.length > 0) {
@@ -319,7 +319,7 @@ export default function SeedDetail() {
                   src={product.images[selectedImage]} 
                   alt={product.name}
                   className="w-full h-full object-contain transition-transform hover:scale-105 duration-500"
-                  onError={(e) => { (e.target as HTMLImageElement).src = logoAk; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = kilimoLogo; }}
                 />
               </div>
               {product.images.length > 1 && (
@@ -412,7 +412,7 @@ export default function SeedDetail() {
                       id: product.id,
                       name: product.name,
                       price: product.price,
-                      image: product.images[0] || logoAk,
+                      image: product.images[0] || kilimoLogo,
                       inStock: product.availability !== 'Rupture',
                     });
                     toast({ title: "Semence ajoutée au panier", description: `${product.name} ajouté avec succès` });

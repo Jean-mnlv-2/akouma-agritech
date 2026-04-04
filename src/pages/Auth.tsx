@@ -18,7 +18,7 @@ export default function Auth() {
         title={t("auth.meta.title") || "Connexion - KILIMO"}
         description={t("auth.meta.desc") || "Connectez-vous à votre compte KILIMO"}
         canonical={window.location.origin + '/auth'}
-        image="/logo-ak.png"
+        image="/kilimo-logo.png"
       />
       <Header />
       <main className="flex-1">

@@ -201,7 +201,7 @@ const Partnerships = () => {
       <TitleManager 
         title="Partenariats"
         description="Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner l'agriculture africaine avec des solutions technologiques durables."
-        image="/logo-ak.png"
+        image="/kilimo-logo.png"
       />
       <Header />
       

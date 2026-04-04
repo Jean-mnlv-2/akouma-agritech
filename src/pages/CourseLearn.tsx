@@ -10,7 +10,7 @@ import Footer from "@/components/Footer";
 import TitleManager from "@/components/TitleManager";
 import QuizComponent from "@/components/elearning/QuizComponent";
 import CertificateGenerator from "@/components/elearning/CertificateGenerator";
-import logoAk from "@/assets/logo-ak.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
 import {
   BookOpen, Video, FileText, CheckCircle, Lock, Play,
   ChevronRight, Award, Clock, ArrowLeft
@@ -90,7 +90,7 @@ const CourseLearn = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title="Formation en cours - KILIMO E-Learning" description="Suivez votre formation" canonical={window.location.origin + `/elearning/${id}/learn`} image={logoAk} />
+      <TitleManager title="Formation en cours - KILIMO E-Learning" description="Suivez votre formation" canonical={window.location.origin + `/elearning/${id}/learn`} image={kilimoLogo} />
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 py-6">

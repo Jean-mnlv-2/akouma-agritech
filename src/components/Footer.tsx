@@ -19,7 +19,7 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1 lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4 md:mb-6">
               <img 
-                src="/logo-ak.png"
+                src="/kilimo-logo.png"
                 alt="KILIMO Logo" 
                 className="w-10 h-10 md:w-14 md:h-14"
               />

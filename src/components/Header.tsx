@@ -114,7 +114,7 @@ const Header = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
               <img 
-                src="/logo-ak.png"
+                src="/kilimo-logo.png"
                 alt="Kilimo Logo" 
                 className="w-8 h-8 md:w-12 md:h-12"
               />
