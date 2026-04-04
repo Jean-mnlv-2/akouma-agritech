@@ -241,6 +241,12 @@ const Header = () => {
                             <Link to="/admin">Dashboard Admin</Link>
                           </Button>
                         )}
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                          <Link to="/orders">Mes commandes</Link>
+                        </Button>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                          <Link to="/my-cashback">Mon Cashback</Link>
+                        </Button>
                         <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
                           {t("header.logout") || "Déconnexion"}
                         </Button>
