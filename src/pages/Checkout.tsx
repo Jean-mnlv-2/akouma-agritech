@@ -63,6 +63,13 @@ const Checkout = () => {
         const { data: session } = await api.auth.getSession();
         if (session?.session?.user) {
           setIsAuthenticated(true);
+          // Load cashback balance
+          try {
+            const cbRes = await api.request('GET', '/api/promo-codes/my-cashback');
+            if (cbRes?.data?.cashbackBalance > 0) {
+              setCashbackBalance(Number(cbRes.data.cashbackBalance));
+            }
+          } catch { /* no cashback */ }
         } else {
           navigate('/auth?redirect=/checkout');
         }
