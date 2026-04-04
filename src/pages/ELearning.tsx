@@ -20,7 +20,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ContentSubmission from "@/components/ContentSubmission";
 import elearningHero from "@/assets/elearning-hero.jpg";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
-import logoAk from "@/assets/logo-ak.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n/i18n";
@@ -240,7 +240,7 @@ const ELearning = () => {
         title={t("elearning.meta.title")}
         description={t("elearning.meta.desc")}
         canonical={window.location.origin + '/elearning'}
-        image={logoAk}
+        image={kilimoLogo}
       />
       <Header />
       

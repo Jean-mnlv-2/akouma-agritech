@@ -298,7 +298,7 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen bg-background admin-responsive" translate="no">
-      <TitleManager title="Administration" description="Dashboard d'administration KILIMO Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/logo-ak.png" />
+      <TitleManager title="Administration" description="Dashboard d'administration KILIMO Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/kilimo-logo.png" />
       
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">

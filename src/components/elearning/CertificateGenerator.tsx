@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Award, Download, QrCode, CheckCircle } from "lucide-react";
-import logoAk from "@/assets/logo-ak.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
 
 interface CertificateData {
   studentName: string;
@@ -73,7 +73,7 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
           <div class="corner corner-bl"></div>
           <div class="corner corner-br"></div>
           <div class="header">
-            <img src="${logoAk}" alt="KILIMO" class="logo" crossorigin="anonymous" />
+            <img src="${kilimoLogo}" alt="KILIMO" class="logo" crossorigin="anonymous" />
             <div class="org-name">KILIMO</div>
             <div class="cert-title">CERTIFICAT DE RÉUSSITE</div>
             <div class="subtitle">Certificate of Achievement</div>

@@ -100,7 +100,7 @@ export default function News() {
         <TitleManager
           title={t('nav.news')}
           description={t('news.meta.desc')}
-          image="/logo-ak.png"
+          image="/kilimo-logo.png"
         />
         <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -116,7 +116,7 @@ export default function News() {
       <TitleManager
         title={t('nav.news')}
         description={t('news.meta.desc')}
-        image="/logo-ak.png"
+        image="/kilimo-logo.png"
       />
       <Header />
       {/* Hero Section - Modern Design */}

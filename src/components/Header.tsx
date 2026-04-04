@@ -114,7 +114,7 @@ const Header = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
               <img 
-                src="/logo-ak.png"
+                src="/kilimo-logo.png"
                 alt="Kilimo Logo" 
                 className="w-8 h-8 md:w-12 md:h-12"
               />
@@ -197,6 +197,12 @@ const Header = () => {
                       <span className="max-w-[100px] truncate">{userName?.split(' ')[0] || 'Mon compte'}</span>
                     </Link>
                   </Button>
+                  <Button variant="ghost" size="sm" className="text-xs" asChild>
+                    <Link to="/orders">Commandes</Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-xs" asChild>
+                    <Link to="/my-cashback">Cashback</Link>
+                  </Button>
                   <Button variant="outline" size="sm" className="text-xs" onClick={handleLogout}>
                     {t("header.logout") || "Déconnexion"}
                   </Button>
@@ -235,6 +241,12 @@ const Header = () => {
                             <Link to="/admin">Dashboard Admin</Link>
                           </Button>
                         )}
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                          <Link to="/orders">Mes commandes</Link>
+                        </Button>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                          <Link to="/my-cashback">Mon Cashback</Link>
+                        </Button>
                         <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
                           {t("header.logout") || "Déconnexion"}
                         </Button>

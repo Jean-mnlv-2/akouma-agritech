@@ -13,7 +13,7 @@ import TitleManager from "@/components/TitleManager";
 import { useI18n } from "@/i18n/i18n";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import logoAk from "@/assets/logo-ak.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
 
 interface SeedProduct {
   id: number;
@@ -153,7 +153,7 @@ const Seeds = () => {
         title={t("seeds.meta.title")}
         description={t("seeds.meta.desc")}
         canonical={window.location.origin + '/seeds'}
-        image={logoAk}
+        image={kilimoLogo}
       />
       <Header />
       

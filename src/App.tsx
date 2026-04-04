@@ -56,6 +56,7 @@ import CourseLearn from "./pages/CourseLearn";
 import ResetPassword from "./pages/ResetPassword";
 import OrderDetail from "./pages/OrderDetail";
 import Orders from "./pages/Orders";
+import MyCashback from "./pages/MyCashback";
 import CookieConsent from "@/components/CookieConsent";
 const queryClient = new QueryClient();
 
@@ -113,6 +114,7 @@ const App = () => (
                 <Route path="/dashboard/learning" element={<LearningDashboard />} />
                 <Route path="/elearning/:id/learn" element={<CourseLearn />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/my-cashback" element={<MyCashback />} />
                 <Route path="/investors" element={<div>Investors - Coming Soon</div>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

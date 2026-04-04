@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/integrations/api/client";
 import { useCountries } from "@/hooks/use-countries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, Lock, ArrowLeft, MapPin } from "lucide-react";
+import { CreditCard, Lock, ArrowLeft, MapPin, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -31,6 +31,11 @@ const Checkout = () => {
     description?: string | null;
   } | null>(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
+
+  // Cashback state
+  const [cashbackBalance, setCashbackBalance] = useState(0);
+  const [cashbackToUse, setCashbackToUse] = useState(0);
+  const [_loadingCashback, setLoadingCashback] = useState(false);
   
   const { countries, updatePhoneWithCode } = useCountries();
   
@@ -50,7 +55,7 @@ const Checkout = () => {
   const subtotal = getCartTotal();
   const shipping = subtotal > 50000 ? 0 : 5000;
   const discount = useMemo(() => validatedPromo?.discountAmount ?? 0, [validatedPromo]);
-  const total = Math.max(0, subtotal - discount + shipping);
+  const total = Math.max(0, subtotal - discount - cashbackToUse + shipping);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -58,6 +63,13 @@ const Checkout = () => {
         const { data: session } = await api.auth.getSession();
         if (session?.session?.user) {
           setIsAuthenticated(true);
+          // Load cashback balance
+          try {
+            const cbRes = await api.request('GET', '/api/promo-codes/my-cashback');
+            if (cbRes?.data?.cashbackBalance > 0) {
+              setCashbackBalance(Number(cbRes.data.cashbackBalance));
+            }
+          } catch { /* no cashback */ }
         } else {
           navigate('/auth?redirect=/checkout');
         }
@@ -148,8 +160,22 @@ const Checkout = () => {
     }
 
     setSubmitting(true);
+    setLoadingCashback(true);
 
     try {
+      // Deduct cashback if used
+      if (cashbackToUse > 0) {
+        try {
+          await api.request('POST', '/api/promo-codes/use-cashback', { body: { amount: cashbackToUse } });
+        } catch (cbErr: unknown) {
+          const e = cbErr as { message?: string };
+          toast({ title: "Erreur cashback", description: e?.message || "Impossible d'utiliser le cashback", variant: "destructive" });
+          setSubmitting(false);
+          setLoadingCashback(false);
+          return;
+        }
+      }
+      setLoadingCashback(false);
       const orderItems = items.map(item => {
         const productId = Number(item.id);
         if (!Number.isFinite(productId)) {
@@ -422,10 +448,47 @@ const Checkout = () => {
                         <span className="text-muted-foreground">Sous-total</span>
                         <span>{formatPrice(subtotal)} FCFA</span>
                       </div>
-                      {validatedPromo && (
+                       {validatedPromo && (
                         <div className="flex justify-between text-green-600">
                           <span>Code {validatedPromo.code}</span>
                           <span>-{formatPrice(discount)} FCFA</span>
+                        </div>
+                      )}
+                      {/* Cashback section */}
+                      {cashbackBalance > 0 && (
+                        <div className="border-t pt-3 space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Wallet className="w-4 h-4 text-primary" />
+                            <span className="font-medium">Cashback disponible : {formatPrice(cashbackBalance)} FCFA</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={Math.min(cashbackBalance, subtotal - discount)}
+                              value={cashbackToUse || ''}
+                              onChange={(e) => {
+                                const val = Math.min(Number(e.target.value) || 0, cashbackBalance, Math.max(0, subtotal - discount));
+                                setCashbackToUse(val);
+                              }}
+                              placeholder="Montant à utiliser"
+                              className="h-8 text-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCashbackToUse(Math.min(cashbackBalance, Math.max(0, subtotal - discount)))}
+                            >
+                              Max
+                            </Button>
+                          </div>
+                          {cashbackToUse > 0 && (
+                            <div className="flex justify-between text-primary text-sm font-medium">
+                              <span>Cashback utilisé</span>
+                              <span>-{formatPrice(cashbackToUse)} FCFA</span>
+                            </div>
+                          )}
                         </div>
                       )}
                       <div className="flex justify-between">

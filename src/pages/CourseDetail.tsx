@@ -77,7 +77,7 @@ const CourseDetail = () => {
         price: data.price || 0,
         level: data.level || 'Tous niveaux',
         category: data.category || 'Général',
-        thumbnail: data.thumbnailUrl || data.imageUrl || '/logo-ak.png',
+        thumbnail: data.thumbnailUrl || data.imageUrl || '/kilimo-logo.png',
         isLive: !!data.isLive,
         isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
         modules: Array.isArray(data.modules) ? data.modules.map((m: any, idx: number) => ({

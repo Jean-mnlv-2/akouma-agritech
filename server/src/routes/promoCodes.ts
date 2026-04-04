@@ -151,6 +151,94 @@ promoCodesRouter.patch('/:id/toggle', authRequired, adminOnly, async (req: Reque
   }
 });
 
+// GET /api/promo-codes/my-cashback - Get current user's affiliate cashback info
+promoCodesRouter.get('/my-cashback', authRequired, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id ?? authReq.userId;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Find the user's email
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user?.email) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    // Find promo code owned by this user
+    const promo = await prismaAny.promoCode.findFirst({
+      where: { ownerEmail: user.email, isActive: true },
+      select: {
+        code: true,
+        cashbackPercent: true,
+        cashbackBalance: true,
+        totalCashbackEarned: true,
+        usesCount: true,
+      },
+    });
+
+    if (!promo) {
+      return res.json({ data: null });
+    }
+
+    res.json({
+      data: {
+        code: promo.code,
+        cashbackPercent: Number(promo.cashbackPercent),
+        cashbackBalance: Number(promo.cashbackBalance),
+        totalCashbackEarned: Number(promo.totalCashbackEarned),
+        usesCount: promo.usesCount,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Bad request';
+    res.status(400).json({ error: message });
+  }
+});
+
+// POST /api/promo-codes/use-cashback - Apply cashback balance as discount
+promoCodesRouter.post('/use-cashback', authRequired, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id ?? authReq.userId;
+    const { amount } = req.body || {};
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const numAmount = Number(amount);
+    if (!Number.isFinite(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ error: 'Montant invalide' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user?.email) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    const promo = await prismaAny.promoCode.findFirst({
+      where: { ownerEmail: user.email, isActive: true },
+    });
+
+    if (!promo) {
+      return res.status(404).json({ error: 'Aucun code affilié trouvé' });
+    }
+
+    const balance = Number(promo.cashbackBalance);
+    if (numAmount > balance) {
+      return res.status(400).json({ error: `Solde insuffisant. Disponible: ${Math.round(balance)} FCFA` });
+    }
+
+    await prismaAny.promoCode.update({
+      where: { id: promo.id },
+      data: { cashbackBalance: { decrement: numAmount } },
+    });
+
+    res.json({
+      data: {
+        deducted: numAmount,
+        newBalance: balance - numAmount,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Bad request';
+    res.status(400).json({ error: message });
+  }
+});
+
 promoCodesRouter.post('/validate', async (req: Request, res: Response) => {
   try {
     const { code, subtotal } = req.body || {};
