@@ -35,7 +35,7 @@ const Checkout = () => {
   // Cashback state
   const [cashbackBalance, setCashbackBalance] = useState(0);
   const [cashbackToUse, setCashbackToUse] = useState(0);
-  const [loadingCashback, setLoadingCashback] = useState(false);
+  const [_loadingCashback, setLoadingCashback] = useState(false);
   
   const { countries, updatePhoneWithCode } = useCountries();
   
