@@ -227,11 +227,67 @@ promoCodesRouter.post('/use-cashback', authRequired, async (req: Request, res: R
       data: { cashbackBalance: { decrement: numAmount } },
     });
 
+    const newBalance = balance - numAmount;
+
+    // Log the usage transaction
+    await prismaAny.cashbackTransaction.create({
+      data: {
+        promoCodeId: promo.id,
+        type: 'USE',
+        amount: numAmount,
+        description: 'Utilisation cashback au checkout',
+        balanceAfter: newBalance,
+      },
+    });
+
     res.json({
       data: {
         deducted: numAmount,
-        newBalance: balance - numAmount,
+        newBalance,
       },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Bad request';
+    res.status(400).json({ error: message });
+  }
+});
+
+// GET /api/promo-codes/my-cashback/transactions - Get cashback transaction history
+promoCodesRouter.get('/my-cashback/transactions', authRequired, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id ?? authReq.userId;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user?.email) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    const promo = await prismaAny.promoCode.findFirst({
+      where: { ownerEmail: user.email, isActive: true },
+      select: { id: true },
+    });
+
+    if (!promo) return res.json({ data: [] });
+
+    const transactions = await prismaAny.cashbackTransaction.findMany({
+      where: { promoCodeId: promo.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        order: { select: { orderNumber: true } },
+      },
+    });
+
+    res.json({
+      data: transactions.map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        amount: Number(t.amount),
+        description: t.description,
+        orderNumber: t.order?.orderNumber || null,
+        balanceAfter: Number(t.balanceAfter),
+        createdAt: t.createdAt,
+      })),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Bad request';

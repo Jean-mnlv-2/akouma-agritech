@@ -229,11 +229,22 @@ export class OrdersService {
         if (promoRecord.cashbackPercent > 0 && promoRecord.ownerEmail) {
           const cashbackAmount = Math.round((computedSubtotal * promoRecord.cashbackPercent) / 100);
           if (cashbackAmount > 0) {
-            await tx.promoCode.update({
+            const updatedPromo = await tx.promoCode.update({
               where: { id: promoRecord.id },
               data: {
                 cashbackBalance: { increment: cashbackAmount },
                 totalCashbackEarned: { increment: cashbackAmount },
+              },
+            });
+            // Log the cashback transaction
+            await (tx as any).cashbackTransaction.create({
+              data: {
+                promoCodeId: promoRecord.id,
+                type: 'EARN',
+                amount: cashbackAmount,
+                description: `Cashback sur commande`,
+                orderId: created.id,
+                balanceAfter: Number(updatedPromo.cashbackBalance),
               },
             });
           }
