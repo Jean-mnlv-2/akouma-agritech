@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, Star, CheckCircle, Radio, Languages } from "lucide-react";
+import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
@@ -43,7 +43,7 @@ interface UICourse {
 }
 
 const ELearning = () => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useI18n();
 
@@ -74,7 +74,7 @@ const ELearning = () => {
   ];
 
   useEffect(() => {
-    api.auth.getUser().then(({ data }) => setCurrentUser(data?.user || null));
+    api.auth.getUser().then(({ data }: any) => setCurrentUser(data?.user || null));
   }, []);
 
   useEffect(() => {
