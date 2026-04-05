@@ -6,7 +6,7 @@ import TitleManager from "@/components/TitleManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet, TrendingUp, Gift, Copy, CheckCircle, ArrowLeft } from "lucide-react";
+import { Wallet, TrendingUp, Gift, Copy, CheckCircle, ArrowLeft, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -20,23 +20,38 @@ interface CashbackInfo {
   usesCount: number;
 }
 
+interface CashbackTransaction {
+  id: number;
+  type: 'EARN' | 'USE';
+  amount: number;
+  description: string | null;
+  orderNumber: string | null;
+  balanceAfter: number;
+  createdAt: string;
+}
+
 const MyCashback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [cashbackData, setCashbackData] = useState<CashbackInfo | null>(null);
+  const [transactions, setTransactions] = useState<CashbackTransaction[]>([]);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const fetchCashback = async () => {
+    const fetchData = async () => {
       try {
         const { data: session } = await api.auth.getSession();
         if (!session?.session?.user) {
           navigate('/auth?redirect=/my-cashback');
           return;
         }
-        const res = await api.request('GET', '/api/promo-codes/my-cashback');
-        setCashbackData(res.data || null);
+        const [cashbackRes, txRes] = await Promise.all([
+          api.request('GET', '/api/promo-codes/my-cashback'),
+          api.request('GET', '/api/promo-codes/my-cashback/transactions'),
+        ]);
+        setCashbackData(cashbackRes.data || null);
+        setTransactions(txRes.data || []);
       } catch (error) {
         console.warn('No cashback data:', error);
         setCashbackData(null);
@@ -44,7 +59,7 @@ const MyCashback = () => {
         setLoading(false);
       }
     };
-    fetchCashback();
+    fetchData();
   }, [navigate]);
 
   const handleCopy = () => {
@@ -56,6 +71,7 @@ const MyCashback = () => {
   };
 
   const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR').format(Math.round(price));
+  const formatDate = (date: string) => new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   if (loading) {
     return (
@@ -163,6 +179,66 @@ const MyCashback = () => {
                 </CardContent>
               </Card>
 
+              {/* Transaction History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5" />
+                    Historique des transactions
+                  </CardTitle>
+                  <CardDescription>Détail de vos gains et utilisations de cashback</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {transactions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                      <p>Aucune transaction pour le moment</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {transactions.map((tx) => (
+                        <div key={tx.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            tx.type === 'EARN' 
+                              ? 'bg-green-100 dark:bg-green-900/30' 
+                              : 'bg-orange-100 dark:bg-orange-900/30'
+                          }`}>
+                            {tx.type === 'EARN' 
+                              ? <ArrowDownLeft className="w-5 h-5 text-green-600" />
+                              : <ArrowUpRight className="w-5 h-5 text-orange-600" />
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {tx.type === 'EARN' ? 'Gain cashback' : 'Utilisation cashback'}
+                              </span>
+                              {tx.orderNumber && (
+                                <Badge variant="outline" className="text-xs">{tx.orderNumber}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {tx.description || (tx.type === 'EARN' ? 'Cashback sur commande' : 'Réduction appliquée')}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(tx.createdAt)}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className={`font-bold text-sm ${
+                              tx.type === 'EARN' ? 'text-green-600' : 'text-orange-600'
+                            }`}>
+                              {tx.type === 'EARN' ? '+' : '-'}{formatPrice(tx.amount)} FCFA
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Solde: {formatPrice(tx.balanceAfter)} FCFA
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* How it works */}
               <Card>
                 <CardHeader>
@@ -170,27 +246,19 @@ const MyCashback = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <span className="text-lg font-bold text-primary">1</span>
+                    {[
+                      { step: "1", title: "Partagez", desc: "Partagez votre code promo avec vos contacts" },
+                      { step: "2", title: "Ils achètent", desc: "Vos filleuls utilisent le code lors de leurs achats" },
+                      { step: "3", title: "Vous gagnez", desc: `Recevez ${cashbackData.cashbackPercent}% de cashback utilisable sur vos commandes` },
+                    ].map((item) => (
+                      <div key={item.step} className="text-center">
+                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <span className="text-lg font-bold text-primary">{item.step}</span>
+                        </div>
+                        <h4 className="font-semibold mb-1">{item.title}</h4>
+                        <p className="text-sm text-muted-foreground">{item.desc}</p>
                       </div>
-                      <h4 className="font-semibold mb-1">Partagez</h4>
-                      <p className="text-sm text-muted-foreground">Partagez votre code promo avec vos contacts</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <span className="text-lg font-bold text-primary">2</span>
-                      </div>
-                      <h4 className="font-semibold mb-1">Ils achètent</h4>
-                      <p className="text-sm text-muted-foreground">Vos filleuls utilisent le code lors de leurs achats</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <span className="text-lg font-bold text-primary">3</span>
-                      </div>
-                      <h4 className="font-semibold mb-1">Vous gagnez</h4>
-                      <p className="text-sm text-muted-foreground">Recevez {cashbackData.cashbackPercent}% de cashback utilisable sur vos commandes</p>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
