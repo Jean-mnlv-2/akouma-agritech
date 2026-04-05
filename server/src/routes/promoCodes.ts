@@ -227,10 +227,23 @@ promoCodesRouter.post('/use-cashback', authRequired, async (req: Request, res: R
       data: { cashbackBalance: { decrement: numAmount } },
     });
 
+    const newBalance = balance - numAmount;
+
+    // Log the usage transaction
+    await prismaAny.cashbackTransaction.create({
+      data: {
+        promoCodeId: promo.id,
+        type: 'USE',
+        amount: numAmount,
+        description: 'Utilisation cashback au checkout',
+        balanceAfter: newBalance,
+      },
+    });
+
     res.json({
       data: {
         deducted: numAmount,
-        newBalance: balance - numAmount,
+        newBalance,
       },
     });
   } catch (error) {
