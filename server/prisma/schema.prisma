@@ -516,6 +516,7 @@ model Order {
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   events            OrderEvent[]
   items             OrderItem[]
+  cashbackTransactions CashbackTransaction[]
 
   @@index([userId])
   @@index([status])
