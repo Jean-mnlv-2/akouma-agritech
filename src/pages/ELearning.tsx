@@ -20,7 +20,7 @@ import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n/i18n";
 import TitleManager from "@/components/TitleManager";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import countryList from 'react-select-country-list';
 
@@ -43,7 +43,7 @@ interface UICourse {
 }
 
 const ELearning = () => {
-  const _navigate = useNavigate();
+  
   const { toast } = useToast();
   const { t } = useI18n();
 
