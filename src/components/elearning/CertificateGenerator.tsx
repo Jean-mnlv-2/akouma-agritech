@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Award, Download, QrCode, CheckCircle } from "lucide-react";
+import { Award, Download, QrCode, CheckCircle, Share2 } from "lucide-react";
 import kilimoLogo from "@/assets/kilimo-logo.png";
+import { useToast } from "@/hooks/use-toast";
 
 interface CertificateData {
   studentName: string;
@@ -17,14 +18,17 @@ interface CertificateGeneratorProps {
 }
 
 const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
+  const { toast } = useToast();
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-    `https://KILIMO-agritech.lovable.app/verify-certificate/${data.certificateNumber}`
+    `https://kilimo-agritech.lovable.app/verify-certificate/${data.certificateNumber}`
   )}`;
 
   const handleDownloadPDF = () => {
-    // Generate a printable certificate in a new window
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    if (!printWindow) {
+      toast({ title: "Erreur", description: "Impossible d'ouvrir la fenêtre d'impression. Vérifiez votre bloqueur de popups.", variant: "destructive" });
+      return;
+    }
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -36,12 +40,12 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f5f5f5; }
           .certificate {
-            width: 900px; height: 636px; background: white; position: relative;
+            width: 900px; height: 636px; background: linear-gradient(135deg, #fefefe, #f8faf8); position: relative;
             border: 3px solid #1E5B37; padding: 40px; overflow: hidden;
           }
           .certificate::before {
             content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px;
-            border: 2px solid #E57D27; pointer-events: none;
+            border: 2px solid #E57D27; pointer-events: none; border-radius: 4px;
           }
           .corner { position: absolute; width: 60px; height: 60px; }
           .corner-tl { top: 15px; left: 15px; border-top: 4px solid #1E5B37; border-left: 4px solid #1E5B37; }
@@ -105,14 +109,30 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
     printWindow.document.close();
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: `Certificat KILIMO - ${data.courseName}`,
+      text: `J'ai obtenu mon certificat KILIMO pour le cours "${data.courseName}" avec un score de ${data.score}% ! 🎓`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.text);
+        toast({ title: "Copié !", description: "Le lien a été copié dans le presse-papier." });
+      }
+    } catch { /* cancelled */ }
+  };
+
   return (
     <Card className="border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 via-orange-50/50 to-yellow-50 dark:from-yellow-950/20 dark:via-orange-950/10 dark:to-yellow-950/20 overflow-hidden">
       <CardContent className="p-6 sm:p-8">
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <Award className="w-10 h-10 text-white" />
+          <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-200 dark:shadow-yellow-900/20 animate-in zoom-in duration-500">
+            <Award className="w-12 h-12 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-foreground mb-1">🎓 Certificat obtenu !</h3>
+          <h3 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">🎓 Certificat obtenu !</h3>
           <p className="text-muted-foreground">Félicitations pour votre réussite</p>
         </div>
 
@@ -124,10 +144,10 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
               <p className="text-sm text-muted-foreground mb-1">Pour le cours</p>
               <p className="text-lg font-semibold text-primary mb-3">{data.courseName}</p>
               <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-700">
                   <CheckCircle className="w-3 h-3 mr-1" /> Score : {data.score}%
                 </Badge>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-700">
                   {new Date(data.completionDate).toLocaleDateString('fr-FR')}
                 </Badge>
               </div>
@@ -142,9 +162,14 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
           <p className="text-xs text-muted-foreground text-center mt-4 font-mono">N° {data.certificateNumber}</p>
         </div>
 
-        <Button onClick={handleDownloadPDF} className="w-full" size="lg">
-          <Download className="w-5 h-5 mr-2" /> Télécharger le certificat PDF
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button onClick={handleDownloadPDF} className="flex-1" size="lg">
+            <Download className="w-5 h-5 mr-2" /> Télécharger le PDF
+          </Button>
+          <Button onClick={handleShare} variant="outline" size="lg">
+            <Share2 className="w-5 h-5 mr-2" /> Partager
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
