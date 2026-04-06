@@ -9,6 +9,7 @@ import { ArrowLeft, Star, Play, Clock, Users, BookOpen, CheckCircle, User } from
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import CourseComments from "@/components/elearning/CourseComments";
 import { useToast } from "@/hooks/use-toast";
 import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
@@ -47,7 +48,12 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    api.auth.getUser().then(({ data }: any) => setCurrentUser(data?.user || null));
+  }, []);
 
   const { isDialogOpen, closeDialog } = useCopyProtection(
     !!course?.isCopyProtected,
@@ -371,6 +377,16 @@ const CourseDetail = () => {
             )}
           </div>
         </div>
+
+        {/* Comments Section */}
+        {course && (
+          <div className="mt-12">
+            <CourseComments
+              courseId={Number(course.id)}
+              currentUserId={currentUser?.id}
+            />
+          </div>
+        )}
       </div>
       <Footer />
     </div>
