@@ -106,6 +106,7 @@ const tabs = [
   { value: 'livestreams', label: 'Live Streams', icon: Radio },
   { value: 'submissions', label: 'Soumissions', icon: FileText },
   { value: 'reviews', label: 'Avis Clients', icon: StarIcon },
+  { value: 'affiliates', label: 'Classement Affiliés', icon: Crown },
   { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
 ];
 
