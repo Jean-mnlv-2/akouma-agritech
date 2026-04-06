@@ -27,6 +27,9 @@ model User {
   assignedTasks    Task[]                @relation("TaskAssignedTo")
   createdTasks     Task[]                @relation("TaskCreatedBy")
   reviews          Review[]
+  comments         CourseComment[]
+  schedules        CourseSchedule[]
+  moduleProgress   ModuleProgress[]
 }
 
 model Country {
@@ -110,6 +113,94 @@ model Course {
   slug               String                @unique
   previewItems       CoursePreviewItem[]
   enrollments        ELearningEnrollment[]
+  modules            CourseModule[]
+  comments           CourseComment[]
+  schedules          CourseSchedule[]
+}
+
+model CourseModule {
+  id             Int              @id @default(autoincrement())
+  courseId        Int
+  title          String
+  type           String           @default("text")
+  duration       String?
+  content        String?
+  videoUrl       String?
+  pdfUrl         String?
+  order          Int              @default(0)
+  isActive       Boolean          @default(true)
+  quizQuestions  Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  comments       CourseComment[]
+  progress       ModuleProgress[]
+
+  @@index([courseId])
+  @@index([order])
+}
+
+model CourseComment {
+  id          Int             @id @default(autoincrement())
+  courseId     Int
+  moduleId    Int?
+  userId      String
+  content     String
+  parentId    Int?
+  isApproved  Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module      CourseModule?   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      CourseComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies     CourseComment[] @relation("CommentReplies")
+
+  @@index([courseId])
+  @@index([moduleId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model CourseSchedule {
+  id            Int                 @id @default(autoincrement())
+  enrollmentId  Int
+  userId        String
+  courseId       Int
+  scheduledDate DateTime
+  timeSlot      String
+  status        String              @default("scheduled")
+  isLocked      Boolean             @default(false)
+  attendedAt    DateTime?
+  absenceCount  Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  enrollment    ELearningEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([scheduledDate])
+}
+
+model ModuleProgress {
+  id           Int                 @id @default(autoincrement())
+  enrollmentId Int
+  moduleId     Int
+  userId       String
+  completed    Boolean             @default(false)
+  quizScore    Int?
+  completedAt  DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  enrollment   ELearningEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  module       CourseModule        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, moduleId])
+  @@index([userId])
 }
 
 model News {
@@ -234,22 +325,24 @@ model DemoRequest {
 }
 
 model ELearningEnrollment {
-  id               Int           @id @default(autoincrement())
+  id               Int              @id @default(autoincrement())
   userId           String
   courseId         Int
-  enrolledAt       DateTime      @default(now())
+  enrolledAt       DateTime         @default(now())
   completedAt      DateTime?
-  progress         Int           @default(0)
-  studyPace        String        @default("standard")
+  progress         Int              @default(0)
+  studyPace        String           @default("standard")
   startDate        DateTime?
   targetEndDate    DateTime?
-  remindersEnabled Boolean       @default(true)
+  remindersEnabled Boolean          @default(true)
   lastReminderSent DateTime?
   studyDays        String?
   dailyTimeSlot    String?
-  course           Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   reminderLogs     ReminderLog[]
+  schedules        CourseSchedule[]
+  moduleProgress   ModuleProgress[]
 
   @@unique([userId, courseId])
 }
