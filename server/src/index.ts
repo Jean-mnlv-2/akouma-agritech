@@ -48,6 +48,9 @@ import { deliveryPartnersRouter } from './routes/deliveryPartners';
 import { deliveriesRouter } from './routes/deliveries';
 import { paymentsRouter } from './routes/payments';
 import { reviewsRouter } from './routes/reviews';
+import { courseModulesRouter } from './routes/courseModules';
+import { courseCommentsRouter } from './routes/courseComments';
+import { courseSchedulesRouter } from './routes/courseSchedules';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -189,6 +192,9 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/course_preview_types', coursePreviewTypesRouter);
 app.use('/api/course_preview_items', coursePreviewItemsRouter);
+app.use('/api/course_modules', courseModulesRouter);
+app.use('/api/course_comments', courseCommentsRouter);
+app.use('/api/course_schedules', courseSchedulesRouter);
 app.use('/api/reminder_logs', reminderLogsRouter);
 app.use('/api', genericRouter);
 
