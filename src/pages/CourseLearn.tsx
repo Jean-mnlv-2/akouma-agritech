@@ -45,7 +45,6 @@ const CourseLearn = () => {
   const [user, setUser] = useState<any>(null);
   const [course, setCourse] = useState<any>(null);
   const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
-  const [progressMap, setProgressMap] = useState<Record<number, boolean>>({});
   const [showComments, setShowComments] = useState(false);
 
   // Fetch user, course, modules, enrollment, progress
@@ -312,7 +311,7 @@ const CourseLearn = () => {
             ) : currentModule?.type === "quiz" && renderQuizQuestions(currentModule.quizQuestions) ? (
               <QuizComponent
                 title={currentModule.title}
-                questions={renderQuizQuestions(currentModule.quizQuestions)}
+                questions={renderQuizQuestions(currentModule.quizQuestions)!}
                 passingScore={70}
                 onComplete={handleQuizComplete}
                 onRetry={() => setQuizScore(null)}

@@ -24,7 +24,7 @@ const timeSlots = [
   "20:00 - 22:00",
 ];
 
-const CourseScheduleManager = ({ enrollmentId, courseId, userId }: CourseScheduleProps) => {
+const CourseScheduleManager = ({ enrollmentId, courseId }: CourseScheduleProps) => {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSlot, setSelectedSlot] = useState("");
   const { toast } = useToast();
