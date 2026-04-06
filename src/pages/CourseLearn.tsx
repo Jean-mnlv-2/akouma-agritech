@@ -45,6 +45,7 @@ const CourseLearn = () => {
   const [user, setUser] = useState<any>(null);
   const [course, setCourse] = useState<any>(null);
   const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
+  const [progressMap, setProgressMap] = useState<Record<number, boolean>>({});
   const [showComments, setShowComments] = useState(false);
 
   // Fetch user, course, modules, enrollment, progress
