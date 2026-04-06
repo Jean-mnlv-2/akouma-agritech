@@ -1,78 +1,163 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-// Tabs removed - unused
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TitleManager from "@/components/TitleManager";
 import QuizComponent from "@/components/elearning/QuizComponent";
 import CertificateGenerator from "@/components/elearning/CertificateGenerator";
+import CourseComments from "@/components/elearning/CourseComments";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import kilimoLogo from "@/assets/kilimo-logo.png";
+import { api } from "@/integrations/api/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   BookOpen, Video, FileText, CheckCircle, Lock, Play,
-  ChevronRight, Award, Clock, ArrowLeft
+  ChevronRight, Award, Clock, ArrowLeft, MessageCircle
 } from "lucide-react";
 
 interface Module {
-  id: string;
+  id: number;
   title: string;
-  type: "video" | "text" | "pdf" | "quiz";
-  duration: string;
+  type: string;
+  duration: string | null;
+  content: string | null;
+  videoUrl: string | null;
+  pdfUrl: string | null;
+  order: number;
+  quizQuestions: any;
   completed: boolean;
   locked: boolean;
-  content?: string;
-  quizQuestions?: any[];
 }
-
-const DEMO_MODULES: Module[] = [
-  { id: "1", title: "Introduction à l'Agriculture Moderne", type: "video", duration: "15 min", completed: true, locked: false, content: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-  { id: "2", title: "Les capteurs IoT en agriculture", type: "text", duration: "10 min", completed: true, locked: false, content: "Les capteurs IoT (Internet of Things) révolutionnent l'agriculture en permettant une surveillance en temps réel des cultures. Ces capteurs mesurent l'humidité du sol, la température, la luminosité et d'autres paramètres essentiels.\n\n## Types de capteurs\n- **Capteurs d'humidité** : Mesurent le taux d'humidité du sol\n- **Capteurs de température** : Surveillent les variations thermiques\n- **Capteurs de luminosité** : Optimisent l'exposition solaire\n- **Capteurs de pH** : Contrôlent l'acidité du sol\n\n## Avantages\n1. Réduction de la consommation d'eau de 30%\n2. Amélioration des rendements de 25%\n3. Détection précoce des maladies\n4. Optimisation des intrants agricoles" },
-  { id: "3", title: "Document : Guide d'installation", type: "pdf", duration: "5 min", completed: false, locked: false },
-  { id: "4", title: "Quiz : Fondamentaux IoT", type: "quiz", duration: "10 min", completed: false, locked: false, quizQuestions: [
-    { id: "q1", question: "Quel est l'avantage principal des capteurs IoT en agriculture ?", options: ["Réduire le travail manuel uniquement", "Surveiller en temps réel les cultures", "Remplacer les agriculteurs", "Augmenter les coûts"], correctAnswer: 1, explanation: "Les capteurs IoT permettent une surveillance en temps réel des paramètres essentiels des cultures." },
-    { id: "q2", question: "De combien les capteurs IoT peuvent-ils réduire la consommation d'eau ?", options: ["10%", "20%", "30%", "50%"], correctAnswer: 2, explanation: "Les études montrent une réduction moyenne de 30% de la consommation d'eau grâce à l'irrigation intelligente." },
-    { id: "q3", question: "Quel capteur mesure l'acidité du sol ?", options: ["Capteur d'humidité", "Capteur de température", "Capteur de pH", "Capteur de luminosité"], correctAnswer: 2, explanation: "Le capteur de pH est spécifiquement conçu pour mesurer l'acidité ou l'alcalinité du sol." },
-    { id: "q4", question: "Quelle technologie permet la transmission des données des capteurs ?", options: ["Bluetooth uniquement", "Wi-Fi uniquement", "LoRaWAN / Réseaux IoT", "Câble Ethernet"], correctAnswer: 2, explanation: "LoRaWAN et les réseaux IoT longue portée sont les plus adaptés pour l'agriculture connectée." },
-    { id: "q5", question: "Quel est l'amélioration moyenne des rendements avec l'IoT ?", options: ["5%", "15%", "25%", "45%"], correctAnswer: 2, explanation: "Les solutions IoT en agriculture permettent en moyenne une amélioration de 25% des rendements." },
-  ]},
-  { id: "5", title: "Systèmes d'irrigation intelligente", type: "video", duration: "20 min", completed: false, locked: true },
-  { id: "6", title: "Quiz final : Certification", type: "quiz", duration: "15 min", completed: false, locked: true },
-];
 
 const CourseLearn = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [modules, setModules] = useState<Module[]>(DEMO_MODULES);
-  const [activeModule, setActiveModule] = useState<string>("1");
+  const { toast } = useToast();
+  const [modules, setModules] = useState<Module[]>([]);
+  const [activeModule, setActiveModule] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [course, setCourse] = useState<any>(null);
+  const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
+  const [, setProgressMap] = useState<Record<number, boolean>>({});
+  const [showComments, setShowComments] = useState(false);
+
+  // Fetch user, course, modules, enrollment, progress
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Get user
+      const { data: userData } = await api.auth.getUser();
+      const currentUser = userData?.user;
+      setUser(currentUser);
+
+      // Get course by slug or ID
+      let courseData;
+      try {
+        const res = await api.request("GET", `/api/courses/slug/${id}`);
+        courseData = res.data;
+      } catch {
+        const res = await api.request("GET", `/api/courses/${id}`);
+        courseData = res.data;
+      }
+      setCourse(courseData);
+
+      if (!courseData) { setLoading(false); return; }
+
+      // Get modules
+      const modulesRes = await api.request("GET", `/api/course_modules/course/${courseData.id}`);
+      const rawModules: any[] = modulesRes.data || [];
+
+      // Get enrollment
+      let enrId: number | null = null;
+      const pMap: Record<number, boolean> = {};
+      if (currentUser) {
+        try {
+          const enrRes = await api.request("GET", "/api/elearning_enrollments");
+          const enrollments = enrRes.data || [];
+          const myEnr = enrollments.find((e: any) => 
+            String(e.userId) === String(currentUser.id) && String(e.courseId) === String(courseData.id)
+          );
+          if (myEnr) {
+            enrId = myEnr.id;
+            // Get progress
+            try {
+              const progRes = await api.request("GET", `/api/course_modules/progress/${myEnr.id}`);
+              (progRes.data || []).forEach((p: any) => {
+                if (p.completed) pMap[p.moduleId] = true;
+              });
+            } catch { /* no progress yet */ }
+          }
+        } catch { /* not enrolled */ }
+      }
+      setEnrollmentId(enrId);
+      setProgressMap(pMap);
+
+      // Build module list with completion and lock state
+      const builtModules: Module[] = rawModules.map((m, idx) => {
+        const completed = !!pMap[m.id];
+        // Lock if previous module not completed (sequential access)
+        const locked = idx === 0 ? false : !pMap[rawModules[idx - 1]?.id];
+        return { ...m, completed, locked };
+      });
+
+      setModules(builtModules);
+      if (builtModules.length > 0) {
+        // Set active to first incomplete or first
+        const firstIncomplete = builtModules.find(m => !m.completed && !m.locked);
+        setActiveModule(firstIncomplete?.id ?? builtModules[0].id);
+      }
+    } catch (e) {
+      console.error("Error loading course data:", e);
+    }
+    setLoading(false);
+  }, [id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const currentModule = modules.find(m => m.id === activeModule);
   const completedCount = modules.filter(m => m.completed).length;
-  const totalProgress = Math.round((completedCount / modules.length) * 100);
+  const totalProgress = modules.length > 0 ? Math.round((completedCount / modules.length) * 100) : 0;
 
-  const handleModuleComplete = (moduleId: string) => {
+  const handleModuleComplete = async (moduleId: number, score?: number) => {
+    // Persist to backend
+    if (enrollmentId) {
+      try {
+        await api.request("POST", "/api/course_modules/progress", {
+          body: { enrollmentId, moduleId, quizScore: score },
+        });
+      } catch (e) {
+        console.error("Failed to save progress:", e);
+      }
+    }
+
+    // Update local state
+    setProgressMap(prev => ({ ...prev, [moduleId]: true }));
     setModules(prev => {
       const updated = prev.map(m => m.id === moduleId ? { ...m, completed: true } : m);
-      // Unlock next module
+      // Unlock next
       const idx = updated.findIndex(m => m.id === moduleId);
       if (idx < updated.length - 1) {
         updated[idx + 1] = { ...updated[idx + 1], locked: false };
       }
       return updated;
     });
+
+    toast({ title: "Module terminé !", description: "Votre progression a été enregistrée." });
   };
 
   const handleQuizComplete = (score: number, passed: boolean) => {
     setQuizScore(score);
     if (passed && currentModule) {
-      handleModuleComplete(currentModule.id);
-      // Check if all modules completed for certificate
+      handleModuleComplete(currentModule.id, score);
       const allDone = modules.every(m => m.completed || m.id === currentModule.id);
-      if (allDone && currentModule.id === modules[modules.length - 1].id) {
+      if (allDone && currentModule.id === modules[modules.length - 1]?.id) {
         setTimeout(() => setShowCertificate(true), 1500);
       }
     }
@@ -88,15 +173,56 @@ const CourseLearn = () => {
     }
   };
 
+  const renderQuizQuestions = (questions: any) => {
+    if (!questions) return null;
+    const parsed = typeof questions === 'string' ? JSON.parse(questions) : questions;
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner size="large" text="Chargement du cours..." />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!course || modules.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-6 py-12 text-center">
+          <BookOpen className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-40" />
+          <h1 className="text-2xl font-bold mb-2">Aucun module disponible</h1>
+          <p className="text-muted-foreground mb-6">Ce cours n'a pas encore de modules. Revenez plus tard.</p>
+          <Button variant="outline" onClick={() => navigate("/elearning")}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Retour aux cours
+          </Button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title="Formation en cours - KILIMO E-Learning" description="Suivez votre formation" canonical={window.location.origin + `/elearning/${id}/learn`} image={kilimoLogo} />
+      <TitleManager
+        title={`${course.title} - KILIMO E-Learning`}
+        description="Suivez votre formation"
+        canonical={window.location.origin + `/elearning/${id}/learn`}
+        image={kilimoLogo}
+      />
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 py-6">
         {/* Back + Progress */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <Button variant="ghost" onClick={() => navigate(`/elearning/${id}`)} className="text-muted-foreground">
+          <Button variant="ghost" onClick={() => navigate(`/elearning/${course.slug || id}`)} className="text-muted-foreground">
             <ArrowLeft className="w-4 h-4 mr-2" /> Retour au cours
           </Button>
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -106,7 +232,7 @@ const CourseLearn = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar - Module list */}
+          {/* Sidebar */}
           <div className="lg:col-span-1 order-2 lg:order-1">
             <Card className="sticky top-4">
               <CardHeader className="pb-2">
@@ -132,7 +258,7 @@ const CourseLearn = () => {
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          mod.completed ? 'bg-green-100 text-green-600' :
+                          mod.completed ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400' :
                           isActive ? 'bg-primary/20 text-primary' :
                           'bg-muted text-muted-foreground'
                         }`}>
@@ -144,7 +270,11 @@ const CourseLearn = () => {
                           <p className={`font-medium truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>{mod.title}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">{mod.type}</Badge>
-                            <span className="text-xs text-muted-foreground flex items-center"><Clock className="w-3 h-3 mr-1" />{mod.duration}</span>
+                            {mod.duration && (
+                              <span className="text-xs text-muted-foreground flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />{mod.duration}
+                              </span>
+                            )}
                           </div>
                         </div>
                         {isActive && <ChevronRight className="w-4 h-4 text-primary flex-shrink-0 mt-2" />}
@@ -152,24 +282,37 @@ const CourseLearn = () => {
                     );
                   })}
                 </div>
+
+                {/* Comments toggle */}
+                <div className="mt-4 pt-4 border-t">
+                  <Button
+                    variant={showComments ? "default" : "outline"}
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowComments(!showComments)}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    {showComments ? "Masquer discussions" : "Voir discussions"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Main content */}
-          <div className="lg:col-span-3 order-1 lg:order-2">
+          <div className="lg:col-span-3 order-1 lg:order-2 space-y-6">
             {showCertificate ? (
               <CertificateGenerator data={{
-                studentName: "Apprenant KILIMO",
-                courseName: "Agriculture Moderne & IoT",
+                studentName: user?.fullName || "Apprenant KILIMO",
+                courseName: course.title,
                 completionDate: new Date().toISOString(),
                 score: quizScore || 85,
-                certificateNumber: `AK-CERT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+                certificateNumber: `KLM-CERT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
               }} />
-            ) : currentModule?.type === "quiz" && currentModule.quizQuestions ? (
+            ) : currentModule?.type === "quiz" && renderQuizQuestions(currentModule.quizQuestions) ? (
               <QuizComponent
                 title={currentModule.title}
-                questions={currentModule.quizQuestions}
+                questions={renderQuizQuestions(currentModule.quizQuestions)!}
                 passingScore={70}
                 onComplete={handleQuizComplete}
                 onRetry={() => setQuizScore(null)}
@@ -177,19 +320,35 @@ const CourseLearn = () => {
             ) : currentModule?.type === "video" ? (
               <Card>
                 <CardContent className="p-0">
-                  <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <Play className="w-16 h-16 mx-auto mb-4 opacity-80" />
-                      <p className="text-lg font-semibold">{currentModule.title}</p>
-                      <p className="text-sm text-white/60 mt-2">Durée : {currentModule.duration}</p>
+                  {currentModule.videoUrl ? (
+                    <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
+                      <iframe
+                        src={currentModule.videoUrl}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title={currentModule.title}
+                      />
                     </div>
-                  </div>
+                  ) : (
+                    <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-t-lg flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <Play className="w-16 h-16 mx-auto mb-4 opacity-80" />
+                        <p className="text-lg font-semibold">{currentModule.title}</p>
+                        {currentModule.duration && (
+                          <p className="text-sm text-white/60 mt-2">Durée : {currentModule.duration}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="p-6">
                     <h2 className="text-xl font-bold mb-2">{currentModule.title}</h2>
                     <p className="text-muted-foreground mb-4">Regardez la vidéo complète pour débloquer le module suivant.</p>
-                    <Button onClick={() => handleModuleComplete(currentModule.id)}>
-                      <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
-                    </Button>
+                    {!currentModule.completed && (
+                      <Button onClick={() => handleModuleComplete(currentModule.id)}>
+                        <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -209,11 +368,13 @@ const CourseLearn = () => {
                       return <p key={i} className="mb-3 text-foreground leading-relaxed">{line}</p>;
                     })}
                   </div>
-                  <div className="mt-8">
-                    <Button onClick={() => handleModuleComplete(currentModule.id)}>
-                      <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
-                    </Button>
-                  </div>
+                  {!currentModule.completed && (
+                    <div className="mt-8">
+                      <Button onClick={() => handleModuleComplete(currentModule.id)}>
+                        <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ) : currentModule?.type === "pdf" ? (
@@ -223,16 +384,31 @@ const CourseLearn = () => {
                   <h2 className="text-2xl font-bold mb-2">{currentModule.title}</h2>
                   <p className="text-muted-foreground mb-6">Téléchargez et consultez le document PDF ci-dessous.</p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Button variant="outline">
-                      <FileText className="w-4 h-4 mr-2" /> Consulter le PDF
-                    </Button>
-                    <Button onClick={() => handleModuleComplete(currentModule.id)}>
-                      <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
-                    </Button>
+                    {currentModule.pdfUrl && (
+                      <Button variant="outline" asChild>
+                        <a href={currentModule.pdfUrl} target="_blank" rel="noreferrer">
+                          <FileText className="w-4 h-4 mr-2" /> Consulter le PDF
+                        </a>
+                      </Button>
+                    )}
+                    {!currentModule.completed && (
+                      <Button onClick={() => handleModuleComplete(currentModule.id)}>
+                        <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ) : null}
+
+            {/* Comments section per module */}
+            {showComments && currentModule && (
+              <CourseComments
+                courseId={course.id}
+                moduleId={currentModule.id}
+                currentUserId={user?.id}
+              />
+            )}
           </div>
         </div>
       </main>

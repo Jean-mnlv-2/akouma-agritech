@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
+import CourseScheduleManager from "@/components/elearning/CourseScheduleManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -368,6 +369,16 @@ const LearningDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Course Schedule Managers */}
+            {enrollments.filter((e: any) => !e.completedAt).map((enrollment: any) => (
+              <CourseScheduleManager
+                key={enrollment.id}
+                enrollmentId={enrollment.id}
+                courseId={enrollment.courseId}
+                userId={user?.id}
+              />
+            ))}
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-8">
