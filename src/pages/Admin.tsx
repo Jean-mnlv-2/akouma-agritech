@@ -50,6 +50,7 @@ import { Badge } from '@/components/ui/badge';
 import { AdminReviews } from '@/components/admin/AdminReviews';
 import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
 import { AdminNotifications } from '@/components/admin/AdminNotifications';
+import { AdminAffiliateLeaderboard } from '@/components/admin/AdminAffiliateLeaderboard';
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
@@ -106,6 +107,7 @@ const tabs = [
   { value: 'livestreams', label: 'Live Streams', icon: Radio },
   { value: 'submissions', label: 'Soumissions', icon: FileText },
   { value: 'reviews', label: 'Avis Clients', icon: StarIcon },
+  { value: 'affiliates', label: 'Classement Affiliés', icon: Crown },
   { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
 ];
 
@@ -373,6 +375,7 @@ function AdminContent() {
               {(activeTab === 'livestreams' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('livestreams')))) && <AdminLiveStreams />}
               {(activeTab === 'submissions' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('submissions')))) && <AdminSubmissions />}
               {(activeTab === 'reviews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reviews')))) && <AdminReviews />}
+              {(activeTab === 'affiliates' && isAdmin) && <AdminAffiliateLeaderboard />}
               {(activeTab === 'contact-settings' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('contact-settings')))) && <AdminContactSettings />}
             </div>
           </Tabs>

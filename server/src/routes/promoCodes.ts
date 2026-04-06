@@ -28,6 +28,25 @@ promoCodesRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Re
   }
 });
 
+// GET /api/promo-codes/leaderboard - Affiliate leaderboard sorted by totalCashbackEarned
+promoCodesRouter.get('/leaderboard', authRequired, adminOnly, async (_req: Request, res: Response) => {
+  try {
+    const affiliates = await prismaAny.promoCode.findMany({
+      where: { ownerEmail: { not: null } },
+      orderBy: { totalCashbackEarned: 'desc' },
+      select: {
+        id: true, code: true, ownerName: true, ownerEmail: true,
+        cashbackPercent: true, cashbackBalance: true, totalCashbackEarned: true,
+        usesCount: true, isActive: true,
+      },
+    });
+    res.json({ data: affiliates });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Bad request';
+    res.status(400).json({ error: message });
+  }
+});
+
 promoCodesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const {
