@@ -39,8 +39,8 @@ const CookieConsent = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-lg">Nous respectons votre vie privée</h3>
-                <button 
-                  onClick={() => setIsVisible(false)}
+              <button 
+                  onClick={handleDecline}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <X className="w-5 h-5" />
