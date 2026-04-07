@@ -51,6 +51,8 @@ import { AdminReviews } from '@/components/admin/AdminReviews';
 import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
 import { AdminNotifications } from '@/components/admin/AdminNotifications';
 import { AdminAffiliateLeaderboard } from '@/components/admin/AdminAffiliateLeaderboard';
+import { AdminCourseModules } from '@/components/admin/AdminCourseModules';
+import { AdminAttendance } from '@/components/admin/AdminAttendance';
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
@@ -95,6 +97,8 @@ const tabs = [
   { value: 'deliveries', label: 'Livraisons', icon: Truck },
   { value: 'courses', label: 'Cours', icon: BookOpen },
   { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
+  { value: 'course-modules', label: 'Modules Cours', icon: BookOpen },
+  { value: 'attendance', label: 'Présences', icon: Calendar },
   { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
   { value: 'news', label: 'Actualités', icon: Newspaper },
   { value: 'seeds', label: 'Semences', icon: Sprout },
@@ -363,6 +367,8 @@ function AdminContent() {
               {(activeTab === 'deliveries' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('deliveries')))) && <AdminDeliveries />}
               {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && <AdminCourses />}
               {(activeTab === 'course-previews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-previews')))) && <AdminCoursePreviews />}
+              {(activeTab === 'course-modules' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-modules')))) && <AdminCourseModules />}
+              {(activeTab === 'attendance' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('attendance')))) && <AdminAttendance />}
               {(activeTab === 'reminder-logs' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reminder-logs')))) && <AdminReminderLogs />}
               {(activeTab === 'news' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('news')))) && <AdminNews />}
               {(activeTab === 'seeds' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('seeds')))) && <AdminSeeds />}

@@ -10,6 +10,7 @@ import TitleManager from "@/components/TitleManager";
 import QuizComponent from "@/components/elearning/QuizComponent";
 import CertificateGenerator from "@/components/elearning/CertificateGenerator";
 import CourseComments from "@/components/elearning/CourseComments";
+import LiveCourseChat from "@/components/elearning/LiveCourseChat";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import { api } from "@/integrations/api/client";
@@ -47,6 +48,7 @@ const CourseLearn = () => {
   const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
   const [, setProgressMap] = useState<Record<number, boolean>>({});
   const [showComments, setShowComments] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   // Fetch user, course, modules, enrollment, progress
   const fetchData = useCallback(async () => {
@@ -283,8 +285,8 @@ const CourseLearn = () => {
                   })}
                 </div>
 
-                {/* Comments toggle */}
-                <div className="mt-4 pt-4 border-t">
+                {/* Comments & Chat toggle */}
+                <div className="mt-4 pt-4 border-t space-y-2">
                   <Button
                     variant={showComments ? "default" : "outline"}
                     size="sm"
@@ -293,6 +295,15 @@ const CourseLearn = () => {
                   >
                     <MessageCircle className="w-4 h-4 mr-2" />
                     {showComments ? "Masquer discussions" : "Voir discussions"}
+                  </Button>
+                  <Button
+                    variant={showChat ? "default" : "outline"}
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowChat(!showChat)}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    {showChat ? "Masquer le chat" : "💬 Chat live"}
                   </Button>
                 </div>
               </CardContent>
@@ -406,6 +417,14 @@ const CourseLearn = () => {
               <CourseComments
                 courseId={course.id}
                 moduleId={currentModule.id}
+                currentUserId={user?.id}
+              />
+            )}
+
+            {/* Live chat */}
+            {showChat && (
+              <LiveCourseChat
+                courseId={course.id}
                 currentUserId={user?.id}
               />
             )}
