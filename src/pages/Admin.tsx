@@ -53,6 +53,7 @@ import { AdminNotifications } from '@/components/admin/AdminNotifications';
 import { AdminAffiliateLeaderboard } from '@/components/admin/AdminAffiliateLeaderboard';
 import { AdminCourseModules } from '@/components/admin/AdminCourseModules';
 import { AdminAttendance } from '@/components/admin/AdminAttendance';
+interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
   totalNews: number;
