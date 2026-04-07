@@ -10,6 +10,7 @@ import TitleManager from "@/components/TitleManager";
 import QuizComponent from "@/components/elearning/QuizComponent";
 import CertificateGenerator from "@/components/elearning/CertificateGenerator";
 import CourseComments from "@/components/elearning/CourseComments";
+import LiveCourseChat from "@/components/elearning/LiveCourseChat";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import { api } from "@/integrations/api/client";
@@ -47,6 +48,7 @@ const CourseLearn = () => {
   const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
   const [, setProgressMap] = useState<Record<number, boolean>>({});
   const [showComments, setShowComments] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   // Fetch user, course, modules, enrollment, progress
   const fetchData = useCallback(async () => {
