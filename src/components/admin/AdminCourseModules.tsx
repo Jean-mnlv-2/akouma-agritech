@@ -13,7 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Plus, Edit, Trash2, GripVertical, Loader2, BookOpen, Video, FileText,
+  Plus, Edit, Trash2, Loader2, BookOpen, Video, FileText,
   Award, ChevronUp, ChevronDown, ArrowLeft
 } from 'lucide-react';
 

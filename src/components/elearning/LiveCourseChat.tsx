@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, Users, Wifi, WifiOff } from "lucide-react";
+import { MessageCircle, Send, Wifi, WifiOff } from "lucide-react";
 import { api } from "@/integrations/api/client";
 
 interface ChatMessage {
@@ -21,14 +20,13 @@ interface LiveCourseChatProps {
   currentUserName?: string;
 }
 
-const LiveCourseChat = ({ courseId, currentUserId, currentUserName }: LiveCourseChatProps) => {
+const LiveCourseChat = ({ courseId, currentUserId }: LiveCourseChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isConnected, setIsConnected] = useState(true);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const lastFetchRef = useRef<string | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
