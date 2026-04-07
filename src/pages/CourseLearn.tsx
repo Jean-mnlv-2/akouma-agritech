@@ -420,6 +420,14 @@ const CourseLearn = () => {
                 currentUserId={user?.id}
               />
             )}
+
+            {/* Live chat */}
+            {showChat && (
+              <LiveCourseChat
+                courseId={course.id}
+                currentUserId={user?.id}
+              />
+            )}
           </div>
         </div>
       </main>
