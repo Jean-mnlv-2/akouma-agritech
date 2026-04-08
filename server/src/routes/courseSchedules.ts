@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { emailService } from '../utils/email';
 
 const prisma = new PrismaClient();
 export const courseSchedulesRouter = Router();
@@ -40,7 +41,7 @@ courseSchedulesRouter.post('/', authRequired, async (req: Request, res: Response
         courseId: Number(courseId),
         scheduledDate: new Date(scheduledDate),
         timeSlot,
-        isLocked: true, // Lock immediately after creation
+        isLocked: true,
         status: 'scheduled',
       },
     });
@@ -64,11 +65,18 @@ courseSchedulesRouter.put('/:id/attend', authRequired, async (req: Request, res:
   }
 });
 
-// Mark absence (admin/system - increments absence count with penalty)
+// Mark absence (admin/system - increments absence count with penalty + email notification)
 courseSchedulesRouter.put('/:id/absent', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.courseSchedule.findUnique({ where: { id }, include: { enrollment: true } });
+    const existing = await prisma.courseSchedule.findUnique({
+      where: { id },
+      include: {
+        enrollment: true,
+        user: { select: { id: true, fullName: true, email: true } },
+        course: { select: { id: true, title: true } },
+      },
+    });
     if (!existing) return res.status(404).json({ error: 'Not found' });
     
     // Mark as absent
@@ -82,16 +90,37 @@ courseSchedulesRouter.put('/:id/absent', authRequired, adminOnly, async (req: Re
       where: { enrollmentId: existing.enrollmentId, status: 'absent' },
     });
 
-    // Penalty: after 3 absences, block progression (reduce progress by 10% per absence over 3)
+    let penalty = false;
+
+    // Penalty: after 3 absences, reduce progress by 10% per absence over 2
     if (totalAbsences >= 3 && existing.enrollment) {
-      const penalty = Math.min((totalAbsences - 2) * 10, existing.enrollment.progress);
+      const penaltyAmount = Math.min((totalAbsences - 2) * 10, existing.enrollment.progress);
       await prisma.eLearningEnrollment.update({
         where: { id: existing.enrollmentId },
-        data: { progress: Math.max(0, existing.enrollment.progress - penalty) },
+        data: { progress: Math.max(0, existing.enrollment.progress - penaltyAmount) },
       });
+      penalty = true;
     }
 
-    res.json({ data: schedule, totalAbsences, penalty: totalAbsences >= 3 });
+    // Send email notification when threshold is reached (3+ absences)
+    if (totalAbsences >= 3 && existing.user?.email) {
+      try {
+        await emailService.sendAbsenceNotification({
+          email: existing.user.email,
+          userName: existing.user.fullName || 'Apprenant',
+          courseTitle: existing.course?.title || 'Cours inconnu',
+          totalAbsences,
+          penaltyApplied: penalty,
+          currentProgress: existing.enrollment
+            ? Math.max(0, existing.enrollment.progress - (penalty ? (totalAbsences - 2) * 10 : 0))
+            : 0,
+        });
+      } catch (emailErr) {
+        console.error('[Schedules] Failed to send absence notification:', emailErr);
+      }
+    }
+
+    res.json({ data: schedule, totalAbsences, penalty });
   } catch (e) {
     res.status(400).json({ error: e instanceof Error ? e.message : 'Failed to mark absence' });
   }
