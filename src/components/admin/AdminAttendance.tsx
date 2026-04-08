@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, Calendar, AlertTriangle, Users } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Calendar, AlertTriangle, Users, Download, FileText } from 'lucide-react';
 
 interface Schedule {
   id: number;
@@ -83,6 +83,83 @@ export function AdminAttendance() {
     }
   };
 
+  const exportCSV = () => {
+    const headers = ['Étudiant', 'Email', 'Cours', 'Date', 'Créneau', 'Statut', 'Absences'];
+    const rows = filtered.map(s => [
+      s.user?.fullName || '—',
+      s.user?.email || '',
+      s.course?.title || `Cours #${s.courseId}`,
+      formatDate(s.scheduledDate),
+      s.timeSlot,
+      s.status === 'attended' ? 'Présent' : s.status === 'absent' ? 'Absent' : 'Planifié',
+      String(s.absenceCount),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `presences_kilimo_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Export CSV', description: 'Le fichier CSV a été téléchargé.' });
+  };
+
+  const exportPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({ title: 'Erreur', description: 'Vérifiez votre bloqueur de popups.', variant: 'destructive' });
+      return;
+    }
+
+    const tableRows = filtered.map(s => `
+      <tr style="${s.absenceCount >= 3 ? 'background:#fef2f2;' : ''}">
+        <td style="padding:8px;border:1px solid #e5e7eb;">${s.user?.fullName || '—'}<br/><small style="color:#666;">${s.user?.email || ''}</small></td>
+        <td style="padding:8px;border:1px solid #e5e7eb;">${s.course?.title || `Cours #${s.courseId}`}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;">${formatDate(s.scheduledDate)}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;">${s.timeSlot}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;text-align:center;">
+          <span style="padding:2px 8px;border-radius:12px;font-size:12px;${
+            s.status === 'attended' ? 'background:#dcfce7;color:#166534;' :
+            s.status === 'absent' ? 'background:#fecaca;color:#991b1b;' :
+            'background:#f3f4f6;color:#374151;'
+          }">${s.status === 'attended' ? 'Présent' : s.status === 'absent' ? 'Absent' : 'Planifié'}</span>
+        </td>
+        <td style="padding:8px;border:1px solid #e5e7eb;text-align:center;font-weight:bold;${s.absenceCount >= 3 ? 'color:#dc2626;' : ''}">${s.absenceCount}${s.absenceCount >= 3 ? ' ⚠️' : ''}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Rapport de Présences - KILIMO</title>
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:Arial,sans-serif; padding:40px; }
+        h1 { color:#1E5B37; margin-bottom:8px; }
+        .stats { display:flex; gap:24px; margin:16px 0 24px; }
+        .stat { padding:12px 20px; border-radius:8px; background:#f9fafb; border:1px solid #e5e7eb; }
+        .stat strong { display:block; font-size:20px; }
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th { background:#1E5B37; color:white; padding:10px 8px; text-align:left; border:1px solid #1E5B37; }
+        @media print { body { padding:20px; } }
+      </style>
+    </head><body>
+      <h1>📋 Rapport de Présences - KILIMO E-Learning</h1>
+      <p style="color:#666;margin-bottom:16px;">Généré le ${new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })}</p>
+      <div class="stats">
+        <div class="stat"><strong>${stats.total}</strong><span>Total</span></div>
+        <div class="stat"><strong style="color:#2563eb;">${stats.scheduled}</strong><span>Planifiés</span></div>
+        <div class="stat"><strong style="color:#16a34a;">${stats.attended}</strong><span>Présents</span></div>
+        <div class="stat"><strong style="color:#dc2626;">${stats.absent}</strong><span>Absents</span></div>
+      </div>
+      <table>
+        <thead><tr><th>Étudiant</th><th>Cours</th><th>Date</th><th>Créneau</th><th>Statut</th><th>Absences</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <p style="margin-top:24px;font-size:12px;color:#999;">KILIMO Agritech — Rapport de présences E-Learning</p>
+      <script>setTimeout(()=>window.print(),500);</script>
+    </body></html>`);
+    printWindow.document.close();
+  };
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin" /></div>;
   }
@@ -140,15 +217,23 @@ export function AdminAttendance() {
               </CardTitle>
               <CardDescription>Marquez la présence ou l'absence des étudiants. Après 3 absences, une pénalité est appliquée.</CardDescription>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Filtrer" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="scheduled">Planifiés</SelectItem>
-                <SelectItem value="attended">Présents</SelectItem>
-                <SelectItem value="absent">Absents</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={exportCSV} disabled={filtered.length === 0}>
+                <Download className="w-4 h-4 mr-1" /> CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportPDF} disabled={filtered.length === 0}>
+                <FileText className="w-4 h-4 mr-1" /> PDF
+              </Button>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Filtrer" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="scheduled">Planifiés</SelectItem>
+                  <SelectItem value="attended">Présents</SelectItem>
+                  <SelectItem value="absent">Absents</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

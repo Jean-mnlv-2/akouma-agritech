@@ -51,6 +51,7 @@ import { reviewsRouter } from './routes/reviews';
 import { courseModulesRouter } from './routes/courseModules';
 import { courseCommentsRouter } from './routes/courseComments';
 import { courseSchedulesRouter } from './routes/courseSchedules';
+import { sertifierRouter } from './routes/sertifier';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -196,6 +197,7 @@ app.use('/api/course_modules', courseModulesRouter);
 app.use('/api/course_comments', courseCommentsRouter);
 app.use('/api/course_schedules', courseSchedulesRouter);
 app.use('/api/reminder_logs', reminderLogsRouter);
+app.use('/api/sertifier', sertifierRouter);
 app.use('/api', genericRouter);
 
 // Middleware de gestion d'erreur centralisée
