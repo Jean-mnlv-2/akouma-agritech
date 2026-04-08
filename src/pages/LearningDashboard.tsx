@@ -19,6 +19,7 @@ import {
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
 import CourseScheduleManager from "@/components/elearning/CourseScheduleManager";
+import StudentBadges from "@/components/elearning/StudentBadges";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -382,13 +383,48 @@ const LearningDashboard = () => {
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-8">
-            {/* Certificates and existing content */}
+            {/* Badges */}
+            <StudentBadges
+              completedCourses={enrolledCourses.filter(c => c.progress >= 100).length}
+              totalModulesCompleted={stats.completedModules}
+              averageScore={stats.averageScore}
+              totalHours={stats.totalHours}
+              streak={3}
+            />
+
+            {/* Certificates */}
             <section>
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-yellow-500" />
                 Mes certificats
               </h2>
-              {/* Existing certificates UI */}
+              {enrolledCourses.filter(c => c.progress >= 100).length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>Terminez un cours pour obtenir votre premier certificat !</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {enrolledCourses.filter(c => c.progress >= 100).map(course => (
+                    <Card key={course.id} className="border-yellow-200 dark:border-yellow-800 bg-gradient-to-br from-yellow-50/50 to-orange-50/30 dark:from-yellow-950/10 dark:to-orange-950/5">
+                      <CardContent className="p-4 flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                          <Trophy className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-sm">{course.title}</h3>
+                          <p className="text-xs text-muted-foreground">Complété le {new Date(course.lastAccessed).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/elearning/${course.id}/learn`)}>
+                          Voir
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </section>
           </TabsContent>
         </Tabs>
