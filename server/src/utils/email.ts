@@ -126,6 +126,48 @@ export const emailService = {
     }
   },
 
+  async sendAbsenceNotification(data: {
+    email: string;
+    userName: string;
+    courseTitle: string;
+    totalAbsences: number;
+    penaltyApplied: boolean;
+    currentProgress: number;
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configuré. Notification absence pour', data.email, '- absences:', data.totalAbsences);
+      return;
+    }
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject: `⚠️ KILIMO - ${data.totalAbsences} absences sur "${data.courseTitle}"`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+            <h1 style="color: #dc2626; margin-top: 0;">⚠️ Avertissement d'absences</h1>
+            <p>Bonjour ${data.userName},</p>
+            <p>Vous avez accumulé <strong>${data.totalAbsences} absences</strong> pour le cours <strong>"${data.courseTitle}"</strong>.</p>
+            ${data.penaltyApplied ? `
+              <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #fecaca;">
+                <p style="margin: 0; font-weight: bold; color: #991b1b;">📉 Pénalité appliquée</p>
+                <p style="margin: 8px 0 0 0; color: #b91c1c;">Votre progression a été réduite. Progression actuelle : <strong>${Math.round(data.currentProgress)}%</strong></p>
+                <p style="margin: 8px 0 0 0; color: #b91c1c; font-size: 13px;">Chaque absence supplémentaire entraînera une pénalité de -10% sur votre progression.</p>
+              </div>
+            ` : ''}
+            <p>Nous vous encourageons à respecter vos créneaux planifiés pour maintenir votre progression et obtenir votre certificat.</p>
+            <a href="${env.FRONTEND_ORIGINS[0]}/dashboard/learning" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Accéder à mon espace</a>
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 13px; color: #6b7280; margin-bottom: 0;">KILIMO Agritech — Système de suivi des présences</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error('[EMAIL] Erreur envoi notification absence:', error);
+    }
+  },
+
   async sendPromoCashbackNotification(data: {
     ownerEmail: string;
     ownerName: string;
