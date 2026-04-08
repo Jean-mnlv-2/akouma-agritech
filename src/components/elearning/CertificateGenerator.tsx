@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Award, Download, QrCode, CheckCircle, Share2 } from "lucide-react";
+import { Award, Download, QrCode, CheckCircle, Share2, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/integrations/api/client";
 
 interface CertificateData {
   studentName: string;
@@ -11,6 +13,11 @@ interface CertificateData {
   completionDate: string;
   score: number;
   certificateNumber: string;
+  // Sertifier integration
+  sertifierDesignId?: string;
+  sertifierDetailId?: string;
+  sertifierEmailTemplateId?: string;
+  studentEmail?: string;
 }
 
 interface CertificateGeneratorProps {
@@ -19,9 +26,55 @@ interface CertificateGeneratorProps {
 
 const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
   const { toast } = useToast();
+  const [sertifierStatus, setSertifierStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+  const [sertifierUrl, setSertifierUrl] = useState<string>('');
+
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-    `https://kilimo-agritech.lovable.app/verify-certificate/${data.certificateNumber}`
+    sertifierUrl || `https://kilimo-agritech.lovable.app/verify-certificate/${data.certificateNumber}`
   )}`;
+
+  const handleIssueSertifierCertificate = async () => {
+    if (!data.studentEmail || !data.sertifierDesignId || !data.sertifierDetailId || !data.sertifierEmailTemplateId) {
+      toast({
+        title: "Configuration manquante",
+        description: "Les identifiants Sertifier (design, detail, email template) ne sont pas configurés pour ce cours.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSertifierStatus('loading');
+    try {
+      const res = await api.request('POST', '/api/sertifier/issue-credential', {
+        body: {
+          recipientName: data.studentName,
+          recipientEmail: data.studentEmail,
+          courseName: data.courseName,
+          score: data.score,
+          completionDate: data.completionDate,
+          designId: data.sertifierDesignId,
+          detailId: data.sertifierDetailId,
+          emailTemplateId: data.sertifierEmailTemplateId,
+        },
+      });
+
+      setSertifierStatus('sent');
+      if (res.data?.credentialUrl) {
+        setSertifierUrl(res.data.credentialUrl);
+      }
+      toast({
+        title: "🎓 Certificat Sertifier émis !",
+        description: "Le certificat authentifié a été envoyé par email via Sertifier.",
+      });
+    } catch (e) {
+      setSertifierStatus('error');
+      toast({
+        title: "Erreur Sertifier",
+        description: e instanceof Error ? e.message : "Impossible d'émettre le certificat via Sertifier.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDownloadPDF = () => {
     const printWindow = window.open('', '_blank');
@@ -67,6 +120,7 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
           .qr img { width: 80px; height: 80px; }
           .qr-label { font-size: 10px; color: #999; margin-top: 4px; }
           .cert-number { text-align: center; font-size: 11px; color: #999; margin-top: 12px; letter-spacing: 2px; }
+          .sertifier-badge { text-align: center; font-size: 10px; color: #1E5B37; margin-top: 4px; }
           @media print { body { background: white; } .certificate { border: none; } }
         </style>
       </head>
@@ -98,6 +152,7 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
             <div class="qr">
               <img src="${qrCodeUrl}" alt="QR Code" />
               <div class="qr-label">Scanner pour vérifier</div>
+              ${sertifierStatus === 'sent' ? '<div class="sertifier-badge">🔒 Authentifié par Sertifier</div>' : ''}
             </div>
           </div>
           <div class="cert-number">N° ${data.certificateNumber}</div>
@@ -113,17 +168,19 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
     const shareData = {
       title: `Certificat KILIMO - ${data.courseName}`,
       text: `J'ai obtenu mon certificat KILIMO pour le cours "${data.courseName}" avec un score de ${data.score}% ! 🎓`,
-      url: window.location.href,
+      url: sertifierUrl || window.location.href,
     };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(shareData.text);
+        await navigator.clipboard.writeText(shareData.text + ' ' + shareData.url);
         toast({ title: "Copié !", description: "Le lien a été copié dans le presse-papier." });
       }
     } catch { /* cancelled */ }
   };
+
+  const hasSertifierConfig = data.sertifierDesignId && data.sertifierDetailId && data.sertifierEmailTemplateId && data.studentEmail;
 
   return (
     <Card className="border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 via-orange-50/50 to-yellow-50 dark:from-yellow-950/20 dark:via-orange-950/10 dark:to-yellow-950/20 overflow-hidden">
@@ -150,6 +207,11 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-700">
                   {new Date(data.completionDate).toLocaleDateString('fr-FR')}
                 </Badge>
+                {sertifierStatus === 'sent' && (
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-700">
+                    <ShieldCheck className="w-3 h-3 mr-1" /> Authentifié Sertifier
+                  </Badge>
+                )}
               </div>
             </div>
             <div className="text-center flex-shrink-0">
@@ -170,6 +232,43 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
             <Share2 className="w-5 h-5 mr-2" /> Partager
           </Button>
         </div>
+
+        {/* Sertifier authentication */}
+        {hasSertifierConfig && sertifierStatus !== 'sent' && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <Button
+              onClick={handleIssueSertifierCertificate}
+              variant="outline"
+              size="lg"
+              className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+              disabled={sertifierStatus === 'loading'}
+            >
+              {sertifierStatus === 'loading' ? (
+                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Émission en cours...</>
+              ) : (
+                <><ShieldCheck className="w-5 h-5 mr-2" /> Obtenir le certificat authentifié Sertifier</>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Recevez un certificat vérifié et partageable via la plateforme Sertifier
+            </p>
+          </div>
+        )}
+
+        {sertifierStatus === 'sent' && sertifierUrl && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="w-full border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400"
+            >
+              <a href={sertifierUrl} target="_blank" rel="noreferrer">
+                <ExternalLink className="w-5 h-5 mr-2" /> Voir sur Sertifier
+              </a>
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
