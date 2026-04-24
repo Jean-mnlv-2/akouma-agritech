@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Target, Users, Lightbulb, Globe } from "lucide-react";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 
 const values = [
   {
@@ -196,7 +196,7 @@ const About = () => {
                 {t("about.join.cta.jobs")}
               </Button>
             </Link>
-            <Link to="/contact" className="group">
+            <Link to="/#contact" className="group">
               <Button variant="outline" size="lg" className="w-full sm:w-auto border-2 group-hover:scale-105 transition-transform duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
                 {t("about.join.cta.contact")}
               </Button>

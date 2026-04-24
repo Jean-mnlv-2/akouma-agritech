@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { env } from '../utils/env';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import * as deliveryService from '../services/deliveryService';
 
@@ -66,6 +67,86 @@ deliveriesRouter.post('/assign', authRequired, adminOnly, async (req: Request, r
     res.json(updated);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to assign livreur';
+    res.status(500).json({ error: message });
+  }
+});
+
+deliveriesRouter.post('/estimate', authRequired, async (req: Request, res: Response) => {
+  try {
+    const { dropAddressId, items, cartTotal } = req.body;
+
+    if (!dropAddressId) {
+      return res.status(400).json({ error: 'dropAddressId est requis pour l\'estimation' });
+    }
+
+    const estimate = await deliveryService.getShippingEstimate({
+      pickAddressId: env.DELIVERY_PICK_ADDRESS_ID,
+      dropAddressId,
+      items,
+      cartTotal,
+    });
+
+    res.json({ data: estimate });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Échec de l\'estimation de livraison';
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * POST /api/deliveries/webhook
+ * Webhook receiver for real-time status updates from LeLivreur
+ */
+deliveriesRouter.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    const { id, status, commandeId } = req.body;
+
+    if (!id || !status) {
+      return res.status(400).json({ error: 'Payload webhook invalide' });
+    }
+
+    // Rechercher la commande soit par son ID de livraison partenaire,
+    // soit par son numéro de commande (extrait du commandeId renforcé),
+    // soit par son ID interne si commandeId est un nombre
+    const orderNumberFromId = typeof commandeId === 'string' && commandeId.startsWith('KLM-') 
+      ? commandeId.split('-').slice(0, 3).join('-') // Extrait KLM-XXX-XXX
+      : null;
+
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { deliveryId: id },
+          ...(orderNumberFromId ? [{ orderNumber: orderNumberFromId }] : []),
+          ...(Number.isInteger(Number(commandeId)) ? [{ id: Number(commandeId) }] : [])
+        ]
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Commande non trouvée pour ce webhook' });
+    }
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        deliveryStatus: status,
+        deliveryId: id
+      }
+    });
+
+    await prisma.orderEvent.create({
+      data: {
+        orderId: order.id,
+        type: 'delivery_update',
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        note: `Mise à jour webhook LeLivreur: Statut ${status}`,
+      }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Erreur lors du traitement du webhook livraison';
     res.status(500).json({ error: message });
   }
 });

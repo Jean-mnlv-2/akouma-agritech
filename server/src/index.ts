@@ -11,6 +11,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { env } from './utils/env';
 import { initCronJobs } from './utils/cron';
+import * as deliveryService from './services/deliveryService';
 import { authRouter } from './routes/auth';
 import { countriesRouter } from './routes/countries';
 import { seedsRouter } from './routes/seeds';
@@ -267,6 +268,7 @@ async function bootstrap() {
   try {
     await ensureDefaultAdmin();
     await ensureCoursePreviewTypes(prisma);
+    await deliveryService.ensurePartnerExists();
     initCronJobs();
     app.listen(env.PORT, () => {
       if (env.isDevelopment()) {

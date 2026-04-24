@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Leaf, Star, Package, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
-import { useI18n } from '@/i18n/i18n';
+import { useI18n } from '@/i18n';
 import kilimoLogo from '@/assets/kilimo-logo.png';
 
 interface SeedProduct {

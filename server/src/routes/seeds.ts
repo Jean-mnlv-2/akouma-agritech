@@ -121,7 +121,12 @@ seedsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respo
 
 seedsRouter.post('/:id/reviews', authRequired, async (req: Request, res: Response) => {
   const seedId = Number(req.params.id);
-  const userId = (req as any).userId;
+  const userId = (req as any).user?.id || (req as any).userId;
+  
+  if (!userId) {
+    return res.status(401).json({ error: 'Utilisateur non authentifié' });
+  }
+
   const { rating, comment } = req.body;
 
   if (rating == null || rating < 1 || rating > 5) {

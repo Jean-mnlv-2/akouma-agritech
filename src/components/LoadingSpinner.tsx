@@ -4,12 +4,14 @@ interface LoadingSpinnerProps {
   size?: "small" | "medium" | "large";
   text?: string;
   showIcon?: boolean;
+  className?: string;
 }
 
 const LoadingSpinner = ({ 
   size = "medium", 
   text = "Chargement...",
-  showIcon = true 
+  showIcon = true,
+  className = ""
 }: LoadingSpinnerProps) => {
   const sizeClasses = {
     small: "w-4 h-4",
@@ -24,7 +26,7 @@ const LoadingSpinner = ({
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center p-8 ${containerClasses[size]}`}>
+    <div className={`flex flex-col items-center justify-center p-8 ${containerClasses[size]} ${className}`}>
       <div className="relative">
         {showIcon && (
           <Wheat className={`${sizeClasses[size]} text-primary animate-pulse`} />

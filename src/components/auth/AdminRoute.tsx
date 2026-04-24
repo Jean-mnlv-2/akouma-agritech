@@ -8,6 +8,12 @@ interface AdminRouteProps {
   children: ReactNode;
 }
 
+interface User {
+  email?: string;
+  role?: string;
+  isActive?: boolean;
+}
+
 export default function AdminRoute({ children }: AdminRouteProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,8 +43,8 @@ export default function AdminRoute({ children }: AdminRouteProps) {
         }
 
         // Fallback: verify via API session cookie
-        const { data: { user } } = await api.auth.getUser();
-        console.log("[AdminRoute] API session user:", user?.email, "Role:", (user as any)?.role);
+        const { data: { user } } = await api.auth.getUser() as { data: { user: User | null } };
+        console.log("[AdminRoute] API session user:", user?.email, "Role:", user?.role);
         
         if (!user) {
           console.warn("[AdminRoute] No user session found, redirecting to /auth");
@@ -47,8 +53,8 @@ export default function AdminRoute({ children }: AdminRouteProps) {
           return;
         }
 
-        const role = (user as any)?.role;
-        const isActive = (user as any)?.isActive ?? true;
+        const role = user.role;
+        const isActive = user.isActive ?? true;
 
         if (isActive === false) {
           await api.auth.signOut();

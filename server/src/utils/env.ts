@@ -99,6 +99,19 @@ export const env = {
   DELIVERY_API_URL: process.env.DELIVERY_API_URL || '',
   DELIVERY_API_PUBLIC_KEY: process.env.DELIVERY_API_PUBLIC_KEY || '',
   DELIVERY_API_SECRET_KEY: process.env.DELIVERY_API_SECRET_KEY || '',
+  DELIVERY_PICK_ADDRESS_ID: readEnv('DELIVERY_PICK_ADDRESS_ID', {
+    defaultValue: 'MAIN_WAREHOUSE',
+    description: 'ID de l\'adresse de ramassage par défaut (entrepôt)',
+  }),
+  SHIPPING_FREE_THRESHOLD: readEnv('SHIPPING_FREE_THRESHOLD', {
+    defaultValue: '50000',
+    description: 'Montant minimum pour livraison gratuite (XOF)',
+  }),
+  SHIPPING_BASE_FEE: readEnv('SHIPPING_BASE_FEE', {
+    defaultValue: '5000',
+    description: 'Frais de livraison de base (XOF)',
+  }),
+  SERTIFIER_SECRET_KEY: process.env.SERTIFIER_SECRET_KEY || '',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
   validateSecrets: () => {

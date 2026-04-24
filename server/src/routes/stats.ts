@@ -110,13 +110,13 @@ statsRouter.get('/charts', async (req: Request, res: Response) => {
 
     // Average rating
     const avgRating = reviews.length > 0
-      ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+      ? reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length
       : 0;
 
     res.json({
       data: {
         chartData,
-        totalRevenue30d: orders.reduce((s, o) => s + Number(o.total), 0),
+        totalRevenue30d: orders.reduce((s: number, o: any) => s + Number(o.total), 0),
         ordersByStatus: statusCounts,
         avgRating: Math.round(avgRating * 10) / 10,
         totalOrders30d: orders.length,
@@ -142,28 +142,28 @@ statsRouter.get('/notifications', async (req: Request, res: Response) => {
       }),
       prisma.jobApplication.findMany({
         where: { createdAt: { gte: since } },
-        select: { id: true, fullName: true, position: true, createdAt: true },
+        select: { id: true, fullName: true, careerTitle: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
         take: 20,
       }),
     ]);
 
     const notifications = [
-      ...recentOrders.map(o => ({
+      ...recentOrders.map((o: any) => ({
         id: `order-${o.id}`,
         type: 'order' as const,
         title: `Nouvelle commande #${o.orderNumber}`,
         description: `${o.user?.fullName || o.user?.email || 'Client'} — ${Number(o.total).toLocaleString('fr-FR')} FCFA`,
         createdAt: o.createdAt.toISOString(),
       })),
-      ...recentApplications.map(a => ({
+      ...recentApplications.map((a: any) => ({
         id: `application-${a.id}`,
         type: 'application' as const,
         title: `Nouvelle candidature`,
-        description: `${a.fullName} — ${a.position}`,
+        description: `${a.fullName} — ${a.careerTitle}`,
         createdAt: a.createdAt.toISOString(),
       })),
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 20);
 
     res.json({ data: notifications });
   } catch (e) {

@@ -10,7 +10,7 @@ import NewsSection from "@/components/NewsSection";
 import SeedsSection from "@/components/SeedsSection";
 import ShopSection from "@/components/ShopSection";
 import StatsSection from "@/components/StatsSection";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 const Index = () => {

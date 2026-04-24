@@ -14,12 +14,19 @@ elearningEnrollmentsRouter.get('/', authRequired, async (_req: Request, res: Res
 });
 
 elearningEnrollmentsRouter.post('/', authRequired, async (req: Request, res: Response) => {
-  const { userId, courseId } = req.body || {};
-  if (!userId || !courseId) return res.status(400).json({ error: 'missing fields' });
-  
+  const { courseId } = req.body || {};
+  const userId = req.user?.id;
+
+  if (!userId || !courseId) {
+    return res.status(400).json({ error: 'Missing userId or courseId' });
+  }
+
   try {
     const created = await prisma.eLearningEnrollment.create({
-      data: { userId, courseId: Number(courseId) },
+      data: { 
+        userId: String(userId), 
+        courseId: Number(courseId) 
+      },
     });
     res.status(201).json({ data: created });
   } catch (e) {

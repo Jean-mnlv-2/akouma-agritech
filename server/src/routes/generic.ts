@@ -34,18 +34,15 @@ function ensureTable(table: string): string {
   return table;
 }
 
-// Validation des noms de colonnes pour éviter l'injection SQL
 function isValidColumnName(name: string): boolean {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
 }
 
-// Mapping camelCase → snake_case pour contact_settings
 function mapColumnName(table: string, column: string): string {
   if (table !== 'contact_settings') {
     return column;
   }
   
-  // Mapping spécifique pour contact_settings basé sur le schéma Prisma
   const columnMap: Record<string, string> = {
     'whatsappNumber': 'whatsapp_number',
     'addressLine1': 'address_line1',
@@ -68,7 +65,6 @@ function mapColumnName(table: string, column: string): string {
   return columnMap[column] || column;
 }
 
-// Mapping inverse snake_case → camelCase pour contact_settings (pour les résultats GET)
 function unmapColumnName(table: string, column: string): string {
   if (table !== 'contact_settings') {
     return column;
@@ -97,7 +93,6 @@ function unmapColumnName(table: string, column: string): string {
   return columnMap[column] || column;
 }
 
-// Convertir un objet de snake_case vers camelCase pour contact_settings
 function unmapRow(table: string, row: Record<string, unknown>): Record<string, unknown> {
   if (table !== 'contact_settings') {
     return row;
@@ -116,13 +111,16 @@ function parseOrder(query: Record<string, unknown>): { orderBy?: string; orderDi
   return { orderBy, orderDir };
 }
 
+function shouldManageUpdatedAt(table: string): boolean {
+  return table === 'contact_settings';
+}
+
 // LIST
 genericRouter.get('/:table', async (req: Request, res: Response) => {
   try {
     const table = ensureTable(req.params.table);
     const { orderBy, orderDir } = parseOrder(req.query as Record<string, unknown>);
 
-    // Filtrage simple eq si un seul param (ex: id=..., status=...)
     const filters: Record<string, unknown> = { ...req.query };
     delete filters.orderBy;
     delete filters.orderDir;
@@ -142,13 +140,11 @@ genericRouter.get('/:table', async (req: Request, res: Response) => {
     if (orderBy) {
       orderClause = `ORDER BY "${orderBy}" ${orderDir === 'asc' ? 'asc' : 'desc'}`;
     } else {
-      // Par défaut: si created_at existe, trier dessus desc
       orderClause = `ORDER BY 1`;
     }
 
     const sql = `SELECT * FROM "${table}" ${whereClause} ${orderClause}`;
     const rows = await prisma.$queryRawUnsafe(sql, ...values) as Array<Record<string, unknown>>;
-    // Mapper les résultats de snake_case vers camelCase pour contact_settings
     const mappedRows = rows.map(row => unmapRow(table, row));
     res.json({ data: mappedRows });
   } catch (e) {
@@ -169,7 +165,6 @@ genericRouter.post('/:table', authRequired, adminOnly, async (req: Request, res:
     
     const mappedKeys = keys.map(k => mapColumnName(table, k));
     
-    // Exclure les champs qui ne doivent pas être insérés (comme id, createdAt, updatedAt)
     const filteredCols: string[] = [];
     const filteredParams: string[] = [];
     const filteredValues: unknown[] = [];
@@ -193,10 +188,14 @@ genericRouter.post('/:table', authRequired, adminOnly, async (req: Request, res:
     if (filteredCols.length === 0) {
       return res.status(400).json({ error: 'No valid fields to insert (excluding auto-managed fields)' });
     }
+
+    if (shouldManageUpdatedAt(table) && !filteredCols.includes('"updated_at"')) {
+      filteredCols.push('"updated_at"');
+      filteredParams.push('NOW()');
+    }
     
     const sql = `INSERT INTO "${table}" (${filteredCols.join(', ')}) VALUES (${filteredParams.join(', ')}) RETURNING *`;
     const rows = await prisma.$queryRawUnsafe(sql, ...filteredValues) as Array<Record<string, unknown>>;
-    // Mapper les résultats de snake_case vers camelCase pour contact_settings
     const mappedRow = unmapRow(table, rows[0]);
     res.status(201).json({ data: mappedRow });
   } catch (e) {
@@ -216,25 +215,20 @@ genericRouter.put('/:table/:id', authRequired, adminOnly, async (req: Request, r
     const keys = Object.keys(body).filter(k => isValidColumnName(k));
     if (keys.length === 0) return res.status(400).json({ error: 'No fields to update' });
     
-    // Mapper les noms de colonnes (camelCase → snake_case pour contact_settings)
     const mappedKeys = keys.map(k => mapColumnName(table, k));
     
-    // Convertir les valeurs de date si nécessaire et exclure les champs auto-gérés
     const processedKeys: string[] = [];
     const processedValues: unknown[] = [];
     mappedKeys.forEach((mappedKey, idx) => {
-      // Ne pas mettre à jour id, createdAt (updatedAt est géré automatiquement par le trigger)
       if (mappedKey !== 'id' && mappedKey !== 'created_at') {
         const originalKey = keys[idx];
         const val = body[originalKey];
         let processedVal = val;
         
-        // Si c'est une chaîne qui ressemble à une date ISO et que le nom de colonne contient 'At' ou 'Date'
         if (typeof val === 'string' && (mappedKey.includes('_at') || mappedKey.includes('_date') || mappedKey.includes('At') || mappedKey.includes('Date')) && val.match(/^\d{4}-\d{2}-\d{2}/)) {
           processedVal = new Date(val);
         }
         
-        // Sécurité pour les entiers (id, etc) passés en string par le front
         const idVal = Number(id);
         const finalId = isNaN(idVal) ? id : idVal;
         
@@ -247,14 +241,16 @@ genericRouter.put('/:table/:id', authRequired, adminOnly, async (req: Request, r
       return res.status(400).json({ error: 'No fields to update (excluding auto-managed fields)' });
     }
     
-    // Détection du type d'ID (Int vs UUID) pour la clause WHERE
     const idVal = Number(id);
     const finalId = !isNaN(idVal) && String(idVal) === id ? idVal : id;
     
-    const setClause = processedKeys.map((k, i) => `"${k}" = $${i + 1}`).join(', ');
+    const setParts = processedKeys.map((k, i) => `"${k}" = $${i + 1}`);
+    if (shouldManageUpdatedAt(table)) {
+      setParts.push(`"updated_at" = NOW()`);
+    }
+    const setClause = setParts.join(', ');
     const sql = `UPDATE "${table}" SET ${setClause} WHERE "id" = $${processedKeys.length + 1} RETURNING *`;
     const rows = await prisma.$queryRawUnsafe(sql, ...processedValues, finalId) as Array<Record<string, unknown>>;
-    // Mapper les résultats de snake_case vers camelCase pour contact_settings
     const mappedRow = unmapRow(table, rows[0]);
     res.json({ data: mappedRow });
   } catch (e) {
@@ -272,7 +268,6 @@ genericRouter.delete('/:table/:id', authRequired, adminOnly, async (req: Request
       return res.status(400).json({ error: 'Invalid id parameter' });
     }
     
-    // Détection du type d'ID (Int vs UUID)
     const idVal = Number(id);
     const finalId = !isNaN(idVal) && String(idVal) === id ? idVal : id;
     

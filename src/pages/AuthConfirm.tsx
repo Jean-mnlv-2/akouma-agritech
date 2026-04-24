@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/integrations/api/client";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 
 export default function AuthConfirm() {
   const navigate = useNavigate();

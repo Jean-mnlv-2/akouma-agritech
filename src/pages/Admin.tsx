@@ -4,7 +4,6 @@ import { Star as StarIcon } from 'lucide-react';
 import { api } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
 import { 
   Loader2, 
   LogOut, 
@@ -131,19 +130,13 @@ function AdminContent() {
     totalSubmissions: 0
   });
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     let isMounted = true;
-    const checkAuth = async () => {
+    const loadUser = async () => {
       try {
         const { data: { user } } = await api.auth.getUser();
-        if (!isMounted) return;
-        
-        if (!user) {
-          navigate('/auth');
-          return;
-        }
+        if (!isMounted || !user) return;
 
         setUser({ 
           email: user.email, 
@@ -151,38 +144,25 @@ function AdminContent() {
           allowedModules: user.allowedModules || [] 
         });
         
-        const isAuthorizedAdmin = user.role === 'admin';
-        const isAuthorizedSupervisor = user.role === 'supervisor';
+        setIsAdmin(user.role === 'admin');
+        setIsSupervisor(user.role === 'supervisor');
         
-        if (!isAuthorizedAdmin && !isAuthorizedSupervisor) {
-          toast({ title: "Accès refusé", description: "Vous n'avez pas les permissions pour accéder à cette page.", variant: "destructive" });
-          navigate('/auth');
-          return;
-        }
-
-        setIsAdmin(isAuthorizedAdmin);
-        setIsSupervisor(isAuthorizedSupervisor);
-        
-        // Si c'est un superviseur, on le redirige vers son premier module autorisé s'il n'est pas sur 'users'
-        if (isAuthorizedSupervisor && !isAuthorizedAdmin) {
+        if (user.role === 'supervisor' && user.role !== 'admin') {
           const modules = user.allowedModules || [];
           if (modules.length > 0 && !modules.includes('users')) {
             setActiveTab(modules[0]);
           }
         }
       } catch (error) {
-        if (isMounted) {
-          console.error('Error checking auth:', error);
-          navigate('/auth');
-        }
+        console.error('Error loading user:', error);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    checkAuth();
+    loadUser();
     return () => { isMounted = false; };
-  }, [navigate, toast]);
+  }, []);
 
   // Filtrer les onglets selon les permissions
   const visibleTabs = tabs.filter(tab => {

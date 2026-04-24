@@ -70,18 +70,45 @@ interface Order {
   };
 }
 
+const normalizeOrder = (order: Partial<Order> | null | undefined): Order => ({
+  id: Number(order?.id ?? 0),
+  orderNumber: order?.orderNumber ?? '',
+  status: order?.status ?? 'pending',
+  paymentStatus: order?.paymentStatus ?? 'pending',
+  paymentMethod: order?.paymentMethod,
+  subtotal: Number(order?.subtotal ?? 0),
+  shipping: Number(order?.shipping ?? 0),
+  discount: Number(order?.discount ?? 0),
+  total: Number(order?.total ?? 0),
+  shippingAddress: order?.shippingAddress,
+  shippingCity: order?.shippingCity,
+  shippingCountry: order?.shippingCountry,
+  shippingPhone: order?.shippingPhone,
+  notes: order?.notes,
+  deliveryId: order?.deliveryId,
+  deliveryStatus: order?.deliveryStatus,
+  createdAt: order?.createdAt ?? new Date(0).toISOString(),
+  updatedAt: order?.updatedAt ?? new Date(0).toISOString(),
+  promoCode: order?.promoCode ?? null,
+  items: Array.isArray(order?.items) ? order.items : [],
+  events: Array.isArray(order?.events) ? order.events : [],
+  user: order?.user,
+});
+
 export function AdminOrders() {
   const queryClient = useQueryClient();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const selectedOrderItems = Array.isArray(selectedOrder?.items) ? selectedOrder.items : [];
+  const selectedOrderEvents = Array.isArray(selectedOrder?.events) ? selectedOrder.events : [];
 
   const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ['admin', 'orders'],
     queryFn: async () => {
       const res = await api.request('GET', '/api/orders');
       const items = Array.isArray(res) ? res : res.data;
-      return items || [];
+      return Array.isArray(items) ? items.map((item) => normalizeOrder(item)) : [];
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
@@ -100,7 +127,7 @@ export function AdminOrders() {
     onSuccess: (res: { data?: Order }) => {
       toast({ title: 'Succès', description: 'Statut de la commande mis à jour' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
-      const updated = res?.data;
+      const updated = res?.data ? normalizeOrder(res.data) : null;
       if (updated && selectedOrder?.id === updated.id) {
         setSelectedOrder(updated);
       }
@@ -324,7 +351,7 @@ export function AdminOrders() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {selectedOrder.items.map((item) => (
+                      {selectedOrderItems.map((item) => (
                         <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg">
                           {item.imageUrl && (
                             <img
@@ -436,10 +463,10 @@ export function AdminOrders() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
-                      {selectedOrder.events.length === 0 ? (
+                      {selectedOrderEvents.length === 0 ? (
                         <div className="text-sm text-muted-foreground">Aucun événement enregistré pour cette commande.</div>
                       ) : (
-                        selectedOrder.events
+                        selectedOrderEvents
                           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                           .map((event) => (
                             <div key={event.id} className="border border-border rounded-lg p-3">

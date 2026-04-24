@@ -10,7 +10,7 @@ import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import TitleManager from "@/components/TitleManager";
 import { api } from "@/integrations/api/client";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { 
   BookOpen, Clock, Play, CheckCircle, 

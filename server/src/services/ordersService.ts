@@ -1,7 +1,9 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { env } from '../utils/env';
 import * as deliveryService from './deliveryService';
 import { logger } from '../utils/logger';
 import { emailService } from '../utils/email';
+import { randomUUID, createHash } from 'crypto';
 
 export type DeliveryMethod = 'PICKUP' | 'DELIVERY';
 export const DeliveryMethod: { PICKUP: 'PICKUP'; DELIVERY: 'DELIVERY' } = {
@@ -25,6 +27,8 @@ export type CreateOrderPayload = {
   items: NormalizedOrderItem[];
   shippingAddress?: string | null;
   shippingCity?: string | null;
+  shippingState?: string | null;
+  shippingZipCode?: string | null;
   shippingCountry?: string | null;
   shippingPhone?: string | null;
   paymentMethod?: string | null;
@@ -32,6 +36,7 @@ export type CreateOrderPayload = {
   promoCode?: string | null;
   deliveryMethod: DeliveryMethod;
   deliveryPartnerId?: number | null;
+  shippingFee?: number | null;
 };
 
 export class OrdersService {
@@ -48,16 +53,20 @@ export class OrdersService {
   }
 
   calculateShipping(subtotal: number, deliveryMethod: DeliveryMethod, partner?: { baseRate: any | null }): number {
+    // Si retrait sur place, c'est gratuit
     if (deliveryMethod === 'PICKUP') return 0;
+
+    // Si le panier est vide ou invalide, pas de frais calculables
+    if (!Number.isFinite(subtotal) || subtotal <= 0) return 0;
+
     if (partner?.baseRate != null) {
       const rate = Number(partner.baseRate);
       if (Number.isFinite(rate) && rate >= 0) {
         return rate;
       }
     }
-    if (!Number.isFinite(subtotal)) return 0;
-    if (subtotal > 50000) return 0;
-    return 5000;
+
+    return 0;
   }
 
   calculateDiscountAmount(subtotal: number, promo: { discountType: DiscountType; discountValue: any }): number {
@@ -133,20 +142,32 @@ export class OrdersService {
     let deliveryPartnerNumericId: number | null = null;
 
     if (payload.deliveryMethod === DeliveryMethod.DELIVERY) {
-      const numericPartnerId = Number(payload.deliveryPartnerId);
-      if (!Number.isFinite(numericPartnerId)) {
-        throw new Error('Un partenaire de livraison valide est requis.');
+      // Si aucun partenaire n'est fourni, on essaie d'assigner "Le Livreur" par défaut
+      let targetPartnerId = payload.deliveryPartnerId;
+      
+      if (targetPartnerId == null) {
+        const defaultPartner = await deliveryService.ensurePartnerExists();
+        if (defaultPartner) {
+          targetPartnerId = defaultPartner.id;
+        }
       }
-      deliveryPartnerRecord = await this.prisma.deliveryPartner.findFirst({
-        where: { id: numericPartnerId, isActive: true },
-      });
-      if (!deliveryPartnerRecord) {
-        throw new Error('Partenaire de livraison introuvable ou inactif.');
+
+      if (targetPartnerId != null) {
+        const numericPartnerId = Number(targetPartnerId);
+        if (Number.isFinite(numericPartnerId)) {
+          deliveryPartnerRecord = await this.prisma.deliveryPartner.findFirst({
+            where: { id: numericPartnerId, isActive: true },
+          });
+          if (deliveryPartnerRecord) {
+            deliveryPartnerNumericId = deliveryPartnerRecord.id;
+          }
+        }
       }
-      deliveryPartnerNumericId = deliveryPartnerRecord.id;
     }
 
-    const shippingAmount = this.calculateShipping(computedSubtotal, payload.deliveryMethod, deliveryPartnerRecord || undefined);
+    const shippingAmount = payload.shippingFee != null && Number.isFinite(payload.shippingFee)
+      ? Number(payload.shippingFee)
+      : this.calculateShipping(computedSubtotal, payload.deliveryMethod, deliveryPartnerRecord || undefined);
 
     const order = await this.prisma.$transaction(async (tx: any) => {
       let promoRecord: { id: number; code: string; cashbackPercent: number; ownerEmail: string | null; ownerName: string | null } | null = null;
@@ -183,6 +204,8 @@ export class OrdersService {
           total,
           shippingAddress: payload.shippingAddress || null,
           shippingCity: payload.shippingCity || null,
+          shippingState: payload.shippingState || null,
+          shippingZipCode: payload.shippingZipCode || null,
           shippingCountry: payload.shippingCountry || null,
           shippingPhone: payload.shippingPhone || null,
           notes: payload.notes || null,
@@ -302,13 +325,26 @@ export class OrdersService {
 
       logger.info(`[OrdersService] Creating delivery for order ${order.orderNumber}`);
 
+      // Création d'un UUID déterministe basé sur l'ID de commande pour renforcer l'ID technique
+      const orderUuid = createHash('md5').update(`ORDER-${order.id}`).digest('hex');
+      const reinforcedCommandeId = `${order.orderNumber}-${orderUuid}`;
+
       // Create delivery directly
       const delivery = await deliveryService.createDelivery({
-        commandeId: String(order.id),
-        pickAddressId: process.env.DELIVERY_PICK_ADDRESS_ID || 'warehouse_default', 
-        dropAddressId: order.shippingAddress || 'customer_address_missing',
+        commandeId: reinforcedCommandeId, // ID renforcé : KLM-XXX-XXX + UUID déterministe
+        referenceExterne: order.orderNumber, // Référence interne courte
+        pickAddressId: env.DELIVERY_PICK_ADDRESS_ID, 
+        dropAddressId: `${order.shippingAddress}, ${order.shippingZipCode || ''} ${order.shippingCity}, ${order.shippingState || ''}, ${order.shippingCountry}`.replace(/ ,/g, '').replace(/,,/g, ','),
+        customerPhone: order.shippingPhone || (order.user as any)?.phone,
+        items: order.items.map(item => ({
+          id: String(item.productId),
+          quantity: item.quantity,
+          unitPrice: Number(item.price),
+          name: item.name
+        })),
+        notes: order.notes,
         distanceKm: 0,
-        etaMinutes: 30,
+        etaMinutes: 1, // Valeur par défaut doc
       });
 
       // 3. Update order with delivery info

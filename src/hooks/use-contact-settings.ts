@@ -43,15 +43,15 @@ export function useContactSettings() {
         const list = Array.isArray(body) ? body : body.data;
         const first = (list && list[0]) || null;
         if (!cancelled) setData(first);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || 'Error');
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Error');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [apiBaseUrl]);
 
   return { data, loading, error };
 }

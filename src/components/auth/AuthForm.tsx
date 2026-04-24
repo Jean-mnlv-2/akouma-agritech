@@ -78,6 +78,8 @@ export const AuthForm = () => {
         // Store session info for AdminRoute to use immediately after redirect
         sessionStorage.setItem('kilimo_auth_user', JSON.stringify(user));
 
+        window.dispatchEvent(new Event('auth-change'));
+
         if (role === 'admin') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
           console.log("[AuthForm] Redirecting to /admin...");

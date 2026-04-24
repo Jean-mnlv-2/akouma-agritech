@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from "lucide-react";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 import { useContactSettings } from "@/hooks/use-contact-settings";
 
 const Footer = () => {

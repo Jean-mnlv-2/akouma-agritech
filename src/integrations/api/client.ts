@@ -15,7 +15,13 @@ function getApiBaseUrl(): string {
     return window.location.origin;
   }
   
-  // En développement: fallback vers localhost
+  // En développement Docker ou local:
+  // Si on est sur le port 8080 (Docker), on utilise le proxy Nginx (même origine)
+  if (window.location.port === '8080') {
+    return window.location.origin;
+  }
+  
+  // Fallback vers localhost:4000 (développement sans Docker)
   return 'http://localhost:4000';
 }
 

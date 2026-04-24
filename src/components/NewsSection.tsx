@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, User, ArrowRight, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
-import { useI18n } from '@/i18n/i18n';
+import { useI18n } from '@/i18n';
 import DOMPurify from 'dompurify';
 
 interface NewsItem {

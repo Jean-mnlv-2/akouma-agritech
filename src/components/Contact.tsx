@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { MapPin, Phone, Mail, Clock, Briefcase } from "lucide-react";
 import { ContactForm } from "@/components/forms/ContactForm";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 import { useContactSettings } from "@/hooks/use-contact-settings";
 
 const buildContactInfo = (contact?: { city?: string | null; addressLine1?: string | null; phone?: string | null; whatsappNumber?: string | null; email?: string | null; }) => ([

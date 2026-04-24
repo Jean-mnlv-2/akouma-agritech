@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart, Star, Package, ArrowRight, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
-import { useI18n } from '@/i18n/i18n';
+import { useI18n } from '@/i18n';
 
 interface Product {
   id: string;

@@ -1,11 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, ComposedChart } from 'recharts';
 import { api } from '@/integrations/api/client';
 import { Loader2, TrendingUp, DollarSign, Star, ShoppingCart, Download, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChartStats {
   chartData: { date: string; orders: number; revenue: number; reviews: number; applications: number }[];
@@ -42,6 +43,7 @@ const chartConfig = {
 type PeriodDays = '7' | '30' | '90';
 
 export function AdminDashboardCharts() {
+  const { toast } = useToast();
   const [data, setData] = useState<ChartStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodDays>('30');
@@ -51,9 +53,17 @@ export function AdminDashboardCharts() {
     setLoading(true);
     api.request('GET', '/api/stats/charts', { params: { days } })
       .then((res: { data: ChartStats }) => setData(res.data))
-      .catch(console.error)
+      .catch((error: unknown) => {
+        console.error(error);
+        setData(null);
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de charger les statistiques du tableau de bord.',
+          variant: 'destructive',
+        });
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [toast]);
 
   useEffect(() => { fetchData(period); }, [period, fetchData]);
 
@@ -114,6 +124,71 @@ export function AdminDashboardCharts() {
     }
   };
 
+  const formatDate = (d: string) => {
+    const date = new Date(d);
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  };
+
+  const formatFullDate = (d: string) => {
+    const date = new Date(d);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const formatCompactCurrency = (value: number) => {
+    if (value >= 1_000_000) {
+      return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+    }
+    if (value >= 1_000) {
+      return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}k`;
+    }
+    return value.toLocaleString('fr-FR');
+  };
+
+  const chartData = useMemo(() => {
+    const rawData = data?.chartData ?? [];
+    if (!Array.isArray(rawData)) return [];
+    
+    return rawData.map((item) => ({
+      ...item,
+      orders: Number(item.orders || 0),
+      revenue: Number(item.revenue || 0),
+      reviews: Number(item.reviews || 0),
+      applications: Number(item.applications || 0),
+      dateLabel: formatDate(item.date),
+    }));
+  }, [data?.chartData]);
+
+  const totals = useMemo(() => (
+    chartData.reduce((acc, item) => ({
+      orders: acc.orders + item.orders,
+      revenue: acc.revenue + item.revenue,
+      reviews: acc.reviews + item.reviews,
+      applications: acc.applications + item.applications,
+    }), { orders: 0, revenue: 0, reviews: 0, applications: 0 })
+  ), [chartData]);
+
+  const hasActivity = useMemo(() => 
+    chartData.length > 0 && chartData.some((item) =>
+      item.orders > 0 || item.revenue > 0 || item.reviews > 0 || item.applications > 0
+    ), [chartData]);
+
+  const pieData = useMemo(() => {
+    const statusEntries = Object.entries(data?.ordersByStatus ?? {});
+    if (statusEntries.length === 0) return [];
+
+    return statusEntries.map(([status, count]) => ({
+      name: STATUS_LABELS[status] || status,
+      value: Number(count || 0),
+      fill: STATUS_COLORS[status] || 'hsl(var(--muted))',
+    })).filter(item => item.value > 0);
+  }, [data?.ordersByStatus]);
+
+  const periodLabel = period === '7' ? '7 jours' : period === '30' ? '30 jours' : '90 jours';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -123,19 +198,6 @@ export function AdminDashboardCharts() {
   }
 
   if (!data) return null;
-
-  const formatDate = (d: string) => {
-    const date = new Date(d);
-    return `${date.getDate()}/${date.getMonth() + 1}`;
-  };
-
-  const pieData = Object.entries(data.ordersByStatus).map(([status, count]) => ({
-    name: STATUS_LABELS[status] || status,
-    value: count,
-    fill: STATUS_COLORS[status] || 'hsl(var(--muted))',
-  }));
-
-  const periodLabel = period === '7' ? '7 jours' : period === '30' ? '30 jours' : '90 jours';
 
   return (
     <div className="space-y-6">
@@ -165,7 +227,7 @@ export function AdminDashboardCharts() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Commandes ({periodLabel})</p>
-              <p className="text-2xl font-bold">{data.chartData.reduce((s, i) => s + i.orders, 0)}</p>
+              <p className="text-2xl font-bold">{totals.orders}</p>
             </div>
           </CardContent>
         </Card>
@@ -176,7 +238,7 @@ export function AdminDashboardCharts() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Revenus ({periodLabel})</p>
-              <p className="text-2xl font-bold">{data.chartData.reduce((s, i) => s + i.revenue, 0).toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span></p>
+              <p className="text-2xl font-bold">{totals.revenue.toLocaleString('fr-FR')} <span className="text-sm font-normal">FCFA</span></p>
             </div>
           </CardContent>
         </Card>
@@ -198,13 +260,22 @@ export function AdminDashboardCharts() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Avis ({periodLabel})</p>
-              <p className="text-2xl font-bold">{data.chartData.reduce((s, i) => s + i.reviews, 0)}</p>
+              <p className="text-2xl font-bold">{totals.reviews}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {!hasActivity && (
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            Aucune activite enregistree sur la periode selectionnee.
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts */}
+      {hasActivity && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -213,13 +284,61 @@ export function AdminDashboardCharts() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
-              <BarChart data={data.chartData}>
+              <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                <XAxis dataKey="date" tickFormatter={formatDate} className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="orders" fill="var(--color-orders)" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatDate}
+                  className="text-xs"
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  minTickGap={24}
+                />
+                <YAxis
+                  yAxisId="orders"
+                  allowDecimals={false}
+                  width={42}
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                />
+                <YAxis
+                  yAxisId="revenue"
+                  orientation="right"
+                  width={52}
+                  tickFormatter={formatCompactCurrency}
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                />
+                <ChartTooltip
+                  content={(
+                    <ChartTooltipContent
+                      labelFormatter={(_, payload) => {
+                        const point = payload?.[0]?.payload;
+                        return point?.date ? formatFullDate(point.date) : '';
+                      }}
+                      formatter={(value, name) => (
+                        <div className="flex w-full items-center justify-between gap-4">
+                          <span className="text-muted-foreground">
+                            {name === 'orders' ? 'Commandes' : 'Revenus'}
+                          </span>
+                          <span className="font-mono font-medium text-foreground">
+                            {name === 'revenue'
+                              ? `${Number(value).toLocaleString('fr-FR')} FCFA`
+                              : Number(value).toLocaleString('fr-FR')}
+                          </span>
+                        </div>
+                      )}
+                    />
+                  )}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar yAxisId="orders" dataKey="orders" fill="var(--color-orders)" radius={[4, 4, 0, 0]} />
+                <Line
+                  yAxisId="revenue"
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="var(--color-revenue)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </ComposedChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -231,11 +350,21 @@ export function AdminDashboardCharts() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
-              <LineChart data={data.chartData}>
+              <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: 'hsl(var(--muted-foreground))' }} minTickGap={24} />
+                <YAxis allowDecimals={false} width={42} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                <ChartTooltip
+                  content={(
+                    <ChartTooltipContent
+                      labelFormatter={(_, payload) => {
+                        const point = payload?.[0]?.payload;
+                        return point?.date ? formatFullDate(point.date) : '';
+                      }}
+                    />
+                  )}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
                 <Line type="monotone" dataKey="reviews" stroke="var(--color-reviews)" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="applications" stroke="var(--color-applications)" strokeWidth={2} dot={false} />
               </LineChart>
@@ -252,8 +381,20 @@ export function AdminDashboardCharts() {
             <CardContent className="flex items-center justify-center">
               <ChartContainer config={chartConfig} className="h-[250px] w-full max-w-[300px]">
                 <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  <ChartTooltip
+                    content={(
+                      <ChartTooltipContent
+                        formatter={(value, name) => (
+                          <div className="flex w-full items-center justify-between gap-4">
+                            <span className="text-muted-foreground">{String(name)}</span>
+                            <span className="font-mono font-medium text-foreground">{Number(value).toLocaleString('fr-FR')}</span>
+                          </div>
+                        )}
+                      />
+                    )}
+                  />
+                  <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false}>
                     {pieData.map((entry, i) => (
                       <Cell key={i} fill={entry.fill} />
                     ))}
@@ -271,17 +412,33 @@ export function AdminDashboardCharts() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
-              <BarChart data={data.chartData}>
+              <BarChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: 'hsl(var(--muted-foreground))' }} minTickGap={24} />
+                <YAxis width={56} tickFormatter={formatCompactCurrency} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                <ChartTooltip
+                  content={(
+                    <ChartTooltipContent
+                      labelFormatter={(_, payload) => {
+                        const point = payload?.[0]?.payload;
+                        return point?.date ? formatFullDate(point.date) : '';
+                      }}
+                      formatter={(value) => (
+                        <div className="flex w-full items-center justify-between gap-4">
+                          <span className="text-muted-foreground">Revenus</span>
+                          <span className="font-mono font-medium text-foreground">{Number(value).toLocaleString('fr-FR')} FCFA</span>
+                        </div>
+                      )}
+                    />
+                  )}
+                />
                 <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
   );
 }

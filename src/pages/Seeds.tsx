@@ -10,7 +10,7 @@ import { Search, Leaf, Star, Package, Truck, Shield, RefreshCw, ShoppingCart } f
 import { Link } from "react-router-dom";
 import DOMPurify from 'dompurify';
 import TitleManager from "@/components/TitleManager";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import kilimoLogo from "@/assets/kilimo-logo.png";

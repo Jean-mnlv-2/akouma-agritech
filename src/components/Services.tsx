@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Cpu, CloudRain, BarChart3, Leaf, Smartphone, Zap } from "lucide-react";
 import servicesImage from "@/assets/services-tech.jpg";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 
 const services = [
   {

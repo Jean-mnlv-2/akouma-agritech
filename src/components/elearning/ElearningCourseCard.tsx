@@ -2,9 +2,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Clock, Users, Award, Star, Eye, GraduationCap, PlayCircle, UserPlus, Download } from "lucide-react";
+import { Clock, Users, Award, Star, Eye, GraduationCap, PlayCircle, UserPlus, Download, CheckCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import DOMPurify from 'dompurify';
+
+interface User {
+  id: string | number;
+  email: string;
+  name?: string;
+}
+
+interface PreviewItem {
+  id: string | number;
+  courseId: number;
+  title: string;
+  description?: string;
+  type: string;
+  url: string;
+  previewType?: {
+    name: string;
+  };
+}
 
 interface CourseCardProps {
   course: {
@@ -23,8 +41,9 @@ interface CourseCardProps {
     instructor: string;
     isPreviewAvailable?: boolean;
   };
-  currentUser: any;
-  previewItems: any[];
+  currentUser: User | null;
+  isEnrolled?: boolean;
+  previewItems: PreviewItem[];
   onEnroll: () => void;
   t: (key: string) => string;
   index: number;
@@ -39,9 +58,9 @@ const getLevelColor = (level: string) => {
   }
 };
 
-const ElearningCourseCard = ({ course, currentUser, previewItems, onEnroll, t, index }: CourseCardProps) => {
+const ElearningCourseCard = ({ course, currentUser, isEnrolled, previewItems, onEnroll, t, index }: CourseCardProps) => {
   const navigate = useNavigate();
-  const coursePreviewItems = previewItems.filter((it: any) => it.courseId === Number(course.id));
+  const coursePreviewItems = previewItems.filter((it: PreviewItem) => it.courseId === Number(course.id));
 
   return (
     <Card className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-1 border border-border overflow-hidden flex flex-col" style={{ transitionDelay: `${index * 50}ms` }}>
@@ -85,36 +104,59 @@ const ElearningCourseCard = ({ course, currentUser, previewItems, onEnroll, t, i
       </CardHeader>
 
       <CardContent className="pt-0">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2 flex-wrap">
-          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{course.duration}</span>
-          <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{course.students} {t("elearning.students_label")}</span>
+        <div className="flex items-center gap-4 text-[11px] text-muted-foreground mb-3 flex-wrap font-medium">
+          <span className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-full"><Clock className="w-3 h-3 text-primary" />{course.duration}</span>
+          <span className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-full"><Users className="w-3 h-3 text-primary" />{course.students} {t("elearning.students_label")}</span>
         </div>
-        <div className="text-sm text-muted-foreground mb-3 flex items-center gap-1">
-          <GraduationCap className="w-3.5 h-3.5" /> {course.instructor}
+        
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+            <GraduationCap className="w-4 h-4 text-primary" />
+          </div>
+          <span className="text-xs font-semibold text-foreground/80">{course.instructor}</span>
         </div>
 
-        <div className="flex items-center justify-between pt-3 border-t border-border mb-3">
-          <span className="text-xl font-bold text-primary">
-            {course.price === "Gratuit" || course.price === "0" ? "Mode Libre" : `${course.price} FCFA`}
-          </span>
+        <div className="flex items-center justify-between pt-4 border-t border-primary/10 mb-4">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("elearning.price_label") || "Prix"}</span>
+            <span className="text-xl font-black text-primary">
+              {course.price === "Gratuit" || course.price === "0" ? (
+                <span className="text-green-600 dark:text-green-400">Gratuit</span>
+              ) : (
+                `${course.price} FCFA`
+              )}
+            </span>
+          </div>
+          {course.price !== "Gratuit" && course.price !== "0" && (
+            <span className="text-xs text-muted-foreground line-through opacity-50 font-medium">
+              {(Number(course.price) * 1.5).toLocaleString()} FCFA
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" className="rounded-xl font-bold border-2 hover:bg-primary/5 hover:border-primary/30 transition-all" asChild>
             <Link to={`/elearning/${course.slug}`}>
-              <Eye className="w-4 h-4 mr-1" />
+              <Eye className="w-4 h-4 mr-1.5" />
               {t("elearning.view_program")}
             </Link>
           </Button>
           <Button
             size="sm"
-            variant={currentUser ? "default" : "nature"}
-            onClick={() => currentUser ? onEnroll() : navigate('/auth')}
+            className="rounded-xl font-bold shadow-md transition-all active:scale-95"
+            variant={isEnrolled ? "outline" : (currentUser ? "default" : "nature")}
+            onClick={() => {
+              if (isEnrolled) return;
+              currentUser ? onEnroll() : navigate('/auth');
+            }}
+            disabled={isEnrolled}
           >
-            {currentUser ? (
-              <><UserPlus className="w-4 h-4 mr-1" />{t("elearning.enroll")}</>
+            {isEnrolled ? (
+              <><CheckCircle className="w-4 h-4 mr-1.5" />{t("elearning.enrolled") || "Inscrit"}</>
+            ) : currentUser ? (
+              <><UserPlus className="w-4 h-4 mr-1.5" />{t("elearning.enroll")}</>
             ) : (
-              <><PlayCircle className="w-4 h-4 mr-1" />Démarrer</>
+              <><PlayCircle className="w-4 h-4 mr-1.5" />Démarrer</>
             )}
           </Button>
         </div>
@@ -135,7 +177,7 @@ const ElearningCourseCard = ({ course, currentUser, previewItems, onEnroll, t, i
                   <DialogDescription>Consultez un extrait du cours avant de vous inscrire.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  {coursePreviewItems.map((item: any) => {
+                  {coursePreviewItems.map((item: PreviewItem) => {
                     const isVideo = item.type === 'video' || item.previewType?.name === 'video';
                     return (
                       <div key={item.id} className="border rounded-lg p-3 space-y-3">

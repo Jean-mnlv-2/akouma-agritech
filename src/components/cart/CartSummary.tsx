@@ -71,8 +71,9 @@ export const CartSummary = () => {
         title: "Code promo appliqué !",
         description: data.description ? data.description : `Réduction de ${data.discountType === 'PERCENTAGE' ? `${data.discountValue}%` : `${formatPrice(data.discountValue)} FCFA`}`,
       });
-    } catch (error: any) {
-      const message = error instanceof Error ? error.message : (error?.error ?? "Code promo invalide");
+    } catch (error: unknown) {
+      const err = error as { message?: string; error?: string };
+      const message = err.message || err.error || "Code promo invalide";
       clearPromo();
       toast({
         title: "Code promo invalide",
@@ -120,12 +121,18 @@ export const CartSummary = () => {
             <span className="text-muted-foreground">Livraison</span>
           </div>
           <div className="text-right">
-            {shipping === 0 ? (
-              <Badge variant="secondary" className="text-green-600">
+            {deliveryMethod === 'PICKUP' ? (
+              <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none px-2 py-0.5 text-[10px] font-bold uppercase">
                 Gratuite
               </Badge>
             ) : (
-              <span>{formatPrice(shipping)} FCFA</span>
+              shipping > 0 ? (
+                <span className="font-bold text-primary text-sm">{formatPrice(shipping)} FCFA</span>
+              ) : (
+                <span className="text-[10px] font-bold text-orange-600 uppercase tracking-tight bg-orange-50 px-2 py-1 rounded">
+                  À calculer selon l'adresse
+                </span>
+              )
             )}
           </div>
         </div>
@@ -150,16 +157,13 @@ export const CartSummary = () => {
           )}
         </div>
 
-        {deliveryMethod === 'DELIVERY' && shipping > 0 && deliveryPartner?.baseRate == null && subtotal < 50000 && (
+        {deliveryMethod === 'DELIVERY' && shipping > 0 && deliveryPartner?.baseRate == null && (
           <div className="bg-muted/50 p-3 rounded-lg text-sm">
             <div className="flex items-center space-x-2 text-muted-foreground">
               <Truck className="w-4 h-4" />
               <span>
-                Livraison gratuite à partir de 50,000 FCFA
+                Frais de livraison estimés par notre partenaire
               </span>
-            </div>
-            <div className="text-primary font-medium mt-1">
-              Plus que {formatPrice(50000 - subtotal)} FCFA !
             </div>
           </div>
         )}

@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { 
   Target, 
   Users, 
@@ -86,7 +87,7 @@ const About = () => {
     { value: "500+", label: "Producteurs accompagnés" },
     { value: "50+", label: "Coopératives partenaires" },
     { value: "15", label: "Régions couvertes" },
-    { value: "98%", label: "Satisfaction client" }
+    { value: "95%", label: "Satisfaction client" }
   ];
 
   return (
@@ -283,11 +284,11 @@ const About = () => {
               avec nos solutions innovantes et notre accompagnement personnalisé.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" className="text-lg px-8">
-                Nous contacter
+              <Button asChild size="lg" variant="secondary" className="text-lg px-8">
+                <Link to="/contact">Nous contacter</Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 border-white/30 text-white hover:bg-white/20">
-                Voir nos services
+              <Button asChild size="lg" variant="outline" className="text-lg px-8 border-white/30 text-white hover:bg-white/20">
+                <Link to="/#services">Voir nos services</Link>
               </Button>
             </div>
           </div>

@@ -1,11 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Star, Play, Clock, Users, BookOpen, CheckCircle, User } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Star, 
+  Play, 
+  Clock, 
+  Users, 
+  BookOpen, 
+  CheckCircle, 
+  User, 
+  ArrowRight, 
+  Award, 
+  Download, 
+  GraduationCap 
+} from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -14,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
+import { useI18n } from "@/i18n";
 
 interface Course {
   id: string;
@@ -43,17 +57,52 @@ interface CourseModule {
   lessons: string[];
 }
 
+interface User {
+  id: string | number;
+  email: string;
+  name?: string;
+}
+
+interface Enrollment {
+  id: number;
+  userId: string | number;
+  courseId: number;
+  enrolledAt: string;
+}
+
+interface EnrollmentFormData {
+  name: string;
+  email: string;
+  phone?: string;
+  experience?: string;
+  motivation?: string;
+  courseId?: string;
+}
+
 const CourseDetail = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const { t } = useI18n();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    api.auth.getUser().then(({ data }: any) => setCurrentUser(data?.user || null));
-  }, []);
+    api.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
+      const user = data?.user || null;
+      setCurrentUser(user);
+      
+      if (user && course) {
+        api.request('GET', '/api/elearning_enrollments').then((res: { data: Enrollment[] }) => {
+          const enrollments = res.data || [];
+          const isEnrolled = enrollments.some((e: Enrollment) => e.courseId === Number(course.id) && String(e.userId) === String(user.id));
+          setEnrolled(isEnrolled);
+        }).catch((err: Error) => console.error("Erreur lors de la vérification de l'inscription:", err));
+      }
+    });
+  }, [course]);
 
   const { isDialogOpen, closeDialog } = useCopyProtection(
     !!course?.isCopyProtected,
@@ -86,7 +135,7 @@ const CourseDetail = () => {
         thumbnail: data.thumbnailUrl || data.imageUrl || '/kilimo-logo.png',
         isLive: !!data.isLive,
         isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
-        modules: Array.isArray(data.modules) ? data.modules.map((m: any, idx: number) => ({
+        modules: Array.isArray(data.modules) ? data.modules.map((m: { id?: number | string; title?: string; duration?: string; lessons?: string[] }, idx: number) => ({
           id: String(m.id ?? idx + 1),
           title: m.title ?? `Module ${idx + 1}`,
           duration: m.duration ?? '—',
@@ -108,22 +157,40 @@ const CourseDetail = () => {
     fetchCourse();
   }, [fetchCourse]);
 
-  const handleEnrollment = async (formData: any) => {
+  const handleEnrollment = async (_formData: EnrollmentFormData) => {
+    if (!currentUser) {
+      toast({
+        title: "Connexion requise",
+        description: "Veuillez vous connecter pour vous inscrire à ce cours.",
+        variant: "destructive"
+      });
+      navigate('/auth');
+      return;
+    }
+
     try {
-      await api.request('POST', '/api/contact_messages', {
+      await api.request('POST', '/api/elearning_enrollments', {
         body: {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone || null,
-          project_type: `Inscription cours: ${course?.title}`,
-          message: `Motivation: ${formData.motivation || '—'}. Expérience: ${formData.experience || '—'}`,
+          courseId: Number(course?.id)
         }
       });
       setEnrolled(true);
-      toast({ title: "Inscription réussie !", description: "Vous recevrez un email de confirmation." });
-    } catch (err) {
+      toast({ 
+        title: "Inscription réussie !", 
+        description: "Vous êtes maintenant inscrit à ce cours. Vous pouvez commencer à apprendre." 
+      });
+    } catch (err: unknown) {
       console.error(err);
-      toast({ title: "Erreur", description: "Impossible de s'inscrire. Réessayez.", variant: "destructive" });
+      let errorMessage = "Impossible de s'inscrire. Réessayez.";
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response: { data?: { error?: string } } };
+        errorMessage = axiosErr.response.data?.error || errorMessage;
+      }
+      toast({ 
+        title: "Erreur", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -322,52 +389,112 @@ const CourseDetail = () => {
           {/* Sidebar - Enhanced */}
           <div className="space-y-6">
             {/* Video/thumbnail preview - Enhanced */}
-            <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500 sticky top-24">
+            <Card className="bg-card/90 backdrop-blur-md border-2 border-primary/10 hover:shadow-2xl transition-all duration-500 sticky top-24 overflow-hidden group">
               <CardContent className="p-0">
-                <div className="aspect-video bg-muted rounded-t-lg relative overflow-hidden group">
-                  <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent flex items-center justify-center">
-                    <Button variant="ghost" size="icon" className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 hover:scale-110 transition-all duration-300">
-                      <Play className="w-10 h-10 text-white" />
+                <div className="aspect-video bg-muted relative overflow-hidden">
+                  <img 
+                    src={course.thumbnail} 
+                    alt={course.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-center">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 hover:scale-110 transition-all duration-300 shadow-2xl"
+                    >
+                      <Play className="w-10 h-10 text-white fill-white/20" />
                     </Button>
                   </div>
+                  <Badge className="absolute top-4 left-4 bg-primary text-white border-none px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-lg">
+                    {course.category}
+                  </Badge>
                 </div>
-                <div className="p-6">
-                  <div className="text-3xl font-bold text-primary mb-4">{formatPrice(course.price)}</div>
-                  {enrolled ? (
-                    <Button className="w-full" disabled>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Inscrit
-                    </Button>
-                  ) : (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button className="w-full">S'inscrire maintenant</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Inscription au cours</DialogTitle>
-                          <DialogDescription>
-                            Veuillez remplir le formulaire ci-dessous pour vous inscrire à ce cours.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <EnrollmentForm onSubmit={handleEnrollment} course={course} />
-                      </DialogContent>
-                    </Dialog>
-                  )}
+                <div className="p-8 space-y-6">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{t("elearning.price_label") || "Prix du cours"}</span>
+                    <div className="text-4xl font-black text-primary flex items-baseline gap-2">
+                      {formatPrice(course.price)}
+                      {course.price !== 0 && <span className="text-sm font-medium text-muted-foreground line-through opacity-50">{(Number(course.price) * 1.5).toLocaleString()} FCFA</span>}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {enrolled ? (
+                      <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary/10 text-primary hover:bg-primary/20 border-none transition-all" disabled>
+                        <CheckCircle className="w-5 h-5 mr-3" />
+                        {t("elearning.enrolled") || "Inscrit"}
+                      </Button>
+                    ) : (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all bg-primary hover:bg-primary/90 text-white border-none group/btn">
+                            {t("elearning.enroll") || "S'inscrire maintenant"}
+                            <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md rounded-2xl border-2 border-primary/10 overflow-hidden p-0">
+                          <div className="bg-primary/5 p-6 border-b-2 border-primary/10">
+                            <DialogTitle className="text-2xl font-bold">{t("elearning.register.title") || "Inscription au cours"}</DialogTitle>
+                            <DialogDescription className="text-muted-foreground mt-2 font-medium">
+                              {t("elearning.register.description") || "Veuillez remplir le formulaire pour commencer votre apprentissage."}
+                            </DialogDescription>
+                          </div>
+                          <div className="p-6">
+                            <EnrollmentForm onSubmit={handleEnrollment} course={course} t={t} />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                    <p className="text-center text-xs text-muted-foreground font-medium flex items-center justify-center gap-2">
+                      <Award className="w-3 h-3" />
+                      Garantie de satisfaction 30 jours
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 pt-6 border-t border-primary/10">
+                    <h4 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Ce qui est inclus :</h4>
+                    <ul className="space-y-3">
+                      <li className="flex items-center gap-3 text-sm font-medium">
+                        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center border border-primary/10">
+                          <Play className="w-4 h-4 text-primary" />
+                        </div>
+                        Accès illimité à vie
+                      </li>
+                      <li className="flex items-center gap-3 text-sm font-medium">
+                        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center border border-primary/10">
+                          <Download className="w-4 h-4 text-primary" />
+                        </div>
+                        Ressources téléchargeables
+                      </li>
+                      <li className="flex items-center gap-3 text-sm font-medium">
+                        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center border border-primary/10">
+                          <Award className="w-4 h-4 text-primary" />
+                        </div>
+                        Certificat de réussite
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Requirements */}
+            {/* Requirements - Enhanced */}
             {course.requirements.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h4 className="font-semibold mb-4">Prérequis</h4>
-                  <ul className="space-y-2">
+              <Card className="bg-card/90 backdrop-blur-sm border-2 border-primary/10 hover:shadow-xl transition-all duration-500 overflow-hidden">
+                <CardContent className="p-8">
+                  <h4 className="font-bold text-lg mb-6 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center border border-accent/20">
+                      <GraduationCap className="w-5 h-5 text-accent" />
+                    </div>
+                    {t("elearning.requirements") || "Prérequis"}
+                  </h4>
+                  <ul className="space-y-4">
                     {course.requirements.map((req, index) => (
-                      <li key={`req-${index}-${req.slice(0, 20)}`} className="text-sm text-muted-foreground flex items-center">
-                        <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
+                      <li key={`req-${index}-${req.slice(0, 20)}`} className="text-sm font-medium text-muted-foreground flex items-start gap-3">
+                        <div className="w-5 h-5 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-accent/20">
+                          <div className="w-2 h-2 bg-accent rounded-full"></div>
+                        </div>
                         {req}
                       </li>
                     ))}
@@ -383,7 +510,7 @@ const CourseDetail = () => {
           <div className="mt-12">
             <CourseComments
               courseId={Number(course.id)}
-              currentUserId={currentUser?.id}
+              currentUserId={currentUser?.id ? String(currentUser.id) : undefined}
             />
           </div>
         )}
@@ -394,7 +521,7 @@ const CourseDetail = () => {
 };
 
 // Enrollment form component
-const EnrollmentForm = ({ onSubmit, course }: { onSubmit: (data: any) => void; course: Course }) => {
+const EnrollmentForm = ({ onSubmit, course, t }: { onSubmit: (data: EnrollmentFormData) => void; course: Course; t: (key: string) => string }) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -403,19 +530,77 @@ const EnrollmentForm = ({ onSubmit, course }: { onSubmit: (data: any) => void; c
     motivation: ""
   });
 
+  useEffect(() => {
+    api.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
+      if (data?.user) {
+        const user = data.user;
+        setFormData(prev => ({
+          ...prev,
+          name: user.name || prev.name,
+          email: user.email || prev.email,
+        }));
+      }
+    });
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({ ...formData, courseId: course.id });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Input placeholder="Nom complet *" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-      <Input type="email" placeholder="Email *" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
-      <Input placeholder="Téléphone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-      <Input placeholder="Votre expérience en agriculture" value={formData.experience} onChange={(e) => setFormData({ ...formData, experience: e.target.value })} />
-      <textarea placeholder="Pourquoi souhaitez-vous suivre ce cours ?" value={formData.motivation} onChange={(e) => setFormData({ ...formData, motivation: e.target.value })} className="w-full p-3 border rounded-lg resize-none h-20" />
-      <Button type="submit" className="w-full">Confirmer l'inscription</Button>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.name") || "Nom complet"}</label>
+        <Input 
+          placeholder={t("elearning.register.name_placeholder") || "Votre nom complet"} 
+          value={formData.name} 
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
+          required 
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.email") || "Email"}</label>
+        <Input 
+          type="email" 
+          placeholder={t("elearning.register.email_placeholder") || "votre@email.com"} 
+          value={formData.email} 
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
+          required 
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.phone") || "Téléphone"}</label>
+        <Input 
+          placeholder={t("elearning.register.phone_placeholder") || "Votre numéro de téléphone"} 
+          value={formData.phone} 
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience") || "Expérience"}</label>
+        <Input 
+          placeholder={t("elearning.register.experience_placeholder") || "Votre expérience en agriculture"} 
+          value={formData.experience} 
+          onChange={(e) => setFormData({ ...formData, experience: e.target.value })} 
+          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.motivation") || "Motivation"}</label>
+        <textarea 
+          placeholder={t("elearning.register.motivation_placeholder") || "Pourquoi souhaitez-vous suivre ce cours ?"} 
+          value={formData.motivation} 
+          onChange={(e) => setFormData({ ...formData, motivation: e.target.value })} 
+          className="w-full p-4 border-2 rounded-xl focus:border-primary transition-all bg-background resize-none h-28 focus:outline-none" 
+        />
+      </div>
+      <Button type="submit" className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white mt-4">
+        {t("elearning.register.submit") || "Confirmer l'inscription"}
+      </Button>
     </form>
   );
 };

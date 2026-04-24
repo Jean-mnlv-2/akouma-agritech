@@ -10,11 +10,24 @@ eventsRouter.get('/', async (_req: Request, res: Response) => {
     const items = await prisma.event.findMany({ orderBy: { createdAt: 'desc' } });
     res.json({ data: items });
   } catch (error: any) {
-    // Si la table n'existe pas, retourner un tableau vide
     if (error?.code === 'P2021') {
       return res.json({ data: [] });
     }
     res.status(500).json({ error: error?.message || 'Failed to fetch events' });
+  }
+});
+
+eventsRouter.get('/slug/:slug', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const item = await prisma.event.findUnique({ where: { slug } as any });
+    if (!item) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    res.json({ data: item });
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'Bad request';
+    res.status(400).json({ error });
   }
 });
 

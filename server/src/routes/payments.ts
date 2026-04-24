@@ -200,14 +200,40 @@ paymentsRouter.get('/status/:tokenPay', authRequired, async (req: Request, res: 
     const { tokenPay } = req.params;
     const mfNotifUrl = env.MONEYFUSION_NOTIF_URL;
 
-    if (!mfNotifUrl || !tokenPay) {
-      return res.status(400).json({ error: 'Paramètres manquants' });
+    if (!tokenPay) {
+      return res.status(400).json({ error: 'tokenPay est requis' });
+    }
+
+    if (!mfNotifUrl) {
+      console.log(`[payments] MONEYFUSION_NOTIF_URL not set, checking local DB for token: ${tokenPay}`);
+      const order = await prisma.order.findFirst({
+        where: { paymentRef: tokenPay },
+        select: { id: true, paymentStatus: true, status: true, orderNumber: true }
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: 'Paiement introuvable localement' });
+      }
+
+      return res.json({ 
+        data: { 
+          statut: order.paymentStatus === 'paid' ? 'success' : 'pending',
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          localStatus: order.status
+        } 
+      });
     }
 
     const checkUrl = `${mfNotifUrl}${tokenPay}`;
+    console.log(`[payments] Checking payment status at: ${checkUrl}`);
     const response = await fetch(checkUrl);
 
     if (!response.ok) {
+      const order = await prisma.order.findFirst({ where: { paymentRef: tokenPay } });
+      if (order) {
+        return res.json({ data: { statut: order.paymentStatus === 'paid' ? 'success' : 'pending', source: 'local_fallback' } });
+      }
       return res.status(502).json({ error: 'Impossible de vérifier le paiement' });
     }
 

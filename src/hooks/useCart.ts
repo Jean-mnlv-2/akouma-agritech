@@ -45,7 +45,8 @@ export const computeShippingFee = (
   if (!Number.isFinite(subtotal)) {
     return 0;
   }
-  return subtotal > 50000 ? 0 : 5000;
+  // On ne met plus de frais par défaut, c'est le partenaire qui calcule
+  return 0;
 };
 
 interface StoredCart {

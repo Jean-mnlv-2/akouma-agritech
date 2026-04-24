@@ -1,7 +1,8 @@
-FROM node:20-alpine AS deps
+FROM node:22-slim AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+COPY package.json ./
+RUN npm install --no-audit --no-fund
 
 FROM deps AS build
 COPY tsconfig.json ./
@@ -12,8 +13,9 @@ COPY scripts ./scripts
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:20-alpine AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 
 # Copy runtime files (including generated Prisma client and CLI)
@@ -25,4 +27,4 @@ COPY --from=build /app/scripts ./scripts
 VOLUME ["/app/uploads"]
 EXPOSE 4000
 
-CMD ["sh", "-c", "npx prisma generate && (npx prisma migrate deploy || true) && node dist/index.js"]
+CMD ["sh", "-c", "(npx prisma migrate deploy || true) && node dist/index.js"]

@@ -10,25 +10,6 @@ import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-interface RawArticleData {
-  id: string;
-  title: string;
-  excerpt?: string;
-  description?: string;
-  content?: string;
-  author?: string;
-  author_name?: string;
-  createdAt?: string;
-  created_at?: string;
-  date?: string;
-  category?: string;
-  imageUrl?: string;
-  image_url?: string;
-  read_time?: number;
-  isCopyProtected?: boolean;
-  is_copy_protected?: boolean;
-}
-
 interface Article {
   id: string;
   title: string;
@@ -50,6 +31,7 @@ interface RelatedArticle {
   image: string;
   date: string;
   excerpt: string;
+  category?: string;
 }
 
 const NewsDetail = () => {
@@ -100,10 +82,27 @@ const NewsDetail = () => {
       setLoading(true);
       const res = await fetch(`${apiBaseUrl}/api/news/slug/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch article');
-      const { data } = (await res.json()) as { data: RawArticleData };
+      const { data } = (await res.json()) as { data: {
+        id: string | number;
+        title: string;
+        excerpt?: string;
+        description?: string;
+        content?: string;
+        author?: string;
+        author_name?: string;
+        createdAt?: string;
+        created_at?: string;
+        date?: string;
+        category?: string;
+        imageUrl?: string;
+        image_url?: string;
+        read_time?: number;
+        isCopyProtected?: boolean;
+        is_copy_protected?: boolean;
+      } };
 
       const normalized: Article = {
-        id: data.id,
+        id: String(data.id),
         title: data.title,
         excerpt: data.excerpt || data.description || '',
         content: data.content || '',
@@ -122,15 +121,28 @@ const NewsDetail = () => {
           const relBody = await relRes.json();
           const relItems = Array.isArray(relBody) ? relBody : relBody.data;
           normalized.relatedArticles = (relItems || [])
-            .filter((it: RawArticleData) => String(it.id) !== String(normalized.id))
+            .filter((it: { id: string | number }) => String(it.id) !== String(normalized.id))
             .slice(0, 3)
-            .map((it: RawArticleData) => ({
+            .map((it: { 
+              id: string | number; 
+              slug?: string; 
+              title: string; 
+              imageUrl?: string; 
+              image_url?: string; 
+              createdAt?: string; 
+              created_at?: string; 
+              date?: string; 
+              excerpt?: string; 
+              description?: string; 
+              category?: string; 
+            }) => ({
               id: String(it.id),
-              slug: (it as any).slug || String(it.id),
+              slug: it.slug || String(it.id),
               title: it.title,
               image: it.imageUrl || it.image_url || '/kilimo-logo.png',
               date: it.createdAt || it.created_at || it.date || new Date().toISOString(),
               excerpt: it.excerpt || it.description || '',
+              category: it.category
             }));
         }
       } catch (err) {
@@ -239,7 +251,7 @@ const NewsDetail = () => {
           </h1>
 
           {article.excerpt && (
-            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
               {article.excerpt}
             </p>
           )}

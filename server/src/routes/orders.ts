@@ -132,6 +132,7 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       promoCode,
       deliveryMethod,
       deliveryPartnerId,
+      shippingFee,
     } = req.body || {};
 
     if (!userId) {
@@ -186,6 +187,7 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
         promoCode: promoCode || null,
         deliveryMethod: selectedDeliveryMethod,
         deliveryPartnerId: deliveryPartnerId != null ? Number(deliveryPartnerId) : null,
+        shippingFee: shippingFee != null ? Number(shippingFee) : null,
       });
       res.status(201).json({ data: result });
     } catch (error) {
@@ -227,6 +229,9 @@ ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Resp
           items: true,
           promoCode: true,
           deliveryPartner: true,
+          events: {
+            orderBy: { createdAt: 'desc' },
+          },
           user: {
             select: {
               id: true,

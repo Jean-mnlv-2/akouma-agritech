@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Loader2 } from "lucide-react";
 import { api } from "@/integrations/api/client";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 import { useCountries } from "@/hooks/use-countries";
 
 const newsletterSchema = z.object({

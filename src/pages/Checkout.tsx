@@ -12,13 +12,14 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/integrations/api/client";
 import { useCountries } from "@/hooks/use-countries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreditCard, Lock, ArrowLeft, MapPin, Wallet } from "lucide-react";
+import { CreditCard, Lock, ArrowLeft, MapPin, Wallet, Tag, X, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { Badge } from "@/components/ui/badge";
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { items, getCartTotal, clearCart, appliedPromo, clearPromo, applyPromo } = useCartContext();
+  const { items, getCartTotal, clearCart, appliedPromo, clearPromo, applyPromo, getCartItemsCount } = useCartContext();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +32,7 @@ const Checkout = () => {
     description?: string | null;
   } | null>(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
 
   // Cashback state
   const [cashbackBalance, setCashbackBalance] = useState(0);
@@ -42,9 +44,14 @@ const Checkout = () => {
   // Form state
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingCity, setShippingCity] = useState("");
+  const [shippingState, setShippingState] = useState("");
+  const [shippingZipCode, setShippingZipCode] = useState("");
   const [shippingCountry, setShippingCountry] = useState("");
   const [shippingPhone, setShippingPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("orange_money");
+  const [deliveryMethod, setDeliveryMethod] = useState<"PICKUP" | "DELIVERY">("PICKUP");
+  const [estimatedShipping, setEstimatedShipping] = useState(0);
+  const [isEstimating, setIsEstimating] = useState(false);
   const [notes, setNotes] = useState("");
 
   const handleCountryChange = (value: string) => {
@@ -53,9 +60,74 @@ const Checkout = () => {
   };
 
   const subtotal = getCartTotal();
-  const shipping = subtotal > 50000 ? 0 : 5000;
+  const itemsCount = getCartItemsCount();
+  const shipping = deliveryMethod === "PICKUP" ? 0 : estimatedShipping;
   const discount = useMemo(() => validatedPromo?.discountAmount ?? 0, [validatedPromo]);
   const total = Math.max(0, subtotal - discount - cashbackToUse + shipping);
+
+  const handlePromoCode = async () => {
+    if (!promoCode) return;
+    setValidatingPromo(true);
+    try {
+      const { data } = await api.promoCodes.validate(promoCode, subtotal);
+      setValidatedPromo({
+        code: data.code,
+        discountType: data.discountType,
+        discountValue: Number(data.discountValue),
+        discountAmount: Number(data.discountAmount),
+        description: data.description,
+      });
+      applyPromo({
+        code: data.code,
+        discountType: data.discountType,
+        discountValue: Number(data.discountValue),
+        description: data.description,
+      });
+      toast({
+        title: "Code promo appliqué !",
+        description: `Réduction de ${formatPrice(data.discountAmount)} FCFA appliquée`,
+      });
+    } catch (error: unknown) {
+      const err = error as { message?: string; error?: string };
+      toast({
+        title: "Code promo invalide",
+        description: err.message || err.error || "Impossible d'appliquer ce code",
+        variant: "destructive",
+      });
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
+
+  useEffect(() => {
+    if (deliveryMethod === "DELIVERY" && shippingAddress && shippingCity) {
+      const timer = setTimeout(async () => {
+        setIsEstimating(true);
+        try {
+          const res = await api.request('POST', '/api/deliveries/estimate', {
+            body: { 
+              dropAddressId: `${shippingAddress}, ${shippingZipCode} ${shippingCity}, ${shippingState}, ${shippingCountry}`.replace(/ ,/g, '').replace(/,,/g, ','),
+              items: items.map(i => ({ id: i.id, quantity: i.quantity })),
+              cartTotal: subtotal
+            }
+          });
+          if (res?.data?.price !== undefined) {
+            setEstimatedShipping(Number(res.data.price));
+          } else {
+            setEstimatedShipping(0);
+          }
+        } catch (error) {
+          console.error("Estimation error:", error);
+          setEstimatedShipping(0);
+        } finally {
+          setIsEstimating(false);
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    } else if (deliveryMethod === "PICKUP") {
+      setEstimatedShipping(0);
+    }
+  }, [deliveryMethod, shippingAddress, shippingCity, shippingState, shippingZipCode, shippingCountry, items, subtotal]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -63,7 +135,6 @@ const Checkout = () => {
         const { data: session } = await api.auth.getSession();
         if (session?.session?.user) {
           setIsAuthenticated(true);
-          // Load cashback balance
           try {
             const cbRes = await api.request('GET', '/api/promo-codes/my-cashback');
             if (cbRes?.data?.cashbackBalance > 0) {
@@ -90,65 +161,36 @@ const Checkout = () => {
   }, [items, navigate]);
 
   useEffect(() => {
-    if (!appliedPromo) {
-      setValidatedPromo(null);
-      return;
+    if (appliedPromo && !validatedPromo && subtotal > 0) {
+      setPromoCode(appliedPromo.code);
     }
-
-    let cancelled = false;
-    const runValidation = async () => {
-      setValidatingPromo(true);
-      try {
-        const { data } = await api.promoCodes.validate(appliedPromo.code, subtotal);
-        if (!cancelled) {
-          setValidatedPromo({
-            code: data.code,
-            discountType: data.discountType,
-            discountValue: Number(data.discountValue),
-            discountAmount: Number(data.discountAmount),
-            description: data.description,
-          });
-          // Ensure cart promo is up to date with backend values
-          applyPromo({
-            code: data.code,
-            discountType: data.discountType,
-            discountValue: Number(data.discountValue),
-            description: data.description,
-          });
-        }
-      } catch (error: unknown) {
-        if (!cancelled) {
-          console.warn('Promo validation failed:', error);
-          const err = error as { message?: string; error?: string };
-          setValidatedPromo(null);
-          clearPromo();
-          toast({
-            title: "Code promo invalide",
-            description: err?.message || err?.error || "La réduction est expirée",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (!cancelled) setValidatingPromo(false);
-      }
-    };
-
-    if (subtotal > 0) {
-      runValidation();
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [appliedPromo?.code, subtotal, applyPromo, clearPromo, toast, appliedPromo]);
+  }, [appliedPromo, validatedPromo, subtotal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!shippingAddress || !shippingCity || !shippingCountry || !shippingPhone) {
+    if (deliveryMethod === 'DELIVERY' && (!shippingAddress || !shippingCity || !shippingCountry || !shippingPhone)) {
       toast({
         title: "Informations manquantes",
-        description: "Veuillez remplir tous les champs de livraison",
+        description: "Veuillez remplir les champs obligatoires (adresse, ville, pays, téléphone)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (deliveryMethod === 'DELIVERY' && shipping === 0) {
+      toast({
+        title: "Estimation requise",
+        description: "Veuillez saisir une adresse valide pour calculer les frais de livraison",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (deliveryMethod === 'PICKUP' && !shippingPhone) {
+      toast({
+        title: "Téléphone requis",
+        description: "Veuillez fournir un numéro de téléphone pour le suivi du retrait",
         variant: "destructive",
       });
       return;
@@ -196,9 +238,13 @@ const Checkout = () => {
           items: orderItems,
           shippingAddress,
           shippingCity,
+          shippingState,
+          shippingZipCode,
           shippingCountry,
           shippingPhone,
           paymentMethod,
+          deliveryMethod,
+          shippingFee: shipping,
           notes,
           promoCode: validatedPromo?.code || appliedPromo?.code || null,
         },
@@ -307,8 +353,46 @@ const Checkout = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Left Column - Form */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Shipping Information */}
+                {/* Delivery Method Selection */}
                 <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <MapPin className="w-5 h-5" />
+                      <span>Mode de réception</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <RadioGroup 
+                      value={deliveryMethod} 
+                      onValueChange={(val: "PICKUP" | "DELIVERY") => setDeliveryMethod(val)}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
+                      <div className={`flex items-center space-x-3 p-4 border rounded-xl transition-all cursor-pointer ${deliveryMethod === 'PICKUP' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
+                        <RadioGroupItem value="PICKUP" id="pickup" className="text-primary" />
+                        <Label htmlFor="pickup" className="flex-1 cursor-pointer font-medium">
+                          <div className="text-base">Retrait sur place</div>
+                          <div className="text-sm text-green-600 font-normal">Collecte gratuite à notre point de retrait</div>
+                        </Label>
+                      </div>
+                      
+                      <div className={`flex items-center space-x-3 p-4 border rounded-xl transition-all cursor-pointer ${deliveryMethod === 'DELIVERY' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
+                        <RadioGroupItem value="DELIVERY" id="delivery" className="text-primary" />
+                        <Label htmlFor="delivery" className="flex-1 cursor-pointer font-medium">
+                          <div className="text-base">Livraison à domicile</div>
+                          <div className="text-sm text-muted-foreground font-normal">
+                            {isEstimating ? "Calcul du prix..." : estimatedShipping > 0 ? `${formatPrice(estimatedShipping)} FCFA` : "Calculé selon l'adresse"}
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+
+                {/* Shipping Information - Only show if DELIVERY is selected or always? 
+                    User might want to provide address anyway for billing/contact. 
+                    But let's keep it visible and only require if DELIVERY.
+                */}
+                <Card className={deliveryMethod === 'PICKUP' ? 'opacity-60 grayscale-[0.5]' : ''}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <MapPin className="w-5 h-5" />
@@ -318,23 +402,43 @@ const Checkout = () => {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="address">Adresse *</Label>
+                        <Label htmlFor="address">Adresse {deliveryMethod === 'DELIVERY' && '*'}</Label>
                         <Input
                           id="address"
                           value={shippingAddress}
                           onChange={(e) => setShippingAddress(e.target.value)}
                           placeholder="Rue, numéro"
-                          required
+                          required={deliveryMethod === 'DELIVERY'}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="city">Ville *</Label>
+                        <Label htmlFor="zipCode">Code Postal / BP</Label>
+                        <Input
+                          id="zipCode"
+                          value={shippingZipCode}
+                          onChange={(e) => setShippingZipCode(e.target.value)}
+                          placeholder="Ex: 01 BP 1234"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">Ville {deliveryMethod === 'DELIVERY' && '*'}</Label>
                         <Input
                           id="city"
                           value={shippingCity}
                           onChange={(e) => setShippingCity(e.target.value)}
                           placeholder="Ville"
-                          required
+                          required={deliveryMethod === 'DELIVERY'}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">Région / Province</Label>
+                        <Input
+                          id="state"
+                          value={shippingState}
+                          onChange={(e) => setShippingState(e.target.value)}
+                          placeholder="Région ou Province"
                         />
                       </div>
                     </div>
@@ -419,124 +523,170 @@ const Checkout = () => {
 
               {/* Right Column - Order Summary */}
               <div className="lg:col-span-1">
-                <Card className="sticky top-20">
-                  <CardHeader>
-                    <CardTitle>Résumé de la commande</CardTitle>
+                <Card className="sticky top-20 border-primary/20 shadow-lg">
+                  <CardHeader className="bg-primary/5 pb-4">
+                    <CardTitle className="text-xl font-bold text-primary">Résumé de commande</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Items */}
-                    <div className="space-y-3">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex items-center space-x-3">
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm line-clamp-2">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {item.quantity} × {formatPrice(item.price)} FCFA
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                  <CardContent className="space-y-6 pt-6">
+                    {/* Item count and Subtotal */}
+                    <div className="flex justify-between items-center text-sm font-medium">
+                      <span className="text-muted-foreground">{itemsCount} article{itemsCount > 1 ? 's' : ''}</span>
+                      <span className="text-lg">{formatPrice(subtotal)} FCFA</span>
                     </div>
 
-                    <div className="border-t pt-4 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Sous-total</span>
-                        <span>{formatPrice(subtotal)} FCFA</span>
-                      </div>
-                       {validatedPromo && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Code {validatedPromo.code}</span>
-                          <span>-{formatPrice(discount)} FCFA</span>
-                        </div>
-                      )}
-                      {/* Cashback section */}
-                      {cashbackBalance > 0 && (
-                        <div className="border-t pt-3 space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Wallet className="w-4 h-4 text-primary" />
-                            <span className="font-medium">Cashback disponible : {formatPrice(cashbackBalance)} FCFA</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={Math.min(cashbackBalance, subtotal - discount)}
-                              value={cashbackToUse || ''}
-                              onChange={(e) => {
-                                const val = Math.min(Number(e.target.value) || 0, cashbackBalance, Math.max(0, subtotal - discount));
-                                setCashbackToUse(val);
-                              }}
-                              placeholder="Montant à utiliser"
-                              className="h-8 text-sm"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setCashbackToUse(Math.min(cashbackBalance, Math.max(0, subtotal - discount)))}
-                            >
-                              Max
-                            </Button>
-                          </div>
-                          {cashbackToUse > 0 && (
-                            <div className="flex justify-between text-primary text-sm font-medium">
-                              <span>Cashback utilisé</span>
-                              <span>-{formatPrice(cashbackToUse)} FCFA</span>
+                    {/* Delivery / Pickup Choice info */}
+                    <div className="space-y-4 border-t border-b py-4">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <span className="text-muted-foreground font-medium block text-sm">Livraison</span>
+                          {deliveryMethod === 'DELIVERY' ? (
+                            <span className="text-xs text-muted-foreground block">
+                              Livraison à domicile par notre partenaire.
+                            </span>
+                          ) : (
+                            <div className="space-y-1">
+                              <span className="text-sm font-semibold text-foreground block">Retrait sur place</span>
+                              <span className="text-[11px] text-muted-foreground block leading-relaxed">
+                                Collecte gratuite à notre point de retrait.
+                              </span>
                             </div>
                           )}
                         </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Livraison</span>
-                        <span>
-                          {shipping === 0 ? (
-                            <span className="text-green-600">Gratuite</span>
+                        <div className="text-right">
+                          {deliveryMethod === 'PICKUP' ? (
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                              Gratuite
+                            </Badge>
                           ) : (
-                            `${formatPrice(shipping)} FCFA`
+                            shipping > 0 ? (
+                              <span className="font-bold text-primary">{formatPrice(shipping)} FCFA</span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-orange-600 uppercase tracking-tight bg-orange-50 px-2 py-1 rounded">
+                                À calculer selon l'adresse
+                              </span>
+                            )
                           )}
+                        </div>
+                      </div>
+
+                      {/* Code Promo Section */}
+                      <div className="space-y-2 pt-2">
+                        <span className="text-sm font-medium text-muted-foreground block">Code promo</span>
+                        {validatedPromo ? (
+                          <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg border border-green-100">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <Tag className="w-3 h-3 text-green-600 flex-shrink-0" />
+                              <span className="text-xs font-bold text-green-700 truncate uppercase tracking-tighter">
+                                {validatedPromo.code}
+                              </span>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={clearPromo}
+                              className="h-6 w-6 p-0 hover:bg-green-100 text-green-700"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="Votre code..." 
+                              className="h-9 text-xs" 
+                              value={promoCode}
+                              onChange={(e) => setPromoCode(e.target.value)}
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-9 px-3 border-primary/30 hover:bg-primary/5 text-primary"
+                              onClick={handlePromoCode}
+                              disabled={!promoCode || validatingPromo}
+                            >
+                              {validatingPromo ? "..." : "Appliquer"}
+                            </Button>
+                          </div>
+                        )}
+                        {validatedPromo && (
+                          <div className="flex justify-between text-sm font-bold text-green-600 px-1">
+                            <span>Réduction</span>
+                            <span>-{formatPrice(discount)} FCFA</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Cashback section */}
+                    {cashbackBalance > 0 && (
+                      <div className="bg-muted/30 p-4 rounded-xl space-y-3 border border-dashed border-muted-foreground/20">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Wallet className="w-4 h-4 text-primary" />
+                          <span className="font-bold uppercase tracking-wide">Cashback : {formatPrice(cashbackBalance)} FCFA</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={Math.min(cashbackBalance, subtotal - discount)}
+                            value={cashbackToUse || ''}
+                            onChange={(e) => {
+                              const val = Math.min(Number(e.target.value) || 0, cashbackBalance, Math.max(0, subtotal - discount));
+                              setCashbackToUse(val);
+                            }}
+                            placeholder="Montant à utiliser"
+                            className="h-8 text-xs bg-background"
+                          />
+                          <Button
+                            type="button"
+                            variant="nature"
+                            size="sm"
+                            className="h-8 text-[10px] font-bold"
+                            onClick={() => setCashbackToUse(Math.min(cashbackBalance, Math.max(0, subtotal - discount)))}
+                          >
+                            MAX
+                          </Button>
+                        </div>
+                        {cashbackToUse > 0 && (
+                          <div className="flex justify-between text-primary text-xs font-bold pt-1 border-t border-primary/10">
+                            <span>Utilisé</span>
+                            <span>-{formatPrice(cashbackToUse)} FCFA</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="space-y-4 pt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xl font-bold text-foreground">Total</span>
+                        <span className="text-2xl font-black text-primary underline decoration-primary/20 underline-offset-4">
+                          {formatPrice(total)} FCFA
                         </span>
                       </div>
-                      <div className="border-t pt-2 flex justify-between text-lg font-bold">
-                        <span>Total</span>
-                        <span className="text-primary">{formatPrice(total)} FCFA</span>
-                      </div>
-                    </div>
-                    {validatedPromo && validatedPromo.description && (
-                      <div className="text-xs text-muted-foreground">
-                        {validatedPromo.description}
-                      </div>
-                    )}
-                    {validatingPromo && (
-                      <div className="text-xs text-muted-foreground">
-                        Validation du code promo...
-                      </div>
-                    )}
 
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                      <Lock className="w-4 h-4" />
-                      <span>Paiement 100% sécurisé</span>
-                    </div>
+                      <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground bg-green-50/50 py-3 rounded-xl border border-green-100/50">
+                        <Shield className="w-4 h-4 text-green-600" />
+                        <span className="font-medium">Paiement 100% sécurisé</span>
+                      </div>
 
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="w-full"
-                      disabled={submitting}
-                    >
-                      {submitting ? (
-                        "Traitement..."
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4 mr-2" />
-                          Confirmer la commande
-                        </>
-                      )}
-                    </Button>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all duration-300"
+                        disabled={submitting || (deliveryMethod === 'DELIVERY' && isEstimating)}
+                      >
+                        {submitting ? (
+                          <LoadingSpinner size="small" text="Traitement..." />
+                        ) : (
+                          <>
+                            <Lock className="w-5 h-5 mr-3" />
+                            Procéder au paiement
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>

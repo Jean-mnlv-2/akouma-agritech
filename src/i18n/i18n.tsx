@@ -1,6 +1,6 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-
-type LanguageCode = "fr" | "en" | "sw" | "ha" | "yo" | "ar" | "ru" | "zh" | "de";
+import React, { useCallback, useMemo, useState } from "react";
+import { LanguageCode, I18nContextValue } from "./types";
+import { I18nContext } from "./context";
 
 type Translations = Record<string, string>;
 
@@ -17,6 +17,7 @@ const resources: Resources = {
     "nav.partners": "Partenariats",
     "nav.donations": "Dons",
     "nav.about": "À Propos",
+    "nav.contact": "Contact",
     "nav.news": "Actualités",
     "nav.admin": "Admin",
     "nav.tasks": "Tâches",
@@ -331,6 +332,7 @@ const resources: Resources = {
     "elearning.free": "Gratuit",
     "elearning.view_program": "Voir le programme",
     "elearning.enroll": "S'inscrire",
+    "elearning.enrolled": "Inscrit",
     "elearning.students_label": "étudiants",
     "elearning.stat.courses": "Cours disponibles",
     "elearning.stat.students": "Étudiants actifs",
@@ -390,6 +392,7 @@ const resources: Resources = {
     "nav.partners": "Partnerships",
     "nav.donations": "Donations",
     "nav.about": "About",
+    "nav.contact": "Contact",
     "nav.news": "News",
     "nav.admin": "Admin",
     "nav.tasks": "Tasks",
@@ -669,6 +672,7 @@ const resources: Resources = {
     "elearning.free": "Free",
     "elearning.view_program": "View program",
     "elearning.enroll": "Enroll",
+    "elearning.enrolled": "Enrolled",
     "elearning.students_label": "students",
     "elearning.stat.courses": "Available courses",
     "elearning.stat.students": "Active students",
@@ -728,6 +732,7 @@ const resources: Resources = {
     "nav.partners": "Ushirikiano",
     "nav.donations": "Michango",
     "nav.about": "Kuhusu",
+    "nav.contact": "Mawasiliano",
     "nav.news": "Habari",
     "nav.admin": "Admin",
     "nav.tasks": "Kazi",
@@ -815,6 +820,7 @@ const resources: Resources = {
     "elearning.free": "Bure",
     "elearning.view_program": "Tazama programu",
     "elearning.enroll": "Jisajili",
+    "elearning.enrolled": "Umejiandikisha",
     "elearning.students_label": "wanafunzi",
     "elearning.stat.courses": "Kozi zinazopatikana",
     "elearning.stat.students": "Wanafunzi hai",
@@ -2111,15 +2117,6 @@ const resources: Resources = {
   }
 };
 
-type I18nContextValue = {
-  lang: LanguageCode;
-  setLang: (lang: LanguageCode) => void;
-  t: (key: string) => string;
-  available: { code: LanguageCode; label: string }[];
-};
-
-const I18nContext = createContext<I18nContextValue | undefined>(undefined);
-
 const STORAGE_KEY = "KILIMO-lang";
 
 function detectLanguage(): LanguageCode {
@@ -2140,7 +2137,9 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLangState(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {}
+    } catch (e) {
+      console.error("Failed to save language to localStorage:", e);
+    }
   }, []);
 
   const t = useCallback(
@@ -2173,11 +2172,5 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 };
-
-export function useI18n() {
-  const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error("useI18n must be used within I18nProvider");
-  return ctx;
-}
 
 

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sprout, BookOpen, ShoppingBag, Leaf } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-agritech.jpg";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n } from "@/i18n";
 import { useEffect, useState } from "react";
 
 const Hero = () => {

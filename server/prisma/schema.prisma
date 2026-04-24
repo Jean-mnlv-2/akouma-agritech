@@ -17,19 +17,20 @@ model User {
   isActive         Boolean               @default(true)
   resetToken       String?               @unique
   resetTokenExpiry DateTime?
-  allowedModules   String[]              @default([])
-  tempPassword     String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
-  enrollments      ELearningEnrollment[]
-  orders           Order[]
-  reminderLogs     ReminderLog[]
-  assignedTasks    Task[]                @relation("TaskAssignedTo")
-  createdTasks     Task[]                @relation("TaskCreatedBy")
-  reviews          Review[]
+  allowedModules   String[]              @default([])
+  tempPassword     String?
+  phone            String?
   comments         CourseComment[]
   schedules        CourseSchedule[]
+  enrollments      ELearningEnrollment[]
   moduleProgress   ModuleProgress[]
+  orders           Order[]
+  reminderLogs     ReminderLog[]
+  reviews          Review[]
+  assignedTasks    Task[]                @relation("TaskAssignedTo")
+  createdTasks     Task[]                @relation("TaskCreatedBy")
 }
 
 model Country {
@@ -44,39 +45,39 @@ model Seed {
   id                   Int      @id @default(autoincrement())
   name                 String
   description          String
-  category             String?  @default("Général")
-  variety              String?
   price                Decimal  @db.Decimal(12, 2)
-  unit                 String?  @default("kg")
   stock                Int      @default(0)
   imageUrl             String?
-  availability         String?  @default("En stock")
-  harvestTime          String?
-  yield                String?
-  features             String[] @default([])
-  fullDescription      String?
-  origin               String?
-  purity               String?
-  germination          String?
-  moisture             String?
-  packaging            String?
-  soilType             String?
-  plantingDepth        String?
-  spacing              String?
-  watering             String?
-  fertilizer           String?
-  diseases             String[] @default([])
-  plantingInstructions String?
-  careInstructions     String?
-  rating               Decimal  @default(0) @db.Decimal(2, 1)
-  totalReviews         Int      @default(0)
-  isPublished          Boolean  @default(false)
-  isFeatured           Boolean  @default(false)
-  isCopyProtected      Boolean  @default(false)
-  gallery              String[] @default([])
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   slug                 String   @unique
+  availability         String?  @default("En stock")
+  careInstructions     String?
+  category             String?  @default("Général")
+  diseases             String[] @default([])
+  features             String[] @default([])
+  fertilizer           String?
+  fullDescription      String?
+  germination          String?
+  harvestTime          String?
+  moisture             String?
+  origin               String?
+  packaging            String?
+  plantingDepth        String?
+  plantingInstructions String?
+  purity               String?
+  rating               Decimal  @default(0) @db.Decimal(2, 1)
+  soilType             String?
+  spacing              String?
+  totalReviews         Int      @default(0)
+  unit                 String?  @default("kg")
+  variety              String?
+  watering             String?
+  yield                String?
+  isFeatured           Boolean  @default(false)
+  isPublished          Boolean  @default(false)
+  isCopyProtected      Boolean  @default(false)
+  gallery              String[] @default([])
   reviews              Review[]
 }
 
@@ -106,55 +107,55 @@ model Course {
   videoUrl           String?
   isPublished        Boolean               @default(false)
   isPreviewAvailable Boolean               @default(false)
-  isCopyProtected    Boolean               @default(false)
   languages          String[]              @default(["Français"])
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
   slug               String                @unique
-  previewItems       CoursePreviewItem[]
-  enrollments        ELearningEnrollment[]
-  modules            CourseModule[]
+  isCopyProtected    Boolean               @default(false)
   comments           CourseComment[]
+  modules            CourseModule[]
+  previewItems       CoursePreviewItem[]
   schedules          CourseSchedule[]
+  enrollments        ELearningEnrollment[]
 }
 
 model CourseModule {
-  id             Int              @id @default(autoincrement())
-  courseId        Int
-  title          String
-  type           String           @default("text")
-  duration       String?
-  content        String?
-  videoUrl       String?
-  pdfUrl         String?
-  order          Int              @default(0)
-  isActive       Boolean          @default(true)
-  quizQuestions  Json?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  comments       CourseComment[]
-  progress       ModuleProgress[]
+  id            Int              @id @default(autoincrement())
+  courseId      Int
+  title         String
+  type          String           @default("text")
+  duration      String?
+  content       String?
+  videoUrl      String?
+  pdfUrl        String?
+  order         Int              @default(0)
+  isActive      Boolean          @default(true)
+  quizQuestions Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  comments      CourseComment[]
+  course        Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress      ModuleProgress[]
 
   @@index([courseId])
   @@index([order])
 }
 
 model CourseComment {
-  id          Int             @id @default(autoincrement())
-  courseId     Int
-  moduleId    Int?
-  userId      String
-  content     String
-  parentId    Int?
-  isApproved  Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  module      CourseModule?   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent      CourseComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
-  replies     CourseComment[] @relation("CommentReplies")
+  id         Int             @id @default(autoincrement())
+  courseId   Int
+  moduleId   Int?
+  userId     String
+  content    String
+  parentId   Int?
+  isApproved Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  course     Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module     CourseModule?   @relation(fields: [moduleId], references: [id])
+  parent     CourseComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    CourseComment[] @relation("CommentReplies")
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([courseId])
   @@index([moduleId])
@@ -166,7 +167,7 @@ model CourseSchedule {
   id            Int                 @id @default(autoincrement())
   enrollmentId  Int
   userId        String
-  courseId       Int
+  courseId      Int
   scheduledDate DateTime
   timeSlot      String
   status        String              @default("scheduled")
@@ -175,9 +176,9 @@ model CourseSchedule {
   absenceCount  Int                 @default(0)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+  course        Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
   enrollment    ELearningEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course        Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@index([enrollmentId])
   @@index([userId])
@@ -204,52 +205,53 @@ model ModuleProgress {
 }
 
 model News {
-  id          Int      @id @default(autoincrement())
-  title       String
-  content     String
-  excerpt     String?
-  imageUrl    String?
-  author      String?
-  isPublished Boolean  @default(false)
-  isFeatured  Boolean  @default(false)
-  isCopyProtected Boolean @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  slug        String   @unique
+  id              Int      @id @default(autoincrement())
+  title           String
+  content         String
+  excerpt         String?
+  imageUrl        String?
+  author          String?
+  category        String?  @default("Général")
+  isPublished     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  slug            String   @unique
+  isFeatured      Boolean  @default(false)
+  isCopyProtected Boolean  @default(false)
 }
 
 model ShopProduct {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  price       Decimal  @db.Decimal(12, 2)
-  stock       Int      @default(0)
-  category    String?
-  imageUrl    String?
-  gallery     String[] @default([])
-  isActive    Boolean  @default(true)
-  isPublished Boolean  @default(false)
-  isFeatured  Boolean  @default(false)
-  isNew       Boolean  @default(false)
-  isCopyProtected Boolean @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  slug            String    @unique
-  features        String[]  @default([])
-  specifications  Json      @default("{}")
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String?
+  price           Decimal  @db.Decimal(12, 2)
+  stock           Int      @default(0)
+  category        String?
+  imageUrl        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  slug            String   @unique
+  isFeatured      Boolean  @default(false)
+  isNew           Boolean  @default(false)
+  isPublished     Boolean  @default(false)
+  isCopyProtected Boolean  @default(false)
+  gallery         String[] @default([])
+  features        String[] @default([])
+  specifications  Json     @default("{}")
 }
 
 model LegalPage {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   title         String
   content       String
-  slug          String   @unique
-  type          String?  @default("legal")
-  version       String?  @default("1.0")
+  slug          String    @unique
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   effectiveDate DateTime? @default(now())
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  type          String?   @default("legal")
+  version       String?   @default("1.0")
 }
 
 model Partnership {
@@ -299,16 +301,16 @@ model ContentSubmission {
   content        String
   author         String
   email          String
-  phone          String?
-  organization   String?
-  contentType    String?
-  category       String?
-  duration       String?
-  targetAudience String?
-  fileUrl        String?
   status         String   @default("pending")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  category       String?
+  contentType    String?
+  duration       String?
+  fileUrl        String?
+  organization   String?
+  phone          String?
+  targetAudience String?
 }
 
 model DemoRequest {
@@ -338,11 +340,11 @@ model ELearningEnrollment {
   lastReminderSent DateTime?
   studyDays        String?
   dailyTimeSlot    String?
+  schedules        CourseSchedule[]
   course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reminderLogs     ReminderLog[]
-  schedules        CourseSchedule[]
   moduleProgress   ModuleProgress[]
+  reminderLogs     ReminderLog[]
 
   @@unique([userId, courseId])
 }
@@ -546,7 +548,7 @@ model JobApplication {
   status      String   @default("pending")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  career      Career?  @relation(fields: [careerId], references: [id], onDelete: SetNull)
+  career      Career?  @relation(fields: [careerId], references: [id])
 
   @@index([careerId])
   @@index([status])
@@ -571,45 +573,47 @@ model ContactSettings {
   xUrl           String?  @map("x_url") @db.VarChar(255)
   websiteUrl     String?  @map("website_url") @db.VarChar(255)
   telegramUrl    String?  @map("telegram_url") @db.VarChar(255)
-  supportEmail   String?  @map("support_email") @db.VarChar(255)
-  businessHours  String?  @map("business_hours") @db.Text
-  mapUrl         String?  @map("map_url") @db.Text
   updatedAt      DateTime @updatedAt @map("updated_at")
   createdAt      DateTime @default(now()) @map("created_at")
+  businessHours  String?  @map("business_hours")
+  mapUrl         String?  @map("map_url")
+  supportEmail   String?  @map("support_email") @db.VarChar(255)
 
   @@map("contact_settings")
 }
 
 model Order {
-  id                Int              @id @default(autoincrement())
-  userId            String
-  orderNumber       String           @unique
-  status            String           @default("pending")
-  paymentStatus     String           @default("pending")
-  paymentMethod     String?
-  paymentRef        String?
-  deliveryMethod    DeliveryMethod   @default(PICKUP)
-  subtotal          Decimal          @db.Decimal(12, 2)
-  shipping          Decimal          @default(0) @db.Decimal(12, 2)
-  discount          Decimal          @default(0) @db.Decimal(12, 2)
-  total             Decimal          @db.Decimal(12, 2)
-  shippingAddress   String?
-  shippingCity      String?
-  shippingCountry   String?
-  shippingPhone     String?
-  notes             String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  promoCodeId       Int?
-  deliveryPartnerId Int?
-  deliveryPartner   DeliveryPartner? @relation(fields: [deliveryPartnerId], references: [id])
-  deliveryId        String?          @unique
-  deliveryStatus    String?          @default("pending")
-  promoCode         PromoCode?       @relation(fields: [promoCodeId], references: [id])
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events            OrderEvent[]
-  items             OrderItem[]
+  id                   Int                   @id @default(autoincrement())
+  userId               String
+  orderNumber          String                @unique
+  status               String                @default("pending")
+  paymentStatus        String                @default("pending")
+  paymentMethod        String?
+  deliveryMethod       DeliveryMethod        @default(PICKUP)
+  subtotal             Decimal               @db.Decimal(12, 2)
+  shipping             Decimal               @default(0) @db.Decimal(12, 2)
+  discount             Decimal               @default(0) @db.Decimal(12, 2)
+  total                Decimal               @db.Decimal(12, 2)
+  shippingAddress      String?
+  shippingCity         String?
+  shippingCountry      String?
+  shippingPhone        String?
+  notes                String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  promoCodeId          Int?
+  deliveryPartnerId    Int?
+  paymentRef           String?
+  deliveryId           String?               @unique
+  deliveryStatus       String?               @default("pending")
+  shippingState        String?
+  shippingZipCode      String?
   cashbackTransactions CashbackTransaction[]
+  deliveryPartner      DeliveryPartner?      @relation(fields: [deliveryPartnerId], references: [id])
+  promoCode            PromoCode?            @relation(fields: [promoCodeId], references: [id])
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events               OrderEvent[]
+  items                OrderItem[]
 
   @@index([userId])
   @@index([status])
@@ -649,25 +653,25 @@ model OrderEvent {
 }
 
 model PromoCode {
-  id                 Int               @id @default(autoincrement())
-  code               String            @unique
-  description        String?
-  discountType       PromoDiscountType @default(PERCENTAGE)
-  discountValue      Decimal           @db.Decimal(12, 2)
-  maxUses            Int?
-  usesCount          Int               @default(0)
-  isActive           Boolean           @default(true)
-  validFrom          DateTime?
-  validUntil         DateTime?
-  ownerEmail         String?
-  ownerName          String?
-  cashbackPercent    Decimal           @default(0) @db.Decimal(5, 2)
-  cashbackBalance    Decimal           @default(0) @db.Decimal(12, 2)
-  totalCashbackEarned Decimal          @default(0) @db.Decimal(12, 2)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  orders             Order[]
-  transactions       CashbackTransaction[]
+  id                  Int                   @id @default(autoincrement())
+  code                String                @unique
+  description         String?
+  discountType        PromoDiscountType     @default(PERCENTAGE)
+  discountValue       Decimal               @db.Decimal(12, 2)
+  maxUses             Int?
+  usesCount           Int                   @default(0)
+  isActive            Boolean               @default(true)
+  validFrom           DateTime?
+  validUntil          DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  ownerEmail          String?
+  ownerName           String?
+  cashbackPercent     Decimal               @default(0) @db.Decimal(5, 2)
+  cashbackBalance     Decimal               @default(0) @db.Decimal(12, 2)
+  totalCashbackEarned Decimal               @default(0) @db.Decimal(12, 2)
+  transactions        CashbackTransaction[]
+  orders              Order[]
 
   @@index([isActive])
   @@index([code])
@@ -678,14 +682,14 @@ model PromoCode {
 model CashbackTransaction {
   id           Int       @id @default(autoincrement())
   promoCodeId  Int
-  type         String    @default("EARN") // EARN or USE
+  type         String    @default("EARN")
   amount       Decimal   @db.Decimal(12, 2)
   description  String?
   orderId      Int?
   balanceAfter Decimal   @default(0) @db.Decimal(12, 2)
   createdAt    DateTime  @default(now())
+  order        Order?    @relation(fields: [orderId], references: [id])
   promoCode    PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
-  order        Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@index([promoCodeId])
   @@index([createdAt])
@@ -693,6 +697,7 @@ model CashbackTransaction {
 
 model DeliveryPartner {
   id             Int      @id @default(autoincrement())
+  code           String   @unique @default("manual")
   name           String
   description    String?
   contactName    String?
@@ -707,6 +712,7 @@ model DeliveryPartner {
   orders         Order[]
 
   @@index([isActive])
+  @@index([code])
   @@index([createdAt])
 }
 

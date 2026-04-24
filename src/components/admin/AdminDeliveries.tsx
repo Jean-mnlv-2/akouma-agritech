@@ -82,6 +82,26 @@ interface Livreur {
   availability: string;
 }
 
+type DeliveriesResponse = {
+  data?: unknown;
+  pagination?: {
+    page?: number;
+    total?: number;
+    pages?: number;
+  };
+  error?: string;
+};
+
+const DEFAULT_PAGINATION = { page: 1, total: 0, pages: 1 };
+
+const getErrorMessage = (payload: unknown, fallback: string) => {
+  if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string') {
+    return payload.error;
+  }
+
+  return fallback;
+};
+
 export const AdminDeliveries: React.FC = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [livreurs, setLivreurs] = useState<Livreur[]>([]);
@@ -108,17 +128,29 @@ export const AdminDeliveries: React.FC = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      const data = await response.json();
-      
-      if (data.data) {
-        setDeliveries(data.data);
-        setPagination(data.pagination);
+
+      const data = await response.json().catch(() => null) as DeliveriesResponse | null;
+
+      if (!response.ok) {
+        throw new Error(getErrorMessage(data, "Impossible de charger les livraisons."));
       }
+
+      const nextDeliveries = Array.isArray(data?.data) ? data.data as Delivery[] : [];
+      const nextPagination = data?.pagination ?? DEFAULT_PAGINATION;
+
+      setDeliveries(nextDeliveries);
+      setPagination({
+        page: typeof nextPagination.page === 'number' ? nextPagination.page : page,
+        total: typeof nextPagination.total === 'number' ? nextPagination.total : nextDeliveries.length,
+        pages: typeof nextPagination.pages === 'number' ? nextPagination.pages : 1,
+      });
     } catch (err) {
       console.error('Error fetching deliveries:', err);
+      setDeliveries([]);
+      setPagination(DEFAULT_PAGINATION);
       toast({
         title: "Erreur",
-        description: "Impossible de charger les livraisons.",
+        description: err instanceof Error ? err.message : "Impossible de charger les livraisons.",
         variant: "destructive",
       });
     } finally {
@@ -133,14 +165,24 @@ export const AdminDeliveries: React.FC = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      const data = await response.json();
-      if (data.data) {
-        setLivreurs(data.data);
+
+      const data = await response.json().catch(() => null) as DeliveriesResponse | null;
+
+      if (!response.ok) {
+        throw new Error(getErrorMessage(data, "Impossible de charger les livreurs."));
       }
+
+      setLivreurs(Array.isArray(data?.data) ? data.data as Livreur[] : []);
     } catch (err) {
       console.error('Error fetching livreurs:', err);
+      setLivreurs([]);
+      toast({
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Impossible de charger les livreurs.",
+        variant: "destructive",
+      });
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchDeliveries();
@@ -200,10 +242,13 @@ export const AdminDeliveries: React.FC = () => {
     }
   };
 
-  const filteredDeliveries = deliveries.filter(d => 
-    d.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.commande.client.firstName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDeliveries = deliveries.filter((delivery) => {
+    const normalizedSearch = searchTerm.toLowerCase();
+    const deliveryId = delivery.id?.toLowerCase() ?? '';
+    const clientName = delivery.commande?.client?.firstName?.toLowerCase() ?? '';
+
+    return deliveryId.includes(normalizedSearch) || clientName.includes(normalizedSearch);
+  });
 
   return (
     <div className="space-y-6">
@@ -316,6 +361,7 @@ export const AdminDeliveries: React.FC = () => {
                               size="icon"
                               onClick={() => {
                                 setSelectedDelivery(delivery);
+                                setSelectedLivreurId('');
                                 setIsAssignDialogOpen(true);
                               }}
                               disabled={delivery.status === 'LIVRE' || delivery.status === 'ANNULE'}

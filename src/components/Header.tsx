@@ -2,13 +2,22 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Menu, ShoppingCart, LogIn, User as UserIcon } from "lucide-react";
+import { Menu, ShoppingCart, LogIn, User as UserIcon, LogOut, LayoutDashboard, History, PiggyBank } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCartContext } from "@/context/CartContext";
 import { ThemeToggle } from "@/components/theme-toggle";
 import CartDrawer from "./CartDrawer";
 import { api } from "@/integrations/api/client";
-import { useI18n } from "@/i18n/i18n";
+import { useI18n, LanguageCode } from "@/i18n";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -49,35 +58,60 @@ const Header = () => {
   useEffect(() => {
     const loadRoles = async () => {
       try {
-        const { data: session } = await api.auth.getSession();
-        const user = session?.session?.user || session?.user;
-        const userId = user?.id;
-        if (!userId) {
+        const { data: sessionData } = await api.auth.getSession();
+        const user = sessionData?.session?.user;
+        
+        if (!user || !user.id) {
           setIsAdmin(false);
           setIsSupervisor(false);
           setIsLoggedIn(false);
           setUserName(null);
           return;
         }
-        setIsLoggedIn(true);
-        setUserName(user?.fullName || user?.email || null);
         
-        const { data: roles } = await api
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId);
-        const admin = roles?.some((r: { role: string }) => r.role === 'admin') ?? false;
-        const supervisor = admin || (roles?.some((r: { role: string }) => r.role === 'supervisor') ?? false);
-        setIsAdmin(admin);
-        setIsSupervisor(supervisor);
-      } catch {
+        setIsLoggedIn(true);
+        setUserName(user.fullName || user.email || null);
+        
+        const userRole = user.role;
+        const admin = userRole === 'admin';
+        const supervisor = admin || userRole === 'supervisor';
+        
+        if (!userRole) {
+          try {
+            const { data: roles } = await api
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', user.id);
+            
+            const hasAdminRole = roles?.some((r: { role: string }) => r.role === 'admin') ?? false;
+            const hasSupervisorRole = hasAdminRole || (roles?.some((r: { role: string }) => r.role === 'supervisor') ?? false);
+            
+            setIsAdmin(hasAdminRole);
+            setIsSupervisor(hasSupervisorRole);
+          } catch (e) {
+            console.warn("[Header] Could not fetch roles from user_roles table", e);
+          }
+        } else {
+          setIsAdmin(admin);
+          setIsSupervisor(supervisor);
+        }
+      } catch (error) {
+        console.error("[Header] Error loading roles:", error);
         setIsAdmin(false);
         setIsSupervisor(false);
         setIsLoggedIn(false);
       }
     };
+
     loadRoles();
-  }, []);
+
+    const handleAuthChange = () => loadRoles();
+    window.addEventListener('auth-change', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -86,6 +120,7 @@ const Header = () => {
       setIsAdmin(false);
       setIsSupervisor(false);
       setUserName(null);
+      window.dispatchEvent(new Event('auth-change'));
       window.location.href = '/';
     } catch {
       // ignore
@@ -103,7 +138,6 @@ const Header = () => {
     { name: t("nav.agri"), href: "/agri-consulting" },
     { name: t("nav.partners"), href: "/partners" },
     { name: t("nav.donations"), href: "/donations" },
-    { name: t("nav.about"), href: "/about" },
   ];
 
   return (
@@ -136,14 +170,6 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  className={`text-base font-medium transition-colors hover:text-primary ${location.pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}
-                >
-                  {t("nav.admin")}
-                </Link>
-              )}
               {!isAdmin && isSupervisor && (
                 <Link
                   to="/supervisor"
@@ -160,7 +186,7 @@ const Header = () => {
                 <select
                   className="bg-transparent text-sm border rounded px-2 py-1"
                   value={lang}
-                  onChange={(e) => setLang(e.target.value as any)}
+                  onChange={(e) => setLang(e.target.value as LanguageCode)}
                   aria-label="Language selector"
                 >
                   {available.map((opt) => (
@@ -190,22 +216,57 @@ const Header = () => {
 
               {/* Login / User button */}
               {isLoggedIn ? (
-                <div className="hidden md:flex items-center space-x-2">
-                  <Button variant="ghost" size="sm" className="text-sm" asChild>
-                    <Link to={isAdmin ? "/admin" : isSupervisor ? "/supervisor" : "/"}>
-                      <UserIcon className="w-4 h-4 mr-1" />
-                      <span className="max-w-[100px] truncate">{userName?.split(' ')[0] || 'Mon compte'}</span>
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-xs" asChild>
-                    <Link to="/orders">Commandes</Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-xs" asChild>
-                    <Link to="/my-cashback">Cashback</Link>
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs" onClick={handleLogout}>
-                    {t("header.logout") || "Déconnexion"}
-                  </Button>
+                <div className="hidden md:flex items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                            {userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : <UserIcon className="w-5 h-5" />}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">{userName || "Utilisateur"}</p>
+                          <p className="text-xs leading-none text-muted-foreground">
+                            {isAdmin ? "Administrateur" : isSupervisor ? "Superviseur" : "Client"}
+                          </p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {(isAdmin || isSupervisor) && (
+                        <DropdownMenuItem asChild>
+                          <Link to={isAdmin ? "/admin" : "/supervisor"} className="cursor-pointer">
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            <span>Tableau de bord</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem asChild>
+                        <Link to="/orders" className="cursor-pointer">
+                          <History className="mr-2 h-4 w-4" />
+                          <span>Mes commandes</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/my-cashback" className="cursor-pointer">
+                          <PiggyBank className="mr-2 h-4 w-4" />
+                          <span>Mon Cashback</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        className="cursor-pointer text-destructive focus:text-destructive" 
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>{t("header.logout") || "Déconnexion"}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ) : (
                 <Button variant="default" size="sm" className="hidden md:flex text-sm" asChild>
@@ -237,17 +298,27 @@ const Header = () => {
                           <span className="truncate">{userName || 'Mon compte'}</span>
                         </div>
                         {isAdmin && (
-                          <Button variant="outline" size="sm" className="w-full" asChild>
-                            <Link to="/admin">Dashboard Admin</Link>
+                          <Button variant="outline" size="sm" className="w-full justify-start" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                            <Link to="/admin">
+                              <LayoutDashboard className="mr-2 h-4 w-4" />
+                              Dashboard Admin
+                            </Link>
                           </Button>
                         )}
-                        <Button variant="outline" size="sm" className="w-full" asChild>
-                          <Link to="/orders">Mes commandes</Link>
+                        <Button variant="outline" size="sm" className="w-full justify-start" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                          <Link to="/orders">
+                            <History className="mr-2 h-4 w-4" />
+                            Mes commandes
+                          </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="w-full" asChild>
-                          <Link to="/my-cashback">Mon Cashback</Link>
+                        <Button variant="outline" size="sm" className="w-full justify-start" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                          <Link to="/my-cashback">
+                            <PiggyBank className="mr-2 h-4 w-4" />
+                            Mon Cashback
+                          </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
+                        <Button variant="outline" size="sm" className="w-full justify-start text-destructive" onClick={handleLogout}>
+                          <LogOut className="mr-2 h-4 w-4" />
                           {t("header.logout") || "Déconnexion"}
                         </Button>
                       </div>
@@ -289,7 +360,7 @@ const Header = () => {
                       <select
                         className="w-full bg-transparent text-base border rounded px-3 py-3"
                         value={lang}
-                        onChange={(e) => setLang(e.target.value as any)}
+                        onChange={(e) => setLang(e.target.value as LanguageCode)}
                         aria-label="Language selector"
                       >
                         {available.map((opt) => (

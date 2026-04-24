@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, Users, Leaf, Award, Target, Globe } from 'lucide-react';
-import { useI18n } from '@/i18n/i18n';
+import { useI18n } from '@/i18n';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 import { useEffect, useState } from 'react';
 

@@ -9,7 +9,7 @@ import { Loader2, Search, ShoppingCart, Star, Package } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useI18n } from '@/i18n/i18n';
+import { useI18n } from '@/i18n';
 import { useCartContext } from '@/context/CartContext';
 import kilimoLogo from "@/assets/kilimo-logo.png";
 

@@ -10,11 +10,24 @@ import { useLocation } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 const ScrollToTop = () => {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    if (hash) {
+      const element = document.getElementById(hash.substring(1));
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      } else {
+        window.scrollTo(0, 0);
+        setTimeout(() => {
+          const delayedElement = document.getElementById(hash.substring(1));
+          if (delayedElement) delayedElement.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname, hash]);
 
   return null;
 };
@@ -29,6 +42,7 @@ import ProductDetail from "./pages/ProductDetail";
 import About from "./pages/About";
 import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
+import EventDetail from "./pages/EventDetail";
 import Demo from "./pages/Demo";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -57,6 +71,7 @@ import ResetPassword from "./pages/ResetPassword";
 import OrderDetail from "./pages/OrderDetail";
 import Orders from "./pages/Orders";
 import MyCashback from "./pages/MyCashback";
+import ContactPage from "./pages/ContactPage";
 import CookieConsent from "@/components/CookieConsent";
 const queryClient = new QueryClient();
 
@@ -87,8 +102,10 @@ const App = () => (
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/:slug" element={<ProductDetail />} />
                 <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<ContactPage />} />
                 <Route path="/news" element={<News />} />
                 <Route path="/news/:slug" element={<NewsDetail />} />
+                <Route path="/events/:slug" element={<EventDetail />} />
                 <Route path="/demo" element={<Demo />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />

@@ -206,5 +206,106 @@ export const emailService = {
     } catch (error) {
       console.error('[EMAIL] Erreur envoi notification cashback:', error);
     }
-  }
+  },
+
+  async sendUnpaidOrderReminder(data: {
+    email: string;
+    userName: string;
+    orderNumber: string;
+    total: number;
+    daysOld: number;
+    items: { name: string; quantity: number }[];
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configuré. Relance commande impayée pour', data.email);
+      return;
+    }
+
+    const formatPrice = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n));
+    const itemsList = data.items.map(item => `<li>${item.name} (x${item.quantity})</li>`).join('');
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject: `⚠️ Rappel : Votre commande #${data.orderNumber} est en attente de paiement`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <h1 style="color: #10b981; margin: 0;">KILIMO Agritech</h1>
+            </div>
+            <h2 style="color: #374151; margin-top: 0;">Bonjour ${data.userName},</h2>
+            <p>Nous avons remarqué que votre commande <strong>#${data.orderNumber}</strong>, passée il y a ${data.daysOld} jours, est toujours en attente de paiement.</p>
+            
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #e5e7eb;">
+              <h3 style="margin-top: 0; color: #374151; font-size: 16px;">Résumé de la commande :</h3>
+              <ul style="padding-left: 20px; color: #4b5563;">
+                ${itemsList}
+              </ul>
+              <p style="margin-bottom: 0; font-weight: bold; font-size: 18px; color: #111827;">Total : ${formatPrice(data.total)} FCFA</p>
+            </div>
+
+            <p>Pour finaliser votre achat et recevoir vos produits, veuillez procéder au paiement dès que possible.</p>
+            
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${env.FRONTEND_ORIGINS[0]}/checkout/payment?order=${data.orderNumber}" 
+                 style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                 Finaliser mon paiement
+              </a>
+            </div>
+
+            <p style="font-size: 14px; color: #6b7280;">Note : Les commandes non payées sont automatiquement annulées après 7 jours pour libérer le stock.</p>
+            
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-bottom: 0;">
+              Si vous avez déjà effectué le paiement, veuillez ignorer cet e-mail ou contacter notre support.
+            </p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error('[EMAIL] Erreur envoi relance commande impayée:', error);
+    }
+  },
+
+  async sendOrderCancellationNotice(data: {
+    email: string;
+    userName: string;
+    orderNumber: string;
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configuré. Notification annulation pour', data.email);
+      return;
+    }
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject: `Annulation de votre commande #${data.orderNumber} - KILIMO`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+            <h2 style="color: #dc2626; margin-top: 0;">Commande annulée</h2>
+            <p>Bonjour ${data.userName},</p>
+            <p>Votre commande <strong>#${data.orderNumber}</strong> a été annulée car le paiement n'a pas été reçu dans le délai imparti de 7 jours.</p>
+            <p>Si vous souhaitez toujours acquérir ces produits, nous vous invitons à passer une nouvelle commande sur notre boutique.</p>
+            
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${env.FRONTEND_ORIGINS[0]}/shop" 
+                 style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                 Retourner à la boutique
+              </a>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+            <p style="font-size: 12px; color: #9ca3af; text-align: center;">
+              L'équipe KILIMO Agritech
+            </p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error('[EMAIL] Erreur envoi notification annulation commande:', error);
+    }
+  },
 };
