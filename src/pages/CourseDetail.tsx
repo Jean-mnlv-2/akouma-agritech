@@ -29,6 +29,15 @@ import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
 interface Course {
   id: string;
   title: string;
@@ -71,12 +80,17 @@ interface Enrollment {
 }
 
 interface EnrollmentFormData {
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
   phone?: string;
   experience?: string;
   motivation?: string;
   courseId?: string;
+  professionalActivity?: string;
+  organization?: string;
+  sector?: string;
+  experienceLevel?: string;
+  expectations?: string;
 }
 
 const CourseDetail = () => {
@@ -157,7 +171,7 @@ const CourseDetail = () => {
     fetchCourse();
   }, [fetchCourse]);
 
-  const handleEnrollment = async (_formData: EnrollmentFormData) => {
+  const handleEnrollment = async (formData: EnrollmentFormData) => {
     if (!currentUser) {
       toast({
         title: "Connexion requise",
@@ -171,7 +185,8 @@ const CourseDetail = () => {
     try {
       await api.request('POST', '/api/elearning_enrollments', {
         body: {
-          courseId: Number(course?.id)
+          courseId: Number(course?.id),
+          ...formData
         }
       });
       setEnrolled(true);
@@ -441,7 +456,7 @@ const CourseDetail = () => {
                             </DialogDescription>
                           </div>
                           <div className="p-6">
-                            <EnrollmentForm onSubmit={handleEnrollment} course={course} t={t} />
+                            <EnrollmentForm onSubmit={handleEnrollment} course={course} t={t} currentUser={currentUser} />
                           </div>
                         </DialogContent>
                       </Dialog>
@@ -521,84 +536,144 @@ const CourseDetail = () => {
 };
 
 // Enrollment form component
-const EnrollmentForm = ({ onSubmit, course, t }: { onSubmit: (data: EnrollmentFormData) => void; course: Course; t: (key: string) => string }) => {
-  const [formData, setFormData] = useState({
+const EnrollmentForm = ({ onSubmit, course, t, currentUser }: { onSubmit: (data: EnrollmentFormData) => void; course: Course; t: (key: string) => string; currentUser: User | null }) => {
+  const [formData, setFormData] = useState<EnrollmentFormData>({
     name: "",
     email: "",
     phone: "",
-    experience: "",
-    motivation: ""
+    professionalActivity: "",
+    organization: "",
+    sector: "",
+    experienceLevel: "",
+    expectations: ""
   });
 
   useEffect(() => {
-    api.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
-      if (data?.user) {
-        const user = data.user;
-        setFormData(prev => ({
-          ...prev,
-          name: user.name || prev.name,
-          email: user.email || prev.email,
-        }));
-      }
-    });
-  }, []);
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        name: currentUser.name || "",
+        email: currentUser.email || "",
+      }));
+    }
+  }, [currentUser]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ ...formData, courseId: course.id });
+    // For logged in users, we don't send name/email if they are already in the account
+    const submissionData = { ...formData };
+    if (currentUser) {
+      delete submissionData.name;
+      delete submissionData.email;
+    }
+    onSubmit({ ...submissionData, courseId: course.id });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+      {!currentUser && (
+        <>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.name") || "Nom complet"}</label>
+            <Input 
+              placeholder={t("elearning.register.name_placeholder") || "Votre nom complet"} 
+              value={formData.name} 
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+              className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
+              required 
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.email") || "Email"}</label>
+            <Input 
+              type="email" 
+              placeholder={t("elearning.register.email_placeholder") || "votre@email.com"} 
+              value={formData.email} 
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+              className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
+              required 
+            />
+          </div>
+        </>
+      )}
+
+      {currentUser && (
+        <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-2">
+          <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Compte connecté</p>
+          <p className="text-sm font-medium text-foreground">{currentUser.name || currentUser.email}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.phone") || "Téléphone"}</label>
+          <Input 
+            placeholder={t("elearning.register.phone_placeholder") || "Votre numéro"} 
+            value={formData.phone} 
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+            className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience_level") || "Niveau d'expérience"}</label>
+          <Select 
+            value={formData.experienceLevel} 
+            onValueChange={(val) => setFormData({ ...formData, experienceLevel: val })}
+          >
+            <SelectTrigger className="h-11 rounded-xl border-2 focus:border-primary bg-background">
+              <SelectValue placeholder="Choisir..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="beginner">{t("elearning.register.experience_level_beginner") || "Débutant"}</SelectItem>
+              <SelectItem value="intermediate">{t("elearning.register.experience_level_intermediate") || "Intermédiaire"}</SelectItem>
+              <SelectItem value="expert">{t("elearning.register.experience_level_expert") || "Expert"}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.name") || "Nom complet"}</label>
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.professional_activity") || "Activité professionnelle"}</label>
         <Input 
-          placeholder={t("elearning.register.name_placeholder") || "Votre nom complet"} 
-          value={formData.name} 
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
-          required 
+          placeholder={t("elearning.register.professional_activity_placeholder") || "Votre métier"} 
+          value={formData.professionalActivity} 
+          onChange={(e) => setFormData({ ...formData, professionalActivity: e.target.value })} 
+          className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
         />
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.organization") || "Organisation"}</label>
+          <Input 
+            placeholder={t("elearning.register.organization_placeholder") || "Entreprise / Coopérative"} 
+            value={formData.organization} 
+            onChange={(e) => setFormData({ ...formData, organization: e.target.value })} 
+            className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.sector") || "Secteur d'activité"}</label>
+          <Input 
+            placeholder={t("elearning.register.sector_placeholder") || "Ex: Maraîchage"} 
+            value={formData.sector} 
+            onChange={(e) => setFormData({ ...formData, sector: e.target.value })} 
+            className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
+          />
+        </div>
+      </div>
+
       <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.email") || "Email"}</label>
-        <Input 
-          type="email" 
-          placeholder={t("elearning.register.email_placeholder") || "votre@email.com"} 
-          value={formData.email} 
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
-          required 
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.expectations") || "Attentes particulières"}</label>
+        <Textarea 
+          placeholder={t("elearning.register.expectations_placeholder") || "Que souhaitez-vous apprendre ?"} 
+          value={formData.expectations} 
+          onChange={(e) => setFormData({ ...formData, expectations: e.target.value })} 
+          className="rounded-xl border-2 focus:border-primary transition-all bg-background resize-none h-20" 
         />
       </div>
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.phone") || "Téléphone"}</label>
-        <Input 
-          placeholder={t("elearning.register.phone_placeholder") || "Votre numéro de téléphone"} 
-          value={formData.phone} 
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience") || "Expérience"}</label>
-        <Input 
-          placeholder={t("elearning.register.experience_placeholder") || "Votre expérience en agriculture"} 
-          value={formData.experience} 
-          onChange={(e) => setFormData({ ...formData, experience: e.target.value })} 
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all bg-background"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.motivation") || "Motivation"}</label>
-        <textarea 
-          placeholder={t("elearning.register.motivation_placeholder") || "Pourquoi souhaitez-vous suivre ce cours ?"} 
-          value={formData.motivation} 
-          onChange={(e) => setFormData({ ...formData, motivation: e.target.value })} 
-          className="w-full p-4 border-2 rounded-xl focus:border-primary transition-all bg-background resize-none h-28 focus:outline-none" 
-        />
-      </div>
-      <Button type="submit" className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white mt-4">
+
+      <Button type="submit" className="w-full h-12 rounded-xl text-md font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white mt-2">
         {t("elearning.register.submit") || "Confirmer l'inscription"}
       </Button>
     </form>

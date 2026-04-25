@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/integrations/api/client';
 import { Plus, Trash2, PlayCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -27,17 +27,31 @@ interface PreviewItem {
   courseId: number;
   typeId: number;
   title: string;
-  url: string;
+  contentUrl: string;
+  url?: string; // for backward compatibility
+  duration?: string | null;
   description?: string | null;
   previewType?: PreviewType;
   type?: string;
+  order?: number;
 }
 
-export function AdminCoursePreviews() {
+interface AdminCoursePreviewsProps {
+  initialCourseId?: number | null;
+}
+
+export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [courseId, setCourseId] = useState<number | undefined>(undefined);
-  const [form, setForm] = useState<{ courseId?: number; typeId?: number; title: string; description?: string; url: string }>({ title: '', url: '' });
+  const [courseId, setCourseId] = useState<number | undefined>(initialCourseId || undefined);
+  const [form, setForm] = useState<{ courseId?: number; typeId?: number; title: string; description?: string; contentUrl: string; duration?: string; order?: number }>({ title: '', contentUrl: '' });
+
+  // Handle initial course ID from props
+  useEffect(() => {
+    if (initialCourseId) {
+      setCourseId(initialCourseId);
+    }
+  }, [initialCourseId]);
 
   const { data: courses = [] } = useQuery<CourseItem[]>({
     queryKey: ['admin', 'courses'],
@@ -82,7 +96,7 @@ export function AdminCoursePreviews() {
     onSuccess: () => {
       toast({ title: 'Succès', description: 'Élément ajouté' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-items', courseId] });
-      setForm({ title: '', url: '', courseId, typeId: types[0]?.id });
+      setForm({ title: '', contentUrl: '', courseId, typeId: types[0]?.id, duration: '', order: (items.length || 0) + 1 });
     },
     onError: () => {
       toast({ title: 'Erreur', description: "Ajout échoué", variant: 'destructive' });
@@ -129,7 +143,7 @@ export function AdminCoursePreviews() {
               </Select>
               <Input className="w-64" placeholder="Recherche par titre" value={searchTitle} onChange={(e) => { setSearchTitle(e.target.value); setPage(1); }} />
               <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
-                <SelectTrigger className="w-28"><SelectValue placeholder="Taille" /></SelectTrigger>
+                <SelectTrigger className="w-24"><SelectValue placeholder="Taille" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5">5</SelectItem>
                   <SelectItem value="10">10</SelectItem>
@@ -137,13 +151,23 @@ export function AdminCoursePreviews() {
                 </SelectContent>
               </Select>
               <Input placeholder="Titre" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              <Input placeholder="URL" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+              <Input placeholder="URL (vidéo/pdf)" value={form.contentUrl} onChange={(e) => setForm({ ...form, contentUrl: e.target.value })} />
+              <Input placeholder="Durée (ex: 12 min)" className="w-32" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+              <Input type="number" placeholder="Ordre" className="w-20" value={form.order} onChange={(e) => setForm({ ...form, order: Number(e.target.value) })} />
               <Button
                 onClick={() => {
                   if (!courseId) { toast({ title: 'Validation', description: 'Sélectionnez un cours', variant: 'destructive' }); return; }
                   if (!form.typeId) { toast({ title: 'Validation', description: 'Type requis', variant: 'destructive' }); return; }
-                  if (!form.title || !form.url) { toast({ title: 'Validation', description: 'Titre et URL requis', variant: 'destructive' }); return; }
-                  upsertMutation.mutate({ courseId, typeId: form.typeId, title: form.title, url: form.url, description: form.description ?? null });
+                  if (!form.title || !form.contentUrl) { toast({ title: 'Validation', description: 'Titre et URL requis', variant: 'destructive' }); return; }
+                  upsertMutation.mutate({ 
+                    courseId, 
+                    typeId: form.typeId, 
+                    title: form.title, 
+                    contentUrl: form.contentUrl, 
+                    duration: form.duration || null,
+                    order: form.order || 0,
+                    description: form.description ?? null 
+                  });
                 }}
               >
                 <Plus className="w-4 h-4 mr-1" /> Ajouter
@@ -173,7 +197,7 @@ export function AdminCoursePreviews() {
                   <div className="aspect-video w-full">
                     {playlist[currentIndex] ? (
                       <iframe
-                        src={playlist[currentIndex].url}
+                        src={playlist[currentIndex].contentUrl || playlist[currentIndex].url}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
@@ -206,11 +230,12 @@ export function AdminCoursePreviews() {
                   const byType = filterTypeId ? byCourse.filter((it: PreviewItem) => Number(it.typeId) === Number(filterTypeId)) : byCourse;
                   const byText = searchTitle ? byType.filter((it: PreviewItem) => String(it.title).toLowerCase().includes(searchTitle.toLowerCase())) : byType;
                   const toCSV = (v: string | number | null | undefined) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-                  const header = ['Titre', 'Type', 'URL'].map(v => `"${v}"`).join(',');
+                  const header = ['Titre', 'Type', 'URL', 'Durée'].map(v => `"${v}"`).join(',');
                   const lines = byText.map((it: PreviewItem) => [
                     toCSV(it.title),
                     toCSV(it.previewType?.label || it.type),
-                    toCSV(it.url),
+                    toCSV(it.contentUrl || it.url),
+                    toCSV(it.duration),
                   ].join(','));
                   const content = [header, ...lines].join('\n');
                   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
@@ -247,8 +272,10 @@ export function AdminCoursePreviews() {
                 <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Ordre</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Titre</TableHead>
+                <TableHead>Durée</TableHead>
                 <TableHead>URL</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -262,9 +289,11 @@ export function AdminCoursePreviews() {
                     alert(JSON.stringify(it, null, 2));
                   }}
                 >
+                  <TableCell className="font-mono text-xs">{it.order}</TableCell>
                   <TableCell>{it.previewType?.label || it.type}</TableCell>
                   <TableCell className="font-medium">{it.title}</TableCell>
-                  <TableCell className="max-w-xs truncate text-xs text-muted-foreground">{it.url}</TableCell>
+                  <TableCell>{it.duration || '—'}</TableCell>
+                  <TableCell className="max-w-xs truncate text-xs text-muted-foreground">{it.contentUrl || it.url}</TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"

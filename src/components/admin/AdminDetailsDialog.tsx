@@ -15,7 +15,7 @@ interface AdminDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  data: any;
+  data: any | null | undefined;
   type: string;
 }
 
@@ -100,6 +100,27 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
           { label: 'Dernière connexion', key: 'last_login', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : 'Jamais' },
           { label: 'Créé le', key: 'created_at', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : '' },
         ];
+      case 'course':
+        return [
+          { label: 'Titre', key: 'title' },
+          { label: 'Slug', key: 'slug' },
+          { label: 'Catégorie', key: 'category' },
+          { label: 'Instructeur', key: 'instructorName' },
+          { label: 'Bio Instructeur', key: 'instructorBio' },
+          { label: 'Prix', key: 'price', transform: (v: unknown) => `${Number(v).toLocaleString()} FCFA` },
+          { label: 'Durée', key: 'duration', transform: (v: unknown) => `${v || 0} min` },
+          { label: 'Niveau', key: 'level' },
+          { label: 'Langues', key: 'languages' },
+          { label: 'Publié', key: 'isPublished' },
+          { label: 'Vedette', key: 'isFeatured' },
+          { label: 'Aperçu dispo', key: 'isPreviewAvailable' },
+          { label: 'Copie protégée', key: 'isCopyProtected' },
+          { label: 'Description', key: 'description' },
+          { label: 'Contenu', key: 'content' },
+          { label: 'Image', key: 'thumbnailUrl', isImage: true },
+          { label: 'Vidéo', key: 'videoUrl' },
+          { label: 'Créé le', key: 'createdAt', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : '' },
+        ];
       case 'promo-code':
         return [
           { label: 'Code', key: 'code' },
@@ -177,7 +198,7 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
                   <div key={idx} className="md:col-span-2 space-y-2">
                     <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{field.label}</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-muted/20 p-4 rounded-lg">
-                      {Object.entries(jsonObj).map(([k, v]: [string, any]) => (
+                      {Object.entries(jsonObj as Record<string, unknown>).map(([k, v]) => (
                         <div key={k} className="flex justify-between border-b border-border/50 pb-1">
                           <span className="text-sm font-medium">{k} :</span>
                           <span className="text-sm">{String(v)}</span>

@@ -17,6 +17,7 @@ statsRouter.get('/', async (_req: Request, res: Response) => {
       totalOrders,
       totalReviews,
       totalApplications,
+      totalEnrollments,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.course.count(),
@@ -27,6 +28,7 @@ statsRouter.get('/', async (_req: Request, res: Response) => {
       prisma.order.count(),
       prisma.review.count(),
       prisma.jobApplication.count(),
+      prisma.eLearningEnrollment.count(),
     ]);
 
     res.json({
@@ -40,6 +42,7 @@ statsRouter.get('/', async (_req: Request, res: Response) => {
         totalOrders,
         totalReviews,
         totalApplications,
+        totalEnrollments,
       }
     });
   } catch (e) {

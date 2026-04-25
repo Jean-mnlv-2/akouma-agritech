@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,12 +28,13 @@ interface CourseModule {
   pdfUrl: string | null;
   order: number;
   isActive: boolean;
-  quizQuestions: any;
+  quizQuestions: QuizQuestion[] | string | null;
 }
 
 interface Course {
   id: number;
   title: string;
+  duration: number | null;
 }
 
 interface QuizQuestion {
@@ -42,7 +43,11 @@ interface QuizQuestion {
   correctAnswer: number;
 }
 
-export function AdminCourseModules() {
+interface AdminCourseModulesProps {
+  initialCourseId?: number | null;
+}
+
+export function AdminCourseModules({ initialCourseId }: AdminCourseModulesProps) {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<CourseModule | null>(null);
@@ -55,10 +60,23 @@ export function AdminCourseModules() {
     queryFn: async () => {
       const res = await api.request('GET', '/api/courses');
       const items = Array.isArray(res) ? res : res.data;
-      return (items || []).map((c: any) => ({ id: c.id, title: c.title }));
+      return (items || []).map((c: { id: number; title: string; duration?: number }) => ({ 
+        id: c.id, 
+        title: c.title,
+        duration: c.duration || 0
+      }));
     },
     staleTime: 60000,
   });
+
+  useEffect(() => {
+    if (initialCourseId && courses.length > 0) {
+      const course = courses.find(c => Number(c.id) === Number(initialCourseId));
+      if (course) {
+        setSelectedCourse(course);
+      }
+    }
+  }, [initialCourseId, courses]);
 
   // Fetch modules for selected course
   const { data: modules = [], isLoading: loadingModules } = useQuery<CourseModule[]>({
@@ -266,6 +284,8 @@ export function AdminCourseModules() {
         onOpenChange={setDialogOpen}
         module={editingModule}
         courseId={selectedCourse.id}
+        totalCourseDuration={selectedCourse.duration || 0}
+        existingModules={modules}
         nextOrder={modules.length > 0 ? Math.max(...modules.map(m => m.order)) + 1 : 0}
         onSave={(data, id) => saveMutation.mutate({ data, id })}
         saving={saveMutation.isPending}
@@ -276,12 +296,14 @@ export function AdminCourseModules() {
 
 // Module creation/edit dialog
 function ModuleDialog({
-  open, onOpenChange, module, courseId, nextOrder, onSave, saving
+  open, onOpenChange, module, courseId, totalCourseDuration, existingModules, nextOrder, onSave, saving
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   module: CourseModule | null;
   courseId: number;
+  totalCourseDuration: number;
+  existingModules: CourseModule[];
   nextOrder: number;
   onSave: (data: Record<string, unknown>, id?: number) => void;
   saving: boolean;
@@ -295,9 +317,15 @@ function ModuleDialog({
   const [order, setOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const { toast } = useToast();
+
+  const parseDuration = (dur: string | null): number => {
+    if (!dur) return 0;
+    const match = dur.match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  };
 
   // Reset form on open
-  useState(() => {});
   const resetForm = () => {
     if (module) {
       setTitle(module.title);
@@ -325,6 +353,23 @@ function ModuleDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    const currentModuleDuration = parseDuration(duration);
+    const otherModulesDuration = existingModules
+      .filter(m => m.id !== module?.id)
+      .reduce((sum, m) => sum + parseDuration(m.duration), 0);
+
+    const totalDuration = otherModulesDuration + currentModuleDuration;
+
+    if (totalCourseDuration > 0 && totalDuration > totalCourseDuration) {
+      toast({
+        title: "Durée totale dépassée",
+        description: `La somme des durées des modules (${totalDuration} min) ne peut pas dépasser la durée totale du cours (${totalCourseDuration} min).`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const data: Record<string, unknown> = {
       courseId, title: title.trim(), type, duration: duration || null,
       content: type === 'text' ? content : null,
@@ -340,9 +385,9 @@ function ModuleDialog({
     setQuizQuestions([...quizQuestions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
   };
 
-  const updateQuestion = (idx: number, field: string, value: any) => {
+  const updateQuestion = <K extends keyof QuizQuestion>(idx: number, field: K, value: QuizQuestion[K]) => {
     const updated = [...quizQuestions];
-    (updated[idx] as any)[field] = value;
+    updated[idx][field] = value;
     setQuizQuestions(updated);
   };
 

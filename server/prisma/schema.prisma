@@ -103,6 +103,9 @@ model Course {
   price              Decimal               @db.Decimal(12, 2)
   duration           Int?
   level              String?
+  category           String?               @default("Agriculture")
+  instructorName     String?
+  instructorBio      String?
   thumbnailUrl       String?
   videoUrl           String?
   isPublished        Boolean               @default(false)
@@ -327,24 +330,29 @@ model DemoRequest {
 }
 
 model ELearningEnrollment {
-  id               Int              @id @default(autoincrement())
-  userId           String
-  courseId         Int
-  enrolledAt       DateTime         @default(now())
-  completedAt      DateTime?
-  progress         Int              @default(0)
-  studyPace        String           @default("standard")
-  startDate        DateTime?
-  targetEndDate    DateTime?
-  remindersEnabled Boolean          @default(true)
-  lastReminderSent DateTime?
-  studyDays        String?
-  dailyTimeSlot    String?
-  schedules        CourseSchedule[]
-  course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  moduleProgress   ModuleProgress[]
-  reminderLogs     ReminderLog[]
+  id                   Int              @id @default(autoincrement())
+  userId               String
+  courseId             Int
+  enrolledAt           DateTime         @default(now())
+  completedAt          DateTime?
+  progress             Int              @default(0)
+  studyPace            String           @default("standard")
+  startDate            DateTime?
+  targetEndDate        DateTime?
+  remindersEnabled     Boolean          @default(true)
+  lastReminderSent     DateTime?
+  studyDays            String?
+  dailyTimeSlot        String?
+  professionalActivity String?
+  organization         String?
+  sector               String?
+  experienceLevel      String?
+  expectations         String?
+  schedules            CourseSchedule[]
+  course               Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleProgress       ModuleProgress[]
+  reminderLogs         ReminderLog[]
 
   @@unique([userId, courseId])
 }

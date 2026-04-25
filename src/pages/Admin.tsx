@@ -52,6 +52,7 @@ import { AdminNotifications } from '@/components/admin/AdminNotifications';
 import { AdminAffiliateLeaderboard } from '@/components/admin/AdminAffiliateLeaderboard';
 import { AdminCourseModules } from '@/components/admin/AdminCourseModules';
 import { AdminAttendance } from '@/components/admin/AdminAttendance';
+import AdminElearningEnrollments from '@/pages/AdminElearningEnrollments';
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
@@ -59,6 +60,7 @@ interface DashboardStats {
   totalSeeds: number;
   totalProducts: number;
   totalSubmissions: number;
+  totalEnrollments?: number;
 }
 
 interface StatCardProps {
@@ -95,6 +97,7 @@ const tabs = [
   { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
   { value: 'deliveries', label: 'Livraisons', icon: Truck },
   { value: 'courses', label: 'Cours', icon: BookOpen },
+  { value: 'elearning-enrollments', label: 'Inscriptions Cours', icon: Users },
   { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
   { value: 'course-modules', label: 'Modules Cours', icon: BookOpen },
   { value: 'attendance', label: 'Présences', icon: Calendar },
@@ -121,13 +124,15 @@ function AdminContent() {
   const [loading, setLoading] = useState(true);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalCourses: 0,
     totalNews: 0,
     totalSeeds: 0,
     totalProducts: 0,
-    totalSubmissions: 0
+    totalSubmissions: 0,
+    totalEnrollments: 0
   });
   const navigate = useNavigate();
 
@@ -187,6 +192,7 @@ function AdminContent() {
           totalSeeds: Number(s.totalSeeds || 0),
           totalProducts: Number(s.totalProducts || 0),
           totalSubmissions: Number(s.totalSubmissions || 0),
+          totalEnrollments: Number(s.totalEnrollments || 0),
         });
       } catch (error) {
         if (isMounted) console.error('Error fetching dashboard stats:', error);
@@ -242,6 +248,13 @@ function AdminContent() {
       icon: FileText,
       description: "Contenus en attente",
       color: "text-indigo-600"
+    },
+    {
+      title: "Inscriptions",
+      value: stats.totalEnrollments || 0,
+      icon: Users,
+      description: "Inscrits aux cours",
+      color: "text-pink-600"
     }
   ];
 
@@ -274,7 +287,8 @@ function AdminContent() {
         "Actualités": "news",
         "Semences": "seeds",
         "Produits": "products",
-        "Soumissions": "submissions"
+        "Soumissions": "submissions",
+        "Inscriptions": "elearning-enrollments"
       };
       const moduleKey = moduleMap[stat.title];
       return user?.allowedModules?.includes(moduleKey);
@@ -320,7 +334,7 @@ function AdminContent() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
         {/* Dashboard Stats */}
-        <div className="admin-grid-responsive admin-grid-responsive-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
           {visibleStats.map((stat) => (<StatCard key={`stat-${stat.title}`} {...stat} className="admin-card-mobile" />))}
         </div>
 
@@ -345,9 +359,28 @@ function AdminContent() {
               {(activeTab === 'users' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('users')))) && <AdminUserManagement />}
               {(activeTab === 'orders' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('orders')))) && <AdminOrders />}
               {(activeTab === 'deliveries' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('deliveries')))) && <AdminDeliveries />}
-              {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && <AdminCourses />}
-              {(activeTab === 'course-previews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-previews')))) && <AdminCoursePreviews />}
-              {(activeTab === 'course-modules' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-modules')))) && <AdminCourseModules />}
+              {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && (
+                <AdminCourses 
+                  onViewInscriptions={(id) => { setSelectedCourseId(id); setActiveTab('elearning-enrollments'); }}
+                  onViewModules={(id) => { setSelectedCourseId(id); setActiveTab('course-modules'); }}
+                />
+              )}
+              {(activeTab === 'elearning-enrollments' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('elearning-enrollments')))) && (
+                <AdminElearningEnrollments 
+                  initialCourseId={selectedCourseId} 
+                  onClearFilter={() => setSelectedCourseId(null)} 
+                />
+              )}
+              {(activeTab === 'course-previews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-previews')))) && (
+                <AdminCoursePreviews 
+                  initialCourseId={selectedCourseId} 
+                />
+              )}
+              {(activeTab === 'course-modules' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('course-modules')))) && (
+                <AdminCourseModules 
+                  initialCourseId={selectedCourseId} 
+                />
+              )}
               {(activeTab === 'attendance' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('attendance')))) && <AdminAttendance />}
               {(activeTab === 'reminder-logs' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reminder-logs')))) && <AdminReminderLogs />}
               {(activeTab === 'news' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('news')))) && <AdminNews />}

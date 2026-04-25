@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
 import { Plus, Trash, ListPlus } from 'lucide-react';
 import { api } from '@/integrations/api/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Module {
   id: string;
@@ -29,6 +30,7 @@ interface AdminCourseDialogProps {
 }
 
 export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminCourseDialogProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -61,6 +63,29 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
   const thumbInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [newCategory, setNewCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([
+    "Agriculture Durable",
+    "Technologie Agricole",
+    "Gestion des Cultures",
+    "Élevage",
+    "Marketing Agricole"
+  ]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.request('GET', '/api/courses');
+        const courses = res.data || [];
+        const existingCats = Array.from(new Set(courses.map((c: { category?: string }) => c.category).filter(Boolean))) as string[];
+        setCategories(prev => Array.from(new Set([...prev, ...existingCats])).sort());
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     if (course) {
       setFormData({
@@ -68,27 +93,27 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         description: course.description || '',
         content: course.content || '',
         excerpt: course.excerpt || '',
-        instructor_name: course.instructor_name || '',
-        instructor_bio: course.instructor_bio || '',
+        instructor_name: course.instructorName || '',
+        instructor_bio: course.instructorBio || '',
         category: course.category || '',
         level: course.level || '',
-        price_fcfa: course.price_fcfa || 0,
-        duration_minutes: course.duration_minutes || 0,
-        thumbnail_url: course.thumbnail_url || '',
-        video_url: course.video_url || '',
+        price_fcfa: course.price || 0,
+        duration_minutes: course.duration || 0,
+        thumbnail_url: course.thumbnailUrl || '',
+        video_url: course.videoUrl || '',
         course_materials_url: course.course_materials_url || '',
-        is_published: course.is_published || false,
-        is_featured: course.is_featured || false,
+        is_published: course.isPublished || false,
+        is_featured: course.isFeatured || false,
         is_preview_available: course.isPreviewAvailable ?? false,
-        is_copy_protected: (course as any).isCopyProtected ?? (course as any).is_copy_protected ?? false,
+        is_copy_protected: course.isCopyProtected ?? false,
         languages_csv: Array.isArray(course.languages) ? (course.languages?.join(', ') || '') : '',
         slug: course.slug || slugify(course.title || ''),
         benefits_csv: Array.isArray(course.benefits) ? course.benefits.join('\n') : '',
         requirements_csv: Array.isArray(course.requirements) ? course.requirements.join('\n') : '',
         modules: Array.isArray(course.modules) ? (course.modules as Module[]) : []
       });
-      setPreviewImageUrl(course.thumbnail_url || null);
-      setPreviewVideoUrl(course.video_url || null);
+      setPreviewImageUrl(course.thumbnailUrl || null);
+      setPreviewVideoUrl(course.videoUrl || null);
     } else {
       setFormData({
         title: '',
@@ -121,6 +146,23 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation de la durée
+    const newCourseDuration = Number(formData.duration_minutes);
+    if (newCourseDuration > 0 && Array.isArray(course?.modules)) {
+      const parseDuration = (dur: string | null): number => {
+        if (!dur) return 0;
+        const match = dur.match(/(\d+)/);
+        return match ? parseInt(match[1], 10) : 0;
+      };
+      
+      const totalModulesDuration = (course.modules as Module[]).reduce((sum, m) => sum + parseDuration(m.duration), 0);
+      if (totalModulesDuration > newCourseDuration) {
+        alert(`La durée totale des modules (${totalModulesDuration} min) dépasse la nouvelle durée du cours (${newCourseDuration} min).`);
+        return;
+      }
+    }
+
     const slug = formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const languages = formData.languages_csv
       .split(',')
@@ -140,8 +182,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       description: formData.description || null,
       content: formData.content || null,
       excerpt: formData.excerpt || null,
-      instructor_name: formData.instructor_name || null,
-      instructor_bio: formData.instructor_bio || null,
+      instructorName: formData.instructor_name || null,
+      instructorBio: formData.instructor_bio || null,
       category: formData.category || null,
       price: formData.price_fcfa || 0,
       duration: formData.duration_minutes || 0,
@@ -290,16 +332,42 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Catégorie *</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner une catégorie" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Agriculture Durable">Agriculture Durable</SelectItem>
-                  <SelectItem value="Technologie Agricole">Technologie Agricole</SelectItem>
-                  <SelectItem value="Gestion des Cultures">Gestion des Cultures</SelectItem>
-                  <SelectItem value="Élevage">Élevage</SelectItem>
-                  <SelectItem value="Marketing Agricole">Marketing Agricole</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Sélectionner une catégorie" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="icon" title="Ajouter une catégorie"><Plus className="w-4 h-4" /></Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Ajouter une nouvelle catégorie</DialogTitle>
+                      <DialogDescription>Entrez le nom de la nouvelle catégorie à ajouter à la liste.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-2 pt-4">
+                      <Input 
+                        placeholder="Ex: Pisciculture" 
+                        value={newCategory} 
+                        onChange={(e) => setNewCategory(e.target.value)}
+                      />
+                      <Button onClick={() => {
+                        if (newCategory.trim() && !categories.includes(newCategory.trim())) {
+                          setCategories(prev => [...prev, newCategory.trim()].sort());
+                          setFormData({ ...formData, category: newCategory.trim() });
+                          setNewCategory('');
+                          toast({ title: "Catégorie ajoutée", description: `La catégorie "${newCategory}" a été ajoutée.` });
+                        }
+                      }}>Ajouter</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="course_materials_url">URL des supports (PDF, docs)</Label>

@@ -5,6 +5,12 @@ import { authRequired, adminOnly } from '../middleware/authRequired';
 const prisma = new PrismaClient();
 export const coursesRouter = Router();
 
+const parseDuration = (dur: string | null): number => {
+  if (!dur) return 0;
+  const match = dur.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+};
+
 coursesRouter.get('/', async (_req: Request, res: Response) => {
   const items = await prisma.course.findMany({ orderBy: { createdAt: 'desc' } });
   res.json({ data: items });
@@ -42,23 +48,63 @@ coursesRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 coursesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished, isCopyProtected } = req.body || {};
+  const { 
+    title, slug, description, content, price, duration, level, 
+    thumbnailUrl, videoUrl, isPublished, isCopyProtected, 
+    category, instructorName, instructorBio 
+  } = req.body || {};
   if (!title || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.course.create({
-    data: { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished: Boolean(isPublished), isCopyProtected: Boolean(isCopyProtected) } as any,
+    data: { 
+      title, slug, description, content, 
+      price: Number(price), 
+      duration: duration ? Number(duration) : null, 
+      level, thumbnailUrl, videoUrl, 
+      isPublished: Boolean(isPublished), 
+      isCopyProtected: Boolean(isCopyProtected),
+      category, instructorName, instructorBio
+    } as any,
   });
   res.status(201).json({ data: created });
 });
 
 coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, isPublished, isCopyProtected } = req.body || {};
+  const { 
+    title, slug, description, content, price, duration, level, 
+    thumbnailUrl, videoUrl, isPublished, isCopyProtected,
+    category, instructorName, instructorBio
+  } = req.body || {};
+
+  if (duration !== undefined && duration !== null) {
+    const newCourseDuration = Number(duration);
+    if (newCourseDuration > 0) {
+      const courseWithModules = await prisma.course.findUnique({
+        where: { id },
+        include: { modules: { select: { duration: true } } }
+      });
+      
+      if (courseWithModules) {
+        const totalModulesDuration = courseWithModules.modules.reduce((sum, m) => sum + parseDuration(m.duration), 0);
+        if (totalModulesDuration > newCourseDuration) {
+          return res.status(400).json({ 
+            error: `La durée totale des modules (${totalModulesDuration} min) dépasse la nouvelle durée du cours (${newCourseDuration} min). Veuillez d'abord modifier la durée des modules.` 
+          });
+        }
+      }
+    }
+  }
+
   const updated = await prisma.course.update({
     where: { id },
     data: { 
-      title, slug, description, content, price, duration, level, thumbnailUrl, videoUrl, 
+      title, slug, description, content, 
+      price: price !== undefined ? Number(price) : undefined,
+      duration: duration !== undefined ? (duration ? Number(duration) : null) : undefined,
+      level, thumbnailUrl, videoUrl, 
       isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
-      isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
+      isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected),
+      category, instructorName, instructorBio
     } as any,
   });
   res.json({ data: updated });

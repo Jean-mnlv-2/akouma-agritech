@@ -5,6 +5,12 @@ import { authRequired, adminOnly } from '../middleware/authRequired';
 const prisma = new PrismaClient();
 export const courseModulesRouter = Router();
 
+const parseDuration = (dur: string | null): number => {
+  if (!dur) return 0;
+  const match = dur.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+};
+
 // Get modules for a course (public)
 courseModulesRouter.get('/course/:courseId', async (req: Request, res: Response) => {
   try {
@@ -25,6 +31,23 @@ courseModulesRouter.post('/', authRequired, adminOnly, async (req: Request, res:
   try {
     const { courseId, title, type, duration, content, videoUrl, pdfUrl, order, quizQuestions } = req.body;
     if (!courseId || !title) return res.status(400).json({ error: 'courseId and title required' });
+
+    // Validation de la durée totale
+    const course = await prisma.course.findUnique({
+      where: { id: Number(courseId) },
+      select: { duration: true, modules: { select: { duration: true } } }
+    });
+
+    if (course && course.duration && course.duration > 0) {
+      const currentModulesDuration = course.modules.reduce((sum, m) => sum + parseDuration(m.duration), 0);
+      const newModuleDuration = parseDuration(duration);
+      if (currentModulesDuration + newModuleDuration > course.duration) {
+        return res.status(400).json({
+          error: `La durée totale des modules (${currentModulesDuration + newModuleDuration} min) dépasse la durée du cours (${course.duration} min)`
+        });
+      }
+    }
+
     const created = await prisma.courseModule.create({
       data: {
         courseId: Number(courseId),
@@ -49,6 +72,36 @@ courseModulesRouter.put('/:id', authRequired, adminOnly, async (req: Request, re
   try {
     const id = Number(req.params.id);
     const { title, type, duration, content, videoUrl, pdfUrl, order, isActive, quizQuestions } = req.body;
+
+    // Validation de la durée totale si la durée est modifiée
+    if (duration !== undefined) {
+      const moduleToUpdate = await prisma.courseModule.findUnique({
+        where: { id },
+        select: { courseId: true }
+      });
+
+      if (moduleToUpdate) {
+        const course = await prisma.course.findUnique({
+          where: { id: moduleToUpdate.courseId },
+          select: { duration: true, modules: { select: { id: true, duration: true } } }
+        });
+
+        if (course && course.duration && course.duration > 0) {
+          const otherModulesDuration = course.modules
+            .filter(m => m.id !== id)
+            .reduce((sum, m) => sum + parseDuration(m.duration), 0);
+          
+          const newTotalDuration = otherModulesDuration + parseDuration(duration);
+          
+          if (newTotalDuration > course.duration) {
+            return res.status(400).json({
+              error: `La durée totale des modules (${newTotalDuration} min) dépasse la durée du cours (${course.duration} min)`
+            });
+          }
+        }
+      }
+    }
+
     const updated = await prisma.courseModule.update({
       where: { id },
       data: {

@@ -15,13 +15,17 @@ interface User {
 interface PreviewItem {
   id: string | number;
   courseId: number;
+  typeId?: number;
   title: string;
-  description?: string;
-  type: string;
-  url: string;
+  description?: string | null;
+  contentUrl: string;
+  url?: string;
+  duration?: string | null;
+  order?: number;
   previewType?: {
     name: string;
   };
+  type?: string;
 }
 
 interface CourseCardProps {
@@ -177,44 +181,54 @@ const ElearningCourseCard = ({ course, currentUser, isEnrolled, previewItems, on
                   <DialogDescription>Consultez un extrait du cours avant de vous inscrire.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  {coursePreviewItems.map((item: PreviewItem) => {
-                    const isVideo = item.type === 'video' || item.previewType?.name === 'video';
-                    return (
-                      <div key={item.id} className="border rounded-lg p-3 space-y-3">
-                        <div className="flex items-center gap-3">
-                          {isVideo ? <PlayCircle className="w-5 h-5 text-primary" /> : <Download className="w-5 h-5 text-primary" />}
-                          <div>
-                            <div className="font-medium">{item.title}</div>
-                            {item.description && <div className="text-sm text-muted-foreground">{item.description}</div>}
-                          </div>
-                        </div>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              {isVideo ? t("elearning.preview.watch") : t("elearning.preview.download")}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-none">
-                            <DialogHeader className="sr-only">
-                              <DialogTitle>{item.title}</DialogTitle>
-                              <DialogDescription>{item.description || item.title}</DialogDescription>
-                            </DialogHeader>
-                            <div className="aspect-video w-full">
-                              {isVideo ? (
-                                <iframe src={item.url} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
-                                  <Download className="w-16 h-16 mb-4 text-primary" />
-                                  <h3 className="text-xl font-bold mb-4">{item.title}</h3>
-                                  <Button asChild><a href={item.url} target="_blank" rel="noreferrer">Télécharger</a></Button>
-                                </div>
-                              )}
+                  {coursePreviewItems
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((item: PreviewItem) => {
+                      const isVideo = item.type === 'video' || item.previewType?.name === 'video';
+                      const itemUrl = item.contentUrl || item.url || '';
+                      return (
+                        <div key={item.id} className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {isVideo ? <PlayCircle className="w-5 h-5 text-primary" /> : <Download className="w-5 h-5 text-primary" />}
+                              <div>
+                                <div className="font-medium">{item.title}</div>
+                                {item.description && <div className="text-sm text-muted-foreground">{item.description}</div>}
+                              </div>
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    );
-                  })}
+                            {item.duration && (
+                              <Badge variant="secondary" className="text-[10px] font-bold">
+                                {item.duration}
+                              </Badge>
+                            )}
+                          </div>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                                {isVideo ? t("elearning.preview.watch") : t("elearning.preview.download")}
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-none">
+                              <DialogHeader className="sr-only">
+                                <DialogTitle>{item.title}</DialogTitle>
+                                <DialogDescription>{item.description || item.title}</DialogDescription>
+                              </DialogHeader>
+                              <div className="aspect-video w-full">
+                                {isVideo ? (
+                                  <iframe src={itemUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                                ) : (
+                                  <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
+                                    <Download className="w-16 h-16 mb-4 text-primary" />
+                                    <h3 className="text-xl font-bold mb-4">{item.title}</h3>
+                                    <Button asChild><a href={itemUrl} target="_blank" rel="noreferrer">Télécharger</a></Button>
+                                  </div>
+                                )}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      );
+                    })}
                 </div>
               </DialogContent>
             </Dialog>

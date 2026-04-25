@@ -81,7 +81,7 @@ export const createDelivery = async (deliveryData: any) => {
     }
 
     logger.info(`[DeliveryService] Creating delivery with commandeId: ${deliveryData.commandeId}`);
-    const response = await apiClient.post('/api/v1/external/livraisons', deliveryData);
+    const response = await apiClient.post('/livraisons', deliveryData);
     return response.data;
   } catch (error) {
     return handleApiError(error, 'createDelivery');
@@ -134,7 +134,7 @@ export const getShippingEstimate = async (estimateData: {
 
     logger.info(`[DeliveryService] Requesting estimate from Le Livreur with payload:`, deliveryPayload);
 
-    const response = await apiClient.post('/api/v1/external/livraisons', deliveryPayload);
+    const response = await apiClient.post('/livraisons', deliveryPayload);
 
     logger.info(`[DeliveryService] Shipping estimate response from Le Livreur:`, response.data);
 
@@ -171,7 +171,7 @@ export const getShippingEstimate = async (estimateData: {
 
 export const getDeliveries = async (params: any) => {
   try {
-    const response = await apiClient.get('/api/v1/external/livraisons', { params });
+    const response = await apiClient.get('/livraisons', { params });
     return response.data;
   } catch (error) {
     return handleApiError(error, 'getDeliveries');
@@ -180,7 +180,7 @@ export const getDeliveries = async (params: any) => {
 
 export const getLivreurs = async (params: any) => {
   try {
-    const response = await apiClient.get('/api/v1/external/livreurs', { params });
+    const response = await apiClient.get('/livreurs', { params });
     return response.data;
   } catch (error) {
     return handleApiError(error, 'getLivreurs');
@@ -189,7 +189,7 @@ export const getLivreurs = async (params: any) => {
 
 export const assignLivreur = async (livraisonId: string, livreurId: string) => {
   try {
-    const response = await apiClient.put(`/api/v1/external/livraisons/${livraisonId}`, { livreurId });
+    const response = await apiClient.put(`/livraisons/${livraisonId}`, { livreurId });
     return response.data;
   } catch (error) {
     return handleApiError(error, 'assignLivreur');

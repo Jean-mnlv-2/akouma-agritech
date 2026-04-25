@@ -14,7 +14,7 @@ elearningEnrollmentsRouter.get('/', authRequired, async (_req: Request, res: Res
 });
 
 elearningEnrollmentsRouter.post('/', authRequired, async (req: Request, res: Response) => {
-  const { courseId } = req.body || {};
+  const { courseId, professionalActivity, organization, sector, experienceLevel, expectations } = req.body || {};
   const userId = req.user?.id;
 
   if (!userId || !courseId) {
@@ -25,8 +25,13 @@ elearningEnrollmentsRouter.post('/', authRequired, async (req: Request, res: Res
     const created = await prisma.eLearningEnrollment.create({
       data: { 
         userId: String(userId), 
-        courseId: Number(courseId) 
-      },
+        courseId: Number(courseId),
+        professionalActivity,
+        organization,
+        sector,
+        experienceLevel,
+        expectations
+      } as any,
     });
     res.status(201).json({ data: created });
   } catch (e) {

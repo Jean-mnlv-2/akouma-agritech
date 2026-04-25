@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, BookOpen, Users, Eye } from 'lucide-react';
 import { AdminCourseDialog } from './AdminCourseDialog';
 import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,29 +17,34 @@ export interface Course {
   description?: string;
   content?: string;
   excerpt?: string;
-  instructor_name?: string;
-  instructor_bio?: string;
-  price_fcfa?: number;
-  duration_minutes?: number;
+  instructorName?: string;
+  instructorBio?: string;
+  price?: number;
+  duration?: number;
   category?: string;
   level?: string;
-  is_published?: boolean;
-  is_featured?: boolean;
+  isPublished?: boolean;
+  isFeatured?: boolean;
   isCopyProtected?: boolean;
   isPreviewAvailable?: boolean;
   languages?: string[];
   course_materials_url?: string;
-  thumbnail_url?: string;
-  video_url?: string;
+  thumbnailUrl?: string;
+  videoUrl?: string;
   modules?: unknown[];
   benefits?: string[];
   requirements?: string[];
-  created_at?: string;
+  createdAt?: string;
   enrollment_count?: number;
   rating?: number;
 }
 
-export function AdminCourses() {
+export interface AdminCoursesProps {
+  onViewInscriptions?: (courseId: number) => void;
+  onViewModules?: (courseId: number) => void;
+}
+
+export function AdminCourses({ onViewInscriptions, onViewModules }: AdminCoursesProps) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -143,25 +148,25 @@ export function AdminCourses() {
                 }}
               >
                 <TableCell>
-                  {course.thumbnail_url ? (
-                    <img src={course.thumbnail_url} alt={course.title} className="w-10 h-10 rounded object-cover" />
-                  ) : course.video_url ? (
+                  {course.thumbnailUrl ? (
+                    <img src={course.thumbnailUrl} alt={course.title} className="w-10 h-10 rounded object-cover" />
+                  ) : course.videoUrl ? (
                     <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">▶</div>
                   ) : (
                     <div className="w-10 h-10 rounded bg-muted" />)
                   }
                 </TableCell>
                 <TableCell className="font-medium">{course.title}</TableCell>
-                <TableCell>{course.instructor_name}</TableCell>
-                <TableCell>{course.category}</TableCell>
-                <TableCell>{Number(course.price_fcfa ?? 0).toLocaleString()} FCFA</TableCell>
-                <TableCell>{course.duration_minutes ?? 0} min</TableCell>
+                <TableCell>{course.instructorName || <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell>{course.category || <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell>{Number(course.price ?? 0).toLocaleString()} FCFA</TableCell>
+                <TableCell>{course.duration ?? 0} min</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Badge variant={course.is_published ? 'default' : 'secondary'}>
-                      {course.is_published ? 'Publié' : 'Brouillon'}
+                    <Badge variant={course.isPublished ? 'default' : 'secondary'}>
+                      {course.isPublished ? 'Publié' : 'Brouillon'}
                     </Badge>
-                    {course.is_featured && (<Badge variant="outline">Mis en avant</Badge>)}
+                    {course.isFeatured && (<Badge variant="outline">Mis en avant</Badge>)}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -181,8 +186,31 @@ export function AdminCourses() {
                         e.stopPropagation();
                         handleEdit(course);
                       }}
+                      title="Modifier"
                     >
                       <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onViewModules) onViewModules(Number(course.id));
+                      }}
+                      title="Gérer les modules"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onViewInscriptions) onViewInscriptions(Number(course.id));
+                      }}
+                      title="Voir les inscriptions"
+                    >
+                      <Users className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
@@ -198,8 +226,9 @@ export function AdminCourses() {
                           toast({ title: 'Erreur', description: 'Impossible de mettre à jour', variant: 'destructive' });
                         }
                       }}
+                      title={course.isPreviewAvailable ? 'Désactiver Aperçu' : 'Activer Aperçu'}
                     >
-                      {(course.isPreviewAvailable ?? false) ? 'Désactiver Aperçu' : 'Activer Aperçu'}
+                      <Eye className="w-4 h-4" />
                     </Button>
                     <Button 
                       variant="outline" 
@@ -208,6 +237,8 @@ export function AdminCourses() {
                         e.stopPropagation();
                         handleDelete(course.id);
                       }}
+                      className="text-destructive hover:bg-destructive/10"
+                      title="Supprimer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -222,10 +253,10 @@ export function AdminCourses() {
 
       <AdminCourseDialog open={dialogOpen} onOpenChange={setDialogOpen} course={editingCourse} onSave={handleSave} />
 
-      <AdminDetailsDialog
+      <AdminDetailsDialog 
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
-        title={viewingCourse?.title || ''}
+        title={viewingCourse?.title || ""}
         data={viewingCourse}
         type="course"
       />
