@@ -87,7 +87,3 @@
 - Les dépendances doivent être installées (`npm install` dans `server/`)
 - Les variables d'environnement doivent être configurées (voir `PROJECT_STRUCTURE.md`)
 - Le mode strict TypeScript peut révéler des erreurs existantes à corriger
-
-
-
-

@@ -27,6 +27,15 @@ function getApiBaseUrl(): string {
 
 const API_BASE_URL = getApiBaseUrl();
 
+function getCookieValue(name: string): string | null {
+  const all = document.cookie ? document.cookie.split(';') : [];
+  for (const part of all) {
+    const [k, ...rest] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(rest.join('='));
+  }
+  return null;
+}
+
 async function http(method: string, path: string, options?: { params?: Record<string, any>; body?: any; headers?: Record<string, string> }) {
   try {
     const isRelative = !API_BASE_URL || API_BASE_URL.startsWith('/');
@@ -46,7 +55,18 @@ async function http(method: string, path: string, options?: { params?: Record<st
       body = JSON.stringify(body);
     }
 
-    console.log(`[API] ${method} ${url.toString()}`);
+    const debugApi = (import.meta as any).env?.DEV || (import.meta as any).env?.VITE_DEBUG_API === 'true';
+    if (debugApi) {
+      console.log(`[API] ${method} ${url.toString()}`);
+    }
+
+    // CSRF (double-submit) for cookie-based auth on unsafe methods
+    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+      const csrf = getCookieValue('csrf_token');
+      if (csrf) {
+        headers['x-csrf-token'] = csrf;
+      }
+    }
 
     const res = await fetch(url.toString(), {
       method,
@@ -55,7 +75,9 @@ async function http(method: string, path: string, options?: { params?: Record<st
       body,
     });
     
-    console.log(`[API] Response status: ${res.status}, Content-Type: ${res.headers.get("content-type")}`);
+    if (debugApi) {
+      console.log(`[API] Response status: ${res.status}, Content-Type: ${res.headers.get("content-type")}`);
+    }
     
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -113,6 +135,10 @@ function createTableQuery(table: string) {
             if (pendingOrder) {
               params.orderBy = pendingOrder.column;
               params.orderDir = pendingOrder.ascending ? 'asc' : 'desc';
+            }
+            if (Number.isFinite(_from) && Number.isFinite(_to) && _to >= _from) {
+              params.offset = _from;
+              params.limit = Math.min(1000, _to - _from + 1);
             }
             const res = await http('GET', `/api/${table}`, { params });
             return { data: res.data, error: null };

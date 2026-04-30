@@ -1,14 +1,10 @@
 const axios = require('axios');
-const { env } = require('./dist/utils/env');
 
-const public_key = "pk_live_aje7_f17682d611cfcf6e4c913f5777db42ca91861dc361ccebd77f2cb23907b792cb";
-const secret_key = "sk_live_aje7_6450b3a886ba2072e8c7a00ef454c7fb9034b77049f0ebc606";
+const public_key = process.env.DELIVERY_API_PUBLIC_KEY;
+const secret_key = process.env.DELIVERY_API_SECRET_KEY;
 
 const apiClient = axios.create({
-  baseURL: 'https://backend-lelivreur.up.railway.app',
-  headers: {
-    'x-api-key': `${public_key}:${secret_key}`,
-  },
+  baseURL: process.env.DELIVERY_API_URL || 'https://backend-lelivreur.up.railway.app',
 });
 
 async function testPath(path) {
@@ -24,6 +20,13 @@ async function testPath(path) {
 }
 
 async function runTests() {
+  if (!public_key || !secret_key) {
+    console.error('Missing env vars: DELIVERY_API_PUBLIC_KEY and/or DELIVERY_API_SECRET_KEY');
+    process.exit(1);
+  }
+
+  apiClient.defaults.headers['x-api-key'] = `${public_key}:${secret_key}`;
+
   const paths = [
     '/api/v1/external/livreurs',
     '/api/v1/livreurs',

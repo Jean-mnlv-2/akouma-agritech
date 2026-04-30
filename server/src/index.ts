@@ -10,6 +10,7 @@ import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { env } from './utils/env';
+import { logger } from './utils/logger';
 import { initCronJobs } from './utils/cron';
 import * as deliveryService from './services/deliveryService';
 import { authRouter } from './routes/auth';
@@ -53,6 +54,9 @@ import { courseModulesRouter } from './routes/courseModules';
 import { courseCommentsRouter } from './routes/courseComments';
 import { courseSchedulesRouter } from './routes/courseSchedules';
 import { sertifierRouter } from './routes/sertifier';
+import { createRateLimiter } from './middleware/rateLimit';
+import { authRequired, adminOnly } from './middleware/authRequired';
+import { csrfRequired } from './middleware/csrf';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -62,6 +66,50 @@ app.set('trust proxy', 1);
 // Configuration d'upload générique
 const uploadDir = path.resolve(process.cwd(), 'uploads');
 fs.mkdirSync(uploadDir, { recursive: true });
+
+function isAllowedExtension(ext: string): boolean {
+  return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.docx', '.xlsx'].includes(ext);
+}
+
+function looksLikeMagic(magic: Buffer, type: 'png' | 'jpg' | 'gif' | 'webp' | 'pdf' | 'zip'): boolean {
+  if (type === 'png') return magic.length >= 8 && magic.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]));
+  if (type === 'jpg') return magic.length >= 3 && magic.subarray(0, 3).equals(Buffer.from([0xFF, 0xD8, 0xFF]));
+  if (type === 'gif') return magic.length >= 6 && (magic.subarray(0, 6).toString('ascii') === 'GIF87a' || magic.subarray(0, 6).toString('ascii') === 'GIF89a');
+  if (type === 'webp') return magic.length >= 12 && magic.subarray(0, 4).toString('ascii') === 'RIFF' && magic.subarray(8, 12).toString('ascii') === 'WEBP';
+  if (type === 'pdf') return magic.length >= 5 && magic.subarray(0, 5).toString('ascii') === '%PDF-';
+  return magic.length >= 4 && magic.subarray(0, 4).toString('ascii') === 'PK\u0003\u0004';
+}
+
+async function validateUploadedFile(filePath: string, originalName: string, mime: string): Promise<void> {
+  const ext = path.extname(originalName).toLowerCase();
+  if (!isAllowedExtension(ext)) {
+    throw new Error('Extension de fichier non autorisée');
+  }
+
+  const magic = await fs.promises.readFile(filePath, { encoding: null }).then((buf) => buf.subarray(0, 16));
+
+  const isImage = mime.startsWith('image/');
+  if (isImage) {
+    const ok = looksLikeMagic(magic, 'png') || looksLikeMagic(magic, 'jpg') || looksLikeMagic(magic, 'gif') || looksLikeMagic(magic, 'webp');
+    if (!ok) throw new Error('Fichier image invalide');
+    return;
+  }
+
+  if (mime === 'application/pdf') {
+    if (!looksLikeMagic(magic, 'pdf')) throw new Error('PDF invalide');
+    return;
+  }
+
+  if (
+    mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ) {
+    if (!looksLikeMagic(magic, 'zip')) throw new Error('Document Office invalide');
+    return;
+  }
+
+  throw new Error('Type de fichier non autorisé');
+}
 
 const storage = multer.diskStorage({
   destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
@@ -77,12 +125,10 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    // Accepter images et documents
+    // Accepter images et documents (validation approfondie après écriture)
     const allowedMimes = [
       'image/', 'application/pdf',
-      'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ];
     if (allowedMimes.some(m => file.mimetype.startsWith(m))) {
@@ -148,14 +194,23 @@ app.get('/favicon.ico', (_req: Request, res: Response) => {
 });
 
 // Route d'upload générique
-app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
+const uploadLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
+app.post('/api/upload', uploadLimiter, authRequired, adminOnly, csrfRequired, upload.single('file'), async (req: Request, res: Response) => {
   const file = req.file;
   if (!file) {
     return res.status(400).json({ error: 'Aucun fichier fourni' });
   }
-  const relative = `/uploads/${file.filename}`;
-  const publicUrl = `${env.API_PUBLIC_URL}${relative}`;
-  res.json({ url: publicUrl, path: relative });
+  try {
+    await validateUploadedFile(file.path, file.originalname, file.mimetype);
+    const relative = `/uploads/${file.filename}`;
+    const publicUrl = `${env.API_PUBLIC_URL}${relative}`;
+    res.json({ url: publicUrl, path: relative });
+  } catch (e) {
+    // Supprimer le fichier rejeté
+    await fs.promises.unlink(file.path).catch(() => void 0);
+    const msg = e instanceof Error ? e.message : 'Fichier invalide';
+    res.status(400).json({ error: msg });
+  }
 });
 
 // Routes
@@ -205,7 +260,7 @@ app.use('/api', genericRouter);
 const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Fichier trop volumineux (maximum 5MB)' });
+      return res.status(400).json({ error: 'Fichier trop volumineux (maximum 10MB)' });
     }
     return res.status(400).json({ error: err.message });
   }
@@ -226,7 +281,7 @@ app.use(errorHandler);
 async function ensureDefaultAdmin() {
   if (!env.DEFAULT_ADMIN_EMAIL || !env.DEFAULT_ADMIN_PASSWORD) {
     if (env.isDevelopment()) {
-      console.warn('[auth] Default admin credentials are not fully configured.');
+      logger.warn('[auth] Default admin credentials are not fully configured.');
     }
     return;
   }
@@ -245,7 +300,7 @@ async function ensureDefaultAdmin() {
         isActive: true,
       },
     });
-    console.log(`[auth] Default admin user created (${email}).`);
+    logger.info(`[auth] Default admin user created (${email}).`);
     return;
   }
 
@@ -260,7 +315,7 @@ async function ensureDefaultAdmin() {
         isActive: true,
       },
     });
-    console.log(`[auth] Default admin password updated (${email}).`);
+    logger.info(`[auth] Default admin password updated (${email}).`);
   }
 }
 
@@ -272,11 +327,11 @@ async function bootstrap() {
     initCronJobs();
     app.listen(env.PORT, () => {
       if (env.isDevelopment()) {
-        console.log(`[server] listening on http://localhost:${env.PORT}`);
+        logger.info(`[server] listening on http://localhost:${env.PORT}`);
       }
     });
   } catch (error) {
-    console.error('[server] Failed to start application:', error);
+    logger.error('[server] Failed to start application', error);
     process.exit(1);
   }
 }

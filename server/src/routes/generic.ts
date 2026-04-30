@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
 
 const prisma = new PrismaClient();
 export const genericRouter = Router();
@@ -111,6 +112,16 @@ function parseOrder(query: Record<string, unknown>): { orderBy?: string; orderDi
   return { orderBy, orderDir };
 }
 
+function parsePagination(query: Record<string, unknown>): { limit?: number; offset?: number } {
+  const rawLimit = typeof query.limit === 'string' ? Number(query.limit) : undefined;
+  const rawOffset = typeof query.offset === 'string' ? Number(query.offset) : undefined;
+
+  const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(1000, rawLimit as number)) : undefined;
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset as number) : undefined;
+
+  return { limit, offset };
+}
+
 function shouldManageUpdatedAt(table: string): boolean {
   return table === 'contact_settings';
 }
@@ -120,18 +131,22 @@ genericRouter.get('/:table', async (req: Request, res: Response) => {
   try {
     const table = ensureTable(req.params.table);
     const { orderBy, orderDir } = parseOrder(req.query as Record<string, unknown>);
+    const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
 
     const filters: Record<string, unknown> = { ...req.query };
     delete filters.orderBy;
     delete filters.orderDir;
+    delete filters.limit;
+    delete filters.offset;
 
     let whereClause = '';
     const values: unknown[] = [];
     const filterKeys = Object.keys(filters).filter(k => isValidColumnName(k));
     if (filterKeys.length > 0) {
       const clauses = filterKeys.map((k, idx) => {
+        const mapped = mapColumnName(table, k);
         values.push(filters[k]);
-        return `"${k}" = $${idx + 1}`;
+        return `"${mapped}" = $${idx + 1}`;
       });
       whereClause = `WHERE ${clauses.join(' AND ')}`;
     }
@@ -143,7 +158,10 @@ genericRouter.get('/:table', async (req: Request, res: Response) => {
       orderClause = `ORDER BY 1`;
     }
 
-    const sql = `SELECT * FROM "${table}" ${whereClause} ${orderClause}`;
+    const limitClause = limit ? `LIMIT ${limit}` : 'LIMIT 1000';
+    const offsetClause = offset ? `OFFSET ${offset}` : '';
+
+    const sql = `SELECT * FROM "${table}" ${whereClause} ${orderClause} ${limitClause} ${offsetClause}`;
     const rows = await prisma.$queryRawUnsafe(sql, ...values) as Array<Record<string, unknown>>;
     const mappedRows = rows.map(row => unmapRow(table, row));
     res.json({ data: mappedRows });
@@ -154,7 +172,7 @@ genericRouter.get('/:table', async (req: Request, res: Response) => {
 });
 
 // CREATE
-genericRouter.post('/:table', authRequired, adminOnly, async (req: Request, res: Response) => {
+genericRouter.post('/:table', authRequired, adminOnly, csrfRequired, async (req: Request, res: Response) => {
   try {
     const table = ensureTable(req.params.table);
     const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
@@ -204,7 +222,7 @@ genericRouter.post('/:table', authRequired, adminOnly, async (req: Request, res:
   }
 });
 
-genericRouter.put('/:table/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+genericRouter.put('/:table/:id', authRequired, adminOnly, csrfRequired, async (req: Request, res: Response) => {
   try {
     const table = ensureTable(req.params.table);
     const id = req.params.id;
@@ -260,7 +278,7 @@ genericRouter.put('/:table/:id', authRequired, adminOnly, async (req: Request, r
 });
 
 // DELETE (id obligatoire dans l'URL)
-genericRouter.delete('/:table/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+genericRouter.delete('/:table/:id', authRequired, adminOnly, csrfRequired, async (req: Request, res: Response) => {
   try {
     const table = ensureTable(req.params.table);
     const id = req.params.id;

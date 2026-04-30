@@ -96,6 +96,7 @@ export const env = {
   MONEYFUSION_API_URL: process.env.MONEYFUSION_API_URL || '',
   MONEYFUSION_TOKEN: process.env.MONEYFUSION_TOKEN || '',
   MONEYFUSION_NOTIF_URL: process.env.MONEYFUSION_NOTIF_URL || '',
+  MONEYFUSION_WEBHOOK_SECRET: process.env.MONEYFUSION_WEBHOOK_SECRET || '',
   DELIVERY_API_URL: process.env.DELIVERY_API_URL || '',
   DELIVERY_API_PUBLIC_KEY: process.env.DELIVERY_API_PUBLIC_KEY || '',
   DELIVERY_API_SECRET_KEY: process.env.DELIVERY_API_SECRET_KEY || '',
@@ -124,6 +125,10 @@ export const env = {
       }
       if (DEFAULT_ADMIN_PASSWORD === DEFAULTS.DEFAULT_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD.length < 8) {
         throw new Error('DEFAULT_ADMIN_PASSWORD doit être défini en production, différer de la valeur par défaut et contenir au moins 8 caractères');
+      }
+      // Si les paiements sont activés, exiger au moins un mécanisme de vérification webhook
+      if (process.env.MONEYFUSION_TOKEN && !process.env.MONEYFUSION_NOTIF_URL && !process.env.MONEYFUSION_WEBHOOK_SECRET) {
+        throw new Error('Pour les paiements, définir MONEYFUSION_NOTIF_URL ou MONEYFUSION_WEBHOOK_SECRET pour vérifier les webhooks');
       }
     }
   },

@@ -1,8 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { authRequired } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
+import { createRateLimiter } from '../middleware/rateLimit';
 import { env } from '../utils/env';
 import { OrdersService } from '../services/ordersService';
+import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
 const ordersService = new OrdersService(prisma);
@@ -18,7 +21,8 @@ type AuthenticatedRequest = Request & {
  * Initie un paiement Money Fusion après la création d'une commande.
  * Body: { orderId: number }
  */
-paymentsRouter.post('/initiate', authRequired, async (req: Request, res: Response) => {
+const paymentsInitiateLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
+paymentsRouter.post('/initiate', paymentsInitiateLimiter, authRequired, csrfRequired, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id ?? authReq.userId;
@@ -51,7 +55,7 @@ paymentsRouter.post('/initiate', authRequired, async (req: Request, res: Respons
     const mfNotifUrl = env.MONEYFUSION_NOTIF_URL;
 
     if (!mfApiUrl || !mfToken) {
-      console.error('[payments] Money Fusion credentials not configured');
+      logger.error('[payments] Money Fusion credentials not configured');
       return res.status(500).json({ error: 'Configuration de paiement manquante' });
     }
 
@@ -80,7 +84,7 @@ paymentsRouter.post('/initiate', authRequired, async (req: Request, res: Respons
 
     const payUrl = `${mfApiUrl}${mfToken}/pay/`;
 
-    console.log(`[payments] Initiating Money Fusion payment for order #${order.orderNumber}, URL: ${payUrl}`);
+    logger.info(`[payments] Initiating Money Fusion payment for order #${order.orderNumber}`);
 
     const response = await fetch(payUrl, {
       method: 'POST',
@@ -90,7 +94,7 @@ paymentsRouter.post('/initiate', authRequired, async (req: Request, res: Respons
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[payments] Money Fusion error (${response.status}):`, errorText);
+      logger.error(`[payments] Money Fusion error (${response.status})`, errorText?.substring?.(0, 500) ?? errorText);
       return res.status(502).json({ error: 'Erreur du service de paiement' });
     }
 
@@ -119,14 +123,26 @@ paymentsRouter.post('/initiate', authRequired, async (req: Request, res: Respons
       });
     }
 
-    console.error('[payments] Unexpected Money Fusion response:', result);
+    logger.warn('[payments] Unexpected Money Fusion response', result);
     return res.status(502).json({ error: 'Réponse inattendue du service de paiement' });
   } catch (e) {
-    console.error('[payments] Error initiating payment:', e);
+    logger.error('[payments] Error initiating payment', e);
     const message = e instanceof Error ? e.message : 'Erreur interne';
     res.status(500).json({ error: message });
   }
 });
+
+async function verifyWebhookPayment(tokenPay: string): Promise<{ paid: boolean; raw?: unknown } | null> {
+  const mfNotifUrl = env.MONEYFUSION_NOTIF_URL;
+  if (!mfNotifUrl) return null;
+  const checkUrl = `${mfNotifUrl}${tokenPay}`;
+  const response = await fetch(checkUrl);
+  if (!response.ok) return null;
+  const result = await response.json().catch(() => null);
+  const statut = (result as any)?.statut;
+  const paid = statut === 'paid' || statut === 'successful' || statut === 'success';
+  return { paid, raw: result };
+}
 
 /**
  * POST /api/payments/webhook
@@ -135,9 +151,17 @@ paymentsRouter.post('/initiate', authRequired, async (req: Request, res: Respons
 paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
   try {
     const body = req.body || {};
-    console.log('[payments] Webhook received:', JSON.stringify(body));
+    logger.info('[payments] Webhook received');
 
-    const { tokenPay, statut, personal_Info } = body;
+    const webhookSecret = env.MONEYFUSION_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const provided = String(req.headers['x-webhook-secret'] || '');
+      if (!provided || provided !== webhookSecret) {
+        return res.status(401).json({ error: 'Webhook non autorisé' });
+      }
+    }
+
+    const { tokenPay, statut } = body;
 
     if (!tokenPay) {
       return res.status(400).json({ error: 'tokenPay manquant' });
@@ -153,7 +177,19 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Commande introuvable' });
     }
 
-    const isPaid = statut === 'paid' || statut === 'successful' || statut === 'success';
+    // Sécurisation: revalidation côté serveur (si possible).
+    // Si l'URL de statut n'est pas configurée, exiger un secret webhook.
+    const revalidated = await verifyWebhookPayment(tokenPay);
+    if (!revalidated && !webhookSecret) {
+      logger.error('[payments] Webhook received but cannot be verified (missing MONEYFUSION_NOTIF_URL and MONEYFUSION_WEBHOOK_SECRET)');
+      return res.status(500).json({ error: 'Configuration webhook manquante' });
+    }
+
+    const isPaid =
+      (revalidated ? revalidated.paid : false) ||
+      statut === 'paid' ||
+      statut === 'successful' ||
+      statut === 'success';
 
     await prisma.$transaction(async (tx: any) => {
       await tx.order.update({
@@ -175,18 +211,18 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
       });
     });
 
-    console.log(`[payments] Order #${order.orderNumber} payment ${isPaid ? 'confirmed' : 'failed'}`);
+    logger.info(`[payments] Order #${order.orderNumber} payment ${isPaid ? 'confirmed' : 'failed'}`);
 
     // Trigger post-payment processing asynchronously
     if (isPaid) {
       ordersService.processPostPayment(order.id).catch((err) => {
-        console.error(`[payments] Error in processPostPayment for order ${order.id}:`, err);
+        logger.error(`[payments] Error in processPostPayment for order ${order.id}`, err);
       });
     }
 
     res.json({ status: 'ok' });
   } catch (e) {
-    console.error('[payments] Webhook error:', e);
+    logger.error('[payments] Webhook error', e);
     res.status(500).json({ error: 'Erreur interne' });
   }
 });
@@ -205,7 +241,7 @@ paymentsRouter.get('/status/:tokenPay', authRequired, async (req: Request, res: 
     }
 
     if (!mfNotifUrl) {
-      console.log(`[payments] MONEYFUSION_NOTIF_URL not set, checking local DB for token: ${tokenPay}`);
+      logger.info(`[payments] MONEYFUSION_NOTIF_URL not set, checking local DB for token`);
       const order = await prisma.order.findFirst({
         where: { paymentRef: tokenPay },
         select: { id: true, paymentStatus: true, status: true, orderNumber: true }
@@ -226,7 +262,7 @@ paymentsRouter.get('/status/:tokenPay', authRequired, async (req: Request, res: 
     }
 
     const checkUrl = `${mfNotifUrl}${tokenPay}`;
-    console.log(`[payments] Checking payment status at: ${checkUrl}`);
+    logger.info('[payments] Checking payment status');
     const response = await fetch(checkUrl);
 
     if (!response.ok) {
@@ -240,7 +276,7 @@ paymentsRouter.get('/status/:tokenPay', authRequired, async (req: Request, res: 
     const result = await response.json();
     res.json({ data: result });
   } catch (e) {
-    console.error('[payments] Status check error:', e);
+    logger.error('[payments] Status check error', e);
     res.status(500).json({ error: 'Erreur interne' });
   }
 });

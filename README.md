@@ -61,6 +61,12 @@
   DEFAULT_ADMIN_EMAIL=admin@akouma.test
   DEFAULT_ADMIN_PASSWORD=Admin123!
   DEFAULT_ADMIN_FULL_NAME="AKOUMA Admin"
+  # Livraison (ne jamais commiter de clés live)
+  DELIVERY_API_URL=https://backend-lelivreur.up.railway.app
+  DELIVERY_API_PUBLIC_KEY=pk_live_xxx
+  DELIVERY_API_SECRET_KEY=sk_live_xxx
+  # Paiements (sécurisation des webhooks)
+  MONEYFUSION_WEBHOOK_SECRET=un_secret_long_aleatoire
   ```
   
   **Important** : `JWT_SECRET` doit contenir **au moins 32 caractères** car le backend est en mode production dans Docker. Si vous ne créez pas de fichier `.env`, une valeur par défaut de 32+ caractères sera utilisée automatiquement. Utilisez `DEFAULT_ADMIN_FORCE_RESET=true` ponctuellement pour régénérer le mot de passe admin dans un environnement Docker.

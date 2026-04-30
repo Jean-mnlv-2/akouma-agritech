@@ -237,9 +237,6 @@ boucle
 
 Node.js
 
-Python
-
-PHP
 curl -X GET "https://backend-lelivreur.up.railway.app/livraisons" \
   -H "x-api-key: pk_live_123456:sk_live_votre_cle_privee"
 
@@ -437,8 +434,5 @@ boucle
 
 Node.js
 
-Python
-
-PHP
 curl -X GET "https://backend-lelivreur.up.railway.app/livreurs" \
   -H "x-api-key: pk_live_123456:sk_live_votre_cle_privee"

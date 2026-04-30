@@ -5,6 +5,9 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { env } from '../utils/env';
 import { emailService } from '../utils/email';
+import { issueCsrfToken } from '../middleware/csrf';
+import { logger } from '../utils/logger';
+import { createRateLimiter } from '../middleware/rateLimit';
 
 const prisma = new PrismaClient();
 export const authRouter = Router();
@@ -28,7 +31,20 @@ function setAuthCookie(res: Response, token: string): void {
   });
 }
 
-authRouter.post('/sign-in', async (req: Request, res: Response) => {
+const signInLimiterIp = createRateLimiter({ windowMs: 60_000, max: 20 });
+const signInLimiterEmail = createRateLimiter({
+  windowMs: 60_000,
+  max: 10,
+  keyGenerator: (req) => String((req.body?.email || 'unknown')).toLowerCase().trim(),
+});
+const forgotLimiterIp = createRateLimiter({ windowMs: 60_000, max: 10 });
+const forgotLimiterEmail = createRateLimiter({
+  windowMs: 60_000,
+  max: 5,
+  keyGenerator: (req) => String((req.body?.email || 'unknown')).toLowerCase().trim(),
+});
+
+authRouter.post('/sign-in', signInLimiterIp, signInLimiterEmail, async (req: Request, res: Response) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
   const normalizedEmail = email.toLowerCase().trim();
@@ -38,17 +54,13 @@ authRouter.post('/sign-in', async (req: Request, res: Response) => {
   if (!ok) return res.status(401).json({ error: 'invalid credentials' });
   
   if (env.isDevelopment()) {
-    console.log('[AUTH] Login successful:', { 
-      id: user.id, 
-      email: user.email, 
-      role: user.role, 
-      isActive: user.isActive 
-    });
+    logger.info('[AUTH] Login successful', { id: user.id, role: user.role, isActive: user.isActive });
   }
   
   const token = signToken({ sub: user.id, role: user.role });
   setAuthCookie(res, token);
-  res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive } });
+  const csrfToken = issueCsrfToken(res);
+  res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive }, csrfToken });
 });
 
 authRouter.post('/sign-up', async (req: Request, res: Response) => {
@@ -72,20 +84,18 @@ authRouter.post('/sign-up', async (req: Request, res: Response) => {
   });
 
   if (env.isDevelopment()) {
-    console.log('[AUTH] User created:', {
-      id: created.id,
-      email: created.email,
-      role: created.role,
-    });
+    logger.info('[AUTH] User created', { id: created.id, role: created.role });
   }
 
   const token = signToken({ sub: created.id, role: created.role });
   setAuthCookie(res, token);
-  res.status(201).json({ user: { id: created.id, email: created.email, fullName: created.fullName, role: created.role, isActive: created.isActive } });
+  const csrfToken = issueCsrfToken(res);
+  res.status(201).json({ user: { id: created.id, email: created.email, fullName: created.fullName, role: created.role, isActive: created.isActive }, csrfToken });
 });
 
 authRouter.post('/sign-out', async (req: Request, res: Response) => {
   res.clearCookie('auth_token', { path: '/' });
+  res.clearCookie('csrf_token', { path: '/' });
   res.json({ success: true });
 });
 
@@ -99,16 +109,17 @@ authRouter.get('/session', async (req: Request, res: Response) => {
       select: { id: true, email: true, fullName: true, role: true, isActive: true }
     });
     if (!user || !user.isActive) return res.json({ user: null });
-    res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive } });
+    const csrfToken = issueCsrfToken(res);
+    res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive }, csrfToken });
   } catch (error) {
     if (env.isDevelopment()) {
-      console.error('[AUTH] Session error:', error);
+      logger.warn('[AUTH] Session error', error);
     }
     return res.json({ user: null });
   }
 });
 
-authRouter.post('/forgot-password', async (req: Request, res: Response) => {
+authRouter.post('/forgot-password', forgotLimiterIp, forgotLimiterEmail, async (req: Request, res: Response) => {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email requis' });
   

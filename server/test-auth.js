@@ -1,9 +1,9 @@
 const axios = require('axios');
 
-const public_key = "pk_live_aje7_f52496ed6010b5fc4f58426c1b9888988e7e158891788411744e9aa490ac5b68";
-const secret_key = "sk_live_aje7_600b8ca4e5adfa6da08016af2fa0c7b9e15f933f3346bf2d5e";
+const public_key = process.env.DELIVERY_API_PUBLIC_KEY;
+const secret_key = process.env.DELIVERY_API_SECRET_KEY;
 
-const baseURL = 'https://backend-lelivreur.up.railway.app';
+const baseURL = process.env.DELIVERY_API_URL || 'https://backend-lelivreur.up.railway.app';
 
 async function testAuth(headers, path, label) {
   try {
@@ -22,6 +22,11 @@ async function testAuth(headers, path, label) {
 }
 
 async function runTests() {
+  if (!public_key || !secret_key) {
+    console.error('Missing env vars: DELIVERY_API_PUBLIC_KEY and/or DELIVERY_API_SECRET_KEY');
+    process.exit(1);
+  }
+
   const paths = [
     '/livreurs',
     '/livraisons'
@@ -31,10 +36,8 @@ async function runTests() {
     console.log(`\n--- Testing Path: ${path} ---`);
     await testAuth({ 'x-api-key': `${public_key}:${secret_key}` }, path, 'x-api-key: pub:sec');
     
-    // Test avec uniquement la secret key (souvent le cas pour les appels serveur)
     await testAuth({ 'x-api-key': secret_key }, path, 'x-api-key: sec');
 
-    // Test avec le header Authorization (alternative citée dans la doc)
     await testAuth({ 'Authorization': `ApiKey ${public_key}:${secret_key}` }, path, 'Auth: ApiKey pub:sec');
   }
 }
