@@ -14,7 +14,7 @@ import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   BookOpen, Play, CheckCircle, Calendar, Award, Clock,
-  AlertTriangle, ShieldCheck, ShieldAlert, RefreshCw, ExternalLink, Loader2, Trophy
+  AlertTriangle, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Trophy
 } from "lucide-react";
 
 interface Enrollment {
