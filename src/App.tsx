@@ -58,6 +58,7 @@ import AdminTasks from "./pages/AdminTasks";
 import AdminElearningEnrollments from "./pages/AdminElearningEnrollments";
 import AdminLiveStreams from "./pages/AdminLiveStreams";
 import AdminElearningStats from "./pages/AdminElearningStats";
+import AdminCertificatePreview from "./pages/AdminCertificatePreview";
 import Supervisor from "./pages/Supervisor";
 import AgriConsulting from "./pages/AgriConsulting";
 import Cart from "./pages/Cart";
@@ -67,6 +68,7 @@ import Donations from "./pages/Donations";
 import NotFound from "./pages/NotFound";
 import LearningDashboard from "./pages/LearningDashboard";
 import CourseLearn from "./pages/CourseLearn";
+import MyCourses from "./pages/MyCourses";
 import ResetPassword from "./pages/ResetPassword";
 import OrderDetail from "./pages/OrderDetail";
 import Orders from "./pages/Orders";
@@ -119,6 +121,7 @@ const App = () => (
                 <Route path="/admin/elearning-enrollments" element={<AdminRoute><AdminElearningEnrollments /></AdminRoute>} />
                 <Route path="/admin/live-streams" element={<AdminRoute><AdminLiveStreams /></AdminRoute>} />
                 <Route path="/admin/elearning-stats" element={<AdminRoute><AdminElearningStats /></AdminRoute>} />
+                <Route path="/admin/courses/:id/certificate-preview" element={<AdminRoute><AdminCertificatePreview /></AdminRoute>} />
                 <Route path="/supervisor" element={<SupervisorRoute><Supervisor /></SupervisorRoute>} />
                 <Route path="/admin-access" element={<AdminAccess />} />
                 <Route path="/agri-consulting" element={<AgriConsulting />} />
@@ -129,6 +132,7 @@ const App = () => (
                 <Route path="/partners" element={<Partnerships />} />
                 <Route path="/donations" element={<Donations />} />
                 <Route path="/dashboard/learning" element={<LearningDashboard />} />
+                <Route path="/my-courses" element={<MyCourses />} />
                 <Route path="/elearning/:id/learn" element={<CourseLearn />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/my-cashback" element={<MyCashback />} />

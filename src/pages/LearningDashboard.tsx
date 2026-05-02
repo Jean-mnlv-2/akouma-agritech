@@ -50,53 +50,6 @@ const LearningDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const queryClient = useQueryClient();
 
-  // Demo data - will be replaced with real API when backend is ready
-  const enrolledCourses: EnrolledCourse[] = [
-    {
-      id: "1",
-      title: "Agriculture Moderne & IoT",
-      progress: 65,
-      thumbnail: courseThumbnail,
-      level: "Intermédiaire",
-      totalModules: 8,
-      completedModules: 5,
-      lastAccessed: "2026-02-24",
-      studyPace: "standard",
-      targetEndDate: "2026-03-15",
-      remindersEnabled: true
-    },
-    {
-      id: "2",
-      title: "Irrigation Intelligente",
-      progress: 30,
-      thumbnail: courseThumbnail,
-      level: "Débutant",
-      totalModules: 6,
-      completedModules: 2,
-      lastAccessed: "2026-02-23",
-      studyPace: "intensive",
-      targetEndDate: "2026-03-05",
-      remindersEnabled: false
-    },
-    {
-      id: "3",
-      title: "Gestion des Maladies des Plantes",
-      progress: 100,
-      thumbnail: courseThumbnail,
-      level: "Avancé",
-      totalModules: 10,
-      completedModules: 10,
-      lastAccessed: "2026-02-20",
-    },
-  ];
-
-
-  const stats = {
-    totalHours: 47,
-    completedModules: 17,
-    averageScore: 82,
-    activeCourses: 2,
-  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -151,6 +104,32 @@ const LearningDashboard = () => {
     const uId = user?.id;
     if (!uId) return undefined;
     return (enrollments || []).find((e: any) => String(e.userId) === String(uId) && String(e.courseId) === String(courseId));
+  };
+
+  // Derive enrolledCourses from real enrollments (with course data preloaded by API)
+  const enrolledCourses: EnrolledCourse[] = (enrollments || [])
+    .filter((e: any) => String(e.userId) === String(user?.id))
+    .map((e: any) => ({
+      id: String(e.courseId),
+      title: e.course?.title || `Cours #${e.courseId}`,
+      progress: Number(e.progress ?? 0),
+      thumbnail: e.course?.thumbnailUrl || courseThumbnail,
+      level: e.course?.level || '—',
+      totalModules: Array.isArray(e.course?.modules) ? e.course.modules.length : 0,
+      completedModules: 0,
+      lastAccessed: e.enrolledAt || new Date().toISOString(),
+      studyPace: e.studyPace,
+      targetEndDate: e.targetEndDate,
+      remindersEnabled: e.remindersEnabled,
+    }));
+
+  const stats = {
+    totalHours: enrolledCourses.reduce((sum, c) => sum + Math.round((c.progress / 100) * 10), 0),
+    completedModules: enrolledCourses.reduce((sum, c) => sum + c.completedModules, 0),
+    averageScore: enrolledCourses.length
+      ? Math.round(enrolledCourses.reduce((sum, c) => sum + c.progress, 0) / enrolledCourses.length)
+      : 0,
+    activeCourses: enrolledCourses.filter(c => c.progress < 100).length,
   };
 
   const persistPlan = (courseIdStr: string, changes: Partial<{ studyPace: string; targetEndDate: string; remindersEnabled: boolean }>) => {
@@ -209,6 +188,9 @@ const LearningDashboard = () => {
             <p className="text-muted-foreground text-lg">Continuez votre parcours d'apprentissage</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="default" size="sm" className="flex items-center gap-2" onClick={() => navigate('/my-courses')}>
+              <BookOpen className="w-4 h-4" /> Mes cours
+            </Button>
             <Button variant="outline" size="sm" className="flex items-center gap-2">
               <CalendarDays className="w-4 h-4" /> Calendrier
             </Button>

@@ -1,34 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authRequired } from '../middleware/authRequired';
-
-const SERTIFIER_BASE = 'https://b2b.sertifier.com';
-const API_VERSION = '3.3';
-
-function getSertifierHeaders(): Record<string, string> {
-  const secretKey = process.env.SERTIFIER_SECRET_KEY;
-  if (!secretKey) throw new Error('SERTIFIER_SECRET_KEY not configured');
-  return {
-    'Content-Type': 'application/json',
-    'api-version': API_VERSION,
-    'secretKey': secretKey,
-  };
-}
-
-async function sertifierRequest(method: string, path: string, body?: any) {
-  const url = `${SERTIFIER_BASE}${path}`;
-  const options: RequestInit = {
-    method,
-    headers: getSertifierHeaders(),
-  };
-  if (body) options.body = JSON.stringify(body);
-
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Sertifier ${method} ${path}: ${res.status} - ${text}`);
-  }
-  return res.json();
-}
+import { sertifierFetch as sertifierRequest } from '../utils/sertifierClient';
 
 export const sertifierRouter = Router();
 

@@ -5,10 +5,16 @@ import { authRequired } from '../middleware/authRequired';
 const prisma = new PrismaClient();
 export const elearningEnrollmentsRouter = Router();
 
-elearningEnrollmentsRouter.get('/', authRequired, async (_req: Request, res: Response) => {
+elearningEnrollmentsRouter.get('/', authRequired, async (req: Request, res: Response) => {
+  const u = (req as any).user;
+  const isAdmin = u?.role === 'admin' || u?.role === 'supervisor';
   const items = await prisma.eLearningEnrollment.findMany({
+    where: isAdmin ? undefined : { userId: u.id },
     orderBy: { enrolledAt: 'desc' },
-    include: { user: true, course: true },
+    include: {
+      course: { include: { modules: { select: { id: true } } } },
+      ...(isAdmin ? { user: true } : {}),
+    },
   });
   res.json({ data: items });
 });

@@ -53,6 +53,7 @@ import { AdminAffiliateLeaderboard } from '@/components/admin/AdminAffiliateLead
 import { AdminCourseModules } from '@/components/admin/AdminCourseModules';
 import { AdminAttendance } from '@/components/admin/AdminAttendance';
 import { AdminSertifierSettings } from '@/components/admin/AdminSertifierSettings';
+import { AdminCertificates } from '@/components/admin/AdminCertificates';
 import AdminElearningEnrollments from '@/pages/AdminElearningEnrollments';
 interface DashboardStats {
   totalUsers: number;
@@ -103,6 +104,7 @@ const tabs = [
   { value: 'course-modules', label: 'Modules Cours', icon: BookOpen },
   { value: 'attendance', label: 'Présences', icon: Calendar },
   { value: 'sertifier', label: 'Sertifier', icon: Shield },
+  { value: 'certificates', label: 'Certificats', icon: Crown },
   { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
   { value: 'news', label: 'Actualités', icon: Newspaper },
   { value: 'seeds', label: 'Semences', icon: Sprout },
@@ -385,6 +387,7 @@ function AdminContent() {
               )}
               {(activeTab === 'attendance' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('attendance')))) && <AdminAttendance />}
       {(activeTab === 'sertifier' && isAdmin) && <AdminSertifierSettings />}
+              {(activeTab === 'certificates' && isAdmin) && <AdminCertificates />}
               {(activeTab === 'reminder-logs' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reminder-logs')))) && <AdminReminderLogs />}
               {(activeTab === 'news' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('news')))) && <AdminNews />}
               {(activeTab === 'seeds' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('seeds')))) && <AdminSeeds />}
