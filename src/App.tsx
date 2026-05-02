@@ -58,6 +58,7 @@ import AdminTasks from "./pages/AdminTasks";
 import AdminElearningEnrollments from "./pages/AdminElearningEnrollments";
 import AdminLiveStreams from "./pages/AdminLiveStreams";
 import AdminElearningStats from "./pages/AdminElearningStats";
+import AdminCertificatePreview from "./pages/AdminCertificatePreview";
 import Supervisor from "./pages/Supervisor";
 import AgriConsulting from "./pages/AgriConsulting";
 import Cart from "./pages/Cart";
@@ -119,6 +120,7 @@ const App = () => (
                 <Route path="/admin/elearning-enrollments" element={<AdminRoute><AdminElearningEnrollments /></AdminRoute>} />
                 <Route path="/admin/live-streams" element={<AdminRoute><AdminLiveStreams /></AdminRoute>} />
                 <Route path="/admin/elearning-stats" element={<AdminRoute><AdminElearningStats /></AdminRoute>} />
+                <Route path="/admin/courses/:id/certificate-preview" element={<AdminRoute><AdminCertificatePreview /></AdminRoute>} />
                 <Route path="/supervisor" element={<SupervisorRoute><Supervisor /></SupervisorRoute>} />
                 <Route path="/admin-access" element={<AdminAccess />} />
                 <Route path="/agri-consulting" element={<AgriConsulting />} />
