@@ -1,6 +1,25 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { isValidSertifierId } from '../utils/sertifierClient';
+
+function validateSertifierIds(body: any): string | null {
+  const ids = [
+    ['sertifierDesignId', body.sertifierDesignId],
+    ['sertifierDetailId', body.sertifierDetailId],
+    ['sertifierEmailTemplateId', body.sertifierEmailTemplateId],
+  ] as const;
+  const provided = ids.filter(([, v]) => v != null && String(v).trim() !== '');
+  if (provided.length === 0) return null; // none provided is OK
+  // If any provided, all three must be valid (Sertifier requires the trio)
+  if (provided.length !== 3) return 'Pour activer Sertifier, les trois IDs (design, detail, email template) doivent être fournis.';
+  for (const [name, v] of ids) {
+    if (!isValidSertifierId(String(v).trim())) {
+      return `ID Sertifier invalide pour ${name} (8-64 caractères alphanumériques).`;
+    }
+  }
+  return null;
+}
 
 const prisma = new PrismaClient();
 export const coursesRouter = Router();
@@ -55,6 +74,8 @@ coursesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respo
     sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId
   } = req.body || {};
   if (!title || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
+  const sertifierError = validateSertifierIds(req.body || {});
+  if (sertifierError) return res.status(400).json({ error: sertifierError });
   const created = await prisma.course.create({
     data: { 
       title, slug, description, content, 
@@ -80,6 +101,10 @@ coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Res
     category, instructorName, instructorBio,
     sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId
   } = req.body || {};
+  if (sertifierDesignId !== undefined || sertifierDetailId !== undefined || sertifierEmailTemplateId !== undefined) {
+    const sertifierError = validateSertifierIds({ sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId });
+    if (sertifierError) return res.status(400).json({ error: sertifierError });
+  }
 
   if (duration !== undefined && duration !== null) {
     const newCourseDuration = Number(duration);
