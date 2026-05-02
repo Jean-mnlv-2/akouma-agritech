@@ -51,7 +51,8 @@ coursesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respo
   const { 
     title, slug, description, content, price, duration, level, 
     thumbnailUrl, videoUrl, isPublished, isCopyProtected, 
-    category, instructorName, instructorBio 
+    category, instructorName, instructorBio,
+    sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId
   } = req.body || {};
   if (!title || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.course.create({
@@ -62,7 +63,10 @@ coursesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respo
       level, thumbnailUrl, videoUrl, 
       isPublished: Boolean(isPublished), 
       isCopyProtected: Boolean(isCopyProtected),
-      category, instructorName, instructorBio
+      category, instructorName, instructorBio,
+      sertifierDesignId: sertifierDesignId || null,
+      sertifierDetailId: sertifierDetailId || null,
+      sertifierEmailTemplateId: sertifierEmailTemplateId || null,
     } as any,
   });
   res.status(201).json({ data: created });
@@ -73,7 +77,8 @@ coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Res
   const { 
     title, slug, description, content, price, duration, level, 
     thumbnailUrl, videoUrl, isPublished, isCopyProtected,
-    category, instructorName, instructorBio
+    category, instructorName, instructorBio,
+    sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId
   } = req.body || {};
 
   if (duration !== undefined && duration !== null) {
@@ -104,7 +109,10 @@ coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Res
       level, thumbnailUrl, videoUrl, 
       isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
       isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected),
-      category, instructorName, instructorBio
+      category, instructorName, instructorBio,
+      sertifierDesignId: sertifierDesignId === undefined ? undefined : (sertifierDesignId || null),
+      sertifierDetailId: sertifierDetailId === undefined ? undefined : (sertifierDetailId || null),
+      sertifierEmailTemplateId: sertifierEmailTemplateId === undefined ? undefined : (sertifierEmailTemplateId || null),
     } as any,
   });
   res.json({ data: updated });
