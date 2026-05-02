@@ -106,6 +106,32 @@ const LearningDashboard = () => {
     return (enrollments || []).find((e: any) => String(e.userId) === String(uId) && String(e.courseId) === String(courseId));
   };
 
+  // Derive enrolledCourses from real enrollments (with course data preloaded by API)
+  const enrolledCourses: EnrolledCourse[] = (enrollments || [])
+    .filter((e: any) => String(e.userId) === String(user?.id))
+    .map((e: any) => ({
+      id: String(e.courseId),
+      title: e.course?.title || `Cours #${e.courseId}`,
+      progress: Number(e.progress ?? 0),
+      thumbnail: e.course?.thumbnailUrl || courseThumbnail,
+      level: e.course?.level || '—',
+      totalModules: Array.isArray(e.course?.modules) ? e.course.modules.length : 0,
+      completedModules: 0,
+      lastAccessed: e.enrolledAt || new Date().toISOString(),
+      studyPace: e.studyPace,
+      targetEndDate: e.targetEndDate,
+      remindersEnabled: e.remindersEnabled,
+    }));
+
+  const stats = {
+    totalHours: enrolledCourses.reduce((sum, c) => sum + Math.round((c.progress / 100) * 10), 0),
+    completedModules: enrolledCourses.reduce((sum, c) => sum + c.completedModules, 0),
+    averageScore: enrolledCourses.length
+      ? Math.round(enrolledCourses.reduce((sum, c) => sum + c.progress, 0) / enrolledCourses.length)
+      : 0,
+    activeCourses: enrolledCourses.filter(c => c.progress < 100).length,
+  };
+
   const persistPlan = (courseIdStr: string, changes: Partial<{ studyPace: string; targetEndDate: string; remindersEnabled: boolean }>) => {
     const courseId = Number(courseIdStr);
     const existing = findEnrollment(courseId);
