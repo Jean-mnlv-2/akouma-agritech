@@ -54,6 +54,7 @@ import { courseModulesRouter } from './routes/courseModules';
 import { courseCommentsRouter } from './routes/courseComments';
 import { courseSchedulesRouter } from './routes/courseSchedules';
 import { sertifierRouter } from './routes/sertifier';
+import { certificatesRouter } from './routes/certificates';
 import { createRateLimiter } from './middleware/rateLimit';
 import { authRequired, adminOnly } from './middleware/authRequired';
 import { csrfRequired } from './middleware/csrf';
@@ -254,6 +255,7 @@ app.use('/api/course_comments', courseCommentsRouter);
 app.use('/api/course_schedules', courseSchedulesRouter);
 app.use('/api/reminder_logs', reminderLogsRouter);
 app.use('/api/sertifier', sertifierRouter);
+app.use('/api/certificates', certificatesRouter);
 app.use('/api', genericRouter);
 
 // Middleware de gestion d'erreur centralisée
