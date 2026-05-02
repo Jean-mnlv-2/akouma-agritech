@@ -11,10 +11,9 @@ import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useRef } from 'react';
-import { Plus, Trash, ListPlus } from 'lucide-react';
+import { Plus, Trash, ListPlus, ShieldCheck, Loader2 } from 'lucide-react';
 import { api } from '@/integrations/api/client';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldCheck, Loader2 } from 'lucide-react';
 
 interface Module {
   id: string;
@@ -582,6 +581,68 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
           <div className="space-y-2">
             <Label htmlFor="languages_csv">Langues (séparées par des virgules)</Label>
             <Input id="languages_csv" value={formData.languages_csv} onChange={(e) => setFormData({ ...formData, languages_csv: e.target.value })} placeholder="Français, Hausa, Swahili..." />
+          </div>
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              <Label className="text-base font-semibold">Certification Sertifier</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Configurez les identifiants Sertifier pour permettre l'émission de certificats authentifiés à la fin de ce cours.
+              Récupérez les IDs depuis votre dashboard Sertifier (Designs, Details, Email Templates) ou via l'onglet Sertifier de l'administration.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sertifier_design_id">Design ID</Label>
+                <Input
+                  id="sertifier_design_id"
+                  value={formData.sertifier_design_id}
+                  onChange={(e) => setFormData({ ...formData, sertifier_design_id: e.target.value })}
+                  placeholder="ex: 65f2..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sertifier_detail_id">Detail ID</Label>
+                <Input
+                  id="sertifier_detail_id"
+                  value={formData.sertifier_detail_id}
+                  onChange={(e) => setFormData({ ...formData, sertifier_detail_id: e.target.value })}
+                  placeholder="ex: 65f3..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sertifier_email_template_id">Email Template ID</Label>
+                <Input
+                  id="sertifier_email_template_id"
+                  value={formData.sertifier_email_template_id}
+                  onChange={(e) => setFormData({ ...formData, sertifier_email_template_id: e.target.value })}
+                  placeholder="ex: 65f4..."
+                />
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={testingSertifier}
+              onClick={async () => {
+                setTestingSertifier(true);
+                try {
+                  await api.request('GET', '/api/sertifier/test');
+                  toast({ title: 'Sertifier connecté', description: 'La connexion à l’API Sertifier fonctionne.' });
+                } catch (err) {
+                  toast({
+                    title: 'Échec connexion Sertifier',
+                    description: err instanceof Error ? err.message : 'Vérifiez la clé SERTIFIER_SECRET_KEY côté serveur.',
+                    variant: 'destructive',
+                  });
+                } finally {
+                  setTestingSertifier(false);
+                }
+              }}
+            >
+              {testingSertifier ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Test...</> : <><ShieldCheck className="w-4 h-4 mr-2" /> Tester la connexion Sertifier</>}
+            </Button>
           </div>
           <div className="flex justify-end space-x-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
