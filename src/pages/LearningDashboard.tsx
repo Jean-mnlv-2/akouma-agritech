@@ -209,6 +209,9 @@ const LearningDashboard = () => {
             <p className="text-muted-foreground text-lg">Continuez votre parcours d'apprentissage</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="default" size="sm" className="flex items-center gap-2" onClick={() => navigate('/my-courses')}>
+              <BookOpen className="w-4 h-4" /> Mes cours
+            </Button>
             <Button variant="outline" size="sm" className="flex items-center gap-2">
               <CalendarDays className="w-4 h-4" /> Calendrier
             </Button>
