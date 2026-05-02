@@ -738,3 +738,29 @@ enum DeliveryMethod {
   PICKUP
   DELIVERY
 }
+
+model Certificate {
+  id                Int       @id @default(autoincrement())
+  userId            String
+  courseId          Int
+  enrollmentId      Int?
+  certificateNumber String    @unique
+  score             Int?
+  completionDate    DateTime  @default(now())
+  status            String    @default("pending") // pending | processing | sent | failed
+  attempts          Int       @default(0)
+  lastError         String?
+  campaignId        String?
+  credentialId      String?
+  credentialUrl     String?
+  issuedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course            Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+}
