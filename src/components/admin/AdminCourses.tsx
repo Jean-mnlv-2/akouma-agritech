@@ -37,6 +37,9 @@ export interface Course {
   createdAt?: string;
   enrollment_count?: number;
   rating?: number;
+  sertifierDesignId?: string;
+  sertifierDetailId?: string;
+  sertifierEmailTemplateId?: string;
 }
 
 export interface AdminCoursesProps {

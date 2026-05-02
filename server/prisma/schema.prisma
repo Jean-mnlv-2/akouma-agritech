@@ -115,6 +115,9 @@ model Course {
   updatedAt          DateTime              @updatedAt
   slug               String                @unique
   isCopyProtected    Boolean               @default(false)
+  sertifierDesignId        String?
+  sertifierDetailId        String?
+  sertifierEmailTemplateId String?
   comments           CourseComment[]
   modules            CourseModule[]
   previewItems       CoursePreviewItem[]
