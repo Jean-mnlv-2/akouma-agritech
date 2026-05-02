@@ -4,11 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Loader2, BookOpen, Users, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, BookOpen, Users, Eye, Award } from 'lucide-react';
 import { AdminCourseDialog } from './AdminCourseDialog';
 import AdminDetailsDialog from './AdminDetailsDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
+import { Link } from 'react-router-dom';
 
 export interface Course {
   id: string;
@@ -232,6 +233,11 @@ export function AdminCourses({ onViewInscriptions, onViewModules }: AdminCourses
                       title={course.isPreviewAvailable ? 'Désactiver Aperçu' : 'Activer Aperçu'}
                     >
                       <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button asChild variant="outline" size="sm" title="Aperçu certificat" onClick={(e) => e.stopPropagation()}>
+                      <Link to={`/admin/courses/${course.id}/certificate-preview`}>
+                        <Award className="w-4 h-4" />
+                      </Link>
                     </Button>
                     <Button 
                       variant="outline" 
