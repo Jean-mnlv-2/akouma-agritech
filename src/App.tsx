@@ -68,6 +68,7 @@ import Donations from "./pages/Donations";
 import NotFound from "./pages/NotFound";
 import LearningDashboard from "./pages/LearningDashboard";
 import CourseLearn from "./pages/CourseLearn";
+import MyCourses from "./pages/MyCourses";
 import ResetPassword from "./pages/ResetPassword";
 import OrderDetail from "./pages/OrderDetail";
 import Orders from "./pages/Orders";
@@ -131,6 +132,7 @@ const App = () => (
                 <Route path="/partners" element={<Partnerships />} />
                 <Route path="/donations" element={<Donations />} />
                 <Route path="/dashboard/learning" element={<LearningDashboard />} />
+                <Route path="/my-courses" element={<MyCourses />} />
                 <Route path="/elearning/:id/learn" element={<CourseLearn />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/my-cashback" element={<MyCashback />} />
