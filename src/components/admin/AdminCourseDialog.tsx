@@ -173,6 +173,29 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       }
     }
 
+    // Sertifier IDs validation: all-or-nothing, must match format
+    const sId = formData.sertifier_design_id.trim();
+    const sDet = formData.sertifier_detail_id.trim();
+    const sTpl = formData.sertifier_email_template_id.trim();
+    const provided = [sId, sDet, sTpl].filter(Boolean);
+    if (provided.length > 0 && provided.length < 3) {
+      toast({
+        title: 'Configuration Sertifier incomplète',
+        description: 'Renseignez les trois identifiants (Design, Detail, Email Template) ou laissez-les tous vides.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const sertifierIdRegex = /^[A-Za-z0-9_-]{8,64}$/;
+    if (provided.length === 3 && !provided.every((v) => sertifierIdRegex.test(v))) {
+      toast({
+        title: 'IDs Sertifier invalides',
+        description: 'Chaque identifiant doit contenir 8 à 64 caractères alphanumériques (lettres, chiffres, "-", "_").',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const slug = formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const languages = formData.languages_csv
       .split(',')
