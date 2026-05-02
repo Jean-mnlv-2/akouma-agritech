@@ -50,53 +50,6 @@ const LearningDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const queryClient = useQueryClient();
 
-  // Demo data - will be replaced with real API when backend is ready
-  const enrolledCourses: EnrolledCourse[] = [
-    {
-      id: "1",
-      title: "Agriculture Moderne & IoT",
-      progress: 65,
-      thumbnail: courseThumbnail,
-      level: "Intermédiaire",
-      totalModules: 8,
-      completedModules: 5,
-      lastAccessed: "2026-02-24",
-      studyPace: "standard",
-      targetEndDate: "2026-03-15",
-      remindersEnabled: true
-    },
-    {
-      id: "2",
-      title: "Irrigation Intelligente",
-      progress: 30,
-      thumbnail: courseThumbnail,
-      level: "Débutant",
-      totalModules: 6,
-      completedModules: 2,
-      lastAccessed: "2026-02-23",
-      studyPace: "intensive",
-      targetEndDate: "2026-03-05",
-      remindersEnabled: false
-    },
-    {
-      id: "3",
-      title: "Gestion des Maladies des Plantes",
-      progress: 100,
-      thumbnail: courseThumbnail,
-      level: "Avancé",
-      totalModules: 10,
-      completedModules: 10,
-      lastAccessed: "2026-02-20",
-    },
-  ];
-
-
-  const stats = {
-    totalHours: 47,
-    completedModules: 17,
-    averageScore: 82,
-    activeCourses: 2,
-  };
 
   useEffect(() => {
     const checkAuth = async () => {
