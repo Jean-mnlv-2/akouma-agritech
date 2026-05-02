@@ -14,6 +14,7 @@ import { useRef } from 'react';
 import { Plus, Trash, ListPlus } from 'lucide-react';
 import { api } from '@/integrations/api/client';
 import { useToast } from '@/hooks/use-toast';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 
 interface Module {
   id: string;
@@ -53,11 +54,15 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     slug: '',
     benefits_csv: '',
     requirements_csv: '',
-    modules: [] as Module[]
+    modules: [] as Module[],
+    sertifier_design_id: '',
+    sertifier_detail_id: '',
+    sertifier_email_template_id: '',
   });
 
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [testingSertifier, setTestingSertifier] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(formData.thumbnail_url || null);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(formData.video_url || null);
   const thumbInputRef = useRef<HTMLInputElement | null>(null);
@@ -110,7 +115,10 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         slug: course.slug || slugify(course.title || ''),
         benefits_csv: Array.isArray(course.benefits) ? course.benefits.join('\n') : '',
         requirements_csv: Array.isArray(course.requirements) ? course.requirements.join('\n') : '',
-        modules: Array.isArray(course.modules) ? (course.modules as Module[]) : []
+        modules: Array.isArray(course.modules) ? (course.modules as Module[]) : [],
+        sertifier_design_id: course.sertifierDesignId || '',
+        sertifier_detail_id: course.sertifierDetailId || '',
+        sertifier_email_template_id: course.sertifierEmailTemplateId || '',
       });
       setPreviewImageUrl(course.thumbnailUrl || null);
       setPreviewVideoUrl(course.videoUrl || null);
@@ -137,7 +145,10 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         slug: '',
         benefits_csv: '',
         requirements_csv: '',
-        modules: []
+        modules: [],
+        sertifier_design_id: '',
+        sertifier_detail_id: '',
+        sertifier_email_template_id: '',
       });
       setPreviewImageUrl(null);
       setPreviewVideoUrl(null);
@@ -200,6 +211,9 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       requirements,
       modules: formData.modules,
       slug,
+      sertifierDesignId: formData.sertifier_design_id.trim() || null,
+      sertifierDetailId: formData.sertifier_detail_id.trim() || null,
+      sertifierEmailTemplateId: formData.sertifier_email_template_id.trim() || null,
     };
     onSave(payload);
   };
