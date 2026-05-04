@@ -137,6 +137,12 @@ courseModulesRouter.delete('/:id', authRequired, adminOnly, async (req: Request,
 courseModulesRouter.get('/progress/:enrollmentId', authRequired, async (req: Request, res: Response) => {
   try {
     const enrollmentId = Number(req.params.enrollmentId);
+    const u = (req as any).user;
+    const enrollment = await prisma.eLearningEnrollment.findUnique({ where: { id: enrollmentId } });
+    if (!enrollment) return res.status(404).json({ error: 'Not found' });
+    if (enrollment.userId !== u.id && u.role !== 'admin' && u.role !== 'supervisor') {
+      return res.status(403).json({ error: 'forbidden' });
+    }
     const progress = await prisma.moduleProgress.findMany({
       where: { enrollmentId },
       include: { module: true },
@@ -153,6 +159,10 @@ courseModulesRouter.post('/progress', authRequired, async (req: Request, res: Re
     const { enrollmentId, moduleId, quizScore } = req.body;
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    // Strict ownership check on the enrollment
+    const enrollment = await prisma.eLearningEnrollment.findUnique({ where: { id: Number(enrollmentId) } });
+    if (!enrollment) return res.status(404).json({ error: 'Enrollment not found' });
+    if (enrollment.userId !== user.id) return res.status(403).json({ error: 'forbidden' });
     
     const progress = await prisma.moduleProgress.upsert({
       where: { enrollmentId_moduleId: { enrollmentId: Number(enrollmentId), moduleId: Number(moduleId) } },

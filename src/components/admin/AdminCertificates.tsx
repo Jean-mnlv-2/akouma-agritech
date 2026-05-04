@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/integrations/api/client';
-import { Award, Download, FileText, Loader2, RefreshCw, ShieldCheck, ShieldAlert, Clock, ExternalLink } from 'lucide-react';
+import { Award, Download, FileText, Loader2, RefreshCw, ShieldCheck, ShieldAlert, Clock, ExternalLink, ScrollText, AlertCircle } from 'lucide-react';
 
 interface CertRow {
   id: number;
@@ -28,6 +29,8 @@ interface CertRow {
   course?: { id: number; title: string; slug?: string };
 }
 
+interface LogEntry { ts: string; level: 'info' | 'warn' | 'error'; step: string; message?: string; durationMs?: number }
+
 const statusBadge = (s: CertRow['status']) => {
   switch (s) {
     case 'sent': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300"><ShieldCheck className="w-3 h-3 mr-1" />Émis</Badge>;
@@ -41,13 +44,21 @@ export function AdminCertificates() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [courseFilter, setCourseFilter] = useState<string>('all');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [logCert, setLogCert] = useState<CertRow | null>(null);
 
   const { data: certs = [], isLoading } = useQuery<CertRow[]>({
-    queryKey: ['admin', 'certificates', statusFilter],
+    queryKey: ['admin', 'certificates', statusFilter, fromDate, toDate],
     queryFn: async () => {
-      const url = statusFilter === 'all' ? '/api/certificates/admin' : `/api/certificates/admin?status=${statusFilter}`;
-      const res = await api.request('GET', url);
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (fromDate) params.set('from', fromDate);
+      if (toDate) params.set('to', toDate);
+      const qs = params.toString();
+      const res = await api.request('GET', `/api/certificates/admin${qs ? `?${qs}` : ''}`);
       return res?.data || [];
     },
     refetchInterval: 15000,
@@ -68,19 +79,42 @@ export function AdminCertificates() {
       toast({ title: 'Re-mis en file', description: 'Le certificat a été remis en file d\'émission.' });
       qc.invalidateQueries({ queryKey: ['admin', 'certificates'] });
     },
-    onError: () => toast({ title: 'Erreur', description: 'Impossible de réessayer.', variant: 'destructive' }),
+    onError: (err: unknown) => toast({
+      title: 'Erreur',
+      description: err instanceof Error ? err.message : 'Impossible de réessayer.',
+      variant: 'destructive',
+    }),
   });
+
+  const logQuery = useQuery<{ executionLog: LogEntry[] | null; lastError: string | null; certificateNumber: string; status: string; attempts: number }>({
+    queryKey: ['admin', 'certificates', 'log', logCert?.id],
+    enabled: !!logCert,
+    queryFn: async () => {
+      const res = await api.request('GET', `/api/certificates/${logCert!.id}/log`);
+      return res?.data;
+    },
+    refetchInterval: logCert && (logCert.status === 'pending' || logCert.status === 'processing') ? 4000 : false,
+  });
+
+  const courseOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    certs.forEach(c => { if (c.course) map.set(c.course.id, c.course.title); });
+    return Array.from(map.entries());
+  }, [certs]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return certs;
-    return certs.filter(c =>
-      c.certificateNumber.toLowerCase().includes(q) ||
-      c.user?.email?.toLowerCase().includes(q) ||
-      c.user?.fullName?.toLowerCase().includes(q) ||
-      c.course?.title?.toLowerCase().includes(q)
-    );
-  }, [certs, search]);
+    return certs.filter(c => {
+      if (courseFilter !== 'all' && String(c.courseId) !== courseFilter) return false;
+      if (q && !(
+        c.certificateNumber.toLowerCase().includes(q) ||
+        c.user?.email?.toLowerCase().includes(q) ||
+        c.user?.fullName?.toLowerCase().includes(q) ||
+        c.course?.title?.toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
+  }, [certs, search, courseFilter]);
 
   const exportCSV = () => {
     const header = ['N° Certificat', 'Étudiant', 'Email', 'Cours', 'Score', 'Date complétion', 'Statut', 'Émis le', 'URL Sertifier'];
@@ -185,6 +219,24 @@ export function AdminCertificates() {
               <SelectItem value="failed">Échec</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Tous les cours" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les cours</SelectItem>
+              {courseOptions.map(([id, title]) => (
+                <SelectItem key={id} value={String(id)}>{title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Du</span>
+            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40" />
+            <span className="text-xs text-muted-foreground">au</span>
+            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40" />
+            {(fromDate || toDate || courseFilter !== 'all') && (
+              <Button variant="ghost" size="sm" onClick={() => { setFromDate(''); setToDate(''); setCourseFilter('all'); }}>Réinitialiser</Button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -235,6 +287,9 @@ export function AdminCertificates() {
                           <RefreshCw className="w-4 h-4" />
                         </Button>
                       )}
+                      <Button size="sm" variant="outline" onClick={() => setLogCert(c)} title="Voir le journal d'exécution">
+                        <ScrollText className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -243,6 +298,61 @@ export function AdminCertificates() {
           </Table>
         )}
       </CardContent>
+      {/* Execution log dialog */}
+      <Dialog open={!!logCert} onOpenChange={(o) => !o && setLogCert(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScrollText className="w-5 h-5" /> Journal d'exécution
+            </DialogTitle>
+            <DialogDescription>
+              {logCert?.certificateNumber} — {logCert?.user?.fullName || logCert?.user?.email} — {logCert?.course?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {logQuery.isLoading ? (
+            <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          ) : (
+            <div className="space-y-3 overflow-auto">
+              {logQuery.data?.lastError && (
+                <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5 text-sm">
+                  <div className="flex items-center gap-2 font-semibold text-destructive">
+                    <AlertCircle className="w-4 h-4" /> Dernière erreur
+                  </div>
+                  <p className="mt-1 text-destructive break-words">{logQuery.data.lastError}</p>
+                </div>
+              )}
+              <div className="rounded-lg border bg-muted/20 max-h-[50vh] overflow-auto">
+                {(!logQuery.data?.executionLog || logQuery.data.executionLog.length === 0) ? (
+                  <p className="text-center text-sm text-muted-foreground p-6">Aucun journal disponible pour ce certificat.</p>
+                ) : (
+                  <ul className="divide-y">
+                    {logQuery.data.executionLog.map((e, i) => (
+                      <li key={i} className="p-2 text-xs font-mono flex items-start gap-2">
+                        <span className={
+                          e.level === 'error' ? 'text-destructive font-bold' :
+                          e.level === 'warn' ? 'text-amber-600 font-bold' :
+                          'text-emerald-700 font-bold'
+                        }>[{e.level}]</span>
+                        <span className="text-muted-foreground">{new Date(e.ts).toLocaleString('fr-FR')}</span>
+                        <span className="font-semibold">{e.step}</span>
+                        {e.durationMs !== undefined && <span className="text-muted-foreground">({e.durationMs}ms)</span>}
+                        {e.message && <span className="break-all">— {e.message}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                {logCert && logCert.status !== 'sent' && (
+                  <Button size="sm" variant="outline" onClick={() => logCert && retry.mutate(logCert.id)} disabled={retry.isPending}>
+                    <RefreshCw className="w-4 h-4 mr-2" /> Réessayer
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

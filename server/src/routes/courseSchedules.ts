@@ -55,6 +55,13 @@ courseSchedulesRouter.post('/', authRequired, async (req: Request, res: Response
 courseSchedulesRouter.put('/:id/attend', authRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
+    const u = (req as any).user;
+    const existing = await prisma.courseSchedule.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    // Only the owner or an admin/supervisor may mark attendance
+    if (existing.userId !== u.id && u.role !== 'admin' && u.role !== 'supervisor') {
+      return res.status(403).json({ error: 'forbidden' });
+    }
     const schedule = await prisma.courseSchedule.update({
       where: { id },
       data: { status: 'attended', attendedAt: new Date() },

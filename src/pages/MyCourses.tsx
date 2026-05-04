@@ -96,10 +96,28 @@ const MyCourses = () => {
         return res?.data || [];
       } catch { return []; }
     },
-    refetchInterval: 20000,
+    // Adaptive polling: 5s while a cert is in-flight, otherwise 30s.
+    refetchInterval: (q) => {
+      const list = (q.state.data as Certificate[] | undefined) || [];
+      const inFlight = list.some(c => c.status === 'pending' || c.status === 'processing');
+      return inFlight ? 5000 : 30000;
+    },
+    refetchOnWindowFocus: true,
   });
 
   const requestCertificate = async (enrollment: Enrollment) => {
+    // Anti-doublon front-end: bail if already in queue or sent
+    const existing = certByCourse(enrollment.courseId);
+    if (existing && (existing.status === 'pending' || existing.status === 'processing' || existing.status === 'sent')) {
+      toast({
+        title: 'Déjà en cours',
+        description: existing.status === 'sent'
+          ? 'Ce certificat a déjà été émis.'
+          : 'Une émission est déjà en cours pour ce cours.',
+      });
+      return;
+    }
+    if (requestingCourseId !== null) return;
     setRequestingCourseId(enrollment.courseId);
     try {
       await api.request('POST', '/api/certificates/request', {

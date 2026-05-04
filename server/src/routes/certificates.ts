@@ -14,6 +14,7 @@ export const certificatesRouter = Router();
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 15_000;
 let workerRunning = false;
+const inFlight = new Set<number>(); // anti-doublon process lock per cert id
 
 function genCertNumber() {
   const ts = Date.now().toString(36).toUpperCase();
@@ -21,18 +22,36 @@ function genCertNumber() {
   return `KLM-CERT-${ts}-${rand}`;
 }
 
+type LogEntry = { ts: string; level: 'info' | 'warn' | 'error'; step: string; message?: string; durationMs?: number };
+function appendLog(prev: unknown, entry: LogEntry): LogEntry[] {
+  const arr = Array.isArray(prev) ? (prev as LogEntry[]) : [];
+  arr.push(entry);
+  // cap size to avoid unbounded growth
+  return arr.slice(-200);
+}
+
 async function processOne(certificateId: number): Promise<void> {
+  // Anti-doublon in-process lock
+  if (inFlight.has(certificateId)) return;
+  inFlight.add(certificateId);
+  try {
   const cert = await prisma.certificate.findUnique({
     where: { id: certificateId },
     include: { user: true, course: true },
   });
   if (!cert) return;
   if (cert.status === 'sent') return;
+  if (cert.status === 'processing') return; // already being processed
 
-  await prisma.certificate.update({
-    where: { id: certificateId },
+  // Atomic claim: only transition pending|failed -> processing
+  const claim = await prisma.certificate.updateMany({
+    where: { id: certificateId, status: { in: ['pending', 'failed'] } },
     data: { status: 'processing', attempts: { increment: 1 } },
   });
+  if (claim.count === 0) return; // lost the race; another worker has it
+
+  let log: LogEntry[] = Array.isArray(cert.executionLog) ? (cert.executionLog as unknown as LogEntry[]) : [];
+  log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'claim', message: `Tentative ${(cert.attempts ?? 0) + 1}` });
 
   try {
     const c = cert.course as any;
@@ -42,6 +61,7 @@ async function processOne(certificateId: number): Promise<void> {
     }
     if (!cert.user?.email) throw new Error('Email étudiant manquant');
 
+    let t0 = Date.now();
     const campaign: any = await sertifierFetch('POST', '/campaign', {
       title: `KILIMO - ${cert.course.title} - ${cert.user.fullName || cert.user.email} - ${cert.certificateNumber}`,
       designId: c.sertifierDesignId,
@@ -51,7 +71,9 @@ async function processOne(certificateId: number): Promise<void> {
       fromName: 'KILIMO E-Learning',
     });
     const campaignId = campaign?.id || campaign?.data?.id;
+    log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'campaign.create', message: `campaignId=${campaignId}`, durationMs: Date.now() - t0 });
 
+    t0 = Date.now();
     const credentials: any = await sertifierFetch('POST', '/campaign/addCredentials', {
       campaignId,
       credentials: [{
@@ -66,18 +88,26 @@ async function processOne(certificateId: number): Promise<void> {
         },
       }],
     });
+    log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'campaign.addCredentials', durationMs: Date.now() - t0 });
 
+    t0 = Date.now();
     await sertifierFetch('POST', '/campaign/send', { campaignId });
+    log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'campaign.send', durationMs: Date.now() - t0 });
 
     let credentialId = credentials?.credentials?.[0]?.id || '';
     let credentialUrl = '';
     if (credentialId) {
       try {
+        t0 = Date.now();
         const cd: any = await sertifierFetch('GET', `/credential/${credentialId}`);
         credentialUrl = cd?.verificationUrl || cd?.url || cd?.data?.verificationUrl || '';
-      } catch { /* ignore */ }
+        log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'credential.fetch', message: credentialUrl, durationMs: Date.now() - t0 });
+      } catch (e) {
+        log = appendLog(log, { ts: new Date().toISOString(), level: 'warn', step: 'credential.fetch', message: e instanceof Error ? e.message : 'fetch failed' });
+      }
     }
 
+    log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'done', message: 'Certificat émis avec succès' });
     await prisma.certificate.update({
       where: { id: certificateId },
       data: {
@@ -87,20 +117,25 @@ async function processOne(certificateId: number): Promise<void> {
         credentialUrl,
         issuedAt: new Date(),
         lastError: null,
+        executionLog: log as any,
       },
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     const fresh = await prisma.certificate.findUnique({ where: { id: certificateId } });
     const failed = (fresh?.attempts ?? 1) >= MAX_ATTEMPTS;
+    log = appendLog(log, { ts: new Date().toISOString(), level: 'error', step: failed ? 'failed' : 'retry', message: msg });
     await prisma.certificate.update({
       where: { id: certificateId },
-      data: { status: failed ? 'failed' : 'pending', lastError: msg },
+      data: { status: failed ? 'failed' : 'pending', lastError: msg, executionLog: log as any },
     });
     if (!failed) {
       setTimeout(() => { drainQueue().catch(() => {}); }, RETRY_DELAY_MS);
     }
     console.error('[Certificates] Issue failed:', msg);
+  }
+  } finally {
+    inFlight.delete(certificateId);
   }
 }
 
@@ -138,6 +173,21 @@ certificatesRouter.get('/my', authRequired, async (req: Request, res: Response) 
   res.json({ data: certs });
 });
 
+// Student: fetch a single certificate (must own it)
+certificatesRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  const role = (req as any).user?.role;
+  const id = Number(req.params.id);
+  if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+  const cert = await prisma.certificate.findUnique({
+    where: { id },
+    include: { course: { select: { id: true, title: true, slug: true } } },
+  });
+  if (!cert) return res.status(404).json({ error: 'Not found' });
+  if (cert.userId !== userId && role !== 'admin') return res.status(403).json({ error: 'forbidden' });
+  res.json({ data: cert });
+});
+
 // Student: request issuance for a course they completed
 certificatesRouter.post('/request', authRequired, async (req: Request, res: Response) => {
   try {
@@ -152,30 +202,50 @@ certificatesRouter.post('/request', authRequired, async (req: Request, res: Resp
       where: { userId_courseId: { userId, courseId: Number(courseId) } } as any,
     });
     if (!enrollment) return res.status(403).json({ error: 'Not enrolled' });
+    if (enrollment.userId !== userId) return res.status(403).json({ error: 'forbidden' });
     if ((enrollment.progress ?? 0) < 100 && !enrollment.completedAt) {
       return res.status(400).json({ error: 'Course not completed yet' });
     }
 
-    // Idempotent: reuse if already exists
-    let cert = await prisma.certificate.findUnique({
-      where: { userId_courseId: { userId, courseId: Number(courseId) } } as any,
-    });
-    if (!cert) {
-      cert = await prisma.certificate.create({
-        data: {
-          userId,
-          courseId: Number(courseId),
-          enrollmentId: enrollment.id,
-          certificateNumber: genCertNumber(),
-          score: score != null ? Number(score) : null,
-          status: 'pending',
-        },
+    // Anti-doublon: idempotent and concurrency-safe.
+    // - If a certificate is already pending/processing/sent, return it as-is.
+    // - If failed, reset to pending only if not already being retried.
+    let cert;
+    try {
+      cert = await prisma.$transaction(async (tx) => {
+        const existing = await tx.certificate.findUnique({
+          where: { userId_courseId: { userId, courseId: Number(courseId) } } as any,
+        });
+        if (!existing) {
+          return tx.certificate.create({
+            data: {
+              userId,
+              courseId: Number(courseId),
+              enrollmentId: enrollment.id,
+              certificateNumber: genCertNumber(),
+              score: score != null ? Number(score) : null,
+              status: 'pending',
+            },
+          });
+        }
+        if (existing.status === 'processing' || existing.status === 'pending' || existing.status === 'sent') {
+          return existing;
+        }
+        // failed -> reset
+        return tx.certificate.update({
+          where: { id: existing.id },
+          data: { status: 'pending', attempts: 0, lastError: null },
+        });
       });
-    } else if (cert.status === 'failed') {
-      cert = await prisma.certificate.update({
-        where: { id: cert.id },
-        data: { status: 'pending', attempts: 0, lastError: null },
-      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'create failed';
+      if (msg.includes('Unique constraint')) {
+        cert = await prisma.certificate.findUnique({
+          where: { userId_courseId: { userId, courseId: Number(courseId) } } as any,
+        });
+      } else {
+        throw e;
+      }
     }
     drainQueue().catch(() => {});
     res.status(201).json({ data: cert });
@@ -186,12 +256,16 @@ certificatesRouter.post('/request', authRequired, async (req: Request, res: Resp
 
 // Admin: list all certificates with filters
 certificatesRouter.get('/admin', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { status, courseId, userId } = req.query;
+  const { status, courseId, userId, from, to } = req.query;
+  const dateRange: any = {};
+  if (from) dateRange.gte = new Date(String(from));
+  if (to) dateRange.lte = new Date(String(to));
   const certs = await prisma.certificate.findMany({
     where: {
       ...(status ? { status: String(status) } : {}),
       ...(courseId ? { courseId: Number(courseId) } : {}),
       ...(userId ? { userId: String(userId) } : {}),
+      ...(from || to ? { createdAt: dateRange } : {}),
     },
     include: {
       user: { select: { id: true, fullName: true, email: true } },
@@ -205,12 +279,27 @@ certificatesRouter.get('/admin', authRequired, adminOnly, async (req: Request, r
 // Admin: retry / re-queue a certificate
 certificatesRouter.post('/:id/retry', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  await prisma.certificate.update({
-    where: { id },
+  // Anti-doublon: do not reset if currently processing
+  const updated = await prisma.certificate.updateMany({
+    where: { id, status: { not: 'processing' } },
     data: { status: 'pending', attempts: 0, lastError: null },
   });
+  if (updated.count === 0) {
+    return res.status(409).json({ error: 'Certificate is currently being processed' });
+  }
   drainQueue().catch(() => {});
   res.json({ success: true });
+});
+
+// Admin: fetch execution log for a certificate
+certificatesRouter.get('/:id/log', authRequired, adminOnly, async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const cert = await prisma.certificate.findUnique({
+    where: { id },
+    select: { id: true, certificateNumber: true, status: true, attempts: true, lastError: true, executionLog: true, createdAt: true, updatedAt: true },
+  });
+  if (!cert) return res.status(404).json({ error: 'Not found' });
+  res.json({ data: cert });
 });
 
 // Admin: queue stats
