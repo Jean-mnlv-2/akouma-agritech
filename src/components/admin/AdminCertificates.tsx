@@ -219,6 +219,24 @@ export function AdminCertificates() {
               <SelectItem value="failed">Échec</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Tous les cours" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les cours</SelectItem>
+              {courseOptions.map(([id, title]) => (
+                <SelectItem key={id} value={String(id)}>{title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Du</span>
+            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40" />
+            <span className="text-xs text-muted-foreground">au</span>
+            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40" />
+            {(fromDate || toDate || courseFilter !== 'all') && (
+              <Button variant="ghost" size="sm" onClick={() => { setFromDate(''); setToDate(''); setCourseFilter('all'); }}>Réinitialiser</Button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -269,6 +287,9 @@ export function AdminCertificates() {
                           <RefreshCw className="w-4 h-4" />
                         </Button>
                       )}
+                      <Button size="sm" variant="outline" onClick={() => setLogCert(c)} title="Voir le journal d'exécution">
+                        <ScrollText className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -277,6 +298,61 @@ export function AdminCertificates() {
           </Table>
         )}
       </CardContent>
+      {/* Execution log dialog */}
+      <Dialog open={!!logCert} onOpenChange={(o) => !o && setLogCert(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScrollText className="w-5 h-5" /> Journal d'exécution
+            </DialogTitle>
+            <DialogDescription>
+              {logCert?.certificateNumber} — {logCert?.user?.fullName || logCert?.user?.email} — {logCert?.course?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {logQuery.isLoading ? (
+            <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          ) : (
+            <div className="space-y-3 overflow-auto">
+              {logQuery.data?.lastError && (
+                <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5 text-sm">
+                  <div className="flex items-center gap-2 font-semibold text-destructive">
+                    <AlertCircle className="w-4 h-4" /> Dernière erreur
+                  </div>
+                  <p className="mt-1 text-destructive break-words">{logQuery.data.lastError}</p>
+                </div>
+              )}
+              <div className="rounded-lg border bg-muted/20 max-h-[50vh] overflow-auto">
+                {(!logQuery.data?.executionLog || logQuery.data.executionLog.length === 0) ? (
+                  <p className="text-center text-sm text-muted-foreground p-6">Aucun journal disponible pour ce certificat.</p>
+                ) : (
+                  <ul className="divide-y">
+                    {logQuery.data.executionLog.map((e, i) => (
+                      <li key={i} className="p-2 text-xs font-mono flex items-start gap-2">
+                        <span className={
+                          e.level === 'error' ? 'text-destructive font-bold' :
+                          e.level === 'warn' ? 'text-amber-600 font-bold' :
+                          'text-emerald-700 font-bold'
+                        }>[{e.level}]</span>
+                        <span className="text-muted-foreground">{new Date(e.ts).toLocaleString('fr-FR')}</span>
+                        <span className="font-semibold">{e.step}</span>
+                        {e.durationMs !== undefined && <span className="text-muted-foreground">({e.durationMs}ms)</span>}
+                        {e.message && <span className="break-all">— {e.message}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                {logCert && logCert.status !== 'sent' && (
+                  <Button size="sm" variant="outline" onClick={() => logCert && retry.mutate(logCert.id)} disabled={retry.isPending}>
+                    <RefreshCw className="w-4 h-4 mr-2" /> Réessayer
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
