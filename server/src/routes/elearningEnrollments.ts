@@ -52,6 +52,12 @@ elearningEnrollmentsRouter.post('/', authRequired, async (req: Request, res: Res
 elearningEnrollmentsRouter.put('/:id', authRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
+    const u = (req as any).user;
+    const existing = await prisma.eLearningEnrollment.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    if (existing.userId !== u.id && u.role !== 'admin' && u.role !== 'supervisor') {
+      return res.status(403).json({ error: 'forbidden' });
+    }
     const { studyPace, targetEndDate, remindersEnabled, studyDays, dailyTimeSlot, progress } = req.body || {};
     
     const updated = await prisma.eLearningEnrollment.update({
