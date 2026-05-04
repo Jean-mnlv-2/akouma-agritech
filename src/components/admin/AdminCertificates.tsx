@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/integrations/api/client';
-import { Award, Download, FileText, Loader2, RefreshCw, ShieldCheck, ShieldAlert, Clock, ExternalLink } from 'lucide-react';
+import { Award, Download, FileText, Loader2, RefreshCw, ShieldCheck, ShieldAlert, Clock, ExternalLink, ScrollText, AlertCircle } from 'lucide-react';
 
 interface CertRow {
   id: number;
@@ -28,6 +29,8 @@ interface CertRow {
   course?: { id: number; title: string; slug?: string };
 }
 
+interface LogEntry { ts: string; level: 'info' | 'warn' | 'error'; step: string; message?: string; durationMs?: number }
+
 const statusBadge = (s: CertRow['status']) => {
   switch (s) {
     case 'sent': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300"><ShieldCheck className="w-3 h-3 mr-1" />Émis</Badge>;
@@ -41,13 +44,21 @@ export function AdminCertificates() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [courseFilter, setCourseFilter] = useState<string>('all');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [logCert, setLogCert] = useState<CertRow | null>(null);
 
   const { data: certs = [], isLoading } = useQuery<CertRow[]>({
-    queryKey: ['admin', 'certificates', statusFilter],
+    queryKey: ['admin', 'certificates', statusFilter, fromDate, toDate],
     queryFn: async () => {
-      const url = statusFilter === 'all' ? '/api/certificates/admin' : `/api/certificates/admin?status=${statusFilter}`;
-      const res = await api.request('GET', url);
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (fromDate) params.set('from', fromDate);
+      if (toDate) params.set('to', toDate);
+      const qs = params.toString();
+      const res = await api.request('GET', `/api/certificates/admin${qs ? `?${qs}` : ''}`);
       return res?.data || [];
     },
     refetchInterval: 15000,
@@ -68,19 +79,42 @@ export function AdminCertificates() {
       toast({ title: 'Re-mis en file', description: 'Le certificat a été remis en file d\'émission.' });
       qc.invalidateQueries({ queryKey: ['admin', 'certificates'] });
     },
-    onError: () => toast({ title: 'Erreur', description: 'Impossible de réessayer.', variant: 'destructive' }),
+    onError: (err: unknown) => toast({
+      title: 'Erreur',
+      description: err instanceof Error ? err.message : 'Impossible de réessayer.',
+      variant: 'destructive',
+    }),
   });
+
+  const logQuery = useQuery<{ executionLog: LogEntry[] | null; lastError: string | null; certificateNumber: string; status: string; attempts: number }>({
+    queryKey: ['admin', 'certificates', 'log', logCert?.id],
+    enabled: !!logCert,
+    queryFn: async () => {
+      const res = await api.request('GET', `/api/certificates/${logCert!.id}/log`);
+      return res?.data;
+    },
+    refetchInterval: logCert && (logCert.status === 'pending' || logCert.status === 'processing') ? 4000 : false,
+  });
+
+  const courseOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    certs.forEach(c => { if (c.course) map.set(c.course.id, c.course.title); });
+    return Array.from(map.entries());
+  }, [certs]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return certs;
-    return certs.filter(c =>
-      c.certificateNumber.toLowerCase().includes(q) ||
-      c.user?.email?.toLowerCase().includes(q) ||
-      c.user?.fullName?.toLowerCase().includes(q) ||
-      c.course?.title?.toLowerCase().includes(q)
-    );
-  }, [certs, search]);
+    return certs.filter(c => {
+      if (courseFilter !== 'all' && String(c.courseId) !== courseFilter) return false;
+      if (q && !(
+        c.certificateNumber.toLowerCase().includes(q) ||
+        c.user?.email?.toLowerCase().includes(q) ||
+        c.user?.fullName?.toLowerCase().includes(q) ||
+        c.course?.title?.toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
+  }, [certs, search, courseFilter]);
 
   const exportCSV = () => {
     const header = ['N° Certificat', 'Étudiant', 'Email', 'Cours', 'Score', 'Date complétion', 'Statut', 'Émis le', 'URL Sertifier'];
