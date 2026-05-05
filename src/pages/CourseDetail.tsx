@@ -601,19 +601,22 @@ const EnrollmentForm = ({ onSubmit, course, t, currentUser }: { onSubmit: (data:
         <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-2">
           <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Compte connecté</p>
           <p className="text-sm font-medium text-foreground">{currentUser.name || currentUser.email}</p>
+          <p className="text-xs text-muted-foreground mt-1">Vos informations personnelles (nom, email, pays, téléphone) sont déjà associées à votre compte.</p>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.phone") || "Téléphone"}</label>
-          <Input 
-            placeholder={t("elearning.register.phone_placeholder") || "Votre numéro"} 
-            value={formData.phone} 
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
-            className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
-          />
-        </div>
+        {!currentUser && (
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.phone") || "Téléphone"}</label>
+            <Input 
+              placeholder={t("elearning.register.phone_placeholder") || "Votre numéro"} 
+              value={formData.phone} 
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+              className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
+            />
+          </div>
+        )}
         <div className="space-y-2">
           <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience_level") || "Niveau d'expérience"}</label>
           <Select 
