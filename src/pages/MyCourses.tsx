@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import TitleManager from "@/components/TitleManager";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
@@ -186,17 +187,31 @@ const MyCourses = () => {
         </div>
 
         <Tabs defaultValue="active">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-            <TabsTrigger value="active">En cours</TabsTrigger>
-            <TabsTrigger value="completed">Complétés</TabsTrigger>
-            <TabsTrigger value="attendance">Présences</TabsTrigger>
-            <TabsTrigger value="certificates">Certificats</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-1">
+            <TabsList className="inline-flex w-auto md:w-full md:grid md:grid-cols-4 md:max-w-2xl">
+              <TabsTrigger value="active" className="whitespace-nowrap">En cours</TabsTrigger>
+              <TabsTrigger value="completed" className="whitespace-nowrap">Complétés</TabsTrigger>
+              <TabsTrigger value="attendance" className="whitespace-nowrap">Présences</TabsTrigger>
+              <TabsTrigger value="certificates" className="whitespace-nowrap">Certificats</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ACTIVE */}
           <TabsContent value="active" className="mt-6">
             {loadingEnrollments ? (
-              <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-border overflow-hidden bg-card">
+                    <Skeleton className="h-40 w-full" />
+                    <div className="p-4 space-y-3">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-2 w-full" />
+                      <Skeleton className="h-9 w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : active.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">
                 <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
