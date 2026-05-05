@@ -11,6 +11,7 @@ import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import ContentSubmission from "@/components/ContentSubmission";
 import ElearningCourseCard from "@/components/elearning/ElearningCourseCard";
 import elearningHero from "@/assets/elearning-hero.jpg";
@@ -112,6 +113,8 @@ const ELearning = () => {
   const [showEnrollPopup, setShowEnrollPopup] = useState(false);
   const [languageFilter, setLanguageFilter] = useState<string>('Toutes langues');
   const [showOnlyPreview, setShowOnlyPreview] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const PAGE_SIZE = 9;
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
   const [liveStreams, setLiveStreams] = useState<LiveStreamItem[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -222,6 +225,16 @@ const ELearning = () => {
     const matchesPreview = !showOnlyPreview || course.isPreviewAvailable === true;
     return matchesSearch && matchesCategory && matchesLanguage && matchesPreview;
   });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview]);
+
+  const previewCount = courses.filter(c => c.isPreviewAvailable).length;
+  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const paginatedCourses = filteredCourses.slice(pageStart, pageStart + PAGE_SIZE);
 
   const { data: fetchedPreviewItems = [] } = useQuery({
     queryKey: ['course-preview-items'],
@@ -569,7 +582,9 @@ const ELearning = () => {
                       {t("elearning.preview.available") || "Aperçu disponible"}
                     </label>
                   </div>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-bold">NEW</Badge>
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-bold">
+                    {previewCount}
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -591,7 +606,22 @@ const ELearning = () => {
 
           {/* Course Grid */}
           {loading ? (
-            <LoadingSpinner size="large" text={t("elearning.loading")} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true" aria-live="polite">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-2xl border border-border overflow-hidden bg-card">
+                  <Skeleton className="h-44 w-full" />
+                  <div className="p-4 space-y-3">
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-4/5" />
+                    <div className="flex justify-between pt-2">
+                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-8 w-24" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : error ? (
             <div className="text-center py-12 text-destructive">{error}</div>
           ) : filteredCourses.length === 0 ? (
@@ -601,8 +631,9 @@ const ELearning = () => {
               <p className="text-muted-foreground">{t("elearning.none_desc")}</p>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCourses.map((course, index) => (
+              {paginatedCourses.map((course, index) => (
                 <ElearningCourseCard
                     key={course.id}
                     course={course}
@@ -615,6 +646,48 @@ const ELearning = () => {
                   />
               ))}
             </div>
+            {totalPages > 1 && (
+              <nav className="mt-10 flex items-center justify-center gap-2 flex-wrap" aria-label="Pagination des cours">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Page précédente"
+                >
+                  Précédent
+                </Button>
+                {Array.from({ length: totalPages }).map((_, i) => {
+                  const page = i + 1;
+                  return (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "nature" : "outline"}
+                      size="sm"
+                      className="min-w-[40px]"
+                      onClick={() => setCurrentPage(page)}
+                      aria-label={`Page ${page}`}
+                      aria-current={page === currentPage ? "page" : undefined}
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Page suivante"
+                >
+                  Suivant
+                </Button>
+              </nav>
+            )}
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              {filteredCourses.length} cours • Page {currentPage} / {totalPages}
+            </p>
+            </>
           )}
         </div>
       </section>
