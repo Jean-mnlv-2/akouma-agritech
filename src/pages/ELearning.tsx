@@ -11,6 +11,7 @@ import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import ContentSubmission from "@/components/ContentSubmission";
 import ElearningCourseCard from "@/components/elearning/ElearningCourseCard";
 import elearningHero from "@/assets/elearning-hero.jpg";
@@ -112,6 +113,8 @@ const ELearning = () => {
   const [showEnrollPopup, setShowEnrollPopup] = useState(false);
   const [languageFilter, setLanguageFilter] = useState<string>('Toutes langues');
   const [showOnlyPreview, setShowOnlyPreview] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const PAGE_SIZE = 9;
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
   const [liveStreams, setLiveStreams] = useState<LiveStreamItem[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -222,6 +225,16 @@ const ELearning = () => {
     const matchesPreview = !showOnlyPreview || course.isPreviewAvailable === true;
     return matchesSearch && matchesCategory && matchesLanguage && matchesPreview;
   });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview]);
+
+  const previewCount = courses.filter(c => c.isPreviewAvailable).length;
+  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const paginatedCourses = filteredCourses.slice(pageStart, pageStart + PAGE_SIZE);
 
   const { data: fetchedPreviewItems = [] } = useQuery({
     queryKey: ['course-preview-items'],
