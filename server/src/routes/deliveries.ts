@@ -7,6 +7,22 @@ import * as deliveryService from '../services/deliveryService';
 const prisma = new PrismaClient();
 export const deliveriesRouter = Router();
 
+// Guard: avoid noisy 500s when delivery API is not configured
+function isDeliveryConfigured(): boolean {
+  return !!(env.DELIVERY_API_URL && env.DELIVERY_API_PUBLIC_KEY && env.DELIVERY_API_SECRET_KEY);
+}
+
+deliveriesRouter.use((req, res, next) => {
+  if (!isDeliveryConfigured()) {
+    return res.status(503).json({
+      error: 'Service de livraison non configuré (DELIVERY_API_URL / clés API manquantes).',
+      configured: false,
+      data: [],
+    });
+  }
+  next();
+});
+
 // GET /api/deliveries - List all deliveries
 deliveriesRouter.get('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
