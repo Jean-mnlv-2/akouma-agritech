@@ -182,7 +182,6 @@ courseModulesRouter.post('/progress', authRequired, async (req: Request, res: Re
     });
 
     // Update enrollment progress percentage
-    const enrollment = await prisma.eLearningEnrollment.findUnique({ where: { id: Number(enrollmentId) } });
     if (enrollment) {
       const totalModules = await prisma.courseModule.count({ where: { courseId: enrollment.courseId, isActive: true } });
       const completedModules = await prisma.moduleProgress.count({ where: { enrollmentId: Number(enrollmentId), completed: true } });

@@ -127,8 +127,16 @@ export const env = {
         throw new Error('DEFAULT_ADMIN_PASSWORD doit être défini en production, différer de la valeur par défaut et contenir au moins 8 caractères');
       }
       // Si les paiements sont activés, exiger au moins un mécanisme de vérification webhook
-      if (process.env.MONEYFUSION_TOKEN && !process.env.MONEYFUSION_NOTIF_URL && !process.env.MONEYFUSION_WEBHOOK_SECRET) {
-        throw new Error('Pour les paiements, définir MONEYFUSION_NOTIF_URL ou MONEYFUSION_WEBHOOK_SECRET pour vérifier les webhooks');
+      const hasToken = process.env.MONEYFUSION_TOKEN && 
+                       process.env.MONEYFUSION_TOKEN !== 'undefined' && 
+                       process.env.MONEYFUSION_TOKEN.trim().length > 0;
+                       
+      if (hasToken && !process.env.MONEYFUSION_NOTIF_URL && !process.env.MONEYFUSION_WEBHOOK_SECRET) {
+        if (process.env.API_PUBLIC_URL?.includes('localhost')) {
+          console.warn('[env] MONEYFUSION_TOKEN présent sans URL de notification. Les paiements ne pourront pas être validés automatiquement.');
+        } else {
+          throw new Error('Pour les paiements, définir MONEYFUSION_NOTIF_URL ou MONEYFUSION_WEBHOOK_SECRET pour vérifier les webhooks');
+        }
       }
     }
   },
