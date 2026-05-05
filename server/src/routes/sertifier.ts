@@ -1,8 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { authRequired } from '../middleware/authRequired';
-import { sertifierFetch as sertifierRequest } from '../utils/sertifierClient';
+import { sertifierFetch as sertifierRequest, isSertifierConfigured } from '../utils/sertifierClient';
 
 export const sertifierRouter = Router();
+
+// Guard: short-circuit when Sertifier is not configured to avoid noisy 500s
+sertifierRouter.use((req, res, next) => {
+  if (!isSertifierConfigured()) {
+    return res.status(503).json({
+      error: 'Sertifier non configuré. Définissez SERTIFIER_SECRET_KEY côté serveur.',
+      configured: false,
+      connected: false,
+    });
+  }
+  next();
+});
 
 // Test authentication
 sertifierRouter.get('/test', authRequired, async (_req: Request, res: Response) => {
