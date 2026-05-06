@@ -17,6 +17,7 @@ import ElearningCourseCard from "@/components/elearning/ElearningCourseCard";
 import elearningHero from "@/assets/elearning-hero.jpg";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
 import kilimoLogo from "@/assets/kilimo-logo.png";
+import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n";
@@ -370,10 +371,11 @@ const ELearning = () => {
 
       {/* Hero Section */}
       <section className="relative py-24 md:py-32 overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={elearningHero} alt={t("elearning.hero.alt")} className="w-full h-full object-cover scale-105" />
-          <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/70 to-primary/30" />
-        </div>
+        <PageHeaderCarousel
+          pageKey="elearning"
+          fallbackImage={elearningHero}
+          fallbackAlt={t("elearning.hero.alt")}
+        />
         
         {/* Animated Background Shapes */}
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse" />
