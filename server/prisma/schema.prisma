@@ -765,3 +765,22 @@ model Certificate {
   @@index([courseId])
   @@index([status])
 }
+
+model PageHeaderImage {
+  id        Int      @id @default(autoincrement())
+  pageKey   String
+  imageUrl  String
+  altText   String?
+  title     String?
+  subtitle  String?
+  ctaLabel  String?
+  ctaUrl    String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageKey])
+  @@index([isActive])
+  @@index([order])
+}
