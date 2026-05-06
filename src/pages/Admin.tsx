@@ -55,6 +55,7 @@ import { AdminAttendance } from '@/components/admin/AdminAttendance';
 import { AdminSertifierSettings } from '@/components/admin/AdminSertifierSettings';
 import { AdminCertificates } from '@/components/admin/AdminCertificates';
 import AdminElearningEnrollments from '@/pages/AdminElearningEnrollments';
+import { AdminPageHeaderImages } from '@/components/admin/AdminPageHeaderImages';
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
@@ -118,6 +119,7 @@ const tabs = [
   { value: 'submissions', label: 'Soumissions', icon: FileText },
   { value: 'reviews', label: 'Avis Clients', icon: StarIcon },
   { value: 'affiliates', label: 'Classement Affiliés', icon: Crown },
+  { value: 'page-header-images', label: "Images d'en-tête", icon: Eye },
   { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
 ];
 
@@ -401,6 +403,7 @@ function AdminContent() {
               {(activeTab === 'submissions' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('submissions')))) && <AdminSubmissions />}
               {(activeTab === 'reviews' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reviews')))) && <AdminReviews />}
               {(activeTab === 'affiliates' && isAdmin) && <AdminAffiliateLeaderboard />}
+      {(activeTab === 'page-header-images' && isAdmin) && <AdminPageHeaderImages />}
               {(activeTab === 'contact-settings' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('contact-settings')))) && <AdminContactSettings />}
             </div>
           </Tabs>
