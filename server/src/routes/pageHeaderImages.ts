@@ -84,6 +84,28 @@ pageHeaderImagesRouter.patch('/:id/toggle', authRequired, adminOnly, csrfRequire
   res.json({ data: updated });
 });
 
+// Bulk reorder slides for a given pageKey (drag & drop persistence)
+const ReorderSchema = z.object({
+  pageKey: PageKeySchema,
+  orderedIds: z.array(z.coerce.number().int().positive()).min(1).max(200),
+});
+
+pageHeaderImagesRouter.post('/reorder', authRequired, adminOnly, csrfRequired, async (req: Request, res: Response) => {
+  const parsed = ReorderSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+  const { pageKey, orderedIds } = parsed.data;
+  await prisma.$transaction(
+    orderedIds.map((id, idx) =>
+      prisma.pageHeaderImage.updateMany({ where: { id, pageKey }, data: { order: idx } })
+    )
+  );
+  const items = await prisma.pageHeaderImage.findMany({
+    where: { pageKey },
+    orderBy: [{ order: 'asc' }, { id: 'asc' }],
+  });
+  res.json({ data: items });
+});
+
 pageHeaderImagesRouter.delete('/:id', authRequired, adminOnly, csrfRequired, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid id' });

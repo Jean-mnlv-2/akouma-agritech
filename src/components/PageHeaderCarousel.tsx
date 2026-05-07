@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { usePageHeaderImages, type PageHeaderImage } from '@/hooks/use-page-header-images';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   pageKey: string;
@@ -13,6 +15,10 @@ interface Props {
   /** Overlay au-dessus des images. */
   overlayClassName?: string;
   children?: React.ReactNode;
+  /** Affiche le bloc title/subtitle/CTA piloté depuis l'admin. */
+  showOverlayContent?: boolean;
+  /** Permet d'injecter directement une liste (utilisé pour la prévisualisation admin). */
+  itemsOverride?: PageHeaderImage[];
 }
 
 /**
@@ -29,10 +35,13 @@ export default function PageHeaderCarousel({
   intervalMs = 6000,
   overlayClassName = 'absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-primary/30',
   children,
+  showOverlayContent = false,
+  itemsOverride,
 }: Props) {
-  const { data: images = [] } = usePageHeaderImages(pageKey);
-  const slides: PageHeaderImage[] = images.length > 0
-    ? images
+  const { data: images = [] } = usePageHeaderImages(itemsOverride ? '' : pageKey);
+  const source = itemsOverride ?? images;
+  const slides: PageHeaderImage[] = source.length > 0
+    ? source
     : [{ id: 0, pageKey, imageUrl: fallbackImage, altText: fallbackAlt, order: 0, isActive: true } as PageHeaderImage];
 
   const [index, setIndex] = useState(0);
@@ -47,6 +56,9 @@ export default function PageHeaderCarousel({
 
   // reset on key change
   useEffect(() => { setIndex(0); }, [pageKey, slides.length]);
+
+  const current = slides[index];
+  const isExternal = (url?: string | null) => !!url && /^https?:\/\//i.test(url);
 
   return (
     <div className={cn('absolute inset-0 overflow-hidden', className)} aria-hidden={children ? undefined : true}>
@@ -64,6 +76,29 @@ export default function PageHeaderCarousel({
         />
       ))}
       <div className={overlayClassName} />
+      {showOverlayContent && current && (current.title || current.subtitle || current.ctaLabel) && (
+        <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
+          <div className="container mx-auto px-6 text-center text-white pointer-events-auto">
+            {current.title && (
+              <h2 className="text-3xl md:text-5xl font-bold mb-3 drop-shadow-lg">{current.title}</h2>
+            )}
+            {current.subtitle && (
+              <p className="text-base md:text-xl text-white/90 max-w-2xl mx-auto mb-5 drop-shadow">{current.subtitle}</p>
+            )}
+            {current.ctaLabel && current.ctaUrl && (
+              isExternal(current.ctaUrl) ? (
+                <a href={current.ctaUrl} target="_blank" rel="noreferrer">
+                  <Button size="lg" variant="nature">{current.ctaLabel}</Button>
+                </a>
+              ) : (
+                <Link to={current.ctaUrl}>
+                  <Button size="lg" variant="nature">{current.ctaLabel}</Button>
+                </Link>
+              )
+            )}
+          </div>
+        </div>
+      )}
       {slides.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
           {slides.map((_, i) => (

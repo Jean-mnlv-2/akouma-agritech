@@ -18,7 +18,7 @@ export interface PageHeaderImage {
  * Fetches active header images for a given page key.
  * Falls back gracefully (empty array) if the API is unavailable.
  */
-export function usePageHeaderImages(pageKey: string) {
+export function usePageHeaderImages(pageKey: string, options?: { enabled?: boolean }) {
   return useQuery<PageHeaderImage[]>({
     queryKey: ['page-header-images', pageKey],
     queryFn: async () => {
@@ -31,5 +31,6 @@ export function usePageHeaderImages(pageKey: string) {
     },
     staleTime: 5 * 60 * 1000,
     retry: 1,
+    enabled: (options?.enabled ?? true) && !!pageKey,
   });
 }

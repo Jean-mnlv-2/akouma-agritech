@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Save, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Save, X, GripVertical, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/integrations/api/client';
 import { FileUpload } from './FileUpload';
+import PageHeaderCarousel from '@/components/PageHeaderCarousel';
 
 /** Pages connues — l'admin peut aussi taper une autre clé */
 export const KNOWN_PAGE_KEYS = [
@@ -58,6 +59,8 @@ export function AdminPageHeaderImages() {
   const [filterKey, setFilterKey] = useState<string>('all');
   const [editing, setEditing] = useState<PageHeaderImage | null>(null);
   const [form, setForm] = useState<Partial<PageHeaderImage>>(emptyForm);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [previewKey, setPreviewKey] = useState<string>('home');
 
   const { data: items = [], isLoading } = useQuery<PageHeaderImage[]>({
     queryKey: ['admin', 'page-header-images'],
@@ -128,6 +131,30 @@ export function AdminPageHeaderImages() {
     },
     onError: () => toast({ title: 'Erreur', description: 'Suppression échouée', variant: 'destructive' }),
   });
+
+  const reorderMutation = useMutation({
+    mutationFn: async (payload: { pageKey: string; orderedIds: number[] }) =>
+      api.request('POST', '/api/page_header_images/reorder', { body: payload }),
+    onSuccess: () => {
+      toast({ title: 'Ordre mis à jour' });
+      qc.invalidateQueries({ queryKey: ['admin', 'page-header-images'] });
+      qc.invalidateQueries({ queryKey: ['page-header-images'] });
+    },
+    onError: () => toast({ title: 'Erreur', description: 'Réordonnancement échoué', variant: 'destructive' }),
+  });
+
+  const handleDrop = (pageKey: string, list: PageHeaderImage[], from: number, to: number) => {
+    if (from === to) return;
+    const next = [...list];
+    const [m] = next.splice(from, 1);
+    next.splice(to, 0, m);
+    reorderMutation.mutate({ pageKey, orderedIds: next.map((it) => it.id) });
+  };
+
+  const previewItems = useMemo(
+    () => items.filter((i) => i.pageKey === previewKey && i.isActive).sort((a, b) => a.order - b.order),
+    [items, previewKey]
+  );
 
   return (
     <div className="space-y-6">
@@ -250,8 +277,15 @@ export function AdminPageHeaderImages() {
                     {list.length > 1 && <Badge>Carrousel</Badge>}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {list.map((it) => (
-                      <div key={it.id} className={`border rounded-lg overflow-hidden ${it.isActive ? '' : 'opacity-60'}`}>
+                    {list.map((it, idx) => (
+                      <div
+                        key={it.id}
+                        draggable
+                        onDragStart={() => setDragIndex(idx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => { if (dragIndex !== null) handleDrop(key, list, dragIndex, idx); setDragIndex(null); }}
+                        className={`border rounded-lg overflow-hidden ${it.isActive ? '' : 'opacity-60'} ${dragIndex === idx ? 'ring-2 ring-primary' : ''}`}
+                      >
                         <div className="aspect-video bg-muted relative">
                           {it.imageUrl ? (
                             <img src={it.imageUrl} alt={it.altText || ''} className="w-full h-full object-cover" loading="lazy" />
@@ -259,6 +293,7 @@ export function AdminPageHeaderImages() {
                             <div className="flex items-center justify-center h-full"><ImageIcon className="w-8 h-8 text-muted-foreground" /></div>
                           )}
                           <Badge className="absolute top-2 left-2">#{it.order}</Badge>
+                          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-background/80 rounded p-1 cursor-grab"><GripVertical className="w-4 h-4" /></div>
                           {!it.isActive && <Badge variant="destructive" className="absolute top-2 right-2">Masqué</Badge>}
                         </div>
                         <div className="p-3 space-y-2">
@@ -287,6 +322,39 @@ export function AdminPageHeaderImages() {
                 </div>
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Live preview */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Eye className="w-5 h-5" /> Prévisualisation en direct</CardTitle>
+            <CardDescription>Vérifiez le carrousel et les textes (titre, sous-titre, CTA) pour chaque page avant publication.</CardDescription>
+          </div>
+          <Select value={previewKey} onValueChange={setPreviewKey}>
+            <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {KNOWN_PAGE_KEYS.map((p) => (
+                <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          <div className="relative w-full h-[360px] rounded-xl overflow-hidden border">
+            <PageHeaderCarousel
+              pageKey={previewKey}
+              fallbackImage="/kilimo-logo.png"
+              fallbackAlt="Aperçu"
+              showOverlayContent
+              itemsOverride={previewItems}
+              intervalMs={4000}
+            />
+          </div>
+          {previewItems.length === 0 && (
+            <p className="text-xs text-muted-foreground mt-3">Aucune image active pour cette page — l'image par défaut du site est utilisée.</p>
           )}
         </CardContent>
       </Card>
