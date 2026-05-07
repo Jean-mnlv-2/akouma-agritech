@@ -12,6 +12,7 @@ import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n';
 import { useCartContext } from '@/context/CartContext';
 import kilimoLogo from "@/assets/kilimo-logo.png";
+import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 
 interface Product {
   id: string;
@@ -174,17 +175,12 @@ export default function Shop() {
       <Header />
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src={kilimoLogo}
-            alt={t('shop.hero.alt')}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/50"></div>
-          {/* Animated background decorations */}
-          <div className="absolute top-20 right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        </div>
+        <PageHeaderCarousel
+          pageKey="shop"
+          fallbackImage={kilimoLogo}
+          fallbackAlt={t('shop.hero.alt')}
+          overlayClassName="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/50"
+        />
         <div className="relative container mx-auto px-6 z-10">
           <div className="max-w-4xl">
             <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border border-primary/30 hover:scale-105 transition-transform">
