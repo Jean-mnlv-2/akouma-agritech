@@ -14,6 +14,7 @@ import { useI18n } from "@/i18n";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import kilimoLogo from "@/assets/kilimo-logo.png";
+import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 
 interface SeedProduct {
   id: number;
@@ -158,17 +159,19 @@ const Seeds = () => {
       <Header />
       
       {/* Hero Section - Modern Design */}
-      <section className="relative pt-8 pb-20 bg-gradient-to-br from-green-50/50 via-background to-primary/5 overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-10 right-10 w-40 h-40 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        
+      <section className="relative pt-8 pb-20 overflow-hidden">
+        <PageHeaderCarousel
+          pageKey="seeds"
+          fallbackImage={kilimoLogo}
+          fallbackAlt={t("seeds.hero.title")}
+          overlayClassName="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-primary/30"
+        />
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-green-600 to-primary bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white drop-shadow-lg">
               {t("seeds.hero.title")}
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-10 leading-relaxed">
+            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed drop-shadow">
               {t("seeds.hero.desc")}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
