@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-agritech.jpg";
 import { useI18n } from "@/i18n";
 import { useEffect, useState } from "react";
+import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 
 const Hero = () => {
   const { t } = useI18n();
@@ -16,12 +17,13 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background image with parallax effect */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${heroImage})` }}
+      {/* Background carousel (admin-managed) */}
+      <PageHeaderCarousel
+        pageKey="home"
+        fallbackImage={heroImage}
+        fallbackAlt="Hero KILIMO"
+        overlayClassName="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
       
       {/* Animated floating elements */}
       <div className="absolute top-20 left-10 w-40 h-40 bg-primary/15 rounded-full blur-3xl animate-pulse" />
