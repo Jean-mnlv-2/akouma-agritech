@@ -150,7 +150,9 @@ const Header = () => {
               <img 
                 src="/kilimo-logo.png"
                 alt="Kilimo Logo" 
-                className="w-8 h-8 md:w-12 md:h-12"
+                className="h-9 md:h-12 w-auto object-contain"
+                width={48}
+                height={48}
               />
               <span className="text-xl md:text-2xl font-bold text-primary">
                 Kilimo
