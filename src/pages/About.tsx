@@ -17,6 +17,7 @@ import {
   Sprout
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
+import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 
 const About = () => {
   const sectors = [
@@ -96,17 +97,12 @@ const About = () => {
       
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src={heroAgritech} 
-            alt="À propos d'KILIMO"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/60"></div>
-          {/* Animated background decorations */}
-          <div className="absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        </div>
+        <PageHeaderCarousel
+          pageKey="about"
+          fallbackImage={heroAgritech}
+          fallbackAlt="À propos d'KILIMO"
+          overlayClassName="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/60"
+        />
         
         <div className="relative container mx-auto px-6 z-10">
           <div className="max-w-4xl">
