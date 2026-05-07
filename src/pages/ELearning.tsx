@@ -537,7 +537,7 @@ const ELearning = () => {
       </section>
 
       {/* Course Catalog */}
-      <section id="courses-section" className="py-14 md:py-20">
+      <section id="courses-section" className="py-14 md:py-20 scroll-mt-20">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -549,7 +549,7 @@ const ELearning = () => {
           </div>
 
           {/* Search & Filters - Professional Layout */}
-          <div className="mb-12 space-y-8 bg-card/50 backdrop-blur-md p-8 rounded-[2rem] border-2 border-border shadow-xl">
+          <div className="mb-12 space-y-6 bg-card/70 backdrop-blur-md p-6 md:p-8 rounded-[2rem] border-2 border-border shadow-xl sticky top-16 z-30">
             <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
               <div className="relative w-full lg:max-w-md">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary w-5 h-5" />
