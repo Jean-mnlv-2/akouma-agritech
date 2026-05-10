@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Save, X, GripVertical, Eye, ArrowUp, ArrowDown, Monitor, Smartphone } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Save, X, GripVertical, Eye, ArrowUp, ArrowDown, Monitor, Smartphone, Keyboard, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/integrations/api/client';
 import { FileUpload } from './FileUpload';
@@ -65,6 +65,32 @@ export function AdminPageHeaderImages() {
   const [previewMode, setPreviewMode] = useState<'live' | 'compare'>('live');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
+  // ---- Pre-publish validation ----
+  // Rule: image required. If any CTA field is provided (label OR url), both must be set.
+  // If a title is set without subtitle it's allowed, but a CTA without title is flagged.
+  const validationErrors = useMemo(() => {
+    const errs: string[] = [];
+    if (!form.imageUrl) errs.push("L'image est obligatoire.");
+    if (!form.pageKey) errs.push("La page (pageKey) est obligatoire.");
+    const hasCtaLabel = !!(form.ctaLabel && String(form.ctaLabel).trim());
+    const hasCtaUrl = !!(form.ctaUrl && String(form.ctaUrl).trim());
+    if (hasCtaLabel !== hasCtaUrl) {
+      errs.push("Le bouton CTA est incomplet : libellé ET URL doivent être renseignés.");
+    }
+    if (hasCtaUrl) {
+      const url = String(form.ctaUrl).trim();
+      const ok = /^https?:\/\//i.test(url) || url.startsWith('/');
+      if (!ok) errs.push("L'URL CTA doit commencer par http(s):// ou « / ».");
+    }
+    if ((hasCtaLabel || hasCtaUrl) && !(form.title && String(form.title).trim())) {
+      errs.push("Un CTA sans titre n'est pas recommandé : ajoutez un titre.");
+    }
+    if (form.isActive && !form.altText) {
+      errs.push("Le texte alternatif (alt) est requis pour l'accessibilité d'une image active.");
+    }
+    return errs;
+  }, [form]);
+
   const { data: items = [], isLoading } = useQuery<PageHeaderImage[]>({
     queryKey: ['admin', 'page-header-images'],
     queryFn: async () => {
@@ -91,7 +117,9 @@ export function AdminPageHeaderImages() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!form.pageKey || !form.imageUrl) throw new Error('La page et l\'image sont obligatoires');
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
+      }
       const payload = {
         pageKey: String(form.pageKey).trim(),
         imageUrl: String(form.imageUrl).trim(),
@@ -184,6 +212,30 @@ export function AdminPageHeaderImages() {
         : it
     );
   }, [editing, form, previewItems, previewKey]);
+
+  // Field-level diff (for the highlighted summary panel in compare mode)
+  const fieldDiffs = useMemo(() => {
+    if (!editing || editing.pageKey !== previewKey) return [] as Array<{ field: string; before: string; after: string }>;
+    const before = previewItems.find((i) => i.id === editing.id);
+    if (!before) return [];
+    const after = draftItems.find((i) => i.id === editing.id);
+    if (!after) return [];
+    const fields: Array<{ key: keyof PageHeaderImage; label: string }> = [
+      { key: 'title', label: 'Titre' },
+      { key: 'subtitle', label: 'Sous-titre' },
+      { key: 'ctaLabel', label: 'Libellé CTA' },
+      { key: 'ctaUrl', label: 'URL CTA' },
+      { key: 'imageUrl', label: 'Image' },
+      { key: 'altText', label: 'Texte alternatif' },
+    ];
+    return fields
+      .map((f) => ({
+        field: f.label,
+        before: String((before[f.key] ?? '') || '—'),
+        after: String((after[f.key] ?? '') || '—'),
+      }))
+      .filter((d) => d.before !== d.after);
+  }, [editing, previewKey, previewItems, draftItems]);
 
   const deviceFrame = previewDevice === 'mobile'
     ? 'w-[375px] max-w-full h-[640px]'
