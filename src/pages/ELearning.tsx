@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n";
 import TitleManager from "@/components/TitleManager";
 import { Textarea } from "@/components/ui/textarea";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import countryList from 'react-select-country-list';
 
@@ -104,17 +104,18 @@ const ELearning = () => {
   const { toast } = useToast();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Tous");
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || "");
+  const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get('cat') || "Tous");
   const [courses, setCourses] = useState<UICourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [showEnrollPopup, setShowEnrollPopup] = useState(false);
-  const [languageFilter, setLanguageFilter] = useState<string>('Toutes langues');
-  const [showOnlyPreview, setShowOnlyPreview] = useState<boolean>(false);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [languageFilter, setLanguageFilter] = useState<string>(() => searchParams.get('lang') || 'Toutes langues');
+  const [showOnlyPreview, setShowOnlyPreview] = useState<boolean>(() => searchParams.get('preview') === '1');
+  const [currentPage, setCurrentPage] = useState<number>(() => Math.max(1, Number(searchParams.get('page')) || 1));
   const PAGE_SIZE = 9;
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
   const [liveStreams, setLiveStreams] = useState<LiveStreamItem[]>([]);
@@ -231,6 +232,21 @@ const ELearning = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview]);
+
+  // Sync filters to URL (shareable state)
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    const setOrDelete = (k: string, v: string, def: string) => {
+      if (v && v !== def) next.set(k, v); else next.delete(k);
+    };
+    setOrDelete('q', searchQuery, '');
+    setOrDelete('cat', selectedCategory, 'Tous');
+    setOrDelete('lang', languageFilter, 'Toutes langues');
+    if (showOnlyPreview) next.set('preview', '1'); else next.delete('preview');
+    if (currentPage > 1) next.set('page', String(currentPage)); else next.delete('page');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview, currentPage]);
 
   const previewCount = courses.filter(c => c.isPreviewAvailable).length;
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
