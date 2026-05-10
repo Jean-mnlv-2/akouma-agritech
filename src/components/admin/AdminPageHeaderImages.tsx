@@ -316,14 +316,55 @@ export function AdminPageHeaderImages() {
             <Label>Actif (visible sur le site)</Label>
           </div>
 
+          {validationErrors.length > 0 && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-1"
+            >
+              <div className="flex items-center gap-2 text-destructive text-sm font-semibold">
+                <AlertCircle className="w-4 h-4" />
+                Publication bloquée — corrigez les points suivants :
+              </div>
+              <ul className="list-disc pl-6 text-sm text-destructive">
+                {validationErrors.map((err, i) => (<li key={i}>{err}</li>))}
+              </ul>
+            </div>
+          )}
+
           <div className="flex gap-2">
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || validationErrors.length > 0}
+              aria-disabled={validationErrors.length > 0}
+              title={validationErrors.length > 0 ? 'Corrigez les erreurs avant de publier' : undefined}
+            >
               <Save className="w-4 h-4 mr-2" /> {editing ? 'Mettre à jour' : 'Créer'}
             </Button>
             {editing && (
               <Button variant="outline" onClick={resetForm}><X className="w-4 h-4 mr-2" />Annuler</Button>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Keyboard shortcuts help */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Keyboard className="w-5 h-5" /> Raccourcis & navigation clavier
+          </CardTitle>
+          <CardDescription>Utilisable sans souris pour réordonner et parcourir le carrousel.</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Tab</kbd><span>Passer d'une slide à la suivante</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Shift + Tab</kbd><span>Revenir à la slide précédente</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Alt + ↑</kbd><span>Monter la slide focusée</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Alt + ↓</kbd><span>Descendre la slide focusée</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Entrée / Espace</kbd><span>Activer un bouton (édition, suppression, switch)</span></li>
+          </ul>
+          <p className="text-xs text-muted-foreground pt-2">Astuce : la slide focalisée affiche un anneau bleu ; pendant un glisser-déposer, la cible affiche un cadre en pointillés.</p>
         </CardContent>
       </Card>
 
