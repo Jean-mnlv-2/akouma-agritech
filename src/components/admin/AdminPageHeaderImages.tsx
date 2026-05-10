@@ -540,7 +540,8 @@ export function AdminPageHeaderImages() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="secondary">Publié</Badge>
@@ -562,6 +563,11 @@ export function AdminPageHeaderImages() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge>Modifications en cours</Badge>
+                  {fieldDiffs.length > 0 && (
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30">
+                      {fieldDiffs.length} changement{fieldDiffs.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {editing && editing.pageKey === previewKey ? 'Reflet du formulaire' : 'Identique au publié (aucune édition)'}
                   </span>
@@ -579,6 +585,39 @@ export function AdminPageHeaderImages() {
                   </div>
                 </div>
               </div>
+              </div>
+              {fieldDiffs.length > 0 && (
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30">Diff</Badge>
+                    Champs modifiés sur la slide en cours d'édition
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs uppercase text-muted-foreground">
+                        <tr>
+                          <th className="text-left py-2 pr-4">Champ</th>
+                          <th className="text-left py-2 pr-4">Avant</th>
+                          <th className="text-left py-2">Après</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fieldDiffs.map((d) => (
+                          <tr key={d.field} className="border-t">
+                            <td className="py-2 pr-4 font-medium">{d.field}</td>
+                            <td className="py-2 pr-4">
+                              <span className="px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300 line-through break-all">{d.before}</span>
+                            </td>
+                            <td className="py-2">
+                              <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 break-all">{d.after}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {previewItems.length === 0 && (
