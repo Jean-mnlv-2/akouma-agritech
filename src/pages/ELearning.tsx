@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages, MapPin, Phone, Briefcase } from "lucide-react";
+import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages, MapPin, Phone, Briefcase, RotateCcw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
@@ -549,62 +549,119 @@ const ELearning = () => {
           </div>
 
           {/* Search & Filters - Professional Layout */}
-          <div className="mb-12 space-y-6 bg-card/70 backdrop-blur-md p-6 md:p-8 rounded-[2rem] border-2 border-border shadow-xl sticky top-16 z-30">
-            <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
-              <div className="relative w-full lg:max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary w-5 h-5" />
-                <Input
-                  placeholder={t("elearning.search")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 h-14 text-lg border-2 border-border focus:border-primary rounded-2xl transition-all shadow-inner bg-background/50"
-                />
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
-                <Select value={languageFilter} onValueChange={setLanguageFilter}>
-                  <SelectTrigger className="w-full sm:w-[200px] h-14 border-2 rounded-2xl bg-background/50 font-semibold">
-                    <div className="flex items-center">
-                      <Languages className="w-5 h-5 mr-3 text-primary" />
-                      <SelectValue placeholder="Langue" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-2">
-                    <SelectItem value="Toutes langues" className="font-medium">Toutes langues</SelectItem>
-                    {availableLanguages.map((lang) => (
-                      <SelectItem key={lang} value={lang} className="font-medium">{lang}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {(() => {
+            const hasActiveFilters =
+              !!searchQuery ||
+              (selectedCategory && selectedCategory !== t("elearning.categories.all") && selectedCategory !== "Tous") ||
+              languageFilter !== 'Toutes langues' ||
+              showOnlyPreview;
+            const resetFilters = () => {
+              setSearchQuery('');
+              setSelectedCategory(t("elearning.categories.all") || 'Tous');
+              setLanguageFilter('Toutes langues');
+              setShowOnlyPreview(false);
+            };
+            return (
+            <div
+              role="region"
+              aria-label="Filtres du catalogue de cours"
+              className="mb-12 space-y-5 bg-card/70 backdrop-blur-md p-4 sm:p-6 md:p-8 rounded-3xl border-2 border-border shadow-xl sticky top-16 z-30"
+            >
+              <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-center lg:justify-between">
+                <div className="relative w-full lg:max-w-md">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary w-5 h-5" aria-hidden="true" />
+                  <Input
+                    placeholder={t("elearning.search")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Rechercher un cours"
+                    className="pl-12 h-12 sm:h-14 text-base sm:text-lg border-2 border-border focus:border-primary rounded-2xl transition-all shadow-inner bg-background/50"
+                  />
+                </div>
 
-                <div className="flex items-center gap-4 bg-background/50 px-6 h-14 rounded-2xl border-2 border-border flex-1 sm:flex-none justify-between sm:justify-start">
-                  <div className="flex items-center gap-3">
-                    <Switch id="preview-only" checked={showOnlyPreview} onCheckedChange={setShowOnlyPreview} className="data-[state=checked]:bg-primary" />
-                    <label htmlFor="preview-only" className="text-sm font-bold cursor-pointer whitespace-nowrap uppercase tracking-wider text-muted-foreground">
-                      {t("elearning.preview.available") || "Aperçu disponible"}
-                    </label>
-                  </div>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-bold">
-                    {previewCount}
-                  </Badge>
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                  <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                    <SelectTrigger
+                      aria-label="Filtrer par langue"
+                      className="w-full sm:w-[180px] h-12 sm:h-14 border-2 rounded-2xl bg-background/50 font-semibold"
+                    >
+                      <div className="flex items-center">
+                        <Languages className="w-5 h-5 mr-2 text-primary" aria-hidden="true" />
+                        <SelectValue placeholder="Langue" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-2">
+                      <SelectItem value="Toutes langues" className="font-medium">Toutes langues</SelectItem>
+                      {availableLanguages.map((lang) => (
+                        <SelectItem key={lang} value={lang} className="font-medium">{lang}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <label
+                    htmlFor="preview-only"
+                    className="flex items-center gap-3 bg-background/50 px-4 h-12 sm:h-14 rounded-2xl border-2 border-border flex-1 sm:flex-none cursor-pointer min-w-0"
+                  >
+                    <Switch
+                      id="preview-only"
+                      checked={showOnlyPreview}
+                      onCheckedChange={setShowOnlyPreview}
+                      aria-label="N'afficher que les cours avec aperçu gratuit"
+                      aria-checked={showOnlyPreview}
+                      className="data-[state=checked]:bg-primary shrink-0"
+                    />
+                    <span className="text-sm font-semibold whitespace-nowrap text-foreground truncate">
+                      Aperçu gratuit
+                    </span>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-bold shrink-0">
+                      {previewCount}
+                    </Badge>
+                  </label>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={resetFilters}
+                    disabled={!hasActiveFilters}
+                    aria-label="Réinitialiser tous les filtres"
+                    aria-disabled={!hasActiveFilters}
+                    className="h-12 sm:h-14 rounded-2xl font-semibold"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
+                    Réinitialiser
+                  </Button>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap gap-3 justify-center lg:justify-start border-t border-border pt-8">
-              {categories.map((cat) => (
-                <Button
-                  key={cat}
-                  variant={selectedCategory === cat ? "nature" : "outline"}
-                  size="lg"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`rounded-xl px-6 h-12 font-bold transition-all duration-300 ${selectedCategory === cat ? 'shadow-lg shadow-primary/20 scale-105' : 'hover:border-primary/50'}`}
-                >
-                  {cat}
-                </Button>
-              ))}
+              <div
+                role="group"
+                aria-label="Filtrer par catégorie"
+                className="flex flex-wrap gap-2 sm:gap-3 justify-center lg:justify-start border-t border-border pt-5"
+              >
+                {categories.map((cat) => {
+                  const active = selectedCategory === cat;
+                  return (
+                    <Button
+                      key={cat}
+                      variant={active ? "nature" : "outline"}
+                      size="default"
+                      onClick={() => setSelectedCategory(cat)}
+                      aria-pressed={active}
+                      className={`rounded-xl px-4 sm:px-6 h-10 sm:h-12 font-semibold transition-all duration-300 ${active ? 'shadow-lg shadow-primary/20' : 'hover:border-primary/50'}`}
+                    >
+                      {cat}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <p className="sr-only" aria-live="polite">
+                {filteredCourses.length} cours correspondent aux filtres sélectionnés.
+              </p>
             </div>
-          </div>
+            );
+          })()}
 
           {/* Course Grid */}
           {loading ? (
