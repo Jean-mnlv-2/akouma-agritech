@@ -60,7 +60,7 @@ export function AdminPageHeaderImages() {
   const [editing, setEditing] = useState<PageHeaderImage | null>(null);
   const [form, setForm] = useState<Partial<PageHeaderImage>>(emptyForm);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<{ key: string; index: number } | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [previewKey, setPreviewKey] = useState<string>('home');
   const [previewMode, setPreviewMode] = useState<'live' | 'compare'>('live');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
@@ -315,9 +315,18 @@ export function AdminPageHeaderImages() {
                         key={it.id}
                         draggable
                         onDragStart={() => setDragIndex(idx)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => { if (dragIndex !== null) handleDrop(key, list, dragIndex, idx); setDragIndex(null); }}
-                        className={`border rounded-lg overflow-hidden ${it.isActive ? '' : 'opacity-60'} ${dragIndex === idx ? 'ring-2 ring-primary' : ''}`}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                        onDragLeave={() => setDragOverIndex((v) => (v === idx ? null : v))}
+                        onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                        onDrop={() => { if (dragIndex !== null) handleDrop(key, list, dragIndex, idx); setDragIndex(null); setDragOverIndex(null); }}
+                        tabIndex={0}
+                        role="listitem"
+                        aria-label={`Slide ${idx + 1} sur ${list.length}${it.title ? ` : ${it.title}` : ''}. Utilisez Alt+Flèche haut/bas pour réordonner.`}
+                        onKeyDown={(e) => {
+                          if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); moveItem(key, list, idx, -1); }
+                          else if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); moveItem(key, list, idx, 1); }
+                        }}
+                        className={`border rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary ${it.isActive ? '' : 'opacity-60'} ${dragIndex === idx ? 'ring-2 ring-primary scale-[0.98]' : ''} ${dragOverIndex === idx && dragIndex !== idx ? 'ring-2 ring-accent border-dashed' : ''}`}
                       >
                         <div className="aspect-video bg-muted relative">
                           {it.imageUrl ? (
@@ -326,7 +335,7 @@ export function AdminPageHeaderImages() {
                             <div className="flex items-center justify-center h-full"><ImageIcon className="w-8 h-8 text-muted-foreground" /></div>
                           )}
                           <Badge className="absolute top-2 left-2">#{it.order}</Badge>
-                          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-background/80 rounded p-1 cursor-grab"><GripVertical className="w-4 h-4" /></div>
+                          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-background/80 rounded p-1 cursor-grab" aria-hidden="true"><GripVertical className="w-4 h-4" /></div>
                           {!it.isActive && <Badge variant="destructive" className="absolute top-2 right-2">Masqué</Badge>}
                         </div>
                         <div className="p-3 space-y-2">
@@ -338,6 +347,12 @@ export function AdminPageHeaderImages() {
                               <span className="text-xs">{it.isActive ? 'Actif' : 'Inactif'}</span>
                             </div>
                             <div className="flex gap-1">
+                              <Button size="icon" variant="ghost" disabled={idx === 0} onClick={() => moveItem(key, list, idx, -1)} aria-label="Monter">
+                                <ArrowUp className="w-4 h-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" disabled={idx === list.length - 1} onClick={() => moveItem(key, list, idx, 1)} aria-label="Descendre">
+                                <ArrowDown className="w-4 h-4" />
+                              </Button>
                               <Button size="icon" variant="ghost" onClick={() => { setEditing(it); setForm(it); }}>
                                 <Pencil className="w-4 h-4" />
                               </Button>
