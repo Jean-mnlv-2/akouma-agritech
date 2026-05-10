@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Save, X, GripVertical, Eye, ArrowUp, ArrowDown, Monitor, Smartphone } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Save, X, GripVertical, Eye, ArrowUp, ArrowDown, Monitor, Smartphone, Keyboard, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/integrations/api/client';
 import { FileUpload } from './FileUpload';
@@ -65,6 +65,32 @@ export function AdminPageHeaderImages() {
   const [previewMode, setPreviewMode] = useState<'live' | 'compare'>('live');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
+  // ---- Pre-publish validation ----
+  // Rule: image required. If any CTA field is provided (label OR url), both must be set.
+  // If a title is set without subtitle it's allowed, but a CTA without title is flagged.
+  const validationErrors = useMemo(() => {
+    const errs: string[] = [];
+    if (!form.imageUrl) errs.push("L'image est obligatoire.");
+    if (!form.pageKey) errs.push("La page (pageKey) est obligatoire.");
+    const hasCtaLabel = !!(form.ctaLabel && String(form.ctaLabel).trim());
+    const hasCtaUrl = !!(form.ctaUrl && String(form.ctaUrl).trim());
+    if (hasCtaLabel !== hasCtaUrl) {
+      errs.push("Le bouton CTA est incomplet : libellé ET URL doivent être renseignés.");
+    }
+    if (hasCtaUrl) {
+      const url = String(form.ctaUrl).trim();
+      const ok = /^https?:\/\//i.test(url) || url.startsWith('/');
+      if (!ok) errs.push("L'URL CTA doit commencer par http(s):// ou « / ».");
+    }
+    if ((hasCtaLabel || hasCtaUrl) && !(form.title && String(form.title).trim())) {
+      errs.push("Un CTA sans titre n'est pas recommandé : ajoutez un titre.");
+    }
+    if (form.isActive && !form.altText) {
+      errs.push("Le texte alternatif (alt) est requis pour l'accessibilité d'une image active.");
+    }
+    return errs;
+  }, [form]);
+
   const { data: items = [], isLoading } = useQuery<PageHeaderImage[]>({
     queryKey: ['admin', 'page-header-images'],
     queryFn: async () => {
@@ -91,7 +117,9 @@ export function AdminPageHeaderImages() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!form.pageKey || !form.imageUrl) throw new Error('La page et l\'image sont obligatoires');
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
+      }
       const payload = {
         pageKey: String(form.pageKey).trim(),
         imageUrl: String(form.imageUrl).trim(),
@@ -185,6 +213,30 @@ export function AdminPageHeaderImages() {
     );
   }, [editing, form, previewItems, previewKey]);
 
+  // Field-level diff (for the highlighted summary panel in compare mode)
+  const fieldDiffs = useMemo(() => {
+    if (!editing || editing.pageKey !== previewKey) return [] as Array<{ field: string; before: string; after: string }>;
+    const before = previewItems.find((i) => i.id === editing.id);
+    if (!before) return [];
+    const after = draftItems.find((i) => i.id === editing.id);
+    if (!after) return [];
+    const fields: Array<{ key: keyof PageHeaderImage; label: string }> = [
+      { key: 'title', label: 'Titre' },
+      { key: 'subtitle', label: 'Sous-titre' },
+      { key: 'ctaLabel', label: 'Libellé CTA' },
+      { key: 'ctaUrl', label: 'URL CTA' },
+      { key: 'imageUrl', label: 'Image' },
+      { key: 'altText', label: 'Texte alternatif' },
+    ];
+    return fields
+      .map((f) => ({
+        field: f.label,
+        before: String((before[f.key] ?? '') || '—'),
+        after: String((after[f.key] ?? '') || '—'),
+      }))
+      .filter((d) => d.before !== d.after);
+  }, [editing, previewKey, previewItems, draftItems]);
+
   const deviceFrame = previewDevice === 'mobile'
     ? 'w-[375px] max-w-full h-[640px]'
     : 'w-full h-[360px]';
@@ -264,14 +316,55 @@ export function AdminPageHeaderImages() {
             <Label>Actif (visible sur le site)</Label>
           </div>
 
+          {validationErrors.length > 0 && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-1"
+            >
+              <div className="flex items-center gap-2 text-destructive text-sm font-semibold">
+                <AlertCircle className="w-4 h-4" />
+                Publication bloquée — corrigez les points suivants :
+              </div>
+              <ul className="list-disc pl-6 text-sm text-destructive">
+                {validationErrors.map((err, i) => (<li key={i}>{err}</li>))}
+              </ul>
+            </div>
+          )}
+
           <div className="flex gap-2">
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || validationErrors.length > 0}
+              aria-disabled={validationErrors.length > 0}
+              title={validationErrors.length > 0 ? 'Corrigez les erreurs avant de publier' : undefined}
+            >
               <Save className="w-4 h-4 mr-2" /> {editing ? 'Mettre à jour' : 'Créer'}
             </Button>
             {editing && (
               <Button variant="outline" onClick={resetForm}><X className="w-4 h-4 mr-2" />Annuler</Button>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Keyboard shortcuts help */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Keyboard className="w-5 h-5" /> Raccourcis & navigation clavier
+          </CardTitle>
+          <CardDescription>Utilisable sans souris pour réordonner et parcourir le carrousel.</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Tab</kbd><span>Passer d'une slide à la suivante</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Shift + Tab</kbd><span>Revenir à la slide précédente</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Alt + ↑</kbd><span>Monter la slide focusée</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Alt + ↓</kbd><span>Descendre la slide focusée</span></li>
+            <li className="flex items-center gap-2"><kbd className="px-2 py-0.5 rounded border bg-muted text-xs">Entrée / Espace</kbd><span>Activer un bouton (édition, suppression, switch)</span></li>
+          </ul>
+          <p className="text-xs text-muted-foreground pt-2">Astuce : la slide focalisée affiche un anneau bleu ; pendant un glisser-déposer, la cible affiche un cadre en pointillés.</p>
         </CardContent>
       </Card>
 
@@ -447,7 +540,8 @@ export function AdminPageHeaderImages() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="secondary">Publié</Badge>
@@ -469,6 +563,11 @@ export function AdminPageHeaderImages() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge>Modifications en cours</Badge>
+                  {fieldDiffs.length > 0 && (
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30">
+                      {fieldDiffs.length} changement{fieldDiffs.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {editing && editing.pageKey === previewKey ? 'Reflet du formulaire' : 'Identique au publié (aucune édition)'}
                   </span>
@@ -486,6 +585,39 @@ export function AdminPageHeaderImages() {
                   </div>
                 </div>
               </div>
+              </div>
+              {fieldDiffs.length > 0 && (
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30">Diff</Badge>
+                    Champs modifiés sur la slide en cours d'édition
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs uppercase text-muted-foreground">
+                        <tr>
+                          <th className="text-left py-2 pr-4">Champ</th>
+                          <th className="text-left py-2 pr-4">Avant</th>
+                          <th className="text-left py-2">Après</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fieldDiffs.map((d) => (
+                          <tr key={d.field} className="border-t">
+                            <td className="py-2 pr-4 font-medium">{d.field}</td>
+                            <td className="py-2 pr-4">
+                              <span className="px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300 line-through break-all">{d.before}</span>
+                            </td>
+                            <td className="py-2">
+                              <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 break-all">{d.after}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {previewItems.length === 0 && (
