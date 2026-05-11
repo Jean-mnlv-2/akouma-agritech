@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
 export const newsRouter = Router();
@@ -44,6 +45,7 @@ newsRouter.get('/', async (req: Request, res: Response) => {
       }
     });
   } catch (e) {
+    logger.error('Error in news GET /', e);
     const error = e instanceof Error ? e.message : 'Internal Server Error';
     res.status(500).json({ error });
   }

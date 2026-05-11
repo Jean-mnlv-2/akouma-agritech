@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages, MapPin, Phone, Briefcase, RotateCcw } from "lucide-react";
+import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages, RotateCcw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoadingSpinner from "@/components/LoadingSpinner";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import ContentSubmission from "@/components/ContentSubmission";
 import ElearningCourseCard from "@/components/elearning/ElearningCourseCard";
@@ -22,10 +22,9 @@ import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n";
 import TitleManager from "@/components/TitleManager";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
-import countryList from 'react-select-country-list';
 
 interface UICourse {
   id: string;
@@ -111,7 +110,6 @@ const ELearning = () => {
   const [courses, setCourses] = useState<UICourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isRegistering, setIsRegistering] = useState(false);
   const [showEnrollPopup, setShowEnrollPopup] = useState(false);
   const [languageFilter, setLanguageFilter] = useState<string>(() => searchParams.get('lang') || 'Toutes langues');
   const [showOnlyPreview, setShowOnlyPreview] = useState<boolean>(() => searchParams.get('preview') === '1');
@@ -121,22 +119,9 @@ const ELearning = () => {
   const [liveStreams, setLiveStreams] = useState<LiveStreamItem[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userEnrollments, setUserEnrollments] = useState<Enrollment[]>([]);
-  const [registerForm, setRegisterForm] = useState({ 
-    name: '', 
-    email: '', 
-    country: '', 
-    phone: '', 
-    activity: '',
-    professional_activity: '',
-    organization: '',
-    sector: '',
-    experience_level: 'beginner',
-    expectations: ''
-  });
 
   const availableLanguages = Array.from(new Set(courses.flatMap((c) => Array.isArray(c.languages) ? c.languages : []))).sort();
   const availableCategories = Array.from(new Set(courses.map(c => c.category).filter(Boolean))).sort();
-  const allCountries = countryList().getData();
 
   const categories = [
     t("elearning.categories.all"),
@@ -284,55 +269,7 @@ const ELearning = () => {
     { icon: Download, title: t("elearning.preview.pdf"), desc: t("elearning.preview.pdf_desc"), type: "pdf", url: "/lovable-uploads/agritech-guide.pdf" },
   ];
 
-  const getCountryDialCode = (countryName: string) => {
-    const map: Record<string, string> = {
-      'Cameroun': '+237', "Côte d'Ivoire": '+225', 'Burkina Faso': '+226', 'Mali': '+223',
-      'Sénégal': '+221', 'Bénin': '+229', 'France': '+33', 'Nigeria': '+234', 'Ghana': '+233',
-    };
-    return map[countryName] || '+XXX';
-  };
 
-  const handleRegistration = async () => {
-    if (!registerForm.name || !registerForm.email) {
-      toast({ title: t("common.error"), description: t("elearning.register.required"), variant: "destructive" });
-      return;
-    }
-    setIsRegistering(true);
-    try {
-      await api.request('POST', '/api/contact_messages', {
-        body: {
-          name: registerForm.name,
-          email: registerForm.email,
-          phone: registerForm.phone || null,
-          project_type: 'Inscription E-Learning',
-          message: `Pays: ${registerForm.country || 'N/A'}. 
-            Activité: ${registerForm.activity || 'N/A'}. 
-            Profession: ${registerForm.professional_activity || 'N/A'}. 
-            Organisation: ${registerForm.organization || 'N/A'}. 
-            Secteur: ${registerForm.sector || 'N/A'}. 
-            Niveau: ${registerForm.experience_level || 'N/A'}. 
-            Attentes: ${registerForm.expectations || 'N/A'}`,
-        }
-      });
-      toast({ title: t("elearning.register.success"), description: t("elearning.register.success_desc") });
-      setRegisterForm({ 
-        name: '', 
-        email: '', 
-        country: '', 
-        phone: '', 
-        activity: '',
-        professional_activity: '',
-        organization: '',
-        sector: '',
-        experience_level: 'beginner',
-        expectations: ''
-      });
-    } catch {
-      toast({ title: t("common.error"), description: t("elearning.register.error"), variant: "destructive" });
-    } finally {
-      setIsRegistering(false);
-    }
-  };
 
   const handleCourseEnroll = async (courseId: string, courseTitle: string) => {
     if (!currentUser) {
@@ -415,33 +352,25 @@ const ELearning = () => {
               {t("elearning.hero.desc")}
             </p>
             <div className="flex flex-col sm:flex-row gap-5 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-700">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="xl" variant="nature" className="text-lg px-10 h-16 shadow-2xl shadow-primary/20 group">
-                    <UserPlus className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
-                    {t("elearning.register")}
+              {currentUser ? (
+                <Button size="xl" variant="nature" className="text-lg px-10 h-16 shadow-2xl shadow-primary/20 group" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <BookOpen className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                  {t("elearning.browse")}
+                </Button>
+              ) : (
+                <>
+                  <Button size="xl" variant="nature" className="text-lg px-10 h-16 shadow-2xl shadow-primary/20 group" asChild>
+                    <Link to="/auth">
+                      <UserPlus className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                      {t("elearning.register")}
+                    </Link>
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto border-2 border-primary/20">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold">{t("elearning.register.title")}</DialogTitle>
-                    <DialogDescription className="text-base">{t("elearning.register.desc")}</DialogDescription>
-                  </DialogHeader>
-                  <RegistrationForm
-                    form={registerForm}
-                    setForm={setRegisterForm}
-                    countries={allCountries}
-                    getDialCode={getCountryDialCode}
-                    onSubmit={handleRegistration}
-                    isLoading={isRegistering}
-                    t={t}
-                  />
-                </DialogContent>
-              </Dialog>
-              <Button size="xl" variant="outline" className="text-lg px-10 h-16 bg-white/5 backdrop-blur-xl border-2 border-white/20 text-white hover:bg-white/10 transition-all duration-300" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
-                <PlayCircle className="w-6 h-6 mr-3 text-primary" />
-                {t("elearning.browse")}
-              </Button>
+                  <Button size="xl" variant="outline" className="text-lg px-10 h-16 bg-white/5 backdrop-blur-xl border-2 border-white/20 text-white hover:bg-white/10 transition-all duration-300" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                    <PlayCircle className="w-6 h-6 mr-3 text-primary" />
+                    {t("elearning.browse")}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -836,196 +765,5 @@ const ELearning = () => {
     </div>
   );
 };
-
-// Registration Form Component
-interface RegistrationFormProps {
-  form: {
-    name: string;
-    email: string;
-    country: string;
-    phone: string;
-    activity: string;
-    professional_activity: string;
-    organization: string;
-    sector: string;
-    experience_level: string;
-    expectations: string;
-  };
-  setForm: React.Dispatch<React.SetStateAction<{
-    name: string;
-    email: string;
-    country: string;
-    phone: string;
-    activity: string;
-    professional_activity: string;
-    organization: string;
-    sector: string;
-    experience_level: string;
-    expectations: string;
-  }>>;
-  countries: { value: string; label: string }[];
-  getDialCode: (countryName: string) => string;
-  onSubmit: () => void;
-  isLoading: boolean;
-  t: (key: string) => string;
-}
-
-const RegistrationForm = ({ form, setForm, countries, getDialCode, onSubmit, isLoading, t }: RegistrationFormProps) => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1 flex items-center gap-2">
-          <UserPlus className="w-4 h-4 text-primary" />
-          {t("elearning.register.name")}
-        </label>
-        <Input 
-          placeholder={t("elearning.register.name_placeholder")} 
-          value={form.name} 
-          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1 flex items-center gap-2">
-          <GraduationCap className="w-4 h-4 text-primary" />
-          {t("elearning.register.email")}
-        </label>
-        <Input 
-          type="email" 
-          placeholder={t("elearning.register.email_placeholder")} 
-          value={form.email} 
-          onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all"
-        />
-      </div>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1 flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-primary" />
-          {t("elearning.register.country")}
-        </label>
-        <Select value={form.country} onValueChange={(val) => setForm(f => ({ ...f, country: val }))}>
-          <SelectTrigger className="h-12 rounded-xl border-2 focus:border-primary bg-background">
-            <SelectValue placeholder={t("elearning.register.country_placeholder")} />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-2 max-h-[250px]">
-            {countries.map(c => (
-              <SelectItem key={c.value} value={c.label} className="font-medium">
-                {c.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1 flex items-center gap-2">
-          <Phone className="w-4 h-4 text-primary" />
-          {t("elearning.register.phone")}
-        </label>
-        <div className="flex gap-2">
-          <div className="w-20 h-12 text-xs font-bold text-primary flex items-center justify-center border-2 rounded-xl bg-primary/5 border-primary/10">
-            {form.country ? getDialCode(form.country) : '+XXX'}
-          </div>
-          <Input 
-            placeholder={t("elearning.register.phone_placeholder")} 
-            value={form.phone} 
-            onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} 
-            className="flex-1 h-12 rounded-xl border-2 focus:border-primary transition-all"
-          />
-        </div>
-      </div>
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-sm font-bold text-foreground/80 ml-1 flex items-center gap-2">
-        <Briefcase className="w-4 h-4 text-primary" />
-        {t("elearning.register.activity")}
-      </label>
-      <Select value={form.activity} onValueChange={(val) => setForm(f => ({ ...f, activity: val }))}>
-        <SelectTrigger className="h-12 rounded-xl border-2 focus:border-primary bg-background">
-          <SelectValue placeholder={t("elearning.register.activity_placeholder")} />
-        </SelectTrigger>
-        <SelectContent className="rounded-xl border-2">
-          <SelectItem value="farmer" className="font-medium">{t("elearning.register.activity_farmer")}</SelectItem>
-          <SelectItem value="student" className="font-medium">{t("elearning.register.activity_student")}</SelectItem>
-          <SelectItem value="technician" className="font-medium">{t("elearning.register.activity_technician")}</SelectItem>
-          <SelectItem value="researcher" className="font-medium">{t("elearning.register.activity_researcher")}</SelectItem>
-          <SelectItem value="other" className="font-medium">{t("elearning.register.activity_other")}</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.professional_activity")}</label>
-        <Input 
-          placeholder={t("elearning.register.professional_activity_placeholder")} 
-          value={form.professional_activity} 
-          onChange={e => setForm(f => ({ ...f, professional_activity: e.target.value }))}
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.organization")}</label>
-        <Input 
-          placeholder={t("elearning.register.organization_placeholder")} 
-          value={form.organization} 
-          onChange={e => setForm(f => ({ ...f, organization: e.target.value }))}
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all"
-        />
-      </div>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.sector")}</label>
-        <Input 
-          placeholder={t("elearning.register.sector_placeholder")} 
-          value={form.sector} 
-          onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}
-          className="h-12 rounded-xl border-2 focus:border-primary transition-all"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience_level")}</label>
-        <Select value={form.experience_level} onValueChange={(val) => setForm(f => ({ ...f, experience_level: val }))}>
-          <SelectTrigger className="h-12 rounded-xl border-2 focus:border-primary bg-background">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-2">
-            <SelectItem value="beginner" className="font-medium">{t("elearning.register.experience_level_beginner")}</SelectItem>
-            <SelectItem value="intermediate" className="font-medium">{t("elearning.register.experience_level_intermediate")}</SelectItem>
-            <SelectItem value="expert" className="font-medium">{t("elearning.register.experience_level_expert")}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.expectations")}</label>
-      <Textarea 
-        placeholder={t("elearning.register.expectations_placeholder")} 
-        value={form.expectations} 
-        onChange={e => setForm(f => ({ ...f, expectations: e.target.value }))}
-        className="min-h-[100px] rounded-xl border-2 focus:border-primary transition-all resize-none"
-      />
-    </div>
-    <Button 
-      className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all mt-4" 
-      onClick={onSubmit} 
-      disabled={isLoading}
-      variant="nature"
-    >
-      {isLoading ? (
-        <div className="flex items-center">
-          <LoadingSpinner size="small" className="mr-3" />
-          {t("elearning.register.loading")}
-        </div>
-      ) : t("elearning.register.submit")}
-    </Button>
-  </div>
-);
 
 export default ELearning;

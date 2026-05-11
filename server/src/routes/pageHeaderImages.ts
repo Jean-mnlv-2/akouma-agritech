@@ -52,7 +52,7 @@ pageHeaderImagesRouter.get('/admin', authRequired, adminOnly, async (req: Reques
 // ADMIN distinct page keys (for dropdown helper)
 pageHeaderImagesRouter.get('/admin/keys', authRequired, adminOnly, async (_req: Request, res: Response) => {
   const rows = await prisma.pageHeaderImage.groupBy({ by: ['pageKey'] });
-  res.json({ data: rows.map((r) => r.pageKey) });
+  res.json({ data: rows.map((r: { pageKey: string }) => r.pageKey) });
 });
 
 pageHeaderImagesRouter.post('/', authRequired, adminOnly, csrfRequired, async (req: Request, res: Response) => {
@@ -95,7 +95,7 @@ pageHeaderImagesRouter.post('/reorder', authRequired, adminOnly, csrfRequired, a
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten().fieldErrors });
   const { pageKey, orderedIds } = parsed.data;
   await prisma.$transaction(
-    orderedIds.map((id, idx) =>
+    orderedIds.map((id: number, idx: number) =>
       prisma.pageHeaderImage.updateMany({ where: { id, pageKey }, data: { order: idx } })
     )
   );

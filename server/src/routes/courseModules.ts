@@ -39,7 +39,7 @@ courseModulesRouter.post('/', authRequired, adminOnly, async (req: Request, res:
     });
 
     if (course && course.duration && course.duration > 0) {
-      const currentModulesDuration = course.modules.reduce((sum, m) => sum + parseDuration(m.duration), 0);
+      const currentModulesDuration = course.modules.reduce((sum: number, m: { duration: string | null }) => sum + parseDuration(m.duration), 0);
       const newModuleDuration = parseDuration(duration);
       if (currentModulesDuration + newModuleDuration > course.duration) {
         return res.status(400).json({
@@ -89,7 +89,7 @@ courseModulesRouter.put('/:id', authRequired, adminOnly, async (req: Request, re
         if (course && course.duration && course.duration > 0) {
           const otherModulesDuration = course.modules
             .filter(m => m.id !== id)
-            .reduce((sum, m) => sum + parseDuration(m.duration), 0);
+            .reduce((sum: number, m: { duration: string | null }) => sum + parseDuration(m.duration), 0);
           
           const newTotalDuration = otherModulesDuration + parseDuration(duration);
           

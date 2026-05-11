@@ -115,7 +115,7 @@ coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Res
       });
       
       if (courseWithModules) {
-        const totalModulesDuration = courseWithModules.modules.reduce((sum, m) => sum + parseDuration(m.duration), 0);
+        const totalModulesDuration = courseWithModules.modules.reduce((sum: number, m: { duration: string | null }) => sum + parseDuration(m.duration), 0);
         if (totalModulesDuration > newCourseDuration) {
           return res.status(400).json({ 
             error: `La durée totale des modules (${totalModulesDuration} min) dépasse la nouvelle durée du cours (${newCourseDuration} min). Veuillez d'abord modifier la durée des modules.` 

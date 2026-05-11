@@ -80,11 +80,6 @@ interface Enrollment {
 }
 
 interface EnrollmentFormData {
-  name?: string;
-  email?: string;
-  phone?: string;
-  experience?: string;
-  motivation?: string;
   courseId?: string;
   professionalActivity?: string;
   organization?: string;
@@ -538,9 +533,6 @@ const CourseDetail = () => {
 // Enrollment form component
 const EnrollmentForm = ({ onSubmit, course, t, currentUser }: { onSubmit: (data: EnrollmentFormData) => void; course: Course; t: (key: string) => string; currentUser: User | null }) => {
   const [formData, setFormData] = useState<EnrollmentFormData>({
-    name: "",
-    email: "",
-    phone: "",
     professionalActivity: "",
     organization: "",
     sector: "",
@@ -548,91 +540,35 @@ const EnrollmentForm = ({ onSubmit, course, t, currentUser }: { onSubmit: (data:
     expectations: ""
   });
 
-  useEffect(() => {
-    if (currentUser) {
-      setFormData(prev => ({
-        ...prev,
-        name: currentUser.name || "",
-        email: currentUser.email || "",
-      }));
-    }
-  }, [currentUser]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // For logged in users, we don't send name/email if they are already in the account
-    const submissionData = { ...formData };
-    if (currentUser) {
-      delete submissionData.name;
-      delete submissionData.email;
-    }
-    onSubmit({ ...submissionData, courseId: course.id });
+    onSubmit({ ...formData, courseId: course.id });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-      {!currentUser && (
-        <>
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.name") || "Nom complet"}</label>
-            <Input 
-              placeholder={t("elearning.register.name_placeholder") || "Votre nom complet"} 
-              value={formData.name} 
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-              className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
-              required 
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.email") || "Email"}</label>
-            <Input 
-              type="email" 
-              placeholder={t("elearning.register.email_placeholder") || "votre@email.com"} 
-              value={formData.email} 
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-              className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
-              required 
-            />
-          </div>
-        </>
-      )}
-
       {currentUser && (
         <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-2">
           <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Compte connecté</p>
           <p className="text-sm font-medium text-foreground">{currentUser.name || currentUser.email}</p>
-          <p className="text-xs text-muted-foreground mt-1">Vos informations personnelles (nom, email, pays, téléphone) sont déjà associées à votre compte.</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {!currentUser && (
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.phone") || "Téléphone"}</label>
-            <Input 
-              placeholder={t("elearning.register.phone_placeholder") || "Votre numéro"} 
-              value={formData.phone} 
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
-              className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
-            />
-          </div>
-        )}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience_level") || "Niveau d'expérience"}</label>
-          <Select 
-            value={formData.experienceLevel} 
-            onValueChange={(val) => setFormData({ ...formData, experienceLevel: val })}
-          >
-            <SelectTrigger className="h-11 rounded-xl border-2 focus:border-primary bg-background">
-              <SelectValue placeholder="Choisir..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="beginner">{t("elearning.register.experience_level_beginner") || "Débutant"}</SelectItem>
-              <SelectItem value="intermediate">{t("elearning.register.experience_level_intermediate") || "Intermédiaire"}</SelectItem>
-              <SelectItem value="expert">{t("elearning.register.experience_level_expert") || "Expert"}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience_level") || "Niveau d'expérience"}</label>
+        <Select 
+          value={formData.experienceLevel} 
+          onValueChange={(val) => setFormData({ ...formData, experienceLevel: val })}
+        >
+          <SelectTrigger className="h-11 rounded-xl border-2 focus:border-primary bg-background">
+            <SelectValue placeholder="Choisir..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="beginner">{t("elearning.register.experience_level_beginner") || "Débutant"}</SelectItem>
+            <SelectItem value="intermediate">{t("elearning.register.experience_level_intermediate") || "Intermédiaire"}</SelectItem>
+            <SelectItem value="expert">{t("elearning.register.experience_level_expert") || "Expert"}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
