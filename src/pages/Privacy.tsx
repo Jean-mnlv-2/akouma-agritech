@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
+import TitleManager from "@/components/TitleManager";
 
 interface LegalPage {
   id: number;
@@ -51,6 +52,12 @@ const Privacy = () => {
 
   return (
     <div className="min-h-screen">
+      <TitleManager
+        title="Politique de Confidentialité"
+        description="Votre confiance est essentielle. Découvrez comment KILIMO protège vos données personnelles."
+        canonical={window.location.origin + "/privacy"}
+        image="/kilimo-logo.png"
+      />
       <Header />
       
       <section className="pt-8 pb-16">

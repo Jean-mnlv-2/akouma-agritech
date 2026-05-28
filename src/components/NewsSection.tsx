@@ -252,6 +252,7 @@ const NewsSection = () => {
                   size="sm"
                   className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-background/80 backdrop-blur-sm"
                   onClick={prevSlide}
+                  aria-label="Actualité précédente"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -260,6 +261,7 @@ const NewsSection = () => {
                   size="sm"
                   className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-background/80 backdrop-blur-sm"
                   onClick={nextSlide}
+                  aria-label="Actualité suivante"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

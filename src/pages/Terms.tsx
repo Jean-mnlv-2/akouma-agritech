@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
+import TitleManager from "@/components/TitleManager";
 
 interface LegalPage {
   id: number;
@@ -51,6 +52,12 @@ const Terms = () => {
 
   return (
     <div className="min-h-screen">
+      <TitleManager
+        title="Conditions d'Utilisation"
+        description="Les règles qui régissent l'utilisation des services agricoles technologiques de KILIMO."
+        canonical={window.location.origin + "/terms"}
+        image="/kilimo-logo.png"
+      />
       <Header />
       
       <section className="pt-8 pb-16">
