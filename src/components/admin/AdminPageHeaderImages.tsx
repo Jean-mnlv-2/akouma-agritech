@@ -286,6 +286,7 @@ export function AdminPageHeaderImages() {
             accept="image/*"
             value={form.imageUrl}
             onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+            recommendedSize="1920x1080 px (ratio 16:9) pour un rendu optimal"
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -541,6 +542,34 @@ export function AdminPageHeaderImages() {
             </div>
           ) : (
             <div className="space-y-4">
+              {validationErrors.length > 0 && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 space-y-2"
+                >
+                  <div className="flex items-center gap-2 text-destructive text-sm font-semibold">
+                    <AlertCircle className="w-4 h-4" />
+                    Erreurs de validation (cliquez pour accéder au formulaire)
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto"
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      Aller au formulaire
+                    </Button>
+                  </div>
+                  <ul className="list-disc pl-6 text-sm text-destructive">
+                    {validationErrors.slice(0, 3).map((err, i) => (<li key={i}>{err}</li>))}
+                    {validationErrors.length > 3 && (
+                      <li>... et {validationErrors.length - 3} autre(s)</li>
+                    )}
+                  </ul>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -581,6 +610,7 @@ export function AdminPageHeaderImages() {
                       showOverlayContent
                       itemsOverride={draftItems}
                       intervalMs={4000}
+                      highlightFields={fieldDiffs.map(d => d.field)}
                     />
                   </div>
                 </div>

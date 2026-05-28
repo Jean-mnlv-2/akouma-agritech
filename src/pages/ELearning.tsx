@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages, RotateCcw } from "lucide-react";
+import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages, RotateCcw, Share2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
@@ -563,6 +563,22 @@ const ELearning = () => {
                     </Badge>
                   </label>
 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(window.location.href);
+                      toast({
+                        title: 'Lien copié !',
+                        description: 'Le lien partageable a été copié dans le presse-papiers.',
+                      });
+                    }}
+                    className="h-12 sm:h-14 rounded-2xl font-semibold"
+                  >
+                    <Share2 className="w-4 h-4 mr-2" aria-hidden="true" />
+                    Copier le lien
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"

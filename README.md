@@ -81,7 +81,6 @@ docker compose up --build
 docker compose down
 
 
-
 Le compose démarre trois services :
 - *db* : PostgreSQL (port 5432)
 - *backend* : API Express/Prisma (port 4000)

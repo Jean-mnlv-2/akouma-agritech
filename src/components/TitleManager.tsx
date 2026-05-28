@@ -1,11 +1,15 @@
 import { useEffect } from 'react';
 
+type OpenGraphType = 'website' | 'article' | 'product' | 'course' | 'book';
+
 type TitleManagerProps = {
   title?: string;
   description?: string;
   image?: string;
   canonical?: string;
   noIndex?: boolean;
+  ogType?: OpenGraphType;
+  jsonLd?: Record<string, unknown>;
 };
 
 function upsertMeta(attrs: Record<string, string>, content: string | null) {
@@ -31,7 +35,37 @@ function upsertLink(rel: string, href: string) {
   el.setAttribute('href', href);
 }
 
-export function TitleManager({ title, description, image, canonical, noIndex }: TitleManagerProps) {
+function toAbsoluteUrl(urlOrPath: string): string {
+  if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+    return urlOrPath;
+  }
+  return `${window.location.origin}${urlOrPath.startsWith('/') ? '' : '/'}${urlOrPath}`;
+}
+
+function upsertJsonLd(data: Record<string, unknown> | null) {
+  let el = document.getElementById('json-ld') as HTMLScriptElement | null;
+  if (!data) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('script');
+    el.id = 'json-ld';
+    el.type = 'application/ld+json';
+    document.head.appendChild(el);
+  }
+  el.textContent = JSON.stringify(data);
+}
+
+export function TitleManager({ 
+  title, 
+  description, 
+  image, 
+  canonical, 
+  noIndex, 
+  ogType = 'website',
+  jsonLd 
+}: TitleManagerProps) {
   useEffect(() => {
     const siteName = 'KILIMO';
     const computedTitle = title ? `${title} | ${siteName}` : siteName;
@@ -58,17 +92,20 @@ export function TitleManager({ title, description, image, canonical, noIndex }: 
     // Open Graph
     upsertMeta({ property: 'og:title' }, computedTitle);
     if (description) upsertMeta({ property: 'og:description' }, description);
-    upsertMeta({ property: 'og:type' }, 'website');
+    upsertMeta({ property: 'og:type' }, ogType);
     upsertMeta({ property: 'og:url' }, url);
-    if (image) upsertMeta({ property: 'og:image' }, image);
+    if (image) upsertMeta({ property: 'og:image' }, toAbsoluteUrl(image));
     upsertMeta({ property: 'og:site_name' }, siteName);
 
     // Twitter Card
     upsertMeta({ name: 'twitter:card' }, image ? 'summary_large_image' : 'summary');
     upsertMeta({ name: 'twitter:title' }, computedTitle);
     if (description) upsertMeta({ name: 'twitter:description' }, description);
-    if (image) upsertMeta({ name: 'twitter:image' }, image);
-  }, [title, description, image, canonical, noIndex]);
+    if (image) upsertMeta({ name: 'twitter:image' }, toAbsoluteUrl(image));
+
+    // JSON-LD
+    upsertJsonLd(jsonLd || null);
+  }, [title, description, image, canonical, noIndex, ogType, jsonLd]);
 
   return null;
 }

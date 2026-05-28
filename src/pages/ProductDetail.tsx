@@ -14,6 +14,7 @@ import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import { useNavigate } from "react-router-dom";
+import TitleManager from "@/components/TitleManager";
 
 interface Product {
   id: string;
@@ -215,6 +216,37 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {product && (
+        <TitleManager
+          title={product.name}
+          description={product.description.replace(/<[^>]*>/g, '')}
+          image={product.image}
+          ogType="product"
+          jsonLd={{
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "description": product.description.replace(/<[^>]*>/g, ''),
+            "image": product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`,
+            "brand": {
+              "@type": "Organization",
+              "name": "KILIMO"
+            },
+            "offers": {
+              "@type": "Offer",
+              "url": window.location.href,
+              "priceCurrency": "XOF",
+              "price": product.price,
+              "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            },
+            "aggregateRating": product.rating > 0 ? {
+              "@type": "AggregateRating",
+              "ratingValue": product.rating,
+              "reviewCount": product.reviews
+            } : undefined
+          }}
+        />
+      )}
       <Header />
       
       {product && (

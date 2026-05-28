@@ -285,9 +285,33 @@ export default function SeedDetail() {
   return (
     <div className="min-h-screen bg-background">
       <TitleManager 
-        title={`${product.name} - KILIMO Agritech`}
-        description={product.description}
+        title={product.name}
+        description={product.description.replace(/<[^>]*>/g, '')}
         image={product.images[0]}
+        ogType="product"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": product.name,
+          "description": product.description.replace(/<[^>]*>/g, ''),
+          "image": product.images[0].startsWith('http') ? product.images[0] : `${window.location.origin}${product.images[0]}`,
+          "brand": {
+            "@type": "Organization",
+            "name": "KILIMO"
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": window.location.href,
+            "priceCurrency": "XOF",
+            "price": product.price,
+            "availability": product.availability === "En stock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+          },
+          "aggregateRating": product.rating > 0 ? {
+            "@type": "AggregateRating",
+            "ratingValue": product.rating,
+            "reviewCount": product.reviews
+          } : undefined
+        }}
       />
       <Header />
       

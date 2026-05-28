@@ -13,6 +13,7 @@ interface FileUploadProps {
   onChange: (url: string) => void;
   endpoint?: string;
   className?: string;
+  recommendedSize?: string;
 }
 
 export const FileUpload = ({ 
@@ -21,7 +22,8 @@ export const FileUpload = ({
   value,
   onChange, 
   endpoint = "/api/upload",
-  className = ""
+  className = "",
+  recommendedSize,
 }: FileUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(value || null);
@@ -145,6 +147,11 @@ export const FileUpload = ({
             <span>Upload en cours...</span>
           </div>
         </div>
+      )}
+      {recommendedSize && (
+        <p className="text-xs text-muted-foreground">
+          Taille recommandée : {recommendedSize}
+        </p>
       )}
     </div>
   );

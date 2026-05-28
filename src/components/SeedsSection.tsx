@@ -24,6 +24,37 @@ interface SeedProduct {
   harvestTime: string;
   yield: string;
   features: string[];
+  featured?: boolean;
+  createdAt?: string;
+}
+
+interface RawSeedItem {
+  id?: number | string;
+  slug?: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  variety?: string;
+  price?: number;
+  price_fcfa?: number;
+  unit?: string;
+  imageUrl?: string;
+  image_url?: string;
+  rating?: number;
+  totalReviews?: number;
+  total_reviews?: number;
+  availability?: string;
+  harvestTime?: string;
+  harvest_time?: string;
+  yield?: string;
+  yield_info?: string;
+  features?: string[];
+  isPublished?: boolean;
+  is_published?: boolean;
+  isFeatured?: boolean;
+  is_featured?: boolean;
+  createdAt?: string;
+  created_at?: string;
 }
 
 const SeedsSection = () => {
@@ -36,7 +67,7 @@ const SeedsSection = () => {
     contentType: 'seeds',
     enabled: true,
     onUpdate: (data) => {
-      const rawItems = (data as Record<string, any>[]) || [];
+      const rawItems = (data as RawSeedItem[]) || [];
       const publishedItems = rawItems.filter(item => item.isPublished || item.is_published);
 
       const mapped = publishedItems.map((record) => {
@@ -307,6 +338,7 @@ const SeedsSection = () => {
                   size="sm"
                   className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-background/80 backdrop-blur-sm"
                   onClick={prevSlide}
+                  aria-label="Produit précédent"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -315,6 +347,7 @@ const SeedsSection = () => {
                   size="sm"
                   className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-background/80 backdrop-blur-sm"
                   onClick={nextSlide}
+                  aria-label="Produit suivant"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

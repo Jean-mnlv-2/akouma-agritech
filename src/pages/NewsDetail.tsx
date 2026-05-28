@@ -9,6 +9,7 @@ import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import TitleManager from "@/components/TitleManager";
 
 interface Article {
   id: string;
@@ -190,6 +191,35 @@ const NewsDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {article && (
+        <TitleManager
+          title={article.title}
+          description={article.excerpt}
+          image={article.image}
+          ogType="article"
+          jsonLd={{
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": article.title,
+            "description": article.excerpt,
+            "image": article.image.startsWith('http') ? article.image : `${window.location.origin}${article.image}`,
+            "author": {
+              "@type": "Person",
+              "name": article.author
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "KILIMO Agritech",
+              "logo": {
+                "@type": "ImageObject",
+                "url": `${window.location.origin}/kilimo-logo.png`
+              }
+            },
+            "datePublished": article.date,
+            "dateModified": article.date
+          }}
+        />
+      )}
       <Header />
 
       {article && (

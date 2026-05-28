@@ -28,6 +28,7 @@ import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
+import TitleManager from "@/components/TitleManager";
 
 import { 
   Select,
@@ -98,20 +99,31 @@ const CourseDetail = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { toast } = useToast();
 
+  const checkEnrollment = useCallback(async () => {
+    if (!currentUser || !course) return;
+    try {
+      const res = await api.request('GET', '/api/elearning_enrollments');
+      const enrollments = res.data || [];
+      const isEnrolled = enrollments.some((e: Enrollment) => 
+        e.courseId === Number(course.id) && 
+        String(e.userId) === String(currentUser.id)
+      );
+      setEnrolled(isEnrolled);
+    } catch (err) {
+      console.error("Erreur lors de la vérification de l'inscription:", err);
+    }
+  }, [currentUser, course]);
+
   useEffect(() => {
     api.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
       const user = data?.user || null;
       setCurrentUser(user);
-      
-      if (user && course) {
-        api.request('GET', '/api/elearning_enrollments').then((res: { data: Enrollment[] }) => {
-          const enrollments = res.data || [];
-          const isEnrolled = enrollments.some((e: Enrollment) => e.courseId === Number(course.id) && String(e.userId) === String(user.id));
-          setEnrolled(isEnrolled);
-        }).catch((err: Error) => console.error("Erreur lors de la vérification de l'inscription:", err));
-      }
     });
-  }, [course]);
+  }, []);
+
+  useEffect(() => {
+    checkEnrollment();
+  }, [checkEnrollment]);
 
   const { isDialogOpen, closeDialog } = useCopyProtection(
     !!course?.isCopyProtected,
@@ -164,7 +176,22 @@ const CourseDetail = () => {
 
   useEffect(() => {
     fetchCourse();
-  }, [fetchCourse]);
+
+    const checkPayment = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('payment') === 'success') {
+        // Clear the search params after processing
+        window.history.replaceState({}, document.title, window.location.pathname);
+        toast({
+          title: "Paiement réussi !",
+          description: "Votre paiement a été accepté et vous êtes inscrit au cours.",
+        });
+        // Check enrollment again (in case the webhook just processed it)
+        await checkEnrollment();
+      }
+    };
+    checkPayment();
+  }, [fetchCourse, checkEnrollment, toast]);
 
   const handleEnrollment = async (formData: EnrollmentFormData) => {
     if (!currentUser) {
@@ -178,17 +205,48 @@ const CourseDetail = () => {
     }
 
     try {
-      await api.request('POST', '/api/elearning_enrollments', {
-        body: {
-          courseId: Number(course?.id),
-          ...formData
+      if (course?.price && course.price > 0) {
+        const orderRes = await api.request('POST', '/api/orders', {
+          body: {
+            items: [
+              {
+                productId: Number(course.id),
+                productType: 'course',
+                name: course.title,
+                price: Number(course.price),
+                quantity: 1,
+                imageUrl: course.thumbnail
+              }
+            ]
+          }
+        });
+        const order = orderRes.data;
+        
+        const paymentRes = await api.request('POST', '/api/payments/initiate', {
+          body: { orderId: order.id }
+        });
+        const paymentUrl = paymentRes.data?.paymentUrl;
+        
+        if (paymentUrl) {
+          window.location.href = paymentUrl;
+          return;
+        } else {
+          throw new Error("Impossible de récupérer l'URL de paiement");
         }
-      });
-      setEnrolled(true);
-      toast({ 
-        title: "Inscription réussie !", 
-        description: "Vous êtes maintenant inscrit à ce cours. Vous pouvez commencer à apprendre." 
-      });
+      } else {
+        // Cours gratuit : inscription directe
+        await api.request('POST', '/api/elearning_enrollments', {
+          body: {
+            courseId: Number(course?.id),
+            ...formData
+          }
+        });
+        setEnrolled(true);
+        toast({ 
+          title: "Inscription réussie !", 
+          description: "Vous êtes maintenant inscrit à ce cours. Vous pouvez commencer à apprendre." 
+        });
+      }
     } catch (err: unknown) {
       console.error(err);
       let errorMessage = "Impossible de s'inscrire. Réessayez.";
@@ -242,6 +300,37 @@ const CourseDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {course && (
+        <TitleManager
+          title={course.title}
+          description={course.description}
+          image={course.thumbnail}
+          ogType="course"
+          jsonLd={{
+            "@context": "https://schema.org",
+            "@type": "Course",
+            "name": course.title,
+            "description": course.description,
+            "provider": {
+              "@type": "Organization",
+              "name": "KILIMO",
+              "sameAs": window.location.origin
+            },
+            "offers": {
+              "@type": "Offer",
+              "url": window.location.href,
+              "priceCurrency": "XOF",
+              "price": course.price,
+              "availability": "https://schema.org/InStock"
+            },
+            "aggregateRating": course.rating > 0 ? {
+              "@type": "AggregateRating",
+              "ratingValue": course.rating,
+              "reviewCount": course.students
+            } : undefined
+          }}
+        />
+      )}
       <Header />
 
       {course && (

@@ -40,7 +40,6 @@ export default function News() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(9);
@@ -117,15 +116,12 @@ export default function News() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        setLoadingEvents(true);
         const res = await fetch(`${apiBaseUrl}/api/events`, { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load events');
         const body = await res.json();
         setEvents(Array.isArray(body) ? body : (body.data || []));
       } catch (e) {
         console.error('Error fetching events:', e);
-      } finally {
-        setLoadingEvents(false);
       }
     };
     fetchEvents();
@@ -380,74 +376,47 @@ export default function News() {
             </div>
           )}
 
-          {/* Section Événements - Toujours affichée en bas, sauf si on est en vue spécifique qui l'exclurait */}
-          <div className="mt-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8 flex items-center bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
-              <Calendar className="w-8 h-8 mr-3 text-primary" />
-              {t('news.cat.events')}
-            </h2>
-            
-            {loadingEvents ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          {events.length > 0 && (
+            <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="lg:col-span-3">
               </div>
-            ) : events.length > 0 ? (
-              <>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                  {events.slice(0, selectedCategory === 'evenements' ? undefined : 3).map((event) => (
-                    <Card 
-                      key={event.id} 
-                      className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 border-2 border-primary/10 overflow-hidden"
-                    >
-                      <div className="relative h-48 overflow-hidden">
-                        <img 
-                          src={event.imageUrl || '/kilimo-logo.png'} 
-                          alt={event.title} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                        />
-                        <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground shadow-lg">
-                          Événement
-                        </Badge>
-                      </div>
-                      <CardHeader>
-                        <div className="flex items-center gap-2 text-sm text-primary mb-2">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(event.date).toLocaleDateString()}
+              <div className="lg:col-span-1 space-y-4">
+                <Card className="bg-gradient-to-br from-primary/5 via-background to-accent/5 border-2 border-border sticky top-24">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      Événements à venir
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {events.slice(0, 3).map((event) => (
+                      <Link key={event.id} to={`/events/${event.slug}`} className="block group">
+                        <div className="border border-border rounded-lg p-3 hover:border-primary hover:bg-primary/5 transition-all duration-300">
+                          <div className="flex items-center gap-2 text-xs text-primary mb-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          </div>
+                          <p className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">{event.title}</p>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <MapPin className="w-3 h-3" />
+                            {event.location}
+                          </div>
                         </div>
-                        <CardTitle className="text-lg font-bold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                          {event.title}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          {event.location}
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <Button asChild variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                          <Link to={`/events/${event.slug}`}>
-                            En savoir plus
-                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                          </Link>
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                {selectedCategory !== 'evenements' && events.length > 3 && (
-                  <div className="mt-8 text-center">
-                    <Button variant="ghost" onClick={() => setSelectedCategory('evenements')} className="text-primary hover:text-primary/80">
-                      Voir tous les événements
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed">
-                <p className="text-muted-foreground">Aucun événement à venir pour le moment.</p>
+                      </Link>
+                    ))}
+                    {events.length > 3 && (
+                      <Button asChild variant="ghost" size="sm" className="w-full text-primary">
+                        <Link to="/events">
+                          Voir tous les événements
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Link>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
         </div>
       </section>

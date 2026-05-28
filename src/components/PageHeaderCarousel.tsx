@@ -6,19 +6,16 @@ import { Button } from '@/components/ui/button';
 
 interface Props {
   pageKey: string;
-  /** Image affichée si l'admin n'a configuré aucune image (asset par défaut). */
   fallbackImage: string;
   fallbackAlt?: string;
   className?: string;
-  /** Durée d'affichage de chaque slide en ms. */
   intervalMs?: number;
-  /** Overlay au-dessus des images. */
   overlayClassName?: string;
   children?: React.ReactNode;
-  /** Affiche le bloc title/subtitle/CTA piloté depuis l'admin. */
   showOverlayContent?: boolean;
-  /** Permet d'injecter directement une liste (utilisé pour la prévisualisation admin). */
   itemsOverride?: PageHeaderImage[];
+  /** Champs à surligner (pour mode comparaison admin). */
+  highlightFields?: string[];
 }
 
 /**
@@ -37,6 +34,7 @@ export default function PageHeaderCarousel({
   children,
   showOverlayContent = false,
   itemsOverride,
+  highlightFields = [],
 }: Props) {
   const { data: images = [] } = usePageHeaderImages(itemsOverride ? '' : pageKey);
   const source = itemsOverride ?? images;
@@ -80,21 +78,33 @@ export default function PageHeaderCarousel({
         <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
           <div className="container mx-auto px-6 text-center text-white pointer-events-auto">
             {current.title && (
-              <h2 className="text-3xl md:text-5xl font-bold mb-3 drop-shadow-lg">{current.title}</h2>
+              <h2 className={cn(
+                "text-3xl md:text-5xl font-bold mb-3 drop-shadow-lg",
+                highlightFields.includes('title') && "ring-4 ring-yellow-400/60 rounded-lg px-2 py-1"
+              )}>{current.title}</h2>
             )}
             {current.subtitle && (
-              <p className="text-base md:text-xl text-white/90 max-w-2xl mx-auto mb-5 drop-shadow">{current.subtitle}</p>
+              <p className={cn(
+                "text-base md:text-xl text-white/90 max-w-2xl mx-auto mb-5 drop-shadow",
+                highlightFields.includes('subtitle') && "ring-4 ring-yellow-400/60 rounded-lg px-2 py-1"
+              )}>{current.subtitle}</p>
             )}
             {current.ctaLabel && current.ctaUrl && (
-              isExternal(current.ctaUrl) ? (
-                <a href={current.ctaUrl} target="_blank" rel="noreferrer">
-                  <Button size="lg" variant="nature">{current.ctaLabel}</Button>
-                </a>
-              ) : (
-                <Link to={current.ctaUrl}>
-                  <Button size="lg" variant="nature">{current.ctaLabel}</Button>
-                </Link>
-              )
+              <div className={cn(
+                highlightFields.includes('ctaLabel') || highlightFields.includes('ctaUrl')
+                  ? "ring-4 ring-yellow-400/60 rounded-lg p-1 inline-block"
+                  : ""
+              )}>
+                {isExternal(current.ctaUrl) ? (
+                  <a href={current.ctaUrl} target="_blank" rel="noreferrer">
+                    <Button size="lg" variant="nature">{current.ctaLabel}</Button>
+                  </a>
+                ) : (
+                  <Link to={current.ctaUrl}>
+                    <Button size="lg" variant="nature">{current.ctaLabel}</Button>
+                  </Link>
+                )}
+              </div>
             )}
           </div>
         </div>

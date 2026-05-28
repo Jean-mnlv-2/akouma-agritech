@@ -44,7 +44,13 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [courseId, setCourseId] = useState<number | undefined>(initialCourseId || undefined);
-  const [form, setForm] = useState<{ courseId?: number; typeId?: number; title: string; description?: string; contentUrl: string; duration?: string; order?: number }>({ title: '', contentUrl: '' });
+  const [form, setForm] = useState<{ courseId?: number; typeId?: number; title: string; description?: string; contentUrl: string; duration?: string; order?: number }>({ 
+    title: '', 
+    contentUrl: '',
+    typeId: undefined,
+    duration: '',
+    order: 1
+  });
 
   // Handle initial course ID from props
   useEffect(() => {
@@ -83,6 +89,18 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
     staleTime: 10000,
   });
 
+  // Set default typeId when types load
+  useEffect(() => {
+    if (types.length > 0 && !form.typeId) {
+      setForm(prev => ({ ...prev, typeId: types[0].id }));
+    }
+  }, [types, form.typeId]);
+
+  // Set default order based on items count
+  useEffect(() => {
+    setForm(prev => ({ ...prev, order: (items.length || 0) + 1 }));
+  }, [items.length]);
+
   const [filterTypeId, setFilterTypeId] = useState<number | undefined>(undefined);
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const [playlist, setPlaylist] = useState<PreviewItem[]>([]);
@@ -96,10 +114,22 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
     onSuccess: () => {
       toast({ title: 'Succès', description: 'Élément ajouté' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-items', courseId] });
-      setForm({ title: '', contentUrl: '', courseId, typeId: types[0]?.id, duration: '', order: (items.length || 0) + 1 });
+      setForm({ 
+        title: '', 
+        contentUrl: '', 
+        courseId, 
+        typeId: types.length > 0 ? types[0].id : undefined, 
+        duration: '', 
+        order: (items.length || 0) + 2 // +2 because we just added one
+      });
     },
-    onError: () => {
-      toast({ title: 'Erreur', description: "Ajout échoué", variant: 'destructive' });
+    onError: (error: unknown) => {
+      console.error('Error adding preview item:', error);
+      toast({ 
+        title: 'Erreur', 
+        description: (error as any)?.response?.data?.error || "Ajout échoué", 
+        variant: 'destructive' 
+      });
     }
   });
 
@@ -108,7 +138,7 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
     onSuccess: () => {
       toast({ title: 'Supprimé', description: 'Élément supprimé' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-items', courseId] });
-    }
+    },
   });
 
   return (
@@ -356,7 +386,7 @@ function AdminCoursePreviewTypes() {
     onSuccess: () => {
       toast({ title: 'Supprimé', description: 'Type supprimé' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-types'] });
-    }
+    },
   });
 
   return (

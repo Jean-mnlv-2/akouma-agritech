@@ -23,17 +23,34 @@ coursePreviewItemsRouter.get('/', async (req: Request, res: Response) => {
 coursePreviewItemsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const { typeId, ...rest } = req.body;
+    
+    if (!typeId) {
+      return res.status(400).json({ error: 'Type de ressource requis' });
+    }
+    if (!rest.title) {
+      return res.status(400).json({ error: 'Titre requis' });
+    }
+    if (!rest.contentUrl) {
+      return res.status(400).json({ error: 'URL requis' });
+    }
+    if (!rest.courseId) {
+      return res.status(400).json({ error: 'Cours requis' });
+    }
+
     const type = await prisma.coursePreviewType.findUnique({ where: { id: Number(typeId) } });
     const created = await prisma.coursePreviewItem.create({ 
       data: { 
         ...rest, 
+        courseId: Number(rest.courseId),
         typeId: Number(typeId),
-        type: type?.name || 'video'
+        type: type?.name || 'video',
+        order: Number(rest.order) || 0
       } 
     });
     res.json({ data: created });
-  } catch (e) {
-    res.status(400).json({ error: 'failed_to_create' });
+  } catch (e: any) {
+    console.error('Error creating preview item:', e);
+    res.status(400).json({ error: e.message || 'failed_to_create' });
   }
 });
 

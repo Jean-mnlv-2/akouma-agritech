@@ -309,63 +309,79 @@ export class OrdersService {
       }
 
       if (order.paymentStatus !== 'paid') {
-        logger.warn(`[OrdersService] Order ${order.orderNumber} is not paid, skipping delivery creation`);
+        logger.warn(`[OrdersService] Order ${order.orderNumber} is not paid, skipping processing`);
         return;
       }
 
-      if (order.deliveryMethod !== DeliveryMethod.DELIVERY) {
+      // Traitement pour les cours E-learning
+      const courseItems = order.items.filter((item: any) => item.productType === 'course');
+      for (const item of courseItems) {
+        const existingEnrollment = await this.prisma.eLearningEnrollment.findUnique({
+          where: { userId_courseId: { userId: order.userId, courseId: Number(item.productId) } }
+        });
+        if (!existingEnrollment) {
+          await this.prisma.eLearningEnrollment.create({
+            data: {
+              userId: order.userId,
+              courseId: Number(item.productId),
+            }
+          });
+          logger.info(`[OrdersService] Created E-learning enrollment for user ${order.userId} in course ${item.productId}`);
+        } else {
+          logger.info(`[OrdersService] E-learning enrollment already exists for user ${order.userId} in course ${item.productId}`);
+        }
+      }
+
+      if (order.deliveryMethod === DeliveryMethod.DELIVERY) {
+        if (order.deliveryId) {
+          logger.info(`[OrdersService] Order ${order.orderNumber} already has a delivery ID: ${order.deliveryId}`);
+        } else {
+          logger.info(`[OrdersService] Creating delivery for order ${order.orderNumber}`);
+
+          const orderUuid = createHash('md5').update(`ORDER-${order.id}`).digest('hex');
+          const reinforcedCommandeId = `${order.orderNumber}-${orderUuid}`;
+
+          // Create delivery directly
+          const delivery = await deliveryService.createDelivery({
+            commandeId: reinforcedCommandeId,
+            referenceExterne: order.orderNumber,
+            pickAddressId: env.DELIVERY_PICK_ADDRESS_ID, 
+            dropAddressId: `${order.shippingAddress}, ${order.shippingZipCode || ''} ${order.shippingCity}, ${order.shippingState || ''}, ${order.shippingCountry}`.replace(/ ,/g, '').replace(/,,/g, ','),
+            customerPhone: order.shippingPhone || (order.user as any)?.phone,
+            items: order.items.filter((item: any) => item.productType !== 'course').map((item: any) => ({
+              id: String(item.productId),
+              quantity: item.quantity,
+              unitPrice: Number(item.price),
+              name: item.name
+            })),
+            notes: order.notes,
+            distanceKm: 0,
+            etaMinutes: 1,
+          });
+
+          // Update order with delivery info
+          await this.prisma.order.update({
+            where: { id: order.id },
+            data: {
+              deliveryId: delivery.id,
+              deliveryStatus: delivery.status,
+            },
+          });
+
+          await this.createOrderEvent(
+            this.prisma as any,
+            order.id,
+            'delivery_created',
+            order.status,
+            order.paymentStatus,
+            `Livraison créée avec l'ID: ${delivery.id}`,
+          );
+
+          logger.info(`[OrdersService] Delivery created successfully for order ${order.orderNumber}: ${delivery.id}`);
+        }
+      } else {
         logger.info(`[OrdersService] Order ${order.orderNumber} is PICKUP, no delivery to create`);
-        return;
       }
-
-      if (order.deliveryId) {
-        logger.info(`[OrdersService] Order ${order.orderNumber} already has a delivery ID: ${order.deliveryId}`);
-        return;
-      }
-
-      logger.info(`[OrdersService] Creating delivery for order ${order.orderNumber}`);
-
-      // Création d'un UUID déterministe basé sur l'ID de commande pour renforcer l'ID technique
-      const orderUuid = createHash('md5').update(`ORDER-${order.id}`).digest('hex');
-      const reinforcedCommandeId = `${order.orderNumber}-${orderUuid}`;
-
-      // Create delivery directly
-      const delivery = await deliveryService.createDelivery({
-        commandeId: reinforcedCommandeId, // ID renforcé : KLM-XXX-XXX + UUID déterministe
-        referenceExterne: order.orderNumber, // Référence interne courte
-        pickAddressId: env.DELIVERY_PICK_ADDRESS_ID, 
-        dropAddressId: `${order.shippingAddress}, ${order.shippingZipCode || ''} ${order.shippingCity}, ${order.shippingState || ''}, ${order.shippingCountry}`.replace(/ ,/g, '').replace(/,,/g, ','),
-        customerPhone: order.shippingPhone || (order.user as any)?.phone,
-        items: order.items.map(item => ({
-          id: String(item.productId),
-          quantity: item.quantity,
-          unitPrice: Number(item.price),
-          name: item.name
-        })),
-        notes: order.notes,
-        distanceKm: 0,
-        etaMinutes: 1, // Valeur par défaut doc
-      });
-
-      // 3. Update order with delivery info
-      await this.prisma.order.update({
-        where: { id: order.id },
-        data: {
-          deliveryId: delivery.id,
-          deliveryStatus: delivery.status,
-        },
-      });
-
-      await this.createOrderEvent(
-        this.prisma as any,
-        order.id,
-        'delivery_created',
-        order.status,
-        order.paymentStatus,
-        `Livraison créée avec l'ID: ${delivery.id}`,
-      );
-
-      logger.info(`[OrdersService] Delivery created successfully for order ${order.orderNumber}: ${delivery.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error(`[OrdersService] Failed to process post-payment for order ${orderId}: ${message}`);

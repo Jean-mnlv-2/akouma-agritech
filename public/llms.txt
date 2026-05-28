@@ -1,0 +1,39 @@
+# KILIMO Agritech - LLM Access Guide
+
+## Overview
+KILIMO Agritech is a platform dedicated to advancing agriculture through technology, education, and quality seeds.
+
+## Key Sections
+- **Homepage** (/): Introduction to KILIMO Agritech
+- **E-Learning** (/elearning): Agricultural courses and training
+- **Seeds** (/seeds): High-quality seed products
+- **Shop** (/shop): Agricultural products and equipment
+- **News** (/news): Latest updates and articles
+- **About** (/about): Company information
+- **Contact** (/contact): Get in touch
+- **Partnerships** (/partners): Collaboration opportunities
+- **Donations** (/donations): Support our mission
+- **Careers** (/careers): Join our team
+
+## Core Purpose
+KILIMO Agritech aims to:
+1. Provide quality agricultural education through e-learning courses
+2. Offer high-yield, certified seeds to farmers
+3. Supply essential agricultural products and equipment
+4. Share knowledge and best practices for sustainable farming
+5. Support agricultural innovation and technology adoption
+
+## Brand Identity
+- Name: KILIMO Agritech
+- Mission: Revolutionize agriculture through technology and education for African farmers
+- Colors: Green (primary), representing growth and agriculture
+- Logo: /kilimo-logo.png
+
+## Key Features
+- E-learning platform with course enrollments and certifications
+- E-commerce for seeds and agricultural products
+- News and blog section for agricultural insights
+- Partnership program for collaboration
+- Career opportunities in agritech
+- Contact and support system
+- Admin dashboard for managing content and users
