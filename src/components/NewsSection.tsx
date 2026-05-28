@@ -22,6 +22,26 @@ interface NewsItem {
   read_time: number;
 }
 
+interface RawNewsItem {
+  id?: string | number;
+  slug?: string;
+  title?: string;
+  excerpt?: string;
+  content?: string;
+  author?: string;
+  author_name?: string;
+  imageUrl?: string;
+  image_url?: string;
+  isFeatured?: boolean;
+  is_featured?: boolean;
+  createdAt?: string;
+  created_at?: string;
+  category?: string;
+  read_time?: number;
+  isPublished?: boolean;
+  is_published?: boolean;
+}
+
 const NewsSection = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +52,7 @@ const NewsSection = () => {
   useContentSync({
     contentType: 'news',
     onUpdate: (data) => {
-      const rawItems = (data as Record<string, any>[]) || [];
+      const rawItems = (data as RawNewsItem[]) || [];
       const publishedItems = rawItems.filter(item => item.isPublished || item.is_published);
       
       const normalizedNews = publishedItems.map((item) => ({

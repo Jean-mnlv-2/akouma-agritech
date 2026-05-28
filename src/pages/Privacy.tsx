@@ -15,10 +15,11 @@ interface LegalPage {
   updatedAt: string;
 }
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
+
 const Privacy = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [privacyPage, setPrivacyPage] = useState<LegalPage | null>(null);
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   useEffect(() => {
     const fetchPrivacyPage = async () => {
