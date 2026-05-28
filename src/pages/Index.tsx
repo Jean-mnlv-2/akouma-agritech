@@ -27,10 +27,27 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <TitleManager
-        title={t("index.title")}
-        description={t("index.description")}
+        title="KILIMO Agritech - Agriculture Intelligente, E-Learning et Boutique Agricole"
+        description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées, outils agricoles et accompagnement expert pour les agriculteurs africains."
         canonical={window.location.origin + '/'}
         image="/kilimo-logo.png"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "KILIMO Agritech",
+          "url": window.location.origin,
+          "logo": `${window.location.origin}/kilimo-logo.png`,
+          "sameAs": [
+            "https://twitter.com/kilimoagritech",
+            "https://facebook.com/kilimoagritech",
+            "https://linkedin.com/company/kilimoagritech"
+          ],
+          "description": "KILIMO Agritech est une plateforme dédiée à l'avancement de l'agriculture par la technologie, l'éducation et les semences de qualité pour les agriculteurs africains.",
+          "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "CM"
+          }
+        }}
       />
       <Header />
       <main>

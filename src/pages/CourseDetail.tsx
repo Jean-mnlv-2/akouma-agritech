@@ -305,7 +305,7 @@ const CourseDetail = () => {
           title={course.title}
           description={course.description}
           image={course.thumbnail}
-          ogType="course"
+          ogType="article"
           jsonLd={{
             "@context": "https://schema.org",
             "@type": "Course",

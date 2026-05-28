@@ -204,6 +204,7 @@ const Header = () => {
                 size="icon"
                 onClick={() => setIsCartOpen(true)}
                 className="relative"
+                aria-label={`Voir le panier (${itemsCount} article${itemsCount !== 1 ? 's' : ''})`}
               >
                 <ShoppingCart className="w-4 h-4" />
                 {itemsCount > 0 && (
@@ -221,7 +222,7 @@ const Header = () => {
                 <div className="hidden md:flex items-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Button variant="ghost" className="relative h-10 w-10 rounded-full" aria-label="Menu utilisateur">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback className="bg-primary/10 text-primary font-bold">
                             {userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : <UserIcon className="w-5 h-5" />}
@@ -287,7 +288,7 @@ const Header = () => {
               
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="lg:hidden">
+                  <Button variant="outline" size="icon" className="lg:hidden" aria-label="Ouvrir le menu">
                     <Menu className="w-4 h-4" />
                   </Button>
                 </SheetTrigger>
