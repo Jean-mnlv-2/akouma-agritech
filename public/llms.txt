@@ -1,42 +1,28 @@
-# KILIMO Agritech - LLM Access Guide
+# KILIMO Agritech
 
-## Overview
-KILIMO Agritech is a platform dedicated to advancing agriculture through technology, education, and quality seeds.
+> Plateforme agritech africaine : formations en ligne, semences certifiées, outils agricoles et accompagnement expert.
 
-## Key Pages (Links)
-- Homepage: https://akouma-agritech.lovable.app/
-- E-Learning: https://akouma-agritech.lovable.app/elearning
-- Seeds: https://akouma-agritech.lovable.app/seeds
-- Shop: https://akouma-agritech.lovable.app/shop
-- News: https://akouma-agritech.lovable.app/news
-- About: https://akouma-agritech.lovable.app/about
-- Contact: https://akouma-agritech.lovable.app/contact
-- Partnerships: https://akouma-agritech.lovable.app/partners
-- Donations: https://akouma-agritech.lovable.app/donations
-- Careers: https://akouma-agritech.lovable.app/careers
-- Privacy Policy: https://akouma-agritech.lovable.app/privacy
-- Legal Notice: https://akouma-agritech.lovable.app/legal
-- Terms of Service: https://akouma-agritech.lovable.app/terms
+KILIMO Agritech aide les agriculteurs, coopératives et entrepreneurs à se former, s'équiper et cultiver durablement. La plateforme combine un catalogue e-learning, une boutique de semences et de matériel, des actualités sectorielles et un programme de partenariats.
 
-## Core Purpose
-KILIMO Agritech aims to:
-1. Provide quality agricultural education through e-learning courses
-2. Offer high-yield, certified seeds to farmers
-3. Supply essential agricultural products and equipment
-4. Share knowledge and best practices for sustainable farming
-5. Support agricultural innovation and technology adoption
+## Pages principales
+- [Accueil](https://akouma-agritech.lovable.app/): vue d'ensemble de la plateforme et accès aux services
+- [À propos](https://akouma-agritech.lovable.app/about): mission, équipe et impact de KILIMO Agritech
+- [Contact](https://akouma-agritech.lovable.app/contact): support, partenariats et demandes commerciales
 
-## Brand Identity
-- Name: KILIMO Agritech
-- Mission: Revolutionize agriculture through technology and education for African farmers
-- Colors: Green (primary), representing growth and agriculture
-- Logo: https://akouma-agritech.lovable.app/kilimo-logo.png
+## Catalogue
+- [E-learning](https://akouma-agritech.lovable.app/elearning): catalogue complet de formations agricoles certifiantes
+- [Semences](https://akouma-agritech.lovable.app/seeds): semences certifiées par variété, rendement et zone climatique
+- [Boutique](https://akouma-agritech.lovable.app/shop): outils, intrants et équipements agricoles
+- [Événements](https://akouma-agritech.lovable.app/events): salons, webinaires et journées terrain
 
-## Key Features
-- E-learning platform with course enrollments and certifications
-- E-commerce for seeds and agricultural products
-- News and blog section for agricultural insights
-- Partnership program for collaboration
-- Career opportunities in agritech
-- Contact and support system
-- Admin dashboard for managing content and users
+## Contenu éditorial
+- [Actualités](https://akouma-agritech.lovable.app/news): articles et guides sur les pratiques agricoles modernes
+- [Partenariats](https://akouma-agritech.lovable.app/partners): coopératives, ONG et institutions partenaires
+- [Carrières](https://akouma-agritech.lovable.app/careers): offres d'emploi dans l'agritech
+
+## Optional
+- [Dons](https://akouma-agritech.lovable.app/donations): soutenir les programmes terrain
+- [Mentions légales](https://akouma-agritech.lovable.app/legal)
+- [Confidentialité](https://akouma-agritech.lovable.app/privacy)
+- [Conditions d'utilisation](https://akouma-agritech.lovable.app/terms)
+- [Sitemap XML](https://akouma-agritech.lovable.app/sitemap.xml)
