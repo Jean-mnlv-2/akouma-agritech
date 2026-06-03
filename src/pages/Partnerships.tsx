@@ -447,7 +447,7 @@ const Partnerships = () => {
                     </ul>
                     <div className="mt-4 text-center">
                       <Badge variant="secondary" className="cursor-pointer hover:scale-105 transition-transform">
-                        En savoir plus
+                        En savoir plus sur le partenariat {type.title}
                       </Badge>
                     </div>
                   </CardContent>
