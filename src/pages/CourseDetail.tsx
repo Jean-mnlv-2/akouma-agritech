@@ -29,6 +29,7 @@ import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 import TitleManager from "@/components/TitleManager";
+import SEO, { schema } from "@/components/SEO";
 
 import { 
   Select,
@@ -301,34 +302,25 @@ const CourseDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       {course && (
-        <TitleManager
+        <SEO
           title={course.title}
           description={course.description}
+          path={`/elearning/${slug}`}
           image={course.thumbnail}
-          ogType="article"
-          jsonLd={{
-            "@context": "https://schema.org",
-            "@type": "Course",
-            "name": course.title,
-            "description": course.description,
-            "provider": {
-              "@type": "Organization",
-              "name": "KILIMO",
-              "sameAs": window.location.origin
-            },
-            "offers": {
-              "@type": "Offer",
-              "url": window.location.href,
-              "priceCurrency": "XOF",
-              "price": course.price,
-              "availability": "https://schema.org/InStock"
-            },
-            "aggregateRating": course.rating > 0 ? {
-              "@type": "AggregateRating",
-              "ratingValue": course.rating,
-              "reviewCount": course.students
-            } : undefined
-          }}
+          type="article"
+          jsonLd={[
+            schema.course({
+              name: course.title,
+              description: course.description,
+              image: course.thumbnail,
+              slug: slug || "",
+            }),
+            schema.breadcrumbs([
+              { name: "Accueil", path: "/" },
+              { name: "E-Learning", path: "/elearning" },
+              { name: course.title, path: `/elearning/${slug}` },
+            ]),
+          ]}
         />
       )}
       <Header />

@@ -66,6 +66,7 @@ export default function PageHeaderCarousel({
           src={s.imageUrl}
           alt={s.altText || fallbackAlt}
           loading={i === 0 ? 'eager' : 'lazy'}
+          fetchPriority={i === 0 ? 'high' : 'auto'}
           decoding="async"
           className={cn(
             'absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out scale-105',
