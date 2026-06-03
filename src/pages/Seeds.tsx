@@ -155,6 +155,14 @@ const Seeds = () => {
         description={t("seeds.meta.desc")}
         canonical={window.location.origin + '/seeds'}
         image={kilimoLogo}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": t("seeds.meta.title"),
+          "description": t("seeds.meta.desc"),
+          "url": window.location.origin + '/seeds',
+          "numberOfItems": filteredProducts.length
+        }}
       />
       <Header />
       
@@ -195,6 +203,7 @@ const Seeds = () => {
       {/* Search and Filters - Enhanced */}
       <section className="py-10 bg-gradient-to-br from-card via-background to-muted/20 border-b border-border/50">
         <div className="container mx-auto px-6">
+          <h2 className="sr-only">{t("seeds.search")} et filtres</h2>
           <div className="flex flex-col md:flex-row gap-6 items-center justify-between max-w-6xl mx-auto">
             <div className="relative flex-1 w-full max-w-md">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -243,6 +252,7 @@ const Seeds = () => {
       {/* Products Grid */}
       <section className="py-16">
         <div className="container mx-auto px-6">
+          <h2 className="sr-only">Catalogue de semences disponibles</h2>
           {loading ? (
             <div key="loading-seeds" className="text-center py-20">
               <RefreshCw className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />

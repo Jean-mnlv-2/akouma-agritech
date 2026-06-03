@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authRequired } from '../middleware/authRequired';
+import { authRequired, adminOnly } from '../middleware/authRequired';
 import { sertifierFetch as sertifierRequest, isSertifierConfigured } from '../utils/sertifierClient';
 
 export const sertifierRouter = Router();
@@ -17,7 +17,7 @@ sertifierRouter.use((req, res, next) => {
 });
 
 // Test authentication
-sertifierRouter.get('/test', authRequired, async (_req: Request, res: Response) => {
+sertifierRouter.get('/test', authRequired, adminOnly, async (_req: Request, res: Response) => {
   try {
     const result = await sertifierRequest('GET', '/Test');
     res.json({ data: result, connected: true });
@@ -27,7 +27,7 @@ sertifierRouter.get('/test', authRequired, async (_req: Request, res: Response) 
 });
 
 // Issue a credential: create campaign, add credential, and publish
-sertifierRouter.post('/issue-credential', authRequired, async (req: Request, res: Response) => {
+sertifierRouter.post('/issue-credential', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const { recipientName, recipientEmail, courseName, score, completionDate, designId, detailId, emailTemplateId } = req.body;
 
@@ -97,7 +97,7 @@ sertifierRouter.post('/issue-credential', authRequired, async (req: Request, res
 });
 
 // Search credentials
-sertifierRouter.post('/credentials/search', authRequired, async (req: Request, res: Response) => {
+sertifierRouter.post('/credentials/search', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const result = await sertifierRequest('POST', '/credential/search', req.body);
     res.json({ data: result });
@@ -107,7 +107,7 @@ sertifierRouter.post('/credentials/search', authRequired, async (req: Request, r
 });
 
 // Get credential by ID
-sertifierRouter.get('/credential/:id', authRequired, async (req: Request, res: Response) => {
+sertifierRouter.get('/credential/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const result = await sertifierRequest('GET', `/credential/${req.params.id}`);
     res.json({ data: result });
@@ -117,7 +117,7 @@ sertifierRouter.get('/credential/:id', authRequired, async (req: Request, res: R
 });
 
 // Generate PDF link for credential
-sertifierRouter.get('/credential/:id/pdf', authRequired, async (req: Request, res: Response) => {
+sertifierRouter.get('/credential/:id/pdf', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const result = await sertifierRequest('GET', `/credential/generatePDFLink/${req.params.id}`);
     res.json({ data: result });
@@ -127,7 +127,7 @@ sertifierRouter.get('/credential/:id/pdf', authRequired, async (req: Request, re
 });
 
 // Search designs
-sertifierRouter.post('/designs/search', authRequired, async (req: Request, res: Response) => {
+sertifierRouter.post('/designs/search', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const result = await sertifierRequest('POST', '/design/search', req.body || {});
     res.json({ data: result });
@@ -137,7 +137,7 @@ sertifierRouter.post('/designs/search', authRequired, async (req: Request, res: 
 });
 
 // Search details
-sertifierRouter.post('/details/search', authRequired, async (req: Request, res: Response) => {
+sertifierRouter.post('/details/search', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const result = await sertifierRequest('POST', '/detail/search', req.body || {});
     res.json({ data: result });
@@ -147,7 +147,7 @@ sertifierRouter.post('/details/search', authRequired, async (req: Request, res: 
 });
 
 // Search email templates
-sertifierRouter.post('/email-templates/search', authRequired, async (req: Request, res: Response) => {
+sertifierRouter.post('/email-templates/search', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const result = await sertifierRequest('POST', '/emailTemplate/search', req.body || {});
     res.json({ data: result });

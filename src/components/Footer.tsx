@@ -32,28 +32,28 @@ const Footer = () => {
             </p>
             <div className="flex space-x-3">
               {contact?.facebookUrl && (
-                <a href={contact.facebookUrl} target="_blank" rel="noopener noreferrer">
+                <a href={contact.facebookUrl} target="_blank" rel="noopener noreferrer" aria-label="Facebook KILIMO" title="Facebook KILIMO">
                   <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
                     <Facebook className="w-5 h-5" />
                   </Button>
                 </a>
               )}
               {contact?.xUrl && (
-                <a href={contact.xUrl} target="_blank" rel="noopener noreferrer">
+                <a href={contact.xUrl} target="_blank" rel="noopener noreferrer" aria-label="X (Twitter) KILIMO" title="X (Twitter) KILIMO">
                   <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
                     <Twitter className="w-5 h-5" />
                   </Button>
                 </a>
               )}
               {contact?.linkedinUrl && (
-                <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn KILIMO" title="LinkedIn KILIMO">
                   <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
                     <Linkedin className="w-5 h-5" />
                   </Button>
                 </a>
               )}
               {contact?.instagramUrl && (
-                <a href={contact.instagramUrl} target="_blank" rel="noopener noreferrer">
+                <a href={contact.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram KILIMO" title="Instagram KILIMO">
                   <Button variant="outline" size="icon" className="w-10 h-10 hover:bg-primary hover:text-primary-foreground">
                     <Instagram className="w-5 h-5" />
                   </Button>

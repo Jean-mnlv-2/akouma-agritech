@@ -121,11 +121,28 @@ deliveriesRouter.post('/webhook', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Payload webhook invalide' });
     }
 
-    // Rechercher la commande soit par son ID de livraison partenaire,
-    // soit par son numéro de commande (extrait du commandeId renforcé),
-    // soit par son ID interne si commandeId est un nombre
+    // Verify HMAC signature if secret is configured
+    if (env.DELIVERY_API_SECRET_KEY) {
+      const signatureHeader = req.headers['x-delivery-signature'] || req.headers['x-lelivreur-signature'];
+      if (!signatureHeader) {
+        return res.status(401).json({ error: 'Signature manquante' });
+      }
+
+      const crypto = require('crypto');
+      const hmac = crypto.createHmac('sha256', env.DELIVERY_API_SECRET_KEY);
+      const rawBody = JSON.stringify(req.body);
+      hmac.update(rawBody);
+      const computedSignature = hmac.digest('hex');
+
+      // Check if signature matches
+      const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
+      if (signature !== computedSignature) {
+        return res.status(403).json({ error: 'Signature invalide' });
+      }
+    }
+
     const orderNumberFromId = typeof commandeId === 'string' && commandeId.startsWith('KLM-') 
-      ? commandeId.split('-').slice(0, 3).join('-') // Extrait KLM-XXX-XXX
+      ? commandeId.split('-').slice(0, 3).join('-')
       : null;
 
     const order = await prisma.order.findFirst({
@@ -142,6 +159,21 @@ deliveriesRouter.post('/webhook', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Commande non trouvée pour ce webhook' });
     }
 
+    // Idempotency check: don't process same event multiple times
+    const existingEvent = await prisma.orderEvent.findFirst({
+      where: {
+        orderId: order.id,
+        type: 'delivery_update',
+        note: `Mise à jour webhook LeLivreur: Statut ${status}`,
+        createdAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+        }
+      }
+    });
+    if (existingEvent) {
+      return res.json({ success: true });
+    }
+
     await prisma.order.update({
       where: { id: order.id },
       data: {
@@ -156,7 +188,7 @@ deliveriesRouter.post('/webhook', async (req: Request, res: Response) => {
         type: 'delivery_update',
         status: order.status,
         paymentStatus: order.paymentStatus,
-        note: `Mise à jour webhook LeLivreur: Statut ${status}`,
+        note: `Mise à jour webhook LeLivreur: Statut ${status}`
       }
     });
 

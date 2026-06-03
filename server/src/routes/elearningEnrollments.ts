@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authRequired } from '../middleware/authRequired';
+import { authRequired, adminOnly } from '../middleware/authRequired';
 
 const prisma = new PrismaClient();
 export const elearningEnrollmentsRouter = Router();
@@ -19,15 +19,41 @@ elearningEnrollmentsRouter.get('/', authRequired, async (req: Request, res: Resp
   res.json({ data: items });
 });
 
-elearningEnrollmentsRouter.post('/', authRequired, async (req: Request, res: Response) => {
-  const { courseId, professionalActivity, organization, sector, experienceLevel, expectations } = req.body || {};
-  const userId = req.user?.id;
+elearningEnrollmentsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+  const { courseId, professionalActivity, organization, sector, experienceLevel, expectations, userId: targetUserId } = req.body || {};
+  const u = (req as any).user;
+  const userId = targetUserId && (u.role === 'admin' || u.role === 'supervisor') ? targetUserId : u.id;
 
   if (!userId || !courseId) {
     return res.status(400).json({ error: 'Missing userId or courseId' });
   }
 
   try {
+    const course = await prisma.course.findUnique({ where: { id: Number(courseId) } });
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    if (Number(course.price) > 0) {
+      const validOrder = await prisma.order.findFirst({
+        where: {
+          userId: String(userId),
+          status: { in: ['paid', 'completed'] },
+          paymentStatus: 'paid',
+          items: {
+            some: {
+              productType: 'course',
+              productId: Number(courseId)
+            }
+          }
+        }
+      });
+
+      if (!validOrder) {
+        return res.status(403).json({ error: 'Payment required: No valid paid order found for this course' });
+      }
+    }
+
     const created = await prisma.eLearningEnrollment.create({
       data: { 
         userId: String(userId), 

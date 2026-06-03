@@ -27,7 +27,7 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <TitleManager
-        title="KILIMO Agritech - Agriculture Intelligente, E-Learning et Boutique Agricole"
+        title="KILIMO Agritech - Agriculture Intelligente & Formations"
         description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées, outils agricoles et accompagnement expert pour les agriculteurs africains."
         canonical={window.location.origin + '/'}
         image="/kilimo-logo.png"
