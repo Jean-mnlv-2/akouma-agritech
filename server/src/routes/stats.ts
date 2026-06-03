@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { authRequired, supervisorOnly } from '../middleware/authRequired';
 
 const prisma = new PrismaClient();
 export const statsRouter = Router();
 
-// Public stats endpoint used by admin dashboard to avoid auth issues on list endpoints
-statsRouter.get('/', async (_req: Request, res: Response) => {
+// Admin/supervisor only — exposes counts across the platform.
+statsRouter.get('/', authRequired, supervisorOnly, async (_req: Request, res: Response) => {
   try {
     const [
       totalUsers,
@@ -50,8 +51,8 @@ statsRouter.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-// Time-series stats for charts (last 30 days)
-statsRouter.get('/charts', async (req: Request, res: Response) => {
+// Time-series stats for charts (last 30 days) — admin/supervisor only.
+statsRouter.get('/charts', authRequired, supervisorOnly, async (req: Request, res: Response) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days as string) || 30, 1), 365);
     const since = new Date();
@@ -131,8 +132,8 @@ statsRouter.get('/charts', async (req: Request, res: Response) => {
   }
 });
 
-// Notifications endpoint - returns recent unread items
-statsRouter.get('/notifications', async (req: Request, res: Response) => {
+// Notifications endpoint - returns recent unread items (admin/supervisor only).
+statsRouter.get('/notifications', authRequired, supervisorOnly, async (req: Request, res: Response) => {
   try {
     const since = req.query.since ? new Date(req.query.since as string) : new Date(Date.now() - 24 * 60 * 60 * 1000);
 

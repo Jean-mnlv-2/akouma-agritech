@@ -5,7 +5,7 @@ import { authRequired, adminOnly } from '../middleware/authRequired';
 const prisma = new PrismaClient();
 export const donationsRouter = Router();
 
-donationsRouter.get('/', async (_req: Request, res: Response) => {
+donationsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
   const items = await prisma.donation.findMany({ orderBy: { createdAt: 'desc' } });
   res.json({ data: items });
 });

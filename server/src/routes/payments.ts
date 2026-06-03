@@ -177,19 +177,27 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Commande introuvable' });
     }
 
-    // Sécurisation: revalidation côté serveur (si possible).
-    // Si l'URL de statut n'est pas configurée, exiger un secret webhook.
+    // Sécurisation: ne JAMAIS faire confiance au champ `statut` du corps.
+    // Le paiement n'est confirmé que si le fournisseur (Money Fusion) le confirme via
+    // une revalidation HTTP signée, OU si le webhook est signé avec un secret partagé
+    // ET expose un statut explicite (ex: en environnement de test).
     const revalidated = await verifyWebhookPayment(tokenPay);
     if (!revalidated && !webhookSecret) {
-      logger.error('[payments] Webhook received but cannot be verified (missing MONEYFUSION_NOTIF_URL and MONEYFUSION_WEBHOOK_SECRET)');
+      logger.error('[payments] Webhook rejected: aucune méthode de vérification configurée');
       return res.status(500).json({ error: 'Configuration webhook manquante' });
     }
 
-    const isPaid =
-      (revalidated ? revalidated.paid : false) ||
-      statut === 'paid' ||
-      statut === 'successful' ||
-      statut === 'success';
+    // Si la revalidation externe est disponible, elle fait foi.
+    // Sinon (uniquement quand un secret signé est présent), on accepte le statut du body.
+    const isPaid = revalidated
+      ? revalidated.paid === true
+      : (statut === 'paid' || statut === 'successful' || statut === 'success');
+
+    // Idempotence: si la commande est déjà marquée payée, ne pas rejouer le traitement.
+    if (order.paymentStatus === 'paid' && isPaid) {
+      logger.info(`[payments] Webhook idempotent ignoré pour ${order.orderNumber}`);
+      return res.json({ status: 'ok', idempotent: true });
+    }
 
     await prisma.$transaction(async (tx: any) => {
       await tx.order.update({

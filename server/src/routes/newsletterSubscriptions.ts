@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { authRequired, adminOnly } from '../middleware/authRequired';
 
 const prisma = new PrismaClient();
 export const newsletterSubscriptionsRouter = Router();
 
-newsletterSubscriptionsRouter.get('/', async (_req: Request, res: Response) => {
+newsletterSubscriptionsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
   const items = await prisma.newsletterSubscription.findMany({ orderBy: { createdAt: 'desc' } });
   res.json({ data: items });
 });
