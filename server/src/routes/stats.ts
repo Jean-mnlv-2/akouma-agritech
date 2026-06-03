@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOrSupervisorWithUsers, supervisorOnly } from '../middleware/authRequired';
+import { authRequired, supervisorOnly } from '../middleware/authRequired';
 
 const prisma = new PrismaClient();
 export const statsRouter = Router();
