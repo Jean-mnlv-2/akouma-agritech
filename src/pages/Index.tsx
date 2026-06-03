@@ -12,7 +12,6 @@ import ShopSection from "@/components/ShopSection";
 import StatsSection from "@/components/StatsSection";
 import { useI18n } from "@/i18n";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
-import { SEO, schema } from "@/components/SEO";
 
 const Index = () => {
   const { t } = useI18n();
