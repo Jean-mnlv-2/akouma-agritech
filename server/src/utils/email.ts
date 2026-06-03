@@ -58,11 +58,11 @@ export const emailService = {
     }
   },
 
-  async sendSupervisorWelcomeEmail(email: string, fullName: string, password: string) {
-    const loginUrl = `${env.FRONTEND_ORIGINS[0]}/auth`;
+  async sendSupervisorWelcomeEmail(email: string, fullName: string, resetToken: string) {
+    const resetUrl = `${env.FRONTEND_ORIGINS[0]}/reset-password?token=${resetToken}`;
     
     if (!resend) {
-      console.warn('[EMAIL] Resend API Key non configurée. Identifiants superviseur pour', email, ':', password);
+      console.warn('[EMAIL] Resend API Key non configurée. URL de création de mot de passe pour', email, ':', resetUrl);
       return;
     }
 
@@ -70,20 +70,20 @@ export const emailService = {
       await resend.emails.send({
         from: env.EMAIL_FROM,
         to: email,
-        subject: 'Bienvenue sur KILIMO - Vos identifiants de superviseur',
+        subject: 'Bienvenue sur KILIMO - Créez votre mot de passe',
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
             <h1 style="color: #10b981; margin-top: 0;">Bienvenue, ${fullName} !</h1>
             <p>Votre compte de <strong>superviseur</strong> a été créé avec succès sur la plateforme KILIMO Agritech.</p>
             <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 24px 0;">
-              <p style="margin: 0; color: #374151;"><strong>Identifiants de connexion :</strong></p>
+              <p style="margin: 0; color: #374151;"><strong>Pour commencer :</strong></p>
               <p style="margin: 8px 0 0 0;">Email : <code style="background: #eee; padding: 2px 4px; border-radius: 4px;">${email}</code></p>
-              <p style="margin: 8px 0 0 0;">Mot de passe : <code style="background: #eee; padding: 2px 4px; border-radius: 4px;">${password}</code></p>
             </div>
-            <p>Vous pouvez maintenant vous connecter pour accéder à votre tableau de bord et gérer les modules qui vous ont été assignés.</p>
-            <a href="${loginUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Se connecter à mon compte</a>
+            <p>Cliquez sur le lien ci-dessous pour définir votre mot de passe et accéder à votre tableau de bord :</p>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-decoration: none;">Définir mon mot de passe</a>
+            <p style="margin-top: 16px;">Ce lien expirera dans 7 jours.</p>
             <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
-            <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe dès votre première connexion.</p>
+            <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">Si vous n'avez pas demandé la création de ce compte, vous pouvez ignorer cet email.</p>
           </div>
         `,
       });

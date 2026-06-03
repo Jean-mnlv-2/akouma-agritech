@@ -23,17 +23,15 @@ profilesRouter.get('/', authRequired, adminOrSupervisorWithUsers, async (req: Re
         role: true,
         isActive: true,
         allowedModules: true,
-        tempPassword: true,
         createdAt: true
       }
     });
     
     // On vérifie le rôle directement depuis le token décodé par authRequired
     const userRole = req.user?.role;
-    const isAdmin = userRole === 'admin';
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[GET /profiles] Request by ${userRole} (isAdmin: ${isAdmin}). Total users: ${users.length}`);
+      console.log(`[GET /profiles] Request by ${userRole}. Total users: ${users.length}`);
     }
     
     const data = users.map(u => ({
@@ -45,8 +43,6 @@ profilesRouter.get('/', authRequired, adminOrSupervisorWithUsers, async (req: Re
       created_at: u.createdAt,
       is_active: u.isActive,
       allowed_modules: u.allowedModules || [],
-      // S'assurer que temp_password est présent dans l'objet si admin
-      temp_password: isAdmin ? (u.tempPassword || null) : undefined,
     }));
     
     res.json({ data });
@@ -88,15 +84,13 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
         ...(providedRole ? { role: providedRole } : {}),
         allowedModules: normalizedModules,
       },
-      select: { id: true, email: true, fullName: true, isActive: true, role: true, createdAt: true, allowedModules: true, tempPassword: true },
+      select: { id: true, email: true, fullName: true, isActive: true, role: true, createdAt: true, allowedModules: true },
     });
   } else {
-    // Create new user (optional provided password)
-    const plainPassword: string | undefined = (req.body?.password && String(req.body.password)) || undefined;
-    const passwordSource = plainPassword && plainPassword.length >= 6
-      ? plainPassword
-      : crypto.randomBytes(12).toString('hex');
-    const passwordHash = await bcrypt.hash(passwordSource, 12);
+    // Create new user - use reset token instead of temp password
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const passwordHash = await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 12);
 
     result = await prisma.user.create({
       data: {
@@ -106,14 +100,15 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
         role: providedRole ?? 'customer',
         passwordHash,
         allowedModules: normalizedModules,
-        tempPassword: passwordSource,
+        resetToken,
+        resetTokenExpiry,
       },
-      select: { id: true, email: true, fullName: true, isActive: true, role: true, createdAt: true, allowedModules: true, tempPassword: true },
+      select: { id: true, email: true, fullName: true, isActive: true, role: true, createdAt: true, allowedModules: true },
     });
 
     // Envoyer l'email si c'est un superviseur ou un admin
     if (result.role === 'supervisor' || result.role === 'admin') {
-      emailService.sendSupervisorWelcomeEmail(result.email, result.fullName || result.email, passwordSource);
+      emailService.sendSupervisorWelcomeEmail(result.email, result.fullName || result.email, resetToken);
     }
   }
 
@@ -126,7 +121,6 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
     role: result.role,
     created_at: result.createdAt,
     allowed_modules: result.allowedModules || [],
-    temp_password: result.tempPassword,
   }});
 });
 
@@ -157,8 +151,7 @@ profilesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Re
         isActive: true,
         role: true,
         createdAt: true,
-        allowedModules: true,
-        tempPassword: true
+        allowedModules: true
       }
     });
     invalidateAuthCache(id);
@@ -171,7 +164,6 @@ profilesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Re
       role: updated.role,
       created_at: updated.createdAt,
       allowed_modules: updated.allowedModules || [],
-      temp_password: updated.tempPassword,
     } });
   } catch (e: any) {
     res.status(400).json({ error: 'update_failed', details: e?.message });

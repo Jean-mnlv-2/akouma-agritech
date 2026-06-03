@@ -18,7 +18,17 @@ elearningStatsRouter.get('/', async (req: Request, res: Response) => {
 // Admin CRUD
 elearningStatsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
-    const created = await prisma.eLearningStat.create({ data: req.body });
+    const { label, value, icon } = req.body || {};
+    if (!label || !value) {
+      return res.status(400).json({ error: 'label and value are required' });
+    }
+    const created = await prisma.eLearningStat.create({
+      data: {
+        label: String(label),
+        value: String(value),
+        ...(icon ? { icon: String(icon) } : {}),
+      }
+    });
     res.json(created);
   } catch (e) {
     res.status(400).json({ error: 'failed_to_create' });
@@ -28,7 +38,12 @@ elearningStatsRouter.post('/', authRequired, adminOnly, async (req: Request, res
 elearningStatsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const updated = await prisma.eLearningStat.update({ where: { id }, data: req.body });
+    const { label, value, icon } = req.body || {};
+    const data: any = {};
+    if (label !== undefined) data.label = String(label);
+    if (value !== undefined) data.value = String(value);
+    if (icon !== undefined) data.icon = icon ? String(icon) : null;
+    const updated = await prisma.eLearningStat.update({ where: { id }, data });
     res.json(updated);
   } catch (e) {
     res.status(400).json({ error: 'failed_to_update' });

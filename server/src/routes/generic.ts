@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 export const genericRouter = Router();
 
 // Liste blanche des tables gérées par CRUD générique
-const allowedTables = new Set<string>([
+const publicTables = new Set<string>([
   'courses',
   'seeds',
   'news',
@@ -15,6 +15,19 @@ const allowedTables = new Set<string>([
   'legal_pages',
   'countries',
   'partnerships',
+  'events',
+  'careers',
+  'donation_impacts',
+  'success_stories',
+  'live_streams',
+  'elearning_stats',
+  'partners',
+  'course_preview_types',
+  'course_preview_items',
+  'page_header_images',
+]);
+
+const adminOnlyTables = new Set<string>([
   'donations',
   'contact_messages',
   'content_submissions',
@@ -23,10 +36,10 @@ const allowedTables = new Set<string>([
   'newsletter_subscriptions',
   'profiles',
   'user_roles',
-  'events',
-  'careers',
   'contact_settings',
 ]);
+
+const allowedTables = new Set([...publicTables, ...adminOnlyTables]);
 
 function ensureTable(table: string): string {
   if (!allowedTables.has(table)) {
@@ -127,49 +140,63 @@ function shouldManageUpdatedAt(table: string): boolean {
 }
 
 // LIST
-genericRouter.get('/:table', async (req: Request, res: Response) => {
+genericRouter.get('/:table', async (req: Request, res: Response, next) => {
   try {
     const table = ensureTable(req.params.table);
-    const { orderBy, orderDir } = parseOrder(req.query as Record<string, unknown>);
-    const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
-
-    const filters: Record<string, unknown> = { ...req.query };
-    delete filters.orderBy;
-    delete filters.orderDir;
-    delete filters.limit;
-    delete filters.offset;
-
-    let whereClause = '';
-    const values: unknown[] = [];
-    const filterKeys = Object.keys(filters).filter(k => isValidColumnName(k));
-    if (filterKeys.length > 0) {
-      const clauses = filterKeys.map((k, idx) => {
-        const mapped = mapColumnName(table, k);
-        values.push(filters[k]);
-        return `"${mapped}" = $${idx + 1}`;
+    if (adminOnlyTables.has(table)) {
+      // For admin-only tables, chain to authRequired + adminOnly
+      authRequired(req, res, () => {
+        adminOnly(req, res, async () => {
+          await handleGenericGet(req, res, table);
+        });
       });
-      whereClause = `WHERE ${clauses.join(' AND ')}`;
-    }
-
-    let orderClause = '';
-    if (orderBy) {
-      orderClause = `ORDER BY "${orderBy}" ${orderDir === 'asc' ? 'asc' : 'desc'}`;
     } else {
-      orderClause = `ORDER BY 1`;
+      // Public tables
+      await handleGenericGet(req, res, table);
     }
-
-    const limitClause = limit ? `LIMIT ${limit}` : 'LIMIT 1000';
-    const offsetClause = offset ? `OFFSET ${offset}` : '';
-
-    const sql = `SELECT * FROM "${table}" ${whereClause} ${orderClause} ${limitClause} ${offsetClause}`;
-    const rows = await prisma.$queryRawUnsafe(sql, ...values) as Array<Record<string, unknown>>;
-    const mappedRows = rows.map(row => unmapRow(table, row));
-    res.json({ data: mappedRows });
   } catch (e) {
     const error = e instanceof Error ? e.message : 'Bad request';
     res.status(400).json({ error });
   }
 });
+
+async function handleGenericGet(req: Request, res: Response, table: string) {
+  const { orderBy, orderDir } = parseOrder(req.query as Record<string, unknown>);
+  const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
+
+  const filters: Record<string, unknown> = { ...req.query };
+  delete filters.orderBy;
+  delete filters.orderDir;
+  delete filters.limit;
+  delete filters.offset;
+
+  let whereClause = '';
+  const values: unknown[] = [];
+  const filterKeys = Object.keys(filters).filter(k => isValidColumnName(k));
+  if (filterKeys.length > 0) {
+    const clauses = filterKeys.map((k, idx) => {
+      const mapped = mapColumnName(table, k);
+      values.push(filters[k]);
+      return `"${mapped}" = $${idx + 1}`;
+    });
+    whereClause = `WHERE ${clauses.join(' AND ')}`;
+  }
+
+  let orderClause = '';
+  if (orderBy) {
+    orderClause = `ORDER BY "${orderBy}" ${orderDir === 'asc' ? 'asc' : 'desc'}`;
+  } else {
+    orderClause = `ORDER BY 1`;
+  }
+
+  const limitClause = limit ? `LIMIT ${limit}` : 'LIMIT 1000';
+  const offsetClause = offset ? `OFFSET ${offset}` : '';
+
+  const sql = `SELECT * FROM "${table}" ${whereClause} ${orderClause} ${limitClause} ${offsetClause}`;
+  const rows = await prisma.$queryRawUnsafe(sql, ...values) as Array<Record<string, unknown>>;
+  const mappedRows = rows.map(row => unmapRow(table, row));
+  res.json({ data: mappedRows });
+}
 
 // CREATE
 genericRouter.post('/:table', authRequired, adminOnly, csrfRequired, async (req: Request, res: Response) => {
