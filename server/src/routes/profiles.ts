@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly, adminOrSupervisorWithUsers } from '../middleware/authRequired';
+import { authRequired, adminOnly, adminOrSupervisorWithUsers, invalidateAuthCache } from '../middleware/authRequired';
 import { emailService } from '../utils/email';
 
 const prisma = new PrismaClient();
@@ -161,6 +161,7 @@ profilesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Re
         tempPassword: true
       }
     });
+    invalidateAuthCache(id);
     res.json({ data: {
       id: updated.id,
       email: updated.email,
@@ -181,11 +182,13 @@ profilesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res:
   const id = String(req.params.id);
   try {
     await prisma.user.delete({ where: { id } });
+    invalidateAuthCache(id);
     res.json({ success: true });
   } catch (e: any) {
     // Foreign key constraint: fallback to soft delete (deactivate)
     try {
       await prisma.user.update({ where: { id }, data: { isActive: false } });
+      invalidateAuthCache(id);
       res.json({ success: true, softDeleted: true });
     } catch (e2: any) {
       res.status(400).json({ error: 'delete_failed', details: e2?.message });
