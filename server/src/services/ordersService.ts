@@ -133,7 +133,49 @@ export class OrdersService {
   }
 
   async createOrder(payload: CreateOrderPayload) {
-    const computedSubtotal = payload.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    // SÉCURITÉ: ne JAMAIS faire confiance aux prix envoyés par le client.
+    // On recharge chaque produit depuis la base et on recalcule tout côté serveur.
+    const trustedItems: NormalizedOrderItem[] = [];
+    for (const raw of payload.items) {
+      const qty = Math.max(0, Math.floor(Number(raw.quantity)));
+      if (!qty || !Number.isFinite(qty)) {
+        throw new Error('Quantité invalide');
+      }
+      const productId = Number(raw.productId);
+      if (!Number.isFinite(productId)) {
+        throw new Error('Produit invalide');
+      }
+      const type = String(raw.productType || 'shop_product');
+      let dbPrice: number | null = null;
+      let dbName = '';
+      let dbImage: string | null = null;
+      if (type === 'course') {
+        const c = await this.prisma.course.findUnique({ where: { id: productId } });
+        if (!c) throw new Error('Cours introuvable');
+        dbPrice = Number(c.price); dbName = c.title; dbImage = c.thumbnailUrl ?? null;
+      } else if (type === 'seed') {
+        const s = await this.prisma.seed.findUnique({ where: { id: productId } });
+        if (!s) throw new Error('Semence introuvable');
+        dbPrice = Number(s.price); dbName = s.name; dbImage = s.imageUrl ?? null;
+      } else {
+        const p = await this.prisma.shopProduct.findUnique({ where: { id: productId } });
+        if (!p || p.isActive === false) throw new Error('Produit indisponible');
+        dbPrice = Number(p.price); dbName = p.name; dbImage = p.imageUrl ?? null;
+      }
+      if (!Number.isFinite(dbPrice) || (dbPrice ?? 0) < 0) {
+        throw new Error('Prix produit invalide');
+      }
+      trustedItems.push({
+        productId,
+        productType: type,
+        name: dbName,
+        price: dbPrice as number,
+        quantity: qty,
+        imageUrl: dbImage,
+      });
+    }
+
+    const computedSubtotal = trustedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     if (computedSubtotal <= 0) {
       throw new Error('Le panier est vide.');
     }
@@ -165,9 +207,13 @@ export class OrdersService {
       }
     }
 
-    const shippingAmount = payload.shippingFee != null && Number.isFinite(payload.shippingFee)
-      ? Number(payload.shippingFee)
-      : this.calculateShipping(computedSubtotal, payload.deliveryMethod, deliveryPartnerRecord || undefined);
+    // SÉCURITÉ: les frais d'expédition sont toujours calculés côté serveur.
+    // La valeur éventuellement transmise par le client est ignorée.
+    const shippingAmount = this.calculateShipping(
+      computedSubtotal,
+      payload.deliveryMethod,
+      deliveryPartnerRecord || undefined,
+    );
 
     const order = await this.prisma.$transaction(async (tx: any) => {
       let promoRecord: { id: number; code: string; cashbackPercent: number; ownerEmail: string | null; ownerName: string | null } | null = null;
@@ -213,7 +259,7 @@ export class OrdersService {
           deliveryMethod: payload.deliveryMethod,
           deliveryPartnerId: deliveryPartnerNumericId,
           items: {
-            create: payload.items.map((item) => ({
+            create: trustedItems.map((item) => ({
               productId: item.productId,
               productType: item.productType,
               name: item.name,
