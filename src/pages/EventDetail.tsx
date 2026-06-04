@@ -79,6 +79,31 @@ const EventDetail = () => {
         title={event.title} 
         description={event.description?.substring(0, 160)} 
         image={event.imageUrl}
+        ogType="article"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Event",
+            name: event.title,
+            description: event.description?.replace(/<[^>]*>/g, '').slice(0, 500),
+            image: event.imageUrl,
+            startDate: event.date,
+            eventStatus: "https://schema.org/EventScheduled",
+            eventAttendanceMode: "https://schema.org/MixedEventAttendanceMode",
+            location: event.location ? { "@type": "Place", name: event.location } : undefined,
+            organizer: { "@type": "Organization", name: "KILIMO Agritech", url: window.location.origin },
+            url: window.location.href,
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
+              { "@type": "ListItem", position: 2, name: "Événements", item: window.location.origin + "/events" },
+              { "@type": "ListItem", position: 3, name: event.title, item: window.location.href },
+            ],
+          },
+        ]}
       />
       <Header />
 
