@@ -12,6 +12,8 @@ import ShopSection from "@/components/ShopSection";
 import StatsSection from "@/components/StatsSection";
 import { useI18n } from "@/i18n";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { Helmet } from "react-helmet-async";
+import heroImage from "@/assets/hero-agritech.jpg";
 
 const Index = () => {
   const { t } = useI18n();
@@ -26,6 +28,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
+      {/* LCP preload — image hero (haute priorité, fetchpriority=high) */}
+      <Helmet>
+        <link
+          rel="preload"
+          as="image"
+          href={heroImage}
+          // @ts-expect-error - fetchpriority is a valid HTML attribute
+          fetchpriority="high"
+        />
+      </Helmet>
       <TitleManager
         title="KILIMO Agritech - Agriculture Intelligente & Formations"
         description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées, outils agricoles et accompagnement expert pour les agriculteurs africains."
