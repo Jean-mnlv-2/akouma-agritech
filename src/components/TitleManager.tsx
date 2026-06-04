@@ -9,7 +9,7 @@ type TitleManagerProps = {
   canonical?: string;
   noIndex?: boolean;
   ogType?: OpenGraphType;
-  jsonLd?: Record<string, unknown>;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 };
 
 function upsertMeta(attrs: Record<string, string>, content: string | null) {
@@ -42,19 +42,24 @@ function toAbsoluteUrl(urlOrPath: string): string {
   return `${window.location.origin}${urlOrPath.startsWith('/') ? '' : '/'}${urlOrPath}`;
 }
 
-function upsertJsonLd(data: Record<string, unknown> | null) {
-  let el = document.getElementById('json-ld') as HTMLScriptElement | null;
-  if (!data) {
-    if (el) el.remove();
-    return;
-  }
-  if (!el) {
-    el = document.createElement('script');
-    el.id = 'json-ld';
+function upsertJsonLd(data: Record<string, unknown> | Record<string, unknown>[] | null) {
+  // Supprime tous les blocs JSON-LD existants gérés par TitleManager
+  document.head
+    .querySelectorAll('script[data-tm-jsonld="1"]')
+    .forEach((el) => el.remove());
+  // Compatibilité ascendante: ancien id="json-ld"
+  const legacy = document.getElementById('json-ld');
+  if (legacy) legacy.remove();
+  if (!data) return;
+  const items = Array.isArray(data) ? data : [data];
+  items.forEach((item, i) => {
+    const el = document.createElement('script');
     el.type = 'application/ld+json';
+    el.setAttribute('data-tm-jsonld', '1');
+    el.setAttribute('data-tm-jsonld-index', String(i));
+    el.textContent = JSON.stringify(item);
     document.head.appendChild(el);
-  }
-  el.textContent = JSON.stringify(data);
+  });
 }
 
 export function TitleManager({ 
