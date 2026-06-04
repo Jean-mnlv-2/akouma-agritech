@@ -439,7 +439,7 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
                 <Button type="button" variant="outline" onClick={() => thumbInputRef.current?.click()} disabled={uploadingImage}>{uploadingImage ? 'Upload...' : 'Remplacer l\'image'}</Button>
               </div>
               {uploadingImage && <div className="text-xs text-muted-foreground">Upload en cours...</div>}
-              {previewImageUrl && (<div className="mt-2"><img src={previewImageUrl} alt="Aperçu" className="w-32 h-32 object-cover rounded border" /></div>)}
+              {previewImageUrl && (<div className="mt-2"><img src={previewImageUrl} alt="Aperçu de la miniature du cours" className="w-32 h-32 object-cover rounded border" /></div>)}
             </div>
             <div className="space-y-2">
               <Label htmlFor="video_upload">Vidéo du cours</Label>

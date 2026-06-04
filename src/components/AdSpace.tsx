@@ -40,7 +40,7 @@ const AdSpace = ({
           {image ? (
             <img 
               src={image} 
-              alt="Publicité" 
+              alt={`Visuel sponsorisé : ${title}`}
               className="w-16 h-16 rounded-lg object-cover"
             />
           ) : (

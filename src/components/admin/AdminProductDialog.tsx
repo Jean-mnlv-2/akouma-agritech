@@ -315,7 +315,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
               <Button type="button" variant="outline" onClick={() => imageInputRef.current?.click()} disabled={uploading}>{uploading ? 'Upload...' : 'Remplacer l\'image'}</Button>
             </div>
             {uploading && <div className="text-xs text-muted-foreground">Upload en cours...</div>}
-            {previewUrl && (<div className="mt-2"><img src={previewUrl} alt="Aperçu" className="w-32 h-32 object-cover rounded border" /></div>)}
+            {previewUrl && (<div className="mt-2"><img src={previewUrl} alt="Aperçu de la photo produit" className="w-32 h-32 object-cover rounded border" /></div>)}
           </div>
 
           {/* Galerie d'images (multi) */}

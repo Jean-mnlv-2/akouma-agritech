@@ -28,7 +28,6 @@ import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
-import TitleManager from "@/components/TitleManager";
 import SEO, { schema } from "@/components/SEO";
 
 import { 

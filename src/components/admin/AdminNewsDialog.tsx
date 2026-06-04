@@ -251,7 +251,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
               <Button type="button" variant="outline" onClick={() => imageInputRef.current?.click()} disabled={uploading}>{uploading ? 'Upload...' : previewUrl ? "Remplacer l'image" : "Ajouter une image"}</Button>
             </div>
             {uploading && <div className="text-xs text-muted-foreground">Upload en cours...</div>}
-            {previewUrl && (<div className="mt-2"><img src={previewUrl} alt="Aperçu" className="w-32 h-32 object-cover rounded border" /></div>)}
+            {previewUrl && (<div className="mt-2"><img src={previewUrl} alt="Aperçu de l'image d'article" className="w-32 h-32 object-cover rounded border" /></div>)}
           </div>
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2">

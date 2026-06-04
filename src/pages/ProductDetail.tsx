@@ -222,29 +222,37 @@ const ProductDetail = () => {
           description={product.description.replace(/<[^>]*>/g, '')}
           image={product.image}
           ogType="product"
-          jsonLd={{
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": product.name,
-            "description": product.description.replace(/<[^>]*>/g, ''),
-            "image": product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`,
-            "brand": {
-              "@type": "Organization",
-              "name": "KILIMO"
+          jsonLd={[
+            {
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": product.name,
+              "description": product.description.replace(/<[^>]*>/g, ''),
+              "image": product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`,
+              "brand": { "@type": "Organization", "name": "KILIMO" },
+              "offers": {
+                "@type": "Offer",
+                "url": window.location.href,
+                "priceCurrency": "XOF",
+                "price": product.price,
+                "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+              },
+              "aggregateRating": product.rating > 0 ? {
+                "@type": "AggregateRating",
+                "ratingValue": product.rating,
+                "reviewCount": product.reviews
+              } : undefined
             },
-            "offers": {
-              "@type": "Offer",
-              "url": window.location.href,
-              "priceCurrency": "XOF",
-              "price": product.price,
-              "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
+                { "@type": "ListItem", position: 2, name: "Boutique", item: window.location.origin + "/shop" },
+                { "@type": "ListItem", position: 3, name: product.name, item: window.location.href },
+              ],
             },
-            "aggregateRating": product.rating > 0 ? {
-              "@type": "AggregateRating",
-              "ratingValue": product.rating,
-              "reviewCount": product.reviews
-            } : undefined
-          }}
+          ]}
         />
       )}
       <Header />
