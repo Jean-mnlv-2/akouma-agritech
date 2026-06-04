@@ -289,29 +289,38 @@ export default function SeedDetail() {
         description={product.description.replace(/<[^>]*>/g, '')}
         image={product.images[0]}
         ogType="product"
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "Product",
-          "name": product.name,
-          "description": product.description.replace(/<[^>]*>/g, ''),
-          "image": product.images[0].startsWith('http') ? product.images[0] : `${window.location.origin}${product.images[0]}`,
-          "brand": {
-            "@type": "Organization",
-            "name": "KILIMO"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "description": product.description.replace(/<[^>]*>/g, ''),
+            "image": product.images[0].startsWith('http') ? product.images[0] : `${window.location.origin}${product.images[0]}`,
+            "brand": { "@type": "Organization", "name": "KILIMO" },
+            "category": "Semences agricoles",
+            "offers": {
+              "@type": "Offer",
+              "url": window.location.href,
+              "priceCurrency": "XOF",
+              "price": product.price,
+              "availability": product.availability === "En stock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            },
+            "aggregateRating": product.rating > 0 ? {
+              "@type": "AggregateRating",
+              "ratingValue": product.rating,
+              "reviewCount": product.reviews
+            } : undefined
           },
-          "offers": {
-            "@type": "Offer",
-            "url": window.location.href,
-            "priceCurrency": "XOF",
-            "price": product.price,
-            "availability": product.availability === "En stock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
+              { "@type": "ListItem", position: 2, name: "Semences", item: window.location.origin + "/seeds" },
+              { "@type": "ListItem", position: 3, name: product.name, item: window.location.href },
+            ],
           },
-          "aggregateRating": product.rating > 0 ? {
-            "@type": "AggregateRating",
-            "ratingValue": product.rating,
-            "reviewCount": product.reviews
-          } : undefined
-        }}
+        ]}
       />
       <Header />
       
