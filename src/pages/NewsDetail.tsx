@@ -197,27 +197,33 @@ const NewsDetail = () => {
           description={article.excerpt}
           image={article.image}
           ogType="article"
-          jsonLd={{
-            "@context": "https://schema.org",
-            "@type": "NewsArticle",
-            "headline": article.title,
-            "description": article.excerpt,
-            "image": article.image.startsWith('http') ? article.image : `${window.location.origin}${article.image}`,
-            "author": {
-              "@type": "Person",
-              "name": article.author
+          jsonLd={[
+            {
+              "@context": "https://schema.org",
+              "@type": "NewsArticle",
+              "headline": article.title,
+              "description": article.excerpt,
+              "image": article.image.startsWith('http') ? article.image : `${window.location.origin}${article.image}`,
+              "author": { "@type": "Person", "name": article.author },
+              "publisher": {
+                "@type": "Organization",
+                "name": "KILIMO Agritech",
+                "logo": { "@type": "ImageObject", "url": `${window.location.origin}/kilimo-logo.png` }
+              },
+              "datePublished": article.date,
+              "dateModified": article.date,
+              "mainEntityOfPage": window.location.href,
             },
-            "publisher": {
-              "@type": "Organization",
-              "name": "KILIMO Agritech",
-              "logo": {
-                "@type": "ImageObject",
-                "url": `${window.location.origin}/kilimo-logo.png`
-              }
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
+                { "@type": "ListItem", position: 2, name: "Actualités", item: window.location.origin + "/news" },
+                { "@type": "ListItem", position: 3, name: article.title, item: window.location.href },
+              ],
             },
-            "datePublished": article.date,
-            "dateModified": article.date
-          }}
+          ]}
         />
       )}
       <Header />
