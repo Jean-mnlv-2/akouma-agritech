@@ -625,30 +625,41 @@ const CourseDetail = () => {
 
                   <div className="space-y-3">
                     {enrolled ? (
-                      <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary/10 text-primary hover:bg-primary/20 border-none transition-all" disabled>
-                        <CheckCircle className="w-5 h-5 mr-3" />
-                        {t("elearning.enrolled") || "Inscrit"}
-                      </Button>
+                      <>
+                        <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary/10 text-primary hover:bg-primary/20 border-none transition-all" disabled>
+                          <CheckCircle className="w-5 h-5 mr-3" />
+                          {t("elearning.enrolled") || "Inscrit"}
+                        </Button>
+                        <Button
+                          className="w-full h-12 rounded-xl text-base font-semibold"
+                          variant="outline"
+                          onClick={() => navigate(`/elearning/${slug}/learn`)}
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          Continuer la formation
+                        </Button>
+                      </>
                     ) : (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all bg-primary hover:bg-primary/90 text-white border-none group/btn">
-                            {t("elearning.enroll") || "S'inscrire maintenant"}
-                            <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md rounded-2xl border-2 border-primary/10 overflow-hidden p-0">
-                          <div className="bg-primary/5 p-6 border-b-2 border-primary/10">
-                            <DialogTitle className="text-2xl font-bold">{t("elearning.register.title") || "Inscription au cours"}</DialogTitle>
-                            <DialogDescription className="text-muted-foreground mt-2 font-medium">
-                              {t("elearning.register.description") || "Veuillez remplir le formulaire pour commencer votre apprentissage."}
-                            </DialogDescription>
-                          </div>
-                          <div className="p-6">
-                            <EnrollmentForm onSubmit={handleEnrollment} course={course} t={t} currentUser={currentUser} />
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button
+                        onClick={handleEnrollment}
+                        disabled={enrolling}
+                        className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all bg-primary hover:bg-primary/90 text-white border-none"
+                      >
+                        {enrolling ? (
+                          <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Traitement…</>
+                        ) : !currentUser ? (
+                          <>Connexion pour s'inscrire</>
+                        ) : course.price > 0 ? (
+                          <>Acheter et s'inscrire — {formatPrice(course.price)}</>
+                        ) : (
+                          <>S'inscrire en 1 clic — Gratuit</>
+                        )}
+                      </Button>
+                    )}
+                    {currentUser && (
+                      <p className="text-center text-xs text-muted-foreground">
+                        Connecté en tant que <strong>{currentUser.name || currentUser.email}</strong> — aucune autre information requise.
+                      </p>
                     )}
                     <p className="text-center text-xs text-muted-foreground font-medium flex items-center justify-center gap-2">
                       <Award className="w-3 h-3" />
