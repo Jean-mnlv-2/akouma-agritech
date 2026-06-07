@@ -720,6 +720,43 @@ const CourseDetail = () => {
           </div>
         </div>
 
+        {/* Formations similaires */}
+        {similarCourses.length > 0 && (
+          <section className="mt-16" aria-label="Formations similaires">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Formations similaires
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {similarCourses.map((c: { id?: number; slug?: string; title?: string; description?: string; category?: string; level?: string; duration?: number; price?: number; thumbnailUrl?: string }) => (
+                <Link
+                  key={c.id}
+                  to={`/elearning/${c.slug}`}
+                  className="group block rounded-2xl border-2 border-border overflow-hidden bg-card hover:shadow-xl transition-all hover:-translate-y-1"
+                >
+                  <div className="aspect-video bg-muted overflow-hidden">
+                    <img
+                      src={c.thumbnailUrl || '/kilimo-logo.png'}
+                      alt={`Aperçu de la formation ${c.title}`}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="p-5 space-y-2">
+                    <Badge variant="outline" className="text-xs">{c.category}</Badge>
+                    <h3 className="font-bold text-base group-hover:text-primary transition-colors line-clamp-2">{c.title}</h3>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t border-border">
+                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{c.duration || '—'} min</span>
+                      <span className="font-bold text-primary">
+                        {Number(c.price) > 0 ? formatPrice(Number(c.price)) : 'Gratuit'}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Comments Section */}
         {course && (
           <div className="mt-12">
