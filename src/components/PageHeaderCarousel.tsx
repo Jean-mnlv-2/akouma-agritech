@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 interface Props {
   pageKey: string;
   fallbackImage: string;
+  fallbackImageAvif?: string;
+  fallbackImageWebp?: string;
   fallbackAlt?: string;
   className?: string;
   intervalMs?: number;
@@ -27,6 +29,8 @@ interface Props {
 export default function PageHeaderCarousel({
   pageKey,
   fallbackImage,
+  fallbackImageAvif,
+  fallbackImageWebp,
   fallbackAlt = '',
   className,
   intervalMs = 6000,
@@ -60,20 +64,33 @@ export default function PageHeaderCarousel({
 
   return (
     <div className={cn('absolute inset-0 overflow-hidden', className)} aria-hidden={children ? undefined : true}>
-      {slides.map((s, i) => (
-        <img
-          key={s.id ?? i}
-          src={s.imageUrl}
-          alt={s.altText || fallbackAlt}
-          loading={i === 0 ? 'eager' : 'lazy'}
-          fetchPriority={i === 0 ? 'high' : 'auto'}
-          decoding="async"
-          className={cn(
-            'absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out scale-105',
-            i === index ? 'opacity-100' : 'opacity-0'
-          )}
-        />
-      ))}
+      {slides.map((s, i) => {
+        const isFirst = i === 0;
+        const useAdaptive = isFirst && source.length === 0 && (fallbackImageAvif || fallbackImageWebp);
+        const imgEl = (
+          <img
+            src={s.imageUrl}
+            alt={s.altText || fallbackAlt}
+            loading={isFirst ? 'eager' : 'lazy'}
+            fetchPriority={isFirst ? 'high' : 'auto'}
+            decoding="async"
+            className={cn(
+              'absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out scale-105',
+              i === index ? 'opacity-100' : 'opacity-0'
+            )}
+          />
+        );
+        if (useAdaptive) {
+          return (
+            <picture key={s.id ?? i}>
+              {fallbackImageAvif && <source type="image/avif" srcSet={fallbackImageAvif} />}
+              {fallbackImageWebp && <source type="image/webp" srcSet={fallbackImageWebp} />}
+              {imgEl}
+            </picture>
+          );
+        }
+        return <span key={s.id ?? i}>{imgEl}</span>;
+      })}
       <div className={overlayClassName} />
       {showOverlayContent && current && (current.title || current.subtitle || current.ctaLabel) && (
         <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
