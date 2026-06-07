@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
   ArrowLeft, 
   Star, 
@@ -14,10 +14,16 @@ import {
   BookOpen, 
   CheckCircle, 
   User, 
-  ArrowRight, 
   Award, 
   Download, 
-  GraduationCap 
+  GraduationCap,
+  Video,
+  FileText,
+  HelpCircle,
+  Lock,
+  Loader2,
+  Target,
+  UserCheck
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -29,15 +35,6 @@ import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 import SEO, { schema } from "@/components/SEO";
-
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 
 interface Course {
   id: string;
@@ -55,16 +52,23 @@ interface Course {
   thumbnail: string;
   isLive?: boolean;
   isCopyProtected: boolean;
-  modules: CourseModule[];
   benefits: string[];
   requirements: string[];
+  targetAudience: string[];
+  isCertifying: boolean;
 }
 
-interface CourseModule {
-  id: string;
+interface BackendModule {
+  id: number;
+  courseId: number;
   title: string;
-  duration: string;
-  lessons: string[];
+  type: string;
+  duration?: string | null;
+  content?: string | null;
+  videoUrl?: string | null;
+  pdfUrl?: string | null;
+  order: number;
+  quizQuestions?: unknown;
 }
 
 interface User {
@@ -80,15 +84,6 @@ interface Enrollment {
   enrolledAt: string;
 }
 
-interface EnrollmentFormData {
-  courseId?: string;
-  professionalActivity?: string;
-  organization?: string;
-  sector?: string;
-  experienceLevel?: string;
-  expectations?: string;
-}
-
 const CourseDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -96,6 +91,7 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { toast } = useToast();
 
@@ -156,14 +152,10 @@ const CourseDetail = () => {
         thumbnail: data.thumbnailUrl || data.imageUrl || '/kilimo-logo.png',
         isLive: !!data.isLive,
         isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
-        modules: Array.isArray(data.modules) ? data.modules.map((m: { id?: number | string; title?: string; duration?: string; lessons?: string[] }, idx: number) => ({
-          id: String(m.id ?? idx + 1),
-          title: m.title ?? `Module ${idx + 1}`,
-          duration: m.duration ?? '—',
-          lessons: Array.isArray(m.lessons) ? m.lessons : [],
-        })) : [],
         benefits: Array.isArray(data.benefits) ? data.benefits : [],
         requirements: Array.isArray(data.requirements) ? data.requirements : [],
+        targetAudience: Array.isArray(data.targetAudience) ? data.targetAudience : [],
+        isCertifying: !!(data.sertifierDesignId || data.isCertifying),
       };
       setCourse(normalized);
     } catch (err) {
@@ -193,7 +185,31 @@ const CourseDetail = () => {
     checkPayment();
   }, [fetchCourse, checkEnrollment, toast]);
 
-  const handleEnrollment = async (formData: EnrollmentFormData) => {
+  // Modules réels depuis le backend
+  const { data: modules = [], isLoading: modulesLoading } = useQuery<BackendModule[]>({
+    queryKey: ['course-modules', course?.id],
+    enabled: !!course?.id,
+    queryFn: async () => {
+      const res = await api.request('GET', `/api/course_modules/course/${course!.id}`);
+      return Array.isArray(res?.data) ? res.data : [];
+    },
+    staleTime: 60_000,
+  });
+
+  // Formations similaires (même catégorie)
+  const { data: similarCourses = [] } = useQuery({
+    queryKey: ['similar-courses', course?.category, course?.id],
+    enabled: !!course?.id && !!course?.category,
+    queryFn: async () => {
+      const { data } = await api.from('courses').select('*');
+      return (data || [])
+        .filter((c: { id?: number; category?: string }) => c.category === course!.category && Number(c.id) !== Number(course!.id))
+        .slice(0, 3);
+    },
+    staleTime: 60_000,
+  });
+
+  const handleEnrollment = async () => {
     if (!currentUser) {
       toast({
         title: "Connexion requise",
@@ -205,6 +221,7 @@ const CourseDetail = () => {
     }
 
     try {
+      setEnrolling(true);
       if (course?.price && course.price > 0) {
         const orderRes = await api.request('POST', '/api/orders', {
           body: {
@@ -234,11 +251,10 @@ const CourseDetail = () => {
           throw new Error("Impossible de récupérer l'URL de paiement");
         }
       } else {
-        // Cours gratuit : inscription directe
+        // Cours gratuit : inscription 1-clic
         await api.request('POST', '/api/elearning_enrollments', {
           body: {
             courseId: Number(course?.id),
-            ...formData
           }
         });
         setEnrolled(true);
@@ -259,6 +275,8 @@ const CourseDetail = () => {
         description: errorMessage, 
         variant: "destructive" 
       });
+    } finally {
+      setEnrolling(false);
     }
   };
 
@@ -387,46 +405,142 @@ const CourseDetail = () => {
               <div className="text-muted-foreground leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: course.longDescription }} />
             </div>
 
-            {/* Course modules - Enhanced */}
-            {course.modules.length > 0 && (
-              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl md:text-3xl font-bold mb-8 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            {/* Programme — Modules en accordéon (données backend) */}
+            <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
+              <CardContent className="p-6 md:p-8">
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                  <h2 className="text-2xl md:text-3xl font-bold flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     <BookOpen className="w-6 h-6 mr-3 text-primary" />
-                    Contenu du cours
-                  </h3>
-                  <div className="space-y-4">
-                    {course.modules.map((module, index) => {
-                      const delay = index * 100;
+                    Programme du cours
+                  </h2>
+                  {modules.length > 0 && (
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-semibold">
+                      {modules.length} module{modules.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
+
+                {modulesLoading ? (
+                  <div className="flex items-center justify-center py-12 text-muted-foreground">
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Chargement du programme…
+                  </div>
+                ) : modules.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>Le programme détaillé sera bientôt disponible.</p>
+                  </div>
+                ) : (
+                  <Accordion type="multiple" className="space-y-3">
+                    {modules.map((m, idx) => {
+                      const ModuleIcon = m.type === 'video' ? Video : m.type === 'pdf' ? FileText : m.type === 'quiz' ? HelpCircle : BookOpen;
+                      const hasResource = !!(m.videoUrl || m.pdfUrl || m.content);
                       return (
-                        <div 
-                          key={module.id} 
-                          className="border-2 border-border rounded-xl p-6 bg-gradient-to-br from-primary/5 via-background to-accent/5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
-                          style={{ transitionDelay: `${delay}ms` }}
+                        <AccordionItem
+                          key={m.id}
+                          value={`module-${m.id}`}
+                          className="border-2 border-border rounded-xl px-4 bg-gradient-to-br from-primary/5 via-background to-accent/5"
                         >
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
-                              Module {index + 1}: {module.title}
-                            </h4>
-                            <span className="text-sm text-muted-foreground font-medium bg-card/50 px-3 py-1 rounded-lg">
-                              {module.duration}
-                            </span>
-                          </div>
-                          <ul className="space-y-2">
-                            {module.lessons.map((lesson, lessonIndex) => (
-                              <li 
-                                key={`${module.id}-lesson-${lessonIndex}-${lesson.slice(0, 20)}`} 
-                                className="text-sm text-muted-foreground flex items-center group-hover:text-foreground transition-colors"
-                              >
-                                <Play className="w-4 h-4 mr-3 text-primary flex-shrink-0" />
-                                {lesson}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-4 flex-1 text-left">
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <ModuleIcon className="w-5 h-5 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                  Module {idx + 1}
+                                </div>
+                                <div className="font-bold text-base md:text-lg truncate">{m.title}</div>
+                              </div>
+                              {m.duration && (
+                                <span className="hidden sm:inline-flex items-center text-xs text-muted-foreground font-medium bg-card/70 px-2.5 py-1 rounded-lg">
+                                  <Clock className="w-3 h-3 mr-1 text-primary" />
+                                  {m.duration}
+                                </span>
+                              )}
+                              {!enrolled && course.price > 0 && (
+                                <Lock className="w-4 h-4 text-muted-foreground shrink-0" aria-label="Verrouillé" />
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <div className="pl-14 space-y-3 text-sm">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <Badge variant="secondary" className="capitalize">{m.type}</Badge>
+                                {m.duration && (
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Clock className="w-3 h-3" /> {m.duration}
+                                  </span>
+                                )}
+                                {Array.isArray(m.quizQuestions) && m.quizQuestions.length > 0 && (
+                                  <Badge variant="outline" className="border-yellow-400/50 text-yellow-700 dark:text-yellow-400">
+                                    <HelpCircle className="w-3 h-3 mr-1" /> Quiz inclus
+                                  </Badge>
+                                )}
+                              </div>
+                              {m.content && (
+                                <p className="text-muted-foreground leading-relaxed line-clamp-3">{m.content}</p>
+                              )}
+                              {hasResource && (
+                                <div className="flex gap-2 flex-wrap">
+                                  {m.videoUrl && enrolled && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <a href={m.videoUrl} target="_blank" rel="noreferrer"><Video className="w-3.5 h-3.5 mr-1.5" />Voir la vidéo</a>
+                                    </Button>
+                                  )}
+                                  {m.pdfUrl && enrolled && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <a href={m.pdfUrl} target="_blank" rel="noreferrer"><Download className="w-3.5 h-3.5 mr-1.5" />Télécharger PDF</a>
+                                    </Button>
+                                  )}
+                                  {!enrolled && course.price > 0 && (
+                                    <p className="text-xs text-muted-foreground italic flex items-center gap-1">
+                                      <Lock className="w-3 h-3" /> Inscrivez-vous pour accéder aux ressources
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
                       );
                     })}
-                  </div>
+                  </Accordion>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* À qui s'adresse cette formation */}
+            {course.targetAudience.length > 0 && (
+              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
+                <CardContent className="p-8">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-6 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    <UserCheck className="w-6 h-6 mr-3 text-primary" />
+                    À qui s'adresse cette formation
+                  </h2>
+                  <ul className="space-y-3">
+                    {course.targetAudience.map((a, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm font-medium">
+                        <Target className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                        <span>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Certification */}
+            {course.isCertifying && (
+              <Card className="bg-gradient-to-br from-yellow-50 via-background to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border-2 border-yellow-300/50">
+                <CardContent className="p-8">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-3">
+                    <Award className="w-7 h-7 text-yellow-600" />
+                    Certification incluse
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    À la fin de cette formation, vous recevrez un <strong>certificat officiel KILIMO</strong> attestant de vos compétences, vérifiable en ligne via notre partenaire Sertifier.
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -511,30 +625,41 @@ const CourseDetail = () => {
 
                   <div className="space-y-3">
                     {enrolled ? (
-                      <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary/10 text-primary hover:bg-primary/20 border-none transition-all" disabled>
-                        <CheckCircle className="w-5 h-5 mr-3" />
-                        {t("elearning.enrolled") || "Inscrit"}
-                      </Button>
+                      <>
+                        <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary/10 text-primary hover:bg-primary/20 border-none transition-all" disabled>
+                          <CheckCircle className="w-5 h-5 mr-3" />
+                          {t("elearning.enrolled") || "Inscrit"}
+                        </Button>
+                        <Button
+                          className="w-full h-12 rounded-xl text-base font-semibold"
+                          variant="outline"
+                          onClick={() => navigate(`/elearning/${slug}/learn`)}
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          Continuer la formation
+                        </Button>
+                      </>
                     ) : (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all bg-primary hover:bg-primary/90 text-white border-none group/btn">
-                            {t("elearning.enroll") || "S'inscrire maintenant"}
-                            <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md rounded-2xl border-2 border-primary/10 overflow-hidden p-0">
-                          <div className="bg-primary/5 p-6 border-b-2 border-primary/10">
-                            <DialogTitle className="text-2xl font-bold">{t("elearning.register.title") || "Inscription au cours"}</DialogTitle>
-                            <DialogDescription className="text-muted-foreground mt-2 font-medium">
-                              {t("elearning.register.description") || "Veuillez remplir le formulaire pour commencer votre apprentissage."}
-                            </DialogDescription>
-                          </div>
-                          <div className="p-6">
-                            <EnrollmentForm onSubmit={handleEnrollment} course={course} t={t} currentUser={currentUser} />
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button
+                        onClick={handleEnrollment}
+                        disabled={enrolling}
+                        className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all bg-primary hover:bg-primary/90 text-white border-none"
+                      >
+                        {enrolling ? (
+                          <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Traitement…</>
+                        ) : !currentUser ? (
+                          <>Connexion pour s'inscrire</>
+                        ) : course.price > 0 ? (
+                          <>Acheter et s'inscrire — {formatPrice(course.price)}</>
+                        ) : (
+                          <>S'inscrire en 1 clic — Gratuit</>
+                        )}
+                      </Button>
+                    )}
+                    {currentUser && (
+                      <p className="text-center text-xs text-muted-foreground">
+                        Connecté en tant que <strong>{currentUser.name || currentUser.email}</strong> — aucune autre information requise.
+                      </p>
                     )}
                     <p className="text-center text-xs text-muted-foreground font-medium flex items-center justify-center gap-2">
                       <Award className="w-3 h-3" />
@@ -595,6 +720,43 @@ const CourseDetail = () => {
           </div>
         </div>
 
+        {/* Formations similaires */}
+        {similarCourses.length > 0 && (
+          <section className="mt-16" aria-label="Formations similaires">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Formations similaires
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {similarCourses.map((c: { id?: number; slug?: string; title?: string; description?: string; category?: string; level?: string; duration?: number; price?: number; thumbnailUrl?: string }) => (
+                <Link
+                  key={c.id}
+                  to={`/elearning/${c.slug}`}
+                  className="group block rounded-2xl border-2 border-border overflow-hidden bg-card hover:shadow-xl transition-all hover:-translate-y-1"
+                >
+                  <div className="aspect-video bg-muted overflow-hidden">
+                    <img
+                      src={c.thumbnailUrl || '/kilimo-logo.png'}
+                      alt={`Aperçu de la formation ${c.title}`}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="p-5 space-y-2">
+                    <Badge variant="outline" className="text-xs">{c.category}</Badge>
+                    <h3 className="font-bold text-base group-hover:text-primary transition-colors line-clamp-2">{c.title}</h3>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t border-border">
+                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{c.duration || '—'} min</span>
+                      <span className="font-bold text-primary">
+                        {Number(c.price) > 0 ? formatPrice(Number(c.price)) : 'Gratuit'}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Comments Section */}
         {course && (
           <div className="mt-12">
@@ -610,93 +772,5 @@ const CourseDetail = () => {
   );
 };
 
-// Enrollment form component
-const EnrollmentForm = ({ onSubmit, course, t, currentUser }: { onSubmit: (data: EnrollmentFormData) => void; course: Course; t: (key: string) => string; currentUser: User | null }) => {
-  const [formData, setFormData] = useState<EnrollmentFormData>({
-    professionalActivity: "",
-    organization: "",
-    sector: "",
-    experienceLevel: "",
-    expectations: ""
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({ ...formData, courseId: course.id });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-      {currentUser && (
-        <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-2">
-          <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Compte connecté</p>
-          <p className="text-sm font-medium text-foreground">{currentUser.name || currentUser.email}</p>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.experience_level") || "Niveau d'expérience"}</label>
-        <Select 
-          value={formData.experienceLevel} 
-          onValueChange={(val) => setFormData({ ...formData, experienceLevel: val })}
-        >
-          <SelectTrigger className="h-11 rounded-xl border-2 focus:border-primary bg-background">
-            <SelectValue placeholder="Choisir..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="beginner">{t("elearning.register.experience_level_beginner") || "Débutant"}</SelectItem>
-            <SelectItem value="intermediate">{t("elearning.register.experience_level_intermediate") || "Intermédiaire"}</SelectItem>
-            <SelectItem value="expert">{t("elearning.register.experience_level_expert") || "Expert"}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.professional_activity") || "Activité professionnelle"}</label>
-        <Input 
-          placeholder={t("elearning.register.professional_activity_placeholder") || "Votre métier"} 
-          value={formData.professionalActivity} 
-          onChange={(e) => setFormData({ ...formData, professionalActivity: e.target.value })} 
-          className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.organization") || "Organisation"}</label>
-          <Input 
-            placeholder={t("elearning.register.organization_placeholder") || "Entreprise / Coopérative"} 
-            value={formData.organization} 
-            onChange={(e) => setFormData({ ...formData, organization: e.target.value })} 
-            className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.sector") || "Secteur d'activité"}</label>
-          <Input 
-            placeholder={t("elearning.register.sector_placeholder") || "Ex: Maraîchage"} 
-            value={formData.sector} 
-            onChange={(e) => setFormData({ ...formData, sector: e.target.value })} 
-            className="h-11 rounded-xl border-2 focus:border-primary transition-all bg-background"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-foreground/80 ml-1">{t("elearning.register.expectations") || "Attentes particulières"}</label>
-        <Textarea 
-          placeholder={t("elearning.register.expectations_placeholder") || "Que souhaitez-vous apprendre ?"} 
-          value={formData.expectations} 
-          onChange={(e) => setFormData({ ...formData, expectations: e.target.value })} 
-          className="rounded-xl border-2 focus:border-primary transition-all bg-background resize-none h-20" 
-        />
-      </div>
-
-      <Button type="submit" className="w-full h-12 rounded-xl text-md font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white mt-2">
-        {t("elearning.register.submit") || "Confirmer l'inscription"}
-      </Button>
-    </form>
-  );
-};
 
 export default CourseDetail;

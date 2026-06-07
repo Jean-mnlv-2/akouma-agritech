@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, BookOpen, Video, Award, Users, Clock, UserPlus, PlayCircle, Download, Eye, GraduationCap, CheckCircle, Radio, Languages, RotateCcw, Share2 } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LiveStream from "@/components/LiveStream";
 import Header from "@/components/Header";
@@ -113,6 +114,7 @@ const ELearning = () => {
   const [showEnrollPopup, setShowEnrollPopup] = useState(false);
   const [languageFilter, setLanguageFilter] = useState<string>(() => searchParams.get('lang') || 'Toutes langues');
   const [showOnlyPreview, setShowOnlyPreview] = useState<boolean>(() => searchParams.get('preview') === '1');
+  const [sortBy, setSortBy] = useState<string>(() => searchParams.get('sort') || 'recent');
   const [currentPage, setCurrentPage] = useState<number>(() => Math.max(1, Number(searchParams.get('page')) || 1));
   const PAGE_SIZE = 9;
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
@@ -213,10 +215,23 @@ const ELearning = () => {
     return matchesSearch && matchesCategory && matchesLanguage && matchesPreview;
   });
 
+  // Tri
+  const sortedCourses = [...filteredCourses].sort((a, b) => {
+    switch (sortBy) {
+      case 'popular': return (b.students || 0) - (a.students || 0);
+      case 'rating': return (b.rating || 0) - (a.rating || 0);
+      case 'price_asc': return (Number(a.price) || 0) - (Number(b.price) || 0);
+      case 'price_desc': return (Number(b.price) || 0) - (Number(a.price) || 0);
+      case 'title': return a.title.localeCompare(b.title);
+      case 'recent':
+      default: return 0; // déjà trié par created_at desc côté API
+    }
+  });
+
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview]);
+  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview, sortBy]);
 
   // Sync filters to URL (shareable state)
   useEffect(() => {
@@ -227,16 +242,17 @@ const ELearning = () => {
     setOrDelete('q', searchQuery, '');
     setOrDelete('cat', selectedCategory, 'Tous');
     setOrDelete('lang', languageFilter, 'Toutes langues');
+    setOrDelete('sort', sortBy, 'recent');
     if (showOnlyPreview) next.set('preview', '1'); else next.delete('preview');
     if (currentPage > 1) next.set('page', String(currentPage)); else next.delete('page');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview, currentPage]);
+  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview, sortBy, currentPage]);
 
   const previewCount = courses.filter(c => c.isPreviewAvailable).length;
-  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(sortedCourses.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const paginatedCourses = filteredCourses.slice(pageStart, pageStart + PAGE_SIZE);
+  const paginatedCourses = sortedCourses.slice(pageStart, pageStart + PAGE_SIZE);
 
   const { data: fetchedPreviewItems = [] } = useQuery({
     queryKey: ['course-preview-items'],
@@ -499,12 +515,14 @@ const ELearning = () => {
               !!searchQuery ||
               (selectedCategory && selectedCategory !== t("elearning.categories.all") && selectedCategory !== "Tous") ||
               languageFilter !== 'Toutes langues' ||
-              showOnlyPreview;
+              showOnlyPreview ||
+              sortBy !== 'recent';
             const resetFilters = () => {
               setSearchQuery('');
               setSelectedCategory(t("elearning.categories.all") || 'Tous');
               setLanguageFilter('Toutes langues');
               setShowOnlyPreview(false);
+              setSortBy('recent');
             };
             return (
             <div
@@ -540,6 +558,26 @@ const ELearning = () => {
                       {availableLanguages.map((lang) => (
                         <SelectItem key={lang} value={lang} className="font-medium">{lang}</SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger
+                      aria-label="Trier les cours"
+                      className="w-full sm:w-[190px] h-12 sm:h-14 border-2 rounded-2xl bg-background/50 font-semibold"
+                    >
+                      <div className="flex items-center">
+                        <ArrowUpDown className="w-5 h-5 mr-2 text-primary" aria-hidden="true" />
+                        <SelectValue placeholder="Trier" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-2">
+                      <SelectItem value="recent" className="font-medium">Plus récents</SelectItem>
+                      <SelectItem value="popular" className="font-medium">Plus populaires</SelectItem>
+                      <SelectItem value="rating" className="font-medium">Mieux notés</SelectItem>
+                      <SelectItem value="price_asc" className="font-medium">Prix croissant</SelectItem>
+                      <SelectItem value="price_desc" className="font-medium">Prix décroissant</SelectItem>
+                      <SelectItem value="title" className="font-medium">Titre (A-Z)</SelectItem>
                     </SelectContent>
                   </Select>
 

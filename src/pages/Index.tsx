@@ -13,7 +13,7 @@ import StatsSection from "@/components/StatsSection";
 import { useI18n } from "@/i18n";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { Helmet } from "react-helmet-async";
-import heroImage from "@/assets/hero-agritech.jpg";
+import heroImageAvif from "@/assets/hero-agritech.jpg?format=avif&quality=70";
 
 const Index = () => {
   const { t } = useI18n();
@@ -33,7 +33,8 @@ const Index = () => {
         <link
           rel="preload"
           as="image"
-          href={heroImage}
+          href={heroImageAvif}
+          type="image/avif"
           // @ts-expect-error - fetchpriority is a valid HTML attribute
           fetchpriority="high"
         />

@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sprout, BookOpen, ShoppingBag, Leaf } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-agritech.jpg";
+import heroImageAvif from "@/assets/hero-agritech.jpg?format=avif&quality=70";
+import heroImageWebp from "@/assets/hero-agritech.jpg?format=webp&quality=75";
 import { useI18n } from "@/i18n";
 import { useEffect, useState } from "react";
 import PageHeaderCarousel from "@/components/PageHeaderCarousel";
@@ -21,6 +23,8 @@ const Hero = () => {
       <PageHeaderCarousel
         pageKey="home"
         fallbackImage={heroImage}
+        fallbackImageAvif={heroImageAvif}
+        fallbackImageWebp={heroImageWebp}
         fallbackAlt="Hero KILIMO"
         overlayClassName="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80"
       />
