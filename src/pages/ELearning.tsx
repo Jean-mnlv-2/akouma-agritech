@@ -247,7 +247,7 @@ const ELearning = () => {
     if (currentPage > 1) next.set('page', String(currentPage)); else next.delete('page');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview, currentPage]);
+  }, [searchQuery, selectedCategory, languageFilter, showOnlyPreview, sortBy, currentPage]);
 
   const previewCount = courses.filter(c => c.isPreviewAvailable).length;
   const totalPages = Math.max(1, Math.ceil(sortedCourses.length / PAGE_SIZE));
