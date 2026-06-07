@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
   ArrowLeft, 
   Star, 
@@ -14,10 +14,16 @@ import {
   BookOpen, 
   CheckCircle, 
   User, 
-  ArrowRight, 
   Award, 
   Download, 
-  GraduationCap 
+  GraduationCap,
+  Video,
+  FileText,
+  HelpCircle,
+  Lock,
+  Loader2,
+  Target,
+  UserCheck
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -29,15 +35,6 @@ import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 import SEO, { schema } from "@/components/SEO";
-
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 
 interface Course {
   id: string;
@@ -55,16 +52,23 @@ interface Course {
   thumbnail: string;
   isLive?: boolean;
   isCopyProtected: boolean;
-  modules: CourseModule[];
   benefits: string[];
   requirements: string[];
+  targetAudience: string[];
+  isCertifying: boolean;
 }
 
-interface CourseModule {
-  id: string;
+interface BackendModule {
+  id: number;
+  courseId: number;
   title: string;
-  duration: string;
-  lessons: string[];
+  type: string;
+  duration?: string | null;
+  content?: string | null;
+  videoUrl?: string | null;
+  pdfUrl?: string | null;
+  order: number;
+  quizQuestions?: unknown;
 }
 
 interface User {
@@ -80,15 +84,6 @@ interface Enrollment {
   enrolledAt: string;
 }
 
-interface EnrollmentFormData {
-  courseId?: string;
-  professionalActivity?: string;
-  organization?: string;
-  sector?: string;
-  experienceLevel?: string;
-  expectations?: string;
-}
-
 const CourseDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -96,6 +91,7 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { toast } = useToast();
 
@@ -156,14 +152,10 @@ const CourseDetail = () => {
         thumbnail: data.thumbnailUrl || data.imageUrl || '/kilimo-logo.png',
         isLive: !!data.isLive,
         isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
-        modules: Array.isArray(data.modules) ? data.modules.map((m: { id?: number | string; title?: string; duration?: string; lessons?: string[] }, idx: number) => ({
-          id: String(m.id ?? idx + 1),
-          title: m.title ?? `Module ${idx + 1}`,
-          duration: m.duration ?? '—',
-          lessons: Array.isArray(m.lessons) ? m.lessons : [],
-        })) : [],
         benefits: Array.isArray(data.benefits) ? data.benefits : [],
         requirements: Array.isArray(data.requirements) ? data.requirements : [],
+        targetAudience: Array.isArray(data.targetAudience) ? data.targetAudience : [],
+        isCertifying: !!(data.sertifierDesignId || data.isCertifying),
       };
       setCourse(normalized);
     } catch (err) {
@@ -193,7 +185,31 @@ const CourseDetail = () => {
     checkPayment();
   }, [fetchCourse, checkEnrollment, toast]);
 
-  const handleEnrollment = async (formData: EnrollmentFormData) => {
+  // Modules réels depuis le backend
+  const { data: modules = [], isLoading: modulesLoading } = useQuery<BackendModule[]>({
+    queryKey: ['course-modules', course?.id],
+    enabled: !!course?.id,
+    queryFn: async () => {
+      const res = await api.request('GET', `/api/course_modules/course/${course!.id}`);
+      return Array.isArray(res?.data) ? res.data : [];
+    },
+    staleTime: 60_000,
+  });
+
+  // Formations similaires (même catégorie)
+  const { data: similarCourses = [] } = useQuery({
+    queryKey: ['similar-courses', course?.category, course?.id],
+    enabled: !!course?.id && !!course?.category,
+    queryFn: async () => {
+      const { data } = await api.from('courses').select('*');
+      return (data || [])
+        .filter((c: { id?: number; category?: string }) => c.category === course!.category && Number(c.id) !== Number(course!.id))
+        .slice(0, 3);
+    },
+    staleTime: 60_000,
+  });
+
+  const handleEnrollment = async () => {
     if (!currentUser) {
       toast({
         title: "Connexion requise",
@@ -205,6 +221,7 @@ const CourseDetail = () => {
     }
 
     try {
+      setEnrolling(true);
       if (course?.price && course.price > 0) {
         const orderRes = await api.request('POST', '/api/orders', {
           body: {
@@ -234,11 +251,10 @@ const CourseDetail = () => {
           throw new Error("Impossible de récupérer l'URL de paiement");
         }
       } else {
-        // Cours gratuit : inscription directe
+        // Cours gratuit : inscription 1-clic
         await api.request('POST', '/api/elearning_enrollments', {
           body: {
             courseId: Number(course?.id),
-            ...formData
           }
         });
         setEnrolled(true);
@@ -259,6 +275,8 @@ const CourseDetail = () => {
         description: errorMessage, 
         variant: "destructive" 
       });
+    } finally {
+      setEnrolling(false);
     }
   };
 
