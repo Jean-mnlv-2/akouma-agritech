@@ -405,46 +405,142 @@ const CourseDetail = () => {
               <div className="text-muted-foreground leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: course.longDescription }} />
             </div>
 
-            {/* Course modules - Enhanced */}
-            {course.modules.length > 0 && (
-              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl md:text-3xl font-bold mb-8 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            {/* Programme — Modules en accordéon (données backend) */}
+            <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
+              <CardContent className="p-6 md:p-8">
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                  <h2 className="text-2xl md:text-3xl font-bold flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     <BookOpen className="w-6 h-6 mr-3 text-primary" />
-                    Contenu du cours
-                  </h3>
-                  <div className="space-y-4">
-                    {course.modules.map((module, index) => {
-                      const delay = index * 100;
+                    Programme du cours
+                  </h2>
+                  {modules.length > 0 && (
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-semibold">
+                      {modules.length} module{modules.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
+
+                {modulesLoading ? (
+                  <div className="flex items-center justify-center py-12 text-muted-foreground">
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Chargement du programme…
+                  </div>
+                ) : modules.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>Le programme détaillé sera bientôt disponible.</p>
+                  </div>
+                ) : (
+                  <Accordion type="multiple" className="space-y-3">
+                    {modules.map((m, idx) => {
+                      const ModuleIcon = m.type === 'video' ? Video : m.type === 'pdf' ? FileText : m.type === 'quiz' ? HelpCircle : BookOpen;
+                      const hasResource = !!(m.videoUrl || m.pdfUrl || m.content);
                       return (
-                        <div 
-                          key={module.id} 
-                          className="border-2 border-border rounded-xl p-6 bg-gradient-to-br from-primary/5 via-background to-accent/5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
-                          style={{ transitionDelay: `${delay}ms` }}
+                        <AccordionItem
+                          key={m.id}
+                          value={`module-${m.id}`}
+                          className="border-2 border-border rounded-xl px-4 bg-gradient-to-br from-primary/5 via-background to-accent/5"
                         >
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
-                              Module {index + 1}: {module.title}
-                            </h4>
-                            <span className="text-sm text-muted-foreground font-medium bg-card/50 px-3 py-1 rounded-lg">
-                              {module.duration}
-                            </span>
-                          </div>
-                          <ul className="space-y-2">
-                            {module.lessons.map((lesson, lessonIndex) => (
-                              <li 
-                                key={`${module.id}-lesson-${lessonIndex}-${lesson.slice(0, 20)}`} 
-                                className="text-sm text-muted-foreground flex items-center group-hover:text-foreground transition-colors"
-                              >
-                                <Play className="w-4 h-4 mr-3 text-primary flex-shrink-0" />
-                                {lesson}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-4 flex-1 text-left">
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <ModuleIcon className="w-5 h-5 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                  Module {idx + 1}
+                                </div>
+                                <div className="font-bold text-base md:text-lg truncate">{m.title}</div>
+                              </div>
+                              {m.duration && (
+                                <span className="hidden sm:inline-flex items-center text-xs text-muted-foreground font-medium bg-card/70 px-2.5 py-1 rounded-lg">
+                                  <Clock className="w-3 h-3 mr-1 text-primary" />
+                                  {m.duration}
+                                </span>
+                              )}
+                              {!enrolled && course.price > 0 && (
+                                <Lock className="w-4 h-4 text-muted-foreground shrink-0" aria-label="Verrouillé" />
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <div className="pl-14 space-y-3 text-sm">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <Badge variant="secondary" className="capitalize">{m.type}</Badge>
+                                {m.duration && (
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Clock className="w-3 h-3" /> {m.duration}
+                                  </span>
+                                )}
+                                {Array.isArray(m.quizQuestions) && m.quizQuestions.length > 0 && (
+                                  <Badge variant="outline" className="border-yellow-400/50 text-yellow-700 dark:text-yellow-400">
+                                    <HelpCircle className="w-3 h-3 mr-1" /> Quiz inclus
+                                  </Badge>
+                                )}
+                              </div>
+                              {m.content && (
+                                <p className="text-muted-foreground leading-relaxed line-clamp-3">{m.content}</p>
+                              )}
+                              {hasResource && (
+                                <div className="flex gap-2 flex-wrap">
+                                  {m.videoUrl && enrolled && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <a href={m.videoUrl} target="_blank" rel="noreferrer"><Video className="w-3.5 h-3.5 mr-1.5" />Voir la vidéo</a>
+                                    </Button>
+                                  )}
+                                  {m.pdfUrl && enrolled && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <a href={m.pdfUrl} target="_blank" rel="noreferrer"><Download className="w-3.5 h-3.5 mr-1.5" />Télécharger PDF</a>
+                                    </Button>
+                                  )}
+                                  {!enrolled && course.price > 0 && (
+                                    <p className="text-xs text-muted-foreground italic flex items-center gap-1">
+                                      <Lock className="w-3 h-3" /> Inscrivez-vous pour accéder aux ressources
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
                       );
                     })}
-                  </div>
+                  </Accordion>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* À qui s'adresse cette formation */}
+            {course.targetAudience.length > 0 && (
+              <Card className="bg-card/90 backdrop-blur-sm border-2 border-border hover:shadow-xl transition-all duration-500">
+                <CardContent className="p-8">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-6 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    <UserCheck className="w-6 h-6 mr-3 text-primary" />
+                    À qui s'adresse cette formation
+                  </h2>
+                  <ul className="space-y-3">
+                    {course.targetAudience.map((a, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm font-medium">
+                        <Target className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                        <span>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Certification */}
+            {course.isCertifying && (
+              <Card className="bg-gradient-to-br from-yellow-50 via-background to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border-2 border-yellow-300/50">
+                <CardContent className="p-8">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-3">
+                    <Award className="w-7 h-7 text-yellow-600" />
+                    Certification incluse
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    À la fin de cette formation, vous recevrez un <strong>certificat officiel KILIMO</strong> attestant de vos compétences, vérifiable en ligne via notre partenaire Sertifier.
+                  </p>
                 </CardContent>
               </Card>
             )}
