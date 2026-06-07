@@ -515,12 +515,14 @@ const ELearning = () => {
               !!searchQuery ||
               (selectedCategory && selectedCategory !== t("elearning.categories.all") && selectedCategory !== "Tous") ||
               languageFilter !== 'Toutes langues' ||
-              showOnlyPreview;
+              showOnlyPreview ||
+              sortBy !== 'recent';
             const resetFilters = () => {
               setSearchQuery('');
               setSelectedCategory(t("elearning.categories.all") || 'Tous');
               setLanguageFilter('Toutes langues');
               setShowOnlyPreview(false);
+              setSortBy('recent');
             };
             return (
             <div
@@ -556,6 +558,26 @@ const ELearning = () => {
                       {availableLanguages.map((lang) => (
                         <SelectItem key={lang} value={lang} className="font-medium">{lang}</SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger
+                      aria-label="Trier les cours"
+                      className="w-full sm:w-[190px] h-12 sm:h-14 border-2 rounded-2xl bg-background/50 font-semibold"
+                    >
+                      <div className="flex items-center">
+                        <ArrowUpDown className="w-5 h-5 mr-2 text-primary" aria-hidden="true" />
+                        <SelectValue placeholder="Trier" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-2">
+                      <SelectItem value="recent" className="font-medium">Plus récents</SelectItem>
+                      <SelectItem value="popular" className="font-medium">Plus populaires</SelectItem>
+                      <SelectItem value="rating" className="font-medium">Mieux notés</SelectItem>
+                      <SelectItem value="price_asc" className="font-medium">Prix croissant</SelectItem>
+                      <SelectItem value="price_desc" className="font-medium">Prix décroissant</SelectItem>
+                      <SelectItem value="title" className="font-medium">Titre (A-Z)</SelectItem>
                     </SelectContent>
                   </Select>
 
