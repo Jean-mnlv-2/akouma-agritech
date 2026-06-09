@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +49,10 @@ const CourseLearn = () => {
   const [, setProgressMap] = useState<Record<number, boolean>>({});
   const [showComments, setShowComments] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [resumeVideoSec, setResumeVideoSec] = useState(0);
+  const [pdfPage, setPdfPage] = useState(1);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const lastSavedRef = useRef<number>(0);
 
   // Fetch user, course, modules, enrollment, progress
   const fetchData = useCallback(async () => {
@@ -101,6 +105,14 @@ const CourseLearn = () => {
       setEnrollmentId(enrId);
       setProgressMap(pMap);
 
+      // Restore resume state from enrollment row
+      const myEnrFull = (await api.request("GET", "/api/elearning_enrollments").catch(() => ({ data: [] }))).data
+        ?.find?.((e: any) => e.id === enrId);
+      if (myEnrFull) {
+        setResumeVideoSec(Number(myEnrFull.videoPositionSec || 0));
+        setPdfPage(Math.max(1, Number(myEnrFull.pdfPage || 1)));
+      }
+
       // Build module list with completion and lock state
       const builtModules: Module[] = rawModules.map((m, idx) => {
         const completed = !!pMap[m.id];
@@ -111,9 +123,11 @@ const CourseLearn = () => {
 
       setModules(builtModules);
       if (builtModules.length > 0) {
-        // Set active to first incomplete or first
+        // Resume: prefer last saved module if accessible, otherwise first incomplete
+        const savedId = Number(myEnrFull?.currentModuleId || 0);
+        const savedModule = savedId ? builtModules.find(m => m.id === savedId && !m.locked) : undefined;
         const firstIncomplete = builtModules.find(m => !m.completed && !m.locked);
-        setActiveModule(firstIncomplete?.id ?? builtModules[0].id);
+        setActiveModule(savedModule?.id ?? firstIncomplete?.id ?? builtModules[0].id);
       }
     } catch (e) {
       console.error("Error loading course data:", e);
@@ -122,6 +136,35 @@ const CourseLearn = () => {
   }, [id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Autosave navigation state (debounced, throttled to 10s)
+  const saveState = useCallback((payload: { currentModuleId?: number | null; videoPositionSec?: number; pdfPage?: number }) => {
+    if (!enrollmentId) return;
+    const now = Date.now();
+    if (now - lastSavedRef.current < 8000) return;
+    lastSavedRef.current = now;
+    api.request("PUT", `/api/elearning_enrollments/${enrollmentId}/state`, { body: payload }).catch(() => {});
+  }, [enrollmentId]);
+
+  // Save active module change immediately
+  useEffect(() => {
+    if (enrollmentId && activeModule != null) {
+      lastSavedRef.current = 0;
+      saveState({ currentModuleId: activeModule });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeModule, enrollmentId]);
+
+  // Restore video position when video module activates
+  useEffect(() => {
+    if (currentModule?.type !== 'video') return;
+    const el = videoRef.current;
+    if (!el || !resumeVideoSec) return;
+    const onLoaded = () => { try { el.currentTime = resumeVideoSec; } catch {} };
+    el.addEventListener('loadedmetadata', onLoaded, { once: true });
+    return () => el.removeEventListener('loadedmetadata', onLoaded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeModule]);
 
   const currentModule = modules.find(m => m.id === activeModule);
   const completedCount = modules.filter(m => m.completed).length;
