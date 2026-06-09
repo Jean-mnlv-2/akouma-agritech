@@ -260,6 +260,29 @@ certificatesRouter.post('/request', authRequired, async (req: Request, res: Resp
       }
     }
     drainQueue().catch(() => {});
+    // Fallback local : si Sertifier n'est pas configuré, on émet immédiatement le certificat
+    // (PDF généré côté backend + email avec lien de téléchargement et vérification).
+    if (cert && cert.status !== 'sent' && !isSertifierConfigured()) {
+      try {
+        const issued = await prisma.certificate.update({
+          where: { id: cert.id },
+          data: { status: 'sent', issuedAt: new Date(), lastError: null },
+          include: { user: true, course: true },
+        });
+        const base = (process.env.FRONTEND_ORIGINS || '').split(',')[0].trim() || '';
+        if (issued.user?.email && issued.course?.title) {
+          emailService.sendLearningEvent({
+            email: issued.user.email,
+            userName: issued.user.fullName || issued.user.email,
+            courseTitle: issued.course.title,
+            type: 'certificate-ready',
+            certificateUrl: `${base}/api/certificates/${issued.id}/pdf`,
+            verificationUrl: `${base}/certificates/verify/${encodeURIComponent(issued.certificateNumber)}`,
+          }).catch(() => {});
+        }
+        cert = issued;
+      } catch (e) { /* ignore */ }
+    }
     res.status(201).json({ data: cert });
   } catch (e) {
     res.status(400).json({ error: e instanceof Error ? e.message : 'Failed' });
