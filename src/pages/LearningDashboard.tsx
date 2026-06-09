@@ -116,8 +116,10 @@ const LearningDashboard = () => {
       thumbnail: e.course?.thumbnailUrl || courseThumbnail,
       level: e.course?.level || '—',
       totalModules: Array.isArray(e.course?.modules) ? e.course.modules.length : 0,
-      completedModules: 0,
-      lastAccessed: e.enrolledAt || new Date().toISOString(),
+      completedModules: Array.isArray(e.moduleProgress) ? e.moduleProgress.length : 0,
+      lastAccessed: (Array.isArray(e.moduleProgress) && e.moduleProgress.length
+        ? e.moduleProgress.reduce((max: string, p: any) => (p.completedAt && p.completedAt > max ? p.completedAt : max), e.enrolledAt || '')
+        : e.enrolledAt) || new Date().toISOString(),
       studyPace: e.studyPace,
       targetEndDate: e.targetEndDate,
       remindersEnabled: e.remindersEnabled,
