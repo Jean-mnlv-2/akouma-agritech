@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { sertifierFetch, isSertifierConfigured, isValidSertifierId } from '../utils/sertifierClient';
+import { emailService } from '../utils/email';
 
 const prisma = new PrismaClient();
 export const certificatesRouter = Router();
@@ -120,6 +121,17 @@ async function processOne(certificateId: number): Promise<void> {
         executionLog: log as any,
       },
     });
+    try {
+      const base = (process.env.FRONTEND_ORIGINS || '').split(',')[0].trim() || '';
+      emailService.sendLearningEvent({
+        email: cert.user.email,
+        userName: cert.user.fullName || cert.user.email,
+        courseTitle: cert.course.title,
+        type: 'certificate-ready',
+        certificateUrl: `${base}/api/certificates/${certificateId}/pdf`,
+        verificationUrl: credentialUrl || `${base}/certificates/verify/${encodeURIComponent(cert.certificateNumber)}`,
+      }).catch(() => {});
+    } catch { /* ignore */ }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     const fresh = await prisma.certificate.findUnique({ where: { id: certificateId } });
