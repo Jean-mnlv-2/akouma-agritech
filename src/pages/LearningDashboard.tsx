@@ -397,7 +397,7 @@ const LearningDashboard = () => {
                 <Trophy className="w-6 h-6 text-yellow-500" />
                 Mes certificats
               </h2>
-              {enrolledCourses.filter(c => c.progress >= 100).length === 0 ? (
+              {certificates.length === 0 ? (
                 <Card>
                   <CardContent className="p-8 text-center text-muted-foreground">
                     <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -406,22 +406,37 @@ const LearningDashboard = () => {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {enrolledCourses.filter(c => c.progress >= 100).map(course => (
-                    <Card key={course.id} className="border-yellow-200 dark:border-yellow-800 bg-gradient-to-br from-yellow-50/50 to-orange-50/30 dark:from-yellow-950/10 dark:to-orange-950/5">
-                      <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                          <Trophy className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-sm">{course.title}</h3>
-                          <p className="text-xs text-muted-foreground">Complété le {new Date(course.lastAccessed).toLocaleDateString('fr-FR')}</p>
-                        </div>
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/elearning/${course.id}/learn`)}>
-                          Voir
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {certificates.map((cert: any) => {
+                    const ready = cert.status === 'sent';
+                    const pdfUrl = `${(import.meta as any).env?.VITE_API_BASE_URL || ''}/api/certificates/${cert.id}/pdf`;
+                    const verifyUrl = `${window.location.origin}/certificates/verify/${encodeURIComponent(cert.certificateNumber)}`;
+                    return (
+                      <Card key={cert.id} className="border-yellow-200 dark:border-yellow-800 bg-gradient-to-br from-yellow-50/50 to-orange-50/30 dark:from-yellow-950/10 dark:to-orange-950/5">
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                              <Trophy className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-sm">{cert.course?.title || 'Certificat'}</h3>
+                              <p className="text-xs text-muted-foreground">N° {cert.certificateNumber}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {ready ? `Émis le ${new Date(cert.issuedAt || cert.completionDate).toLocaleDateString('fr-FR')}` : `Statut : ${cert.status}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button size="sm" disabled={!ready} asChild={ready}>
+                              {ready ? <a href={pdfUrl} target="_blank" rel="noreferrer">📄 Télécharger le PDF</a> : <span>En préparation…</span>}
+                            </Button>
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={verifyUrl} target="_blank" rel="noreferrer">🔗 Vérifier</a>
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </section>
