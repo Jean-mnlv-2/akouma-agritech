@@ -191,6 +191,11 @@ const CourseLearn = () => {
       if (idx < updated.length - 1) {
         updated[idx + 1] = { ...updated[idx + 1], locked: false };
       }
+      // Si tous les modules sont complétés, demander l'émission du certificat
+      const allDone = updated.every(m => m.completed);
+      if (allDone && course?.id) {
+        api.request("POST", "/api/certificates/request", { body: { courseId: course.id, score: score ?? undefined } }).catch(() => {});
+      }
       return updated;
     });
 
