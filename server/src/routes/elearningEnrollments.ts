@@ -13,7 +13,7 @@ elearningEnrollmentsRouter.get('/', authRequired, async (req: Request, res: Resp
     orderBy: { enrolledAt: 'desc' },
     include: {
       course: { include: { modules: { select: { id: true } } } },
-      _count: { select: { moduleProgress: { where: { completed: true } } as any } } as any,
+      moduleProgress: { where: { completed: true }, select: { moduleId: true, completedAt: true } },
       ...(isAdmin ? { user: true } : {}),
     },
   });
