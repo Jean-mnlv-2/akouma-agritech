@@ -55,6 +55,7 @@ import { courseCommentsRouter } from './routes/courseComments';
 import { courseSchedulesRouter } from './routes/courseSchedules';
 import { sertifierRouter } from './routes/sertifier';
 import { certificatesRouter } from './routes/certificates';
+import { certificatePdfRouter } from './routes/certificatePdf';
 import { pageHeaderImagesRouter } from './routes/pageHeaderImages';
 import { createRateLimiter } from './middleware/rateLimit';
 import { authRequired, adminOnly } from './middleware/authRequired';
@@ -257,6 +258,7 @@ app.use('/api/course_schedules', courseSchedulesRouter);
 app.use('/api/reminder_logs', reminderLogsRouter);
 app.use('/api/sertifier', sertifierRouter);
 app.use('/api/certificates', certificatesRouter);
+app.use('/api/certificates', certificatePdfRouter);
 app.use('/api/page_header_images', pageHeaderImagesRouter);
 app.use('/api', genericRouter);
 

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import TitleManager from "@/components/TitleManager";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { 
   Target, 
@@ -121,6 +122,11 @@ const AgriConsulting = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <TitleManager
+        title="Agri-Consulting - Conseil agricole expert | KILIMO Agritech"
+        description="Diagnostic, conseil technique, formation et accompagnement agronomique sur mesure pour exploitations et coopératives partout en Afrique."
+        canonical={typeof window !== 'undefined' ? `${window.location.origin}/agri-consulting` : undefined}
+      />
       <Header />
       
       {/* Hero Section - Modern Design */}

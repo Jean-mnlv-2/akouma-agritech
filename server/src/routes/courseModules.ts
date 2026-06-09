@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { emailService } from '../utils/email';
 
 const prisma = new PrismaClient();
 export const courseModulesRouter = Router();
@@ -186,6 +187,7 @@ courseModulesRouter.post('/progress', authRequired, async (req: Request, res: Re
       const totalModules = await prisma.courseModule.count({ where: { courseId: enrollment.courseId, isActive: true } });
       const completedModules = await prisma.moduleProgress.count({ where: { enrollmentId: Number(enrollmentId), completed: true } });
       const pct = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+      const wasCompleted = !!enrollment.completedAt;
       await prisma.eLearningEnrollment.update({
         where: { id: Number(enrollmentId) },
         data: { 
@@ -193,6 +195,23 @@ courseModulesRouter.post('/progress', authRequired, async (req: Request, res: Re
           ...(pct >= 100 ? { completedAt: new Date() } : {}),
         },
       });
+
+      // Notifications email (best-effort, async)
+      try {
+        const [userRow, courseRow, moduleRow] = await Promise.all([
+          prisma.user.findUnique({ where: { id: user.id }, select: { email: true, fullName: true } }),
+          prisma.course.findUnique({ where: { id: enrollment.courseId }, select: { title: true } }),
+          prisma.courseModule.findUnique({ where: { id: Number(moduleId) }, select: { title: true } }),
+        ]);
+        if (userRow?.email && courseRow) {
+          const userName = userRow.fullName || userRow.email.split('@')[0];
+          if (pct >= 100 && !wasCompleted) {
+            emailService.sendLearningEvent({ email: userRow.email, userName, courseTitle: courseRow.title, type: 'course-completed' }).catch(() => {});
+          } else {
+            emailService.sendLearningEvent({ email: userRow.email, userName, courseTitle: courseRow.title, moduleTitle: moduleRow?.title, progress: pct, type: 'module-completed' }).catch(() => {});
+          }
+        }
+      } catch { /* ignore email errors */ }
     }
 
     res.json({ data: progress });

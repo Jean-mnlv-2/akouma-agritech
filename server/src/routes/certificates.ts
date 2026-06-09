@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { sertifierFetch, isSertifierConfigured, isValidSertifierId } from '../utils/sertifierClient';
+import { emailService } from '../utils/email';
 
 const prisma = new PrismaClient();
 export const certificatesRouter = Router();
@@ -120,6 +121,17 @@ async function processOne(certificateId: number): Promise<void> {
         executionLog: log as any,
       },
     });
+    try {
+      const base = (process.env.FRONTEND_ORIGINS || '').split(',')[0].trim() || '';
+      emailService.sendLearningEvent({
+        email: cert.user.email,
+        userName: cert.user.fullName || cert.user.email,
+        courseTitle: cert.course.title,
+        type: 'certificate-ready',
+        certificateUrl: `${base}/api/certificates/${certificateId}/pdf`,
+        verificationUrl: credentialUrl || `${base}/certificates/verify/${encodeURIComponent(cert.certificateNumber)}`,
+      }).catch(() => {});
+    } catch { /* ignore */ }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     const fresh = await prisma.certificate.findUnique({ where: { id: certificateId } });
@@ -248,6 +260,29 @@ certificatesRouter.post('/request', authRequired, async (req: Request, res: Resp
       }
     }
     drainQueue().catch(() => {});
+    // Fallback local : si Sertifier n'est pas configuré, on émet immédiatement le certificat
+    // (PDF généré côté backend + email avec lien de téléchargement et vérification).
+    if (cert && cert.status !== 'sent' && !isSertifierConfigured()) {
+      try {
+        const issued = await prisma.certificate.update({
+          where: { id: cert.id },
+          data: { status: 'sent', issuedAt: new Date(), lastError: null },
+          include: { user: true, course: true },
+        });
+        const base = (process.env.FRONTEND_ORIGINS || '').split(',')[0].trim() || '';
+        if (issued.user?.email && issued.course?.title) {
+          emailService.sendLearningEvent({
+            email: issued.user.email,
+            userName: issued.user.fullName || issued.user.email,
+            courseTitle: issued.course.title,
+            type: 'certificate-ready',
+            certificateUrl: `${base}/api/certificates/${issued.id}/pdf`,
+            verificationUrl: `${base}/certificates/verify/${encodeURIComponent(issued.certificateNumber)}`,
+          }).catch(() => {});
+        }
+        cert = issued;
+      } catch (e) { /* ignore */ }
+    }
     res.status(201).json({ data: cert });
   } catch (e) {
     res.status(400).json({ error: e instanceof Error ? e.message : 'Failed' });

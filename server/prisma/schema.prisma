@@ -352,6 +352,10 @@ model ELearningEnrollment {
   sector               String?
   experienceLevel      String?
   expectations         String?
+  currentModuleId      Int?
+  videoPositionSec     Int              @default(0)
+  pdfPage              Int              @default(1)
+  lastAccessedAt       DateTime?
   schedules            CourseSchedule[]
   course               Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)

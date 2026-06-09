@@ -308,4 +308,56 @@ export const emailService = {
       console.error('[EMAIL] Erreur envoi notification annulation commande:', error);
     }
   },
+
+  async sendLearningEvent(data: {
+    email: string;
+    userName: string;
+    courseTitle: string;
+    type: 'module-completed' | 'course-completed' | 'certificate-ready';
+    moduleTitle?: string;
+    progress?: number;
+    certificateUrl?: string;
+    verificationUrl?: string;
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configurée — notification e-learning ignorée pour', data.email);
+      return;
+    }
+    const base = env.FRONTEND_ORIGINS[0];
+    let subject = '';
+    let body = '';
+    if (data.type === 'module-completed') {
+      subject = `Module terminé : ${data.moduleTitle || ''} - KILIMO`;
+      body = `
+        <h2 style="color:#1E5B37">Bravo ${data.userName} ! 🎉</h2>
+        <p>Vous venez de terminer le module <strong>${data.moduleTitle}</strong> de la formation <strong>${data.courseTitle}</strong>.</p>
+        <p>Progression actuelle : <strong>${data.progress ?? 0}%</strong></p>
+        <p><a href="${base}/dashboard/learning" style="display:inline-block;padding:12px 24px;background:#1E5B37;color:#fff;border-radius:8px;text-decoration:none">Continuer ma formation</a></p>`;
+    } else if (data.type === 'course-completed') {
+      subject = `Formation terminée : ${data.courseTitle} - KILIMO`;
+      body = `
+        <h2 style="color:#1E5B37">Félicitations ${data.userName} ! 🏆</h2>
+        <p>Vous avez terminé avec succès la formation <strong>${data.courseTitle}</strong>.</p>
+        <p>Votre certificat est en cours de génération et vous sera envoyé sous peu.</p>
+        <p><a href="${base}/dashboard/learning" style="display:inline-block;padding:12px 24px;background:#E57D27;color:#fff;border-radius:8px;text-decoration:none">Voir mes succès</a></p>`;
+    } else {
+      subject = `Votre certificat KILIMO est prêt : ${data.courseTitle}`;
+      body = `
+        <h2 style="color:#1E5B37">Votre certificat est disponible !</h2>
+        <p>Bonjour ${data.userName},</p>
+        <p>Votre certificat pour la formation <strong>${data.courseTitle}</strong> est prêt à être téléchargé.</p>
+        ${data.certificateUrl ? `<p><a href="${data.certificateUrl}" style="display:inline-block;padding:12px 24px;background:#1E5B37;color:#fff;border-radius:8px;text-decoration:none">📄 Télécharger mon certificat (PDF)</a></p>` : ''}
+        ${data.verificationUrl ? `<p style="font-size:13px;color:#6b7280">Lien de vérification publique : <a href="${data.verificationUrl}">${data.verificationUrl}</a></p>` : ''}`;
+    }
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject,
+        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">${body}<hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0"/><p style="font-size:12px;color:#9ca3af;text-align:center">L'équipe KILIMO Agritech</p></div>`,
+      });
+    } catch (e) {
+      console.error('[EMAIL] Notif e-learning échouée:', e);
+    }
+  },
 };
