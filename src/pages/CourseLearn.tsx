@@ -375,6 +375,20 @@ const CourseLearn = () => {
               <Card>
                 <CardContent className="p-0">
                   {currentModule.videoUrl ? (
+                    /\.(mp4|webm|mov|m4v)(\?|$)/i.test(currentModule.videoUrl) ? (
+                      <video
+                        ref={videoRef}
+                        src={currentModule.videoUrl}
+                        className="w-full aspect-video bg-black rounded-t-lg"
+                        controls
+                        playsInline
+                        onTimeUpdate={(e) => {
+                          const t = Math.floor((e.target as HTMLVideoElement).currentTime || 0);
+                          if (t > 0 && t % 10 === 0) saveState({ videoPositionSec: t });
+                        }}
+                        onPause={(e) => saveState({ videoPositionSec: Math.floor((e.target as HTMLVideoElement).currentTime || 0) })}
+                      />
+                    ) : (
                     <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
                       <iframe
                         src={currentModule.videoUrl}
@@ -384,6 +398,7 @@ const CourseLearn = () => {
                         title={currentModule.title}
                       />
                     </div>
+                    )
                   ) : (
                     <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-t-lg flex items-center justify-center">
                       <div className="text-center text-white">
@@ -397,7 +412,12 @@ const CourseLearn = () => {
                   )}
                   <div className="p-6">
                     <h2 className="text-xl font-bold mb-2">{currentModule.title}</h2>
-                    <p className="text-muted-foreground mb-4">Regardez la vidéo complète pour débloquer le module suivant.</p>
+                    <p className="text-muted-foreground mb-4">
+                      Regardez la vidéo complète pour débloquer le module suivant.
+                      {resumeVideoSec > 0 && (
+                        <span className="block text-xs text-primary mt-1">⏱ Reprise sauvegardée à {Math.floor(resumeVideoSec/60)}:{String(resumeVideoSec%60).padStart(2,'0')}</span>
+                      )}
+                    </p>
                     {!currentModule.completed && (
                       <Button onClick={() => handleModuleComplete(currentModule.id)}>
                         <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
