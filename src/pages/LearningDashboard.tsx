@@ -85,6 +85,21 @@ const LearningDashboard = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { data: certificates = [] } = useQuery<any[]>({
+    queryKey: ["learning", "certificates"],
+    enabled: !!user,
+    queryFn: async () => {
+      try {
+        const res = await api.request("GET", "/api/certificates/my");
+        return Array.isArray(res?.data) ? res.data : [];
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 30000,
+    refetchInterval: 30000,
+  });
+
   const updateEnrollmentMutation = useMutation({
     mutationFn: async (payload: { id?: number; userId?: string; courseId: number; data: any }) => {
       if (payload.id) {
