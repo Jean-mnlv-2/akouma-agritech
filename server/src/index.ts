@@ -258,6 +258,7 @@ app.use('/api/course_schedules', courseSchedulesRouter);
 app.use('/api/reminder_logs', reminderLogsRouter);
 app.use('/api/sertifier', sertifierRouter);
 app.use('/api/certificates', certificatesRouter);
+app.use('/api/certificates', certificatePdfRouter);
 app.use('/api/page_header_images', pageHeaderImagesRouter);
 app.use('/api', genericRouter);
 
