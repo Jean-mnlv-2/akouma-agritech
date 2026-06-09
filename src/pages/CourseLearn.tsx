@@ -456,7 +456,23 @@ const CourseLearn = () => {
                 <CardContent className="p-6 sm:p-8 text-center">
                   <FileText className="w-20 h-20 text-red-500 mx-auto mb-4" />
                   <h2 className="text-2xl font-bold mb-2">{currentModule.title}</h2>
-                  <p className="text-muted-foreground mb-6">Téléchargez et consultez le document PDF ci-dessous.</p>
+                  <p className="text-muted-foreground mb-2">Téléchargez et consultez le document PDF ci-dessous.</p>
+                  {pdfPage > 1 && (
+                    <p className="text-xs text-primary mb-4">📑 Reprise sauvegardée : page {pdfPage}</p>
+                  )}
+                  {currentModule.pdfUrl && (
+                    <iframe
+                      src={`${currentModule.pdfUrl}#page=${pdfPage}`}
+                      className="w-full h-[60vh] border rounded-lg mb-4"
+                      title={currentModule.title}
+                      onLoad={() => saveState({ pdfPage })}
+                    />
+                  )}
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <Button variant="outline" size="sm" onClick={() => { const next = Math.max(1, pdfPage - 1); setPdfPage(next); lastSavedRef.current = 0; saveState({ pdfPage: next }); }}>Page précédente</Button>
+                    <span className="text-sm text-muted-foreground">Page {pdfPage}</span>
+                    <Button variant="outline" size="sm" onClick={() => { const next = pdfPage + 1; setPdfPage(next); lastSavedRef.current = 0; saveState({ pdfPage: next }); }}>Page suivante</Button>
+                  </div>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     {currentModule.pdfUrl && (
                       <Button variant="outline" asChild>
