@@ -408,7 +408,9 @@ const LearningDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {certificates.map((cert: any) => {
                     const ready = cert.status === 'sent';
-                    const pdfUrl = `${(import.meta as any).env?.VITE_API_BASE_URL || ''}/api/certificates/${cert.id}/pdf`;
+                    const apiBase = (import.meta as any).env?.VITE_API_BASE_URL
+                      || (window.location.hostname === 'kilimo.onrender.com' ? 'https://kilimo-backend.onrender.com' : window.location.origin);
+                    const pdfUrl = `${apiBase}/api/certificates/${cert.id}/pdf`;
                     const verifyUrl = `${window.location.origin}/certificates/verify/${encodeURIComponent(cert.certificateNumber)}`;
                     return (
                       <Card key={cert.id} className="border-yellow-200 dark:border-yellow-800 bg-gradient-to-br from-yellow-50/50 to-orange-50/30 dark:from-yellow-950/10 dark:to-orange-950/5">
