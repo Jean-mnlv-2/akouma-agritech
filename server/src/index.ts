@@ -55,6 +55,7 @@ import { courseCommentsRouter } from './routes/courseComments';
 import { courseSchedulesRouter } from './routes/courseSchedules';
 import { sertifierRouter } from './routes/sertifier';
 import { certificatesRouter } from './routes/certificates';
+import { certificatePdfRouter } from './routes/certificatePdf';
 import { pageHeaderImagesRouter } from './routes/pageHeaderImages';
 import { createRateLimiter } from './middleware/rateLimit';
 import { authRequired, adminOnly } from './middleware/authRequired';
