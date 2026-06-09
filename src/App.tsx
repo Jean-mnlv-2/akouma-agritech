@@ -69,6 +69,8 @@ import NotFound from "./pages/NotFound";
 import LearningDashboard from "./pages/LearningDashboard";
 import CourseLearn from "./pages/CourseLearn";
 import MyCourses from "./pages/MyCourses";
+import CertificateVerify from "./pages/CertificateVerify";
+import Investors from "./pages/Investors";
 import ResetPassword from "./pages/ResetPassword";
 import OrderDetail from "./pages/OrderDetail";
 import Orders from "./pages/Orders";
@@ -136,7 +138,8 @@ const App = () => (
                 <Route path="/elearning/:id/learn" element={<CourseLearn />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/my-cashback" element={<MyCashback />} />
-                <Route path="/investors" element={<div>Investors - Coming Soon</div>} />
+                <Route path="/investors" element={<Investors />} />
+                <Route path="/certificates/verify/:number" element={<CertificateVerify />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
