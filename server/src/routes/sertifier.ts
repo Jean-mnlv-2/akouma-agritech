@@ -1,8 +1,22 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { validate } from '../middleware/validate';
+import { audit, actorFromRequest } from '../utils/audit';
 import { sertifierFetch as sertifierRequest, isSertifierConfigured } from '../utils/sertifierClient';
 
 export const sertifierRouter = Router();
+
+const issueCredentialSchema = z.object({
+  recipientName: z.string().min(1).max(255),
+  recipientEmail: z.string().email().max(320),
+  courseName: z.string().min(1).max(255),
+  score: z.union([z.number().min(0).max(100), z.string()]).optional(),
+  completionDate: z.string().max(40).optional(),
+  designId: z.string().min(1).max(64),
+  detailId: z.string().min(1).max(64),
+  emailTemplateId: z.string().min(1).max(64),
+}).strict();
 
 // Guard: short-circuit when Sertifier is not configured to avoid noisy 500s
 sertifierRouter.use((req, res, next) => {
@@ -27,17 +41,9 @@ sertifierRouter.get('/test', authRequired, adminOnly, async (_req: Request, res:
 });
 
 // Issue a credential: create campaign, add credential, and publish
-sertifierRouter.post('/issue-credential', authRequired, adminOnly, async (req: Request, res: Response) => {
+sertifierRouter.post('/issue-credential', authRequired, adminOnly, validate(issueCredentialSchema), async (req: Request, res: Response) => {
   try {
     const { recipientName, recipientEmail, courseName, score, completionDate, designId, detailId, emailTemplateId } = req.body;
-
-    if (!recipientName || !recipientEmail || !courseName) {
-      return res.status(400).json({ error: 'recipientName, recipientEmail, and courseName are required' });
-    }
-
-    if (!designId || !detailId || !emailTemplateId) {
-      return res.status(400).json({ error: 'designId, detailId, and emailTemplateId are required. Configure them in Sertifier.' });
-    }
 
     // 1. Create campaign
     const campaign = await sertifierRequest('POST', '/campaign', {
@@ -90,6 +96,7 @@ sertifierRouter.post('/issue-credential', authRequired, adminOnly, async (req: R
         status: 'sent',
       },
     });
+    audit({ ...actorFromRequest(req), action: 'sertifier.issue', entityType: 'certificate', entityId: credentialId || campaignId, metadata: { recipientEmail, courseName } }).catch(() => {});
   } catch (e) {
     console.error('[Sertifier] Issue credential error:', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'Failed to issue credential' });
