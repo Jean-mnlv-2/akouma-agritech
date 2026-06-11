@@ -34,6 +34,17 @@ courseSchedulesRouter.post('/', authRequired, async (req: Request, res: Response
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // SÉCURITÉ: vérifier que l'inscription appartient bien à l'utilisateur (anti-IDOR)
+    const enrollment = await prisma.eLearningEnrollment.findUnique({
+      where: { id: Number(enrollmentId) },
+      select: { id: true, userId: true, courseId: true },
+    });
+    if (!enrollment) return res.status(404).json({ error: 'Enrollment not found' });
+    if (enrollment.userId !== user.id) return res.status(403).json({ error: 'forbidden' });
+    if (enrollment.courseId !== Number(courseId)) {
+      return res.status(400).json({ error: 'Course does not match enrollment' });
+    }
+
     const schedule = await prisma.courseSchedule.create({
       data: {
         enrollmentId: Number(enrollmentId),

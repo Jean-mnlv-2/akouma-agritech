@@ -86,7 +86,8 @@ elearningEnrollmentsRouter.put('/:id', authRequired, async (req: Request, res: R
       return res.status(403).json({ error: 'forbidden' });
     }
     const { studyPace, targetEndDate, remindersEnabled, studyDays, dailyTimeSlot, progress } = req.body || {};
-    
+    const isAdmin = u.role === 'admin' || u.role === 'supervisor';
+
     const updated = await prisma.eLearningEnrollment.update({
       where: { id },
       data: {
@@ -95,7 +96,9 @@ elearningEnrollmentsRouter.put('/:id', authRequired, async (req: Request, res: R
         ...(remindersEnabled !== undefined && { remindersEnabled: Boolean(remindersEnabled) }),
         ...(studyDays !== undefined && { studyDays }),
         ...(dailyTimeSlot !== undefined && { dailyTimeSlot }),
-        ...(progress !== undefined && { progress: Number(progress) }),
+        // SÉCURITÉ: la progression ne peut PAS être modifiée par l'utilisateur.
+        // Elle est calculée serveur via les ModuleProgress validés.
+        ...(isAdmin && progress !== undefined && { progress: Number(progress) }),
       },
     });
     res.json({ data: updated });
