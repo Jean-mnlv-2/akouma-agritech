@@ -1,9 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { validate } from '../middleware/validate';
 
 const prisma = new PrismaClient();
 export const elearningStatsRouter = Router();
+
+const createStatSchema = z.object({
+  label: z.string().min(1).max(120),
+  value: z.string().min(1).max(120),
+  icon: z.string().max(120).optional(),
+}).strict();
+
+const updateStatSchema = z.object({
+  label: z.string().min(1).max(120).optional(),
+  value: z.string().min(1).max(120).optional(),
+  icon: z.string().max(120).nullable().optional(),
+}).strict();
 
 // Public read
 elearningStatsRouter.get('/', async (req: Request, res: Response) => {
@@ -16,12 +30,9 @@ elearningStatsRouter.get('/', async (req: Request, res: Response) => {
 });
 
 // Admin CRUD
-elearningStatsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+elearningStatsRouter.post('/', authRequired, adminOnly, validate(createStatSchema), async (req: Request, res: Response) => {
   try {
-    const { label, value, icon } = req.body || {};
-    if (!label || !value) {
-      return res.status(400).json({ error: 'label and value are required' });
-    }
+    const { label, value, icon } = req.body;
     const created = await prisma.eLearningStat.create({
       data: {
         label: String(label),
@@ -35,10 +46,10 @@ elearningStatsRouter.post('/', authRequired, adminOnly, async (req: Request, res
   }
 });
 
-elearningStatsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+elearningStatsRouter.put('/:id', authRequired, adminOnly, validate(updateStatSchema), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { label, value, icon } = req.body || {};
+    const { label, value, icon } = req.body;
     const data: any = {};
     if (label !== undefined) data.label = String(label);
     if (value !== undefined) data.value = String(value);
