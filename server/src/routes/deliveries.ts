@@ -1,11 +1,21 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import { env } from '../utils/env';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { validate } from '../middleware/validate';
+import { antiReplay, timingSafeEqualStr } from '../middleware/webhookReplay';
+import { audit, actorFromRequest } from '../utils/audit';
 import * as deliveryService from '../services/deliveryService';
 
 const prisma = new PrismaClient();
 export const deliveriesRouter = Router();
+
+const webhookSchema = z.object({
+  id: z.union([z.string().min(1).max(255), z.number()]),
+  status: z.string().min(1).max(50),
+  commandeId: z.union([z.string().max(255), z.number(), z.null()]).optional(),
+}).passthrough();
 
 // Guard: avoid noisy 500s when delivery API is not configured
 function isDeliveryConfigured(): boolean {
@@ -113,13 +123,18 @@ deliveriesRouter.post('/estimate', authRequired, async (req: Request, res: Respo
  * POST /api/deliveries/webhook
  * Webhook receiver for real-time status updates from LeLivreur
  */
-deliveriesRouter.post('/webhook', async (req: Request, res: Response) => {
+deliveriesRouter.post(
+  '/webhook',
+  antiReplay({
+    source: 'lelivreur',
+    timestampHeader: 'x-delivery-timestamp',
+    nonceHeader: 'x-delivery-nonce',
+    required: !!env.DELIVERY_API_SECRET_KEY,
+  }),
+  validate(webhookSchema),
+  async (req: Request, res: Response) => {
   try {
-    const { id, status, commandeId } = req.body;
-
-    if (!id || !status) {
-      return res.status(400).json({ error: 'Payload webhook invalide' });
-    }
+    const { id, status, commandeId } = req.body as { id: string | number; status: string; commandeId?: string | number };
 
     // Verify HMAC signature if secret is configured
     if (env.DELIVERY_API_SECRET_KEY) {
@@ -136,7 +151,7 @@ deliveriesRouter.post('/webhook', async (req: Request, res: Response) => {
 
       // Check if signature matches
       const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
-      if (signature !== computedSignature) {
+      if (!timingSafeEqualStr(String(signature), computedSignature)) {
         return res.status(403).json({ error: 'Signature invalide' });
       }
     }
@@ -192,9 +207,12 @@ deliveriesRouter.post('/webhook', async (req: Request, res: Response) => {
       }
     });
 
+    await audit({ action: 'delivery.webhook', entityType: 'order', entityId: order.id, metadata: { deliveryId: id, status } });
+
     res.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erreur lors du traitement du webhook livraison';
     res.status(500).json({ error: message });
   }
-});
+},
+);
