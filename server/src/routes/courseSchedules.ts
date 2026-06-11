@@ -1,10 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { validate } from '../middleware/validate';
+import { audit, actorFromRequest } from '../utils/audit';
 import { emailService } from '../utils/email';
 
 const prisma = new PrismaClient();
 export const courseSchedulesRouter = Router();
+
+const createScheduleSchema = z.object({
+  enrollmentId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
+  courseId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
+  scheduledDate: z.string().min(1),
+  timeSlot: z.string().min(1).max(50),
+}).strict();
 
 // Get user's schedules
 courseSchedulesRouter.get('/my', authRequired, async (req: Request, res: Response) => {
@@ -24,15 +34,12 @@ courseSchedulesRouter.get('/my', authRequired, async (req: Request, res: Respons
 });
 
 // Create schedule (user picks a slot - once locked cannot change)
-courseSchedulesRouter.post('/', authRequired, async (req: Request, res: Response) => {
+courseSchedulesRouter.post('/', authRequired, validate(createScheduleSchema), async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
     
     const { enrollmentId, courseId, scheduledDate, timeSlot } = req.body;
-    if (!enrollmentId || !courseId || !scheduledDate || !timeSlot) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
 
     // SÉCURITÉ: vérifier que l'inscription appartient bien à l'utilisateur (anti-IDOR)
     const enrollment = await prisma.eLearningEnrollment.findUnique({
@@ -56,6 +63,7 @@ courseSchedulesRouter.post('/', authRequired, async (req: Request, res: Response
         status: 'scheduled',
       },
     });
+    await audit({ ...actorFromRequest(req), action: 'schedule.create', entityType: 'schedule', entityId: schedule.id, metadata: { enrollmentId: Number(enrollmentId), courseId: Number(courseId), scheduledDate, timeSlot } });
     res.status(201).json({ data: schedule });
   } catch (e) {
     res.status(400).json({ error: e instanceof Error ? e.message : 'Failed to create schedule' });
@@ -77,6 +85,7 @@ courseSchedulesRouter.put('/:id/attend', authRequired, async (req: Request, res:
       where: { id },
       data: { status: 'attended', attendedAt: new Date() },
     });
+    await audit({ ...actorFromRequest(req), action: 'schedule.attend', entityType: 'schedule', entityId: id });
     res.json({ data: schedule });
   } catch (e) {
     res.status(400).json({ error: 'Failed to mark attendance' });
@@ -102,6 +111,7 @@ courseSchedulesRouter.put('/:id/absent', authRequired, adminOnly, async (req: Re
       where: { id },
       data: { status: 'absent', absenceCount: existing.absenceCount + 1 },
     });
+    await audit({ ...actorFromRequest(req), action: 'schedule.absent', entityType: 'schedule', entityId: id, metadata: { userId: existing.userId, courseId: existing.courseId } });
 
     // Count total absences for this enrollment
     const totalAbsences = await prisma.courseSchedule.count({

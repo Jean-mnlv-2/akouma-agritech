@@ -1,8 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { validate } from '../middleware/validate';
+import { audit, actorFromRequest } from '../utils/audit';
 import { sertifierFetch, isSertifierConfigured, isValidSertifierId } from '../utils/sertifierClient';
 import { emailService } from '../utils/email';
+
+const requestCertSchema = z.object({
+  courseId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
+  score: z.number().min(0).max(100).optional(),
+}).strict();
 
 const prisma = new PrismaClient();
 export const certificatesRouter = Router();
@@ -201,11 +209,11 @@ certificatesRouter.get('/:id', authRequired, async (req: Request, res: Response)
 });
 
 // Student: request issuance for a course they completed
-certificatesRouter.post('/request', authRequired, async (req: Request, res: Response) => {
+certificatesRouter.post('/request', authRequired, validate(requestCertSchema), async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
-    const { courseId, score } = req.body || {};
-    if (!userId || !courseId) return res.status(400).json({ error: 'Missing fields' });
+    const { courseId, score } = req.body;
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const course = await prisma.course.findUnique({ where: { id: Number(courseId) } });
     if (!course) return res.status(404).json({ error: 'Course not found' });
@@ -217,6 +225,19 @@ certificatesRouter.post('/request', authRequired, async (req: Request, res: Resp
     if (enrollment.userId !== userId) return res.status(403).json({ error: 'forbidden' });
     if ((enrollment.progress ?? 0) < 100 && !enrollment.completedAt) {
       return res.status(400).json({ error: 'Course not completed yet' });
+    }
+
+    // Vérification supplémentaire: la progression doit aussi être vérifiable
+    // côté serveur via les ModuleProgress complétés (un utilisateur ne peut
+    // pas obtenir un certificat sans avoir terminé tous les modules).
+    const totalModules = await prisma.courseModule.count({ where: { courseId: Number(courseId) } });
+    if (totalModules > 0) {
+      const completedModules = await prisma.moduleProgress.count({
+        where: { enrollmentId: enrollment.id, completed: true },
+      });
+      if (completedModules < totalModules) {
+        return res.status(400).json({ error: 'Course not completed yet (modules missing)' });
+      }
     }
 
     // Anti-doublon: idempotent and concurrency-safe.
@@ -260,6 +281,9 @@ certificatesRouter.post('/request', authRequired, async (req: Request, res: Resp
       }
     }
     drainQueue().catch(() => {});
+    if (cert) {
+      await audit({ ...actorFromRequest(req), action: 'certificate.request', entityType: 'certificate', entityId: cert.id, metadata: { courseId: Number(courseId), score: score ?? null } });
+    }
     // Fallback local : si Sertifier n'est pas configuré, on émet immédiatement le certificat
     // (PDF généré côté backend + email avec lien de téléchargement et vérification).
     if (cert && cert.status !== 'sent' && !isSertifierConfigured()) {

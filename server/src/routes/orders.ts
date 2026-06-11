@@ -1,11 +1,44 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { validate } from '../middleware/validate';
+import { audit, actorFromRequest } from '../utils/audit';
 import { OrdersService, NormalizedOrderItem, DeliveryMethod } from '../services/ordersService';
 
 const prisma = new PrismaClient();
 const ordersService = new OrdersService(prisma);
 export const ordersRouter = Router();
+
+// NOTE: prix/frais/imageUrl envoyés par le client sont IGNORÉS par ordersService
+// (rechargés depuis la DB). Le schéma les accepte pour compat front mais ils
+// n'ont aucun effet sur le total.
+const createOrderSchema = z.object({
+  items: z.array(z.object({
+    productId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
+    productType: z.enum(['shop_product', 'course', 'seed']).optional(),
+    name: z.string().max(255).optional(),
+    price: z.union([z.number(), z.string()]).optional(),
+    quantity: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
+    imageUrl: z.string().max(2048).nullable().optional(),
+  }).strict()).min(1).max(50),
+  shippingAddress: z.string().max(500).nullable().optional(),
+  shippingCity: z.string().max(120).nullable().optional(),
+  shippingCountry: z.string().max(120).nullable().optional(),
+  shippingPhone: z.string().max(40).nullable().optional(),
+  paymentMethod: z.string().max(50).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  promoCode: z.string().max(50).nullable().optional(),
+  deliveryMethod: z.string().max(20).optional(),
+  deliveryPartnerId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/), z.null()]).optional(),
+  shippingFee: z.union([z.number(), z.string(), z.null()]).optional(),
+}).strict();
+
+const updateOrderSchema = z.object({
+  status: z.string().max(50).optional(),
+  paymentStatus: z.string().max(50).optional(),
+  note: z.string().max(2000).optional(),
+}).strict();
 
 type AuthenticatedUser = {
   id?: string;
@@ -116,7 +149,7 @@ ordersRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
 });
 
 // POST /api/orders - Create a new order
-ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
+ordersRouter.post('/', authRequired, validate(createOrderSchema), async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const authUser: AuthenticatedUser = authReq.user || {};
@@ -133,7 +166,7 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
       deliveryMethod,
       deliveryPartnerId,
       shippingFee,
-    } = req.body || {};
+    } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'unauthorized' });
@@ -189,6 +222,7 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
         deliveryPartnerId: deliveryPartnerId != null ? Number(deliveryPartnerId) : null,
         shippingFee: shippingFee != null ? Number(shippingFee) : null,
       });
+      await audit({ ...actorFromRequest(req), action: 'order.create', entityType: 'order', entityId: (result as any)?.id, metadata: { itemCount: normalizedItems.length, deliveryMethod: selectedDeliveryMethod, promoCode: promoCode || undefined } });
       res.status(201).json({ data: result });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Bad request';
@@ -208,10 +242,10 @@ ordersRouter.post('/', authRequired, async (req: Request, res: Response) => {
 });
 
 // PUT /api/orders/:id - Update order status (admin only)
-ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+ordersRouter.put('/:id', authRequired, adminOnly, validate(updateOrderSchema), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { status, paymentStatus, note } = req.body || {};
+    const { status, paymentStatus, note } = req.body;
 
     if (isNaN(id)) {
       return res.status(400).json({ error: 'Invalid id' });
@@ -256,6 +290,8 @@ ordersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Resp
 
       return order;
     });
+
+    await audit({ ...actorFromRequest(req), action: 'order.update', entityType: 'order', entityId: id, metadata: { status, paymentStatus, note } });
 
     // Trigger post-payment processing if payment status was updated to 'paid'
     if (paymentStatus === 'paid') {
