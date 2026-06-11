@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { z } from 'zod';
 import { authRequired } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
 import { createRateLimiter } from '../middleware/rateLimit';
+import { validate } from '../middleware/validate';
+import { antiReplay } from '../middleware/webhookReplay';
+import { audit, actorFromRequest } from '../utils/audit';
 import { env } from '../utils/env';
 import { OrdersService } from '../services/ordersService';
 import { logger } from '../utils/logger';
@@ -10,6 +14,15 @@ import { logger } from '../utils/logger';
 const prisma = new PrismaClient();
 const ordersService = new OrdersService(prisma);
 export const paymentsRouter = Router();
+
+const initiateSchema = z.object({
+  orderId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
+}).strict();
+
+const webhookSchema = z.object({
+  tokenPay: z.string().min(1).max(255),
+  statut: z.string().max(50).optional(),
+}).passthrough(); // les fournisseurs envoient des champs supplémentaires
 
 type AuthenticatedRequest = Request & {
   user?: { id?: string; role?: string };
@@ -22,11 +35,11 @@ type AuthenticatedRequest = Request & {
  * Body: { orderId: number }
  */
 const paymentsInitiateLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
-paymentsRouter.post('/initiate', paymentsInitiateLimiter, authRequired, csrfRequired, async (req: Request, res: Response) => {
+paymentsRouter.post('/initiate', paymentsInitiateLimiter, authRequired, csrfRequired, validate(initiateSchema), async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id ?? authReq.userId;
-    const { orderId } = req.body || {};
+    const { orderId } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -148,7 +161,16 @@ async function verifyWebhookPayment(tokenPay: string): Promise<{ paid: boolean; 
  * POST /api/payments/webhook
  * Webhook appelé par Money Fusion après le paiement.
  */
-paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
+paymentsRouter.post(
+  '/webhook',
+  antiReplay({
+    source: 'moneyfusion',
+    timestampHeader: 'x-webhook-timestamp',
+    nonceHeader: 'x-webhook-nonce',
+    required: !!env.MONEYFUSION_WEBHOOK_SECRET, // exigé quand la signature partagée est configurée
+  }),
+  validate(webhookSchema),
+  async (req: Request, res: Response) => {
   try {
     const body = req.body || {};
     logger.info('[payments] Webhook received');
@@ -162,10 +184,6 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
     }
 
     const { tokenPay, statut } = body;
-
-    if (!tokenPay) {
-      return res.status(400).json({ error: 'tokenPay manquant' });
-    }
 
     // Find the order by paymentRef
     const order = await prisma.order.findFirst({
@@ -228,12 +246,19 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
       });
     }
 
+    if (isPaid) {
+      await audit({ action: 'payment.webhook.confirmed', entityType: 'order', entityId: order.id, metadata: { tokenPay, statut } });
+    } else {
+      await audit({ action: 'payment.webhook.failed', entityType: 'order', entityId: order.id, metadata: { tokenPay, statut } });
+    }
+
     res.json({ status: 'ok' });
   } catch (e) {
     logger.error('[payments] Webhook error', e);
     res.status(500).json({ error: 'Erreur interne' });
   }
-});
+},
+);
 
 /**
  * GET /api/payments/status/:tokenPay
