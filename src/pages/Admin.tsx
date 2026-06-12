@@ -151,9 +151,6 @@ const tabGroups = [
   }
 ];
 
-// Aplatir les tabs pour la logique de filtrage
-const _tabs = tabGroups.flatMap(group => group.tabs);
-
 function AdminContent() {
   const [user, setUser] = useState<{ email?: string; role?: string; allowedModules?: string[] } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
