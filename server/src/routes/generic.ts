@@ -25,6 +25,7 @@ const publicTables = new Set<string>([
   'course_preview_types',
   'course_preview_items',
   'page_header_images',
+  'contact_settings',
 ]);
 
 const adminOnlyTables = new Set<string>([
@@ -36,7 +37,6 @@ const adminOnlyTables = new Set<string>([
   'newsletter_subscriptions',
   'profiles',
   'user_roles',
-  'contact_settings',
 ]);
 
 const allowedTables = new Set([...publicTables, ...adminOnlyTables]);

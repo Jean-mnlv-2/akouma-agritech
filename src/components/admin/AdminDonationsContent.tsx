@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import 'quill/dist/quill.snow.css';
 import { FileUpload } from './FileUpload';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';

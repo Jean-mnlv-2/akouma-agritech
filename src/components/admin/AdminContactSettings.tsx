@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 import { Loader2, Save, Globe, Phone, Mail, MapPin, Facebook, Instagram, Linkedin, Youtube, Music2, Send, X, Clock } from 'lucide-react';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import 'quill/dist/quill.snow.css';
 
 type ContactSettings = {
   id?: number;

@@ -23,7 +23,7 @@ export const certificatesRouter = Router();
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 15_000;
 let workerRunning = false;
-const inFlight = new Set<number>(); // anti-doublon process lock per cert id
+const inFlight = new Set<number>();
 
 function genCertNumber() {
   const ts = Date.now().toString(36).toUpperCase();
@@ -35,12 +35,11 @@ type LogEntry = { ts: string; level: 'info' | 'warn' | 'error'; step: string; me
 function appendLog(prev: unknown, entry: LogEntry): LogEntry[] {
   const arr = Array.isArray(prev) ? (prev as LogEntry[]) : [];
   arr.push(entry);
-  // cap size to avoid unbounded growth
   return arr.slice(-200);
 }
 
 async function processOne(certificateId: number): Promise<void> {
-  // Anti-doublon in-process lock
+
   if (inFlight.has(certificateId)) return;
   inFlight.add(certificateId);
   try {
@@ -50,7 +49,7 @@ async function processOne(certificateId: number): Promise<void> {
   });
   if (!cert) return;
   if (cert.status === 'sent') return;
-  if (cert.status === 'processing') return; // already being processed
+  if (cert.status === 'processing') return;
 
   // Atomic claim: only transition pending|failed -> processing
   const claim = await prisma.certificate.updateMany({
@@ -164,12 +163,17 @@ async function drainQueue(): Promise<void> {
   workerRunning = true;
   try {
     while (true) {
-      const next = await prisma.certificate.findFirst({
-        where: { status: 'pending', attempts: { lt: MAX_ATTEMPTS } },
-        orderBy: { createdAt: 'asc' },
-      });
-      if (!next) break;
-      await processOne(next.id);
+      try {
+        const next = await prisma.certificate.findFirst({
+          where: { status: 'pending', attempts: { lt: MAX_ATTEMPTS } },
+          orderBy: { createdAt: 'asc' },
+        });
+        if (!next) break;
+        await processOne(next.id);
+      } catch (e) {
+        console.error('[Certificates] Queue error:', e);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
   } finally {
     workerRunning = false;
@@ -338,7 +342,6 @@ certificatesRouter.get('/admin', authRequired, adminOnly, async (req: Request, r
 // Admin: retry / re-queue a certificate
 certificatesRouter.post('/:id/retry', authRequired, adminOnly, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  // Anti-doublon: do not reset if currently processing
   const updated = await prisma.certificate.updateMany({
     where: { id, status: { not: 'processing' } },
     data: { status: 'pending', attempts: 0, lastError: null },

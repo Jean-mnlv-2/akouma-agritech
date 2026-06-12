@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Course } from './AdminCourses';
 import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import 'quill/dist/quill.snow.css';
 import { useRef } from 'react';
 import { Plus, Trash, ListPlus, ShieldCheck, Loader2 } from 'lucide-react';
 import { api } from '@/integrations/api/client';

@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import 'quill/dist/quill.snow.css';
 import { api } from '@/integrations/api/client';
 
 interface NewsArticle {

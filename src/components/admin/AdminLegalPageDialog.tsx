@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import 'quill/dist/quill.snow.css';
 
 interface LegalPage {
   id: string;

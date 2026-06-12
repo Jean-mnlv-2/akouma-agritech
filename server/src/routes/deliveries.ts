@@ -163,7 +163,7 @@ deliveriesRouter.post(
     const order = await prisma.order.findFirst({
       where: {
         OR: [
-          { deliveryId: id },
+          { deliveryId: String(id) },
           ...(orderNumberFromId ? [{ orderNumber: orderNumberFromId }] : []),
           ...(Number.isInteger(Number(commandeId)) ? [{ id: Number(commandeId) }] : [])
         ]
@@ -193,7 +193,7 @@ deliveriesRouter.post(
       where: { id: order.id },
       data: {
         deliveryStatus: status,
-        deliveryId: id
+        deliveryId: String(id)
       }
     });
 

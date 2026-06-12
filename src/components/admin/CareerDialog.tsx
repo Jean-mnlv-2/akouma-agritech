@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { slugify } from '@/lib/utils';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import 'quill/dist/quill.snow.css';
 
 interface Career {
   id: number;
