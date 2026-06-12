@@ -41,7 +41,7 @@ const Index = () => {
       </Helmet>
       <TitleManager
         title="KILIMO Agritech - Agriculture Intelligente & Formations"
-        description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées, outils agricoles et accompagnement expert pour les agriculteurs africains."
+        description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées et accompagnement expert pour les agriculteurs africains."
         canonical={window.location.origin + '/'}
         image="/kilimo-logo.png"
         jsonLd={{
