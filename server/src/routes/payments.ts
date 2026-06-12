@@ -115,8 +115,24 @@ paymentsRouter.post('/initiate', paymentsInitiateLimiter, authRequired, csrfRequ
 
     // Money Fusion returns a payment URL to redirect the user to
     if (result.url || result.statut === 'success' || result.payment_url) {
-      const paymentUrl = result.url || result.payment_url;
+      let paymentUrl = result.url || result.payment_url;
       const tokenPay = result.tokenPay || result.token || null;
+
+      const allowedPaymentHosts = [
+        new URL(mfApiUrl).hostname,
+
+      ];
+      
+      try {
+        const parsedUrl = new URL(paymentUrl);
+        if (!allowedPaymentHosts.includes(parsedUrl.hostname) || parsedUrl.protocol !== 'https:') {
+          logger.error('[payments] Payment URL validation failed', { paymentUrl, allowedHosts: allowedPaymentHosts });
+          return res.status(502).json({ error: 'URL de paiement invalide' });
+        }
+      } catch (urlError) {
+        logger.error('[payments] Payment URL parsing failed', urlError);
+        return res.status(502).json({ error: 'URL de paiement invalide' });
+      }
 
       // Store tokenPay on the order for webhook verification
       if (tokenPay) {
