@@ -94,34 +94,65 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, descripti
   );
 };
 
-const tabs = [
-  { value: 'dashboard', label: 'Tableau de bord', icon: Receipt },
-  { value: 'users', label: 'Utilisateurs', icon: Shield },
-  { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
-  { value: 'deliveries', label: 'Livraisons', icon: Truck },
-  { value: 'courses', label: 'Cours', icon: BookOpen },
-  { value: 'elearning-enrollments', label: 'Inscriptions Cours', icon: Users },
-  { value: 'course-previews', label: 'Aperçus Cours', icon: Eye },
-  { value: 'course-modules', label: 'Modules Cours', icon: BookOpen },
-  { value: 'attendance', label: 'Présences', icon: Calendar },
-  { value: 'sertifier', label: 'Sertifier', icon: Shield },
-  { value: 'certificates', label: 'Certificats', icon: Crown },
-  { value: 'reminder-logs', label: 'Journal Rappels', icon: History },
-  { value: 'news', label: 'Actualités', icon: Newspaper },
-  { value: 'seeds', label: 'Semences', icon: Sprout },
-  { value: 'products', label: 'Produits', icon: Package },
-  { value: 'legal', label: 'Pages Légales', icon: FileText },
-  { value: 'partners', label: 'Partenaires', icon: Users },
-  { value: 'donations-content', label: 'Dons - Contenus', icon: FileText },
-  { value: 'careers', label: 'Emplois', icon: Briefcase },
-  { value: 'events', label: 'Événements', icon: Calendar },
-  { value: 'livestreams', label: 'Live Streams', icon: Radio },
-  { value: 'submissions', label: 'Soumissions', icon: FileText },
-  { value: 'reviews', label: 'Avis Clients', icon: StarIcon },
-  { value: 'affiliates', label: 'Classement Affiliés', icon: Crown },
-  { value: 'page-header-images', label: "Images d'en-tête", icon: Eye },
-  { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
+const tabGroups = [
+  {
+    title: "📊 Dashboard & Aperçu",
+    tabs: [{ value: 'dashboard', label: 'Tableau de bord', icon: Receipt }]
+  },
+  {
+    title: "👥 Utilisateurs",
+    tabs: [
+      { value: 'users', label: 'Utilisateurs', icon: Shield },
+      { value: 'affiliates', label: 'Classement Affiliés', icon: Crown }
+    ]
+  },
+  {
+    title: "💳 Ventes & Logistique",
+    tabs: [
+      { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
+      { value: 'deliveries', label: 'Livraisons', icon: Truck }
+    ]
+  },
+  {
+    title: "📚 E-Learning & Certifications",
+    tabs: [
+      { value: 'courses', label: 'Cours', icon: BookOpen },
+      { value: 'elearning-enrollments', label: 'Inscriptions', icon: Users },
+      { value: 'course-previews', label: 'Aperçus', icon: Eye },
+      { value: 'course-modules', label: 'Modules', icon: BookOpen },
+      { value: 'attendance', label: 'Présences', icon: Calendar },
+      { value: 'sertifier', label: 'Sertifier', icon: Shield },
+      { value: 'certificates', label: 'Certificats', icon: Crown },
+      { value: 'reminder-logs', label: 'Journal Rappels', icon: History }
+    ]
+  },
+  {
+    title: "📰 Contenu & Communication",
+    tabs: [
+      { value: 'news', label: 'Actualités', icon: Newspaper },
+      { value: 'legal', label: 'Pages Légales', icon: FileText },
+      { value: 'partners', label: 'Partenaires', icon: Users },
+      { value: 'careers', label: 'Emplois', icon: Briefcase },
+      { value: 'events', label: 'Événements', icon: Calendar },
+      { value: 'livestreams', label: 'Live Streams', icon: Radio },
+      { value: 'donations-content', label: 'Dons - Contenus', icon: FileText },
+      { value: 'submissions', label: 'Soumissions', icon: FileText },
+      { value: 'reviews', label: 'Avis Clients', icon: StarIcon },
+      { value: 'page-header-images', label: "Images d'en-tête", icon: Eye },
+      { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
+    ]
+  },
+  {
+    title: "🌱 Boutique & Produits",
+    tabs: [
+      { value: 'seeds', label: 'Semences', icon: Sprout },
+      { value: 'products', label: 'Produits', icon: Package }
+    ]
+  }
 ];
+
+// Aplatir les tabs pour la logique de filtrage (inchangée)
+const tabs = tabGroups.flatMap(group => group.tabs);
 
 function AdminContent() {
   const [user, setUser] = useState<{ email?: string; role?: string; allowedModules?: string[] } | null>(null);
@@ -347,18 +378,44 @@ function AdminContent() {
         {/* Tabs */}
         <div className="admin-space-responsive-md">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="flex flex-wrap h-auto w-full bg-muted/30 p-1 justify-start gap-1 mb-6 border border-border/50">
-              {visibleTabs.map((tab) => (
-                <TabsTrigger 
-                  key={`trigger-${tab.value}`} 
-                  value={tab.value} 
-                  className="px-3 py-2 flex items-center space-x-2 text-sm font-medium transition-all hover:bg-background/50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
-                >
-                  <tab.icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div className="space-y-6">
+              {tabGroups.map((group) => {
+                // Filtrer les tabs du groupe selon les permissions
+                const visibleGroupTabs = group.tabs.filter(tab => {
+                  if (isAdmin) return true;
+                  if (isSupervisor) {
+                    return user?.allowedModules?.includes(tab.value);
+                  }
+                  return false;
+                });
+
+                // Ne pas afficher le groupe si pas de tabs visible
+                if (visibleGroupTabs.length === 0) return null;
+
+                return (
+                  <div key={group.title} className="space-y-2">
+                    {/* Titre du groupe */}
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pl-2">
+                      {group.title}
+                    </h3>
+                    
+                    {/* Onglets du groupe */}
+                    <TabsList className="flex flex-wrap h-auto w-full bg-muted/30 p-1 justify-start gap-1 border border-border/50">
+                      {visibleGroupTabs.map((tab) => (
+                        <TabsTrigger 
+                          key={`trigger-${tab.value}`} 
+                          value={tab.value} 
+                          className="px-3 py-2 flex items-center space-x-2 text-sm font-medium transition-all hover:bg-background/50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+                        >
+                          <tab.icon className="w-4 h-4 flex-shrink-0" />
+                          <span>{tab.label}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
+                );
+              })}
+            </div>
 
             <div className="mt-6">
               {(activeTab === 'dashboard' && (isAdmin || isSupervisor)) && <AdminDashboardCharts />}
