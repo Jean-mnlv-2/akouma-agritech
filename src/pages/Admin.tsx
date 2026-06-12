@@ -206,14 +206,7 @@ function AdminContent() {
     return () => { isMounted = false; };
   }, []);
 
-  // Filtrer les onglets selon les permissions
-  const visibleTabs = tabs.filter(tab => {
-    if (isAdmin) return true;
-    if (isSupervisor) {
-      return user?.allowedModules?.includes(tab.value);
-    }
-    return false;
-  });
+
 
   useEffect(() => {
     let isMounted = true;
