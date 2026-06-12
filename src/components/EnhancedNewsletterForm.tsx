@@ -67,18 +67,23 @@ export const EnhancedNewsletterForm = () => {
       });
       if (!res.ok) {
         const text = await res.text();
-        if (text.includes('duplicate') || res.status === 409) {
-          toast({ title: 'Déjà inscrit', description: "Cette adresse email est déjà inscrite à notre newsletter.", variant: 'destructive' });
-          setIsSubmitting(false);
-          return;
-        }
         throw new Error(text);
       }
-      toast({
-        title: "Inscription réussie !",
-        description: "Merci de vous être abonné à notre newsletter. Vous recevrez bientôt nos dernières actualités.",
-      });
-      form.reset();
+      const responseData = await res.json();
+
+      if (responseData.message && (responseData.message.includes('Déjà inscrit') || responseData.message.includes('Email réactivé'))) {
+        toast({
+          title: 'Déjà inscrit',
+          description: responseData.message,
+          variant: 'default'
+        });
+      } else {
+        toast({
+          title: "Inscription réussie !",
+          description: "Merci de vous être abonné à notre newsletter. Vous recevrez bientôt nos dernières actualités.",
+        });
+        form.reset();
+      }
     } catch (error: any) {
       console.error('Error subscribing to newsletter:', error);
       toast({

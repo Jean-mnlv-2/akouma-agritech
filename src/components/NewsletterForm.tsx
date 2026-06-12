@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Loader2 } from "lucide-react";
-import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 import { useCountries } from "@/hooks/use-countries";
 
@@ -53,35 +52,40 @@ export const NewsletterForm = ({
     setIsSubmitting(true);
     
     try {
-      const { error } = await api
-        .from('newsletter_subscriptions')
-        .insert({
-          email: data.email,
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
+      const url = new URL('/api/newsletter_subscriptions', apiBaseUrl);
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email.trim(),
           name: data.name || null,
           country: data.country || null,
           phone: data.phone || null,
           source: source,
           confirmed_at: new Date().toISOString()
-        });
-
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          toast({
-            title: t("newsletter.already.title"),
-            description: t("newsletter.already.desc"),
-            variant: "destructive"
-          });
-          return;
-        }
-        throw error;
-      }
-
-      toast({
-        title: t("newsletter.success.title"),
-        description: t("newsletter.success.desc"),
+        })
       });
 
-      form.reset();
+      if (!res.ok) {
+        throw new Error('Failed to subscribe');
+      }
+
+      const responseData = await res.json();
+
+      if (responseData.message && (responseData.message.includes('Déjà inscrit') || responseData.message.includes('Email réactivé'))) {
+        toast({
+          title: t("newsletter.already.title"),
+          description: responseData.message,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: t("newsletter.success.title"),
+          description: t("newsletter.success.desc"),
+        });
+        form.reset();
+      }
     } catch (error) {
       console.error('Error subscribing to newsletter:', error);
       toast({
