@@ -84,11 +84,15 @@ export const EnhancedNewsletterForm = () => {
         });
         form.reset();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error subscribing to newsletter:', error);
+      let errorMessage = "Une erreur s'est produite lors de l'inscription. Veuillez réessayer.";
+      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
       toast({
         title: "Erreur",
-        description: error.message || "Une erreur s'est produite lors de l'inscription. Veuillez réessayer.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

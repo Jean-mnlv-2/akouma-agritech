@@ -86,7 +86,7 @@ export const NewsletterForm = ({
         });
         form.reset();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error subscribing to newsletter:', error);
       toast({
         title: t("newsletter.error.title"),
