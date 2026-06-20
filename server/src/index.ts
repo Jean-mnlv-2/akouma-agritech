@@ -25,6 +25,7 @@ import { partnersRouter } from './routes/partners';
 import { coursePreviewTypesRouter } from './routes/coursePreviewTypes';
 import { coursePreviewItemsRouter } from './routes/coursePreviewItems';
 import { reminderLogsRouter } from './routes/reminderLogs';
+import { chatRouter } from './routes/chat';
 import { ensureCoursePreviewTypes } from './utils/seedPreviewTypes';
 import { donationsRouter } from './routes/donations';
 import { contactMessagesRouter } from './routes/contactMessages';
@@ -260,6 +261,7 @@ app.use('/api/sertifier', sertifierRouter);
 app.use('/api/certificates', certificatesRouter);
 app.use('/api/certificates', certificatePdfRouter);
 app.use('/api/page_header_images', pageHeaderImagesRouter);
+app.use('/api/chat', chatRouter);
 app.use('/api', genericRouter);
 
 // Middleware de gestion d'erreur centralisée
