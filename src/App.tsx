@@ -77,6 +77,8 @@ import Orders from "./pages/Orders";
 import MyCashback from "./pages/MyCashback";
 import ContactPage from "./pages/ContactPage";
 import CookieConsent from "@/components/CookieConsent";
+import Assistant from "./pages/Assistant";
+import ChatBubble from "@/components/chat/ChatBubble";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -96,6 +98,7 @@ const App = () => (
           >
             <ScrollToTop />
             <CookieConsent />
+            <ChatBubble />
             <Suspense fallback={<LoadingSpinner size="large" text="Chargement..." />}>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -140,6 +143,8 @@ const App = () => (
                 <Route path="/my-cashback" element={<MyCashback />} />
                 <Route path="/investors" element={<Investors />} />
                 <Route path="/certificates/verify/:number" element={<CertificateVerify />} />
+                <Route path="/assistant" element={<Assistant />} />
+                <Route path="/assistant/:threadId" element={<Assistant />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
