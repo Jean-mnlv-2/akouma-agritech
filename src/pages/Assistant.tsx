@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Plus, Send, Trash2, Loader2, MessageSquare, Bot, User as UserIcon, ArrowLeft } from "lucide-react";
+import { Plus, Send, Trash2, Loader2, MessageSquare, Bot, User as UserIcon, ArrowLeft, Search, Download } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { api } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 type ThreadSummary = { id: string; title: string; updatedAt: string };
 type ChatMsg = { id: string; role: "user" | "assistant"; content: string; pending?: boolean };
+type ApiMessage = { id: string; role: "user" | "assistant"; content: string };
 
 function getApiBase(): string {
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL as string;
@@ -40,10 +43,12 @@ export default function Assistant() {
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -67,16 +72,19 @@ export default function Assistant() {
   }, [navigate]);
 
   // Load thread list
-  const refreshThreads = useCallback(async () => {
+  const refreshThreads = useCallback(async (search = searchQuery) => {
     try {
-      const res = await api.request("GET", "/api/chat/threads");
+      const url = search.trim() 
+        ? `/api/chat/threads?search=${encodeURIComponent(search)}` 
+        : "/api/chat/threads";
+      const res = await api.request("GET", url);
       setThreads(res.data || []);
       return res.data as ThreadSummary[];
     } catch (e) {
       console.error(e);
       return [];
     }
-  }, []);
+  }, [searchQuery]);
 
   // Bootstrap: load threads, navigate to first or create one
   useEffect(() => {
@@ -91,7 +99,7 @@ export default function Assistant() {
             const res = await api.request("POST", "/api/chat/threads", { body: {} });
             await refreshThreads();
             navigate(`/assistant/${res.data.id}`, { replace: true });
-          } catch (e) {
+          } catch {
             toast.error("Impossible de créer une conversation");
           }
         }
@@ -108,8 +116,8 @@ export default function Assistant() {
       try {
         const res = await api.request("GET", `/api/chat/threads/${threadId}`);
         if (cancelled) return;
-        setMessages((res.data.messages || []).map((m: any) => ({ id: m.id, role: m.role, content: m.content })));
-      } catch (e) {
+        setMessages((res.data.messages || []).map((m: ApiMessage) => ({ id: m.id, role: m.role, content: m.content })));
+      } catch {
         if (!cancelled) {
           setMessages([]);
           toast.error("Conversation introuvable");
@@ -127,6 +135,13 @@ export default function Assistant() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, streaming]);
+
+  // Refresh threads when search query changes
+  useEffect(() => {
+    if (authed) {
+      refreshThreads(searchQuery);
+    }
+  }, [searchQuery, authed, refreshThreads]);
 
   // Focus textarea on thread change
   useEffect(() => {
@@ -163,6 +178,7 @@ export default function Assistant() {
     if (!content || streaming || !threadId) return;
 
     setInput("");
+    setConnectionError(null);
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content };
     const assistantId = `a-${Date.now()}`;
     setMessages(prev => [...prev, userMsg, { id: assistantId, role: "assistant", content: "", pending: true }]);
@@ -185,7 +201,8 @@ export default function Assistant() {
       });
 
       if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}`);
+        const errorText = await res.text().catch(() => "Erreur inconnue");
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
       }
 
       const reader = res.body.getReader();
@@ -229,10 +246,11 @@ export default function Assistant() {
       } else {
         refreshThreads();
       }
-    } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: "⚠️ Erreur réseau. Réessayez.", pending: false } : m));
-        toast.error("Erreur de connexion");
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name !== "AbortError") {
+        setConnectionError(e.message);
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: "⚠️ Erreur de connexion. Veuillez réessayer.", pending: false } : m));
+        toast.error("Erreur de connexion. Réessayez.");
       }
     } finally {
       setStreaming(false);
@@ -244,6 +262,93 @@ export default function Assistant() {
   const stopStream = useCallback(() => {
     abortRef.current?.abort();
   }, []);
+
+  // Export to JSON
+  const exportToJson = useCallback(async () => {
+    if (!threadId) return;
+    try {
+      const response = await fetch(`${getApiBase()}/api/chat/threads/${threadId}/export/json`, {
+        credentials: 'include'
+      });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `conversation-${threadId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export to JSON failed:', error);
+      toast.error('Erreur lors de l\'export JSON');
+    }
+  }, [threadId]);
+
+  // Export to PDF (client-side)
+  const exportToPdf = useCallback(() => {
+    if (!threadId || messages.length === 0) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Veuillez autoriser les pop-ups');
+      return;
+    }
+
+    const content = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${messages[0]?.content.substring(0, 50) || 'Conversation'}</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              max-width: 800px;
+              margin: 20px auto;
+              padding: 0 20px;
+            }
+            .message {
+              margin: 15px 0;
+              padding: 12px;
+              border-radius: 8px;
+            }
+            .user {
+              background-color: #e3f2fd;
+              margin-left: auto;
+              max-width: 70%;
+            }
+            .assistant {
+              background-color: #f5f5f5;
+              max-width: 70%;
+            }
+            .role {
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            @media print {
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Conversation KILIMO Assistant</h1>
+          <p><em>Date: ${new Date().toLocaleDateString('fr-FR')}</em></p>
+          ${messages.map(msg => `
+            <div class="message ${msg.role}">
+              <div class="role">${msg.role === 'user' ? 'Vous' : 'KILIMO Assistant'}</div>
+              <div>${msg.content.replace(/\n/g, '<br>')}</div>
+            </div>
+          `).join('')}
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  }, [threadId, messages]);
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -277,10 +382,23 @@ export default function Assistant() {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+            <div className="p-2 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher une conversation…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
             <ScrollArea className="flex-1">
               <ul className="p-2">
                 {threads.length === 0 && (
-                  <li className="px-2 py-4 text-sm text-muted-foreground">Aucune conversation</li>
+                  <li className="px-2 py-4 text-sm text-muted-foreground">
+                    {searchQuery ? "Aucune conversation trouvée" : "Aucune conversation"}
+                  </li>
                 )}
                 {threads.map(t => (
                   <li key={t.id}>
@@ -323,6 +441,28 @@ export default function Assistant() {
                 <div className="truncate text-sm font-semibold">KILIMO Assistant</div>
                 <div className="text-xs text-muted-foreground">En ligne · Réponses IA</div>
               </div>
+              {connectionError && (
+                <div className="mr-2 px-3 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                  ⚠️ Problème de connexion
+                </div>
+              )}
+              {threadId && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <Download className="h-3.5 w-3.5 mr-1" /> Exporter
+                  </Button>
+                </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={exportToJson}>
+                      Exporter en JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToPdf}>
+                      Exporter en PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <Button size="sm" variant="outline" onClick={createThread} className="md:hidden">
                 <Plus className="mr-1 h-3.5 w-3.5" /> Nouvelle
               </Button>
@@ -352,11 +492,14 @@ export default function Assistant() {
                       )}>
                         {m.role === "assistant" ? (
                           m.pending && !m.content ? (
-                            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "0ms" }} />
-                              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "120ms" }} />
-                              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "240ms" }} />
-                            </span>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <div className="flex gap-1">
+                                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "0ms" }} />
+                                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "150ms" }} />
+                                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "300ms" }} />
+                              </div>
+                              <span className="text-sm font-medium">Assistant écrit...</span>
+                            </div>
                           ) : (
                             <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-2 prose-ol:my-2 prose-pre:my-2">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>

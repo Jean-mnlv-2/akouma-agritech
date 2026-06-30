@@ -3,12 +3,56 @@ import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { authRequired } from '../middleware/authRequired';
 import { validate } from '../middleware/validate';
+import { createRateLimiter } from '../middleware/rateLimit';
 
 const prisma = new PrismaClient();
 export const chatRouter = Router();
 
-const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const DEFAULT_MODEL = 'google/gemini-3-flash-preview';
+// User-specific rate limiter for chat messages: 10 messages per minute
+const chatMessageRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => {
+    if (req.user && req.user.id) {
+      return `user:${req.user.id}`;
+    }
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    return String(ip);
+  }
+});
+
+// Simple content moderation function
+function isContentMalicious(content: string): { isMalicious: boolean; reason?: string } {
+  const normalizedContent = content.toLowerCase();
+  
+  // Blocked keywords/phrases
+  const blockedPatterns = [
+    /\b(hack|hacked|hacking)\b/i,
+    /\b(sql injection|xss|cross-site scripting)\b/i,
+    /\b(phish|phishing)\b/i,
+    /\b(scam|scammer)\b/i,
+    /\b(password|pwd|passwd)\b.*\b\w{8,}\b/i,
+    /\b(credit card|card number|cvv|ccv)\b/i,
+    /\b(nude|porn|explicit)\b/i,
+    /\b(violent|violence|kill|murder)\b/i,
+    /\b(hate|hateful|racist|racism)\b/i,
+  ];
+  
+  for (const pattern of blockedPatterns) {
+    if (pattern.test(normalizedContent)) {
+      return { isMalicious: true, reason: "Ce contenu est bloqué par nos filtres de sécurité." };
+    }
+  }
+  
+  return { isMalicious: false };
+}
+
+// Configuration
+const AI_PROVIDER = process.env.AI_PROVIDER || 'lovable'; // 'lovable' or 'ollama'
+const LOVABLE_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+const LOVABLE_DEFAULT_MODEL = 'google/gemini-3-flash-preview';
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
+const OLLAMA_DEFAULT_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 const MAX_HISTORY = 30;
 const MAX_MESSAGE_LENGTH = 4000;
 
@@ -29,11 +73,31 @@ Règles :
 chatRouter.use(authRequired);
 
 // List threads
-chatRouter.get('/threads', async (req, res) => {
+chatRouter.get("/threads", async (req, res) => {
   const userId = req.user!.id;
+  const searchQuery = (req.query.search as string) || "";
+  
+  let where: any = { userId };
+  
+  if (searchQuery.trim()) {
+    where = {
+      ...where,
+      OR: [
+        { title: { contains: searchQuery, mode: "insensitive" } },
+        {
+          messages: {
+            some: {
+              content: { contains: searchQuery, mode: "insensitive" }
+            }
+          }
+        }
+      ]
+    };
+  }
+  
   const threads = await prisma.chatThread.findMany({
-    where: { userId },
-    orderBy: { updatedAt: 'desc' },
+    where,
+    orderBy: { updatedAt: "desc" },
     select: { id: true, title: true, createdAt: true, updatedAt: true },
   });
   res.json({ data: threads });
@@ -74,29 +138,162 @@ chatRouter.put('/threads/:id', validate(renameSchema), async (req, res) => {
 });
 
 // Delete
-chatRouter.delete('/threads/:id', async (req, res) => {
+chatRouter.delete("/threads/:id", async (req, res) => {
   const userId = req.user!.id;
   const existing = await prisma.chatThread.findFirst({ where: { id: req.params.id, userId } });
-  if (!existing) return res.status(404).json({ error: 'not_found' });
+  if (!existing) return res.status(404).json({ error: "not_found" });
   await prisma.chatThread.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
 });
 
+// Export conversation as JSON
+chatRouter.get("/threads/:id/export/json", async (req, res) => {
+  const userId = req.user!.id;
+  const threadId = req.params.id;
+  const thread = await prisma.chatThread.findFirst({
+    where: { id: threadId, userId },
+    include: {
+      messages: { orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!thread) return res.status(404).json({ error: "not_found" });
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename="conversation-${thread.id}.json"`);
+  res.json(thread);
+});
+
+// Helper to stream from Lovable API
+async function streamFromLovable(messages: any[], send: (event: string, data: unknown) => void) {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) {
+    throw new Error('LOVABLE_API_KEY non configurée.');
+  }
+
+  const upstream = await fetch(LOVABLE_GATEWAY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: LOVABLE_DEFAULT_MODEL,
+      stream: true,
+      messages,
+    }),
+  });
+
+  if (!upstream.ok || !upstream.body) {
+    const text = await upstream.text().catch(() => '');
+    if (upstream.status === 429) {
+      send('error', { code: 'rate_limited', message: 'Trop de requêtes. Réessayez dans un instant.' });
+    } else if (upstream.status === 402) {
+      send('error', { code: 'credits_exhausted', message: 'Crédits IA épuisés. Contactez l\'administrateur.' });
+    } else {
+      send('error', { code: 'upstream_error', message: text.slice(0, 200) || 'Erreur du modèle.' });
+    }
+    return '';
+  }
+
+  let assistantText = '';
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const json = JSON.parse(payload);
+        const delta = json?.choices?.[0]?.delta?.content;
+        if (typeof delta === 'string' && delta.length > 0) {
+          assistantText += delta;
+          send('delta', { content: delta });
+        }
+      } catch {
+        // ignore parse errors on keep-alive lines
+      }
+    }
+  }
+  return assistantText;
+}
+
+// Helper to stream from Ollama API
+async function streamFromOllama(messages: any[], send: (event: string, data: unknown) => void) {
+  const upstream = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: OLLAMA_DEFAULT_MODEL,
+      stream: true,
+      messages,
+    }),
+  });
+
+  if (!upstream.ok || !upstream.body) {
+    const text = await upstream.text().catch(() => '');
+    send('error', { code: 'upstream_error', message: text.slice(0, 200) || 'Erreur Ollama.' });
+    return '';
+  }
+
+  let assistantText = '';
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const json = JSON.parse(trimmed);
+        const delta = json?.message?.content;
+        if (typeof delta === 'string' && delta.length > 0) {
+          assistantText += delta;
+          send('delta', { content: delta });
+        }
+        if (json?.done) break;
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }
+  return assistantText;
+}
+
 // Stream a chat completion
 const messageSchema = z.object({ content: z.string().min(1).max(MAX_MESSAGE_LENGTH) }).strict();
-chatRouter.post('/threads/:id/messages', validate(messageSchema), async (req, res) => {
+chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messageSchema), async (req, res) => {
   const userId = req.user!.id;
   const threadId = req.params.id;
 
   const thread = await prisma.chatThread.findFirst({ where: { id: threadId, userId } });
   if (!thread) return res.status(404).json({ error: 'not_found' });
 
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'ai_unavailable', message: 'LOVABLE_API_KEY non configurée.' });
-  }
-
   const userContent = req.body.content as string;
+
+  // Check for malicious/inappropriate content
+  const moderation = isContentMalicious(userContent);
+  if (moderation.isMalicious) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.write(`event: error\ndata: ${JSON.stringify({ code: 'content_moderation', message: moderation.reason })}\n\n`);
+    res.end();
+    return;
+  }
 
   // Persist the user message immediately
   await prisma.chatMessage.create({
@@ -120,7 +317,7 @@ chatRouter.post('/threads/:id/messages', validate(messageSchema), async (req, re
 
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
-    ...history.map(m => ({ role: m.role, content: m.content })),
+    ...history.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
   ];
 
   // SSE setup
@@ -135,61 +332,13 @@ chatRouter.post('/threads/:id/messages', validate(messageSchema), async (req, re
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  let assistantText = '';
-
   try {
-    const upstream = await fetch(GATEWAY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        stream: true,
-        messages,
-      }),
-    });
+    let assistantText = '';
 
-    if (!upstream.ok || !upstream.body) {
-      const text = await upstream.text().catch(() => '');
-      if (upstream.status === 429) {
-        send('error', { code: 'rate_limited', message: 'Trop de requêtes. Réessayez dans un instant.' });
-      } else if (upstream.status === 402) {
-        send('error', { code: 'credits_exhausted', message: 'Crédits IA épuisés. Contactez l\'administrateur.' });
-      } else {
-        send('error', { code: 'upstream_error', message: text.slice(0, 200) || 'Erreur du modèle.' });
-      }
-      res.end();
-      return;
-    }
-
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const payload = trimmed.slice(5).trim();
-        if (!payload || payload === '[DONE]') continue;
-        try {
-          const json = JSON.parse(payload);
-          const delta = json?.choices?.[0]?.delta?.content;
-          if (typeof delta === 'string' && delta.length > 0) {
-            assistantText += delta;
-            send('delta', { content: delta });
-          }
-        } catch {
-          // ignore parse errors on keep-alive lines
-        }
-      }
+    if (AI_PROVIDER === 'ollama') {
+      assistantText = await streamFromOllama(messages, send);
+    } else {
+      assistantText = await streamFromLovable(messages, send);
     }
 
     // Persist assistant message

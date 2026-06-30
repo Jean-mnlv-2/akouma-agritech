@@ -20,7 +20,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:8080}
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_min_32_chars_for_docker_1234567890}
@@ -40,9 +40,14 @@ services:
       SHIPPING_FREE_THRESHOLD: ${SHIPPING_FREE_THRESHOLD:-50000}
       SHIPPING_BASE_FEE: ${SHIPPING_BASE_FEE:-5000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-akouma}?schema=public
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
     depends_on:
       db:
         condition: service_healthy
+      ollama:
+        condition: service_started
     volumes:
       - ./server/prisma:/app/prisma
       - uploads:/app/uploads
@@ -61,6 +66,16 @@ services:
     ports:
       - "8080:8080"
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: akouma-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
 volumes:
   db_data:
   uploads:
+  ollama_data:

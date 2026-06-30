@@ -4,7 +4,7 @@ import { MessageCircle } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { cn } from "@/lib/utils";
 
-const HIDDEN_PREFIXES = ["/assistant", "/admin", "/supervisor", "/auth", "/checkout"];
+const HIDDEN_PREFIXES = ["/assistant", "/admin", "/supervisor", "/checkout"];
 
 export default function ChatBubble() {
   const navigate = useNavigate();
@@ -27,13 +27,20 @@ export default function ChatBubble() {
     return () => { cancelled = true; window.removeEventListener("auth-change", onChange); };
   }, []);
 
-  if (!authed) return null;
   if (HIDDEN_PREFIXES.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
+
+  const handleClick = () => {
+    if (!authed) {
+      navigate(`/auth?redirect=${encodeURIComponent(window.location.pathname)}`);
+    } else {
+      navigate("/assistant");
+    }
+  };
 
   return (
     <button
       type="button"
-      onClick={() => navigate("/assistant")}
+      onClick={handleClick}
       className={cn(
         "fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full",
         "bg-primary text-primary-foreground shadow-lg ring-2 ring-primary/20 transition",
