@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { verifyRecaptcha } from '../middleware/recaptcha';
 
 const prisma = new PrismaClient();
 export const newsletterSubscriptionsRouter = Router();
@@ -10,7 +11,7 @@ newsletterSubscriptionsRouter.get('/', authRequired, adminOnly, async (_req: Req
   res.json({ data: items });
 });
 
-newsletterSubscriptionsRouter.post('/', async (req: Request, res: Response) => {
+newsletterSubscriptionsRouter.post('/', verifyRecaptcha('newsletter'), async (req: Request, res: Response) => {
   try {
     const { email } = req.body || {};
     if (!email) return res.status(400).json({ error: 'missing email' });

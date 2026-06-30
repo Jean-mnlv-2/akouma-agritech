@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Send, Loader2 } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useCountries } from "@/hooks/use-countries";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
 
 interface ContactFormProps {
   source?: 'general' | 'partnerships' | 'donations' | 'support' | 'careers';
@@ -29,6 +30,7 @@ const ContactForm = ({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { countries, updatePhoneWithCode } = useCountries();
+  const { execute: executeRecaptcha } = useRecaptcha();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -89,13 +91,15 @@ const ContactForm = ({
     setIsLoading(true);
 
     try {
+      const recaptchaToken = await executeRecaptcha('contact');
       const basePayload: Record<string, unknown> = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone || null,
           company: formData.company || null,
           project_type: formData.subject || 'general',
-          message: formData.message
+          message: formData.message,
+          recaptchaToken
         };
 
       const { error } = await api

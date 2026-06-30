@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
+import { verifyRecaptcha } from '../middleware/recaptcha';
 
 const prisma = new PrismaClient();
 export const demoRequestsRouter = Router();
@@ -10,7 +11,7 @@ demoRequestsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: 
   res.json({ data: items });
 });
 
-demoRequestsRouter.post('/', async (req: Request, res: Response) => {
+demoRequestsRouter.post('/', verifyRecaptcha('demo'), async (req: Request, res: Response) => {
   const { name, email, company, phone, country, message } = req.body || {};
   if (!name || !email || !country) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.demoRequest.create({ data: { name, email, company, phone, country, message, status: 'pending' } });

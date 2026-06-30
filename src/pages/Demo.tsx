@@ -12,12 +12,14 @@ import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
 
 const Demo = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { countries, updatePhoneWithCode } = useCountries();
+  const { execute: executeRecaptcha } = useRecaptcha();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -75,6 +77,7 @@ const Demo = () => {
     }
     setIsSubmitting(true);
     try {
+      const recaptchaToken = await executeRecaptcha('demo');
       const res = await fetch('/api/demo_requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,6 +89,7 @@ const Demo = () => {
           company: formData.company || null,
           country: formData.country || 'Non spécifié',
           message: `${selectedDemo ? `Type de démo: ${selectedDemo}. ` : ''}${formData.message}`,
+          recaptchaToken
         }),
       });
       if (!res.ok) throw new Error(await res.text());

@@ -8,6 +8,7 @@ import { emailService } from '../utils/email';
 import { issueCsrfToken } from '../middleware/csrf';
 import { logger } from '../utils/logger';
 import { createRateLimiter } from '../middleware/rateLimit';
+import { verifyRecaptcha } from '../middleware/recaptcha';
 
 const prisma = new PrismaClient();
 export const authRouter = Router();
@@ -44,7 +45,7 @@ const forgotLimiterEmail = createRateLimiter({
   keyGenerator: (req) => String((req.body?.email || 'unknown')).toLowerCase().trim(),
 });
 
-authRouter.post('/sign-in', signInLimiterIp, signInLimiterEmail, async (req: Request, res: Response) => {
+authRouter.post('/sign-in', signInLimiterIp, signInLimiterEmail, verifyRecaptcha('login'), async (req: Request, res: Response) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
   const normalizedEmail = email.toLowerCase().trim();
@@ -63,7 +64,7 @@ authRouter.post('/sign-in', signInLimiterIp, signInLimiterEmail, async (req: Req
   res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive }, csrfToken });
 });
 
-authRouter.post('/sign-up', async (req: Request, res: Response) => {
+authRouter.post('/sign-up', verifyRecaptcha('signup'), async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
   const normalizedSignupEmail = email.toLowerCase().trim();
@@ -119,11 +120,12 @@ authRouter.get('/session', async (req: Request, res: Response) => {
   }
 });
 
-authRouter.post('/forgot-password', forgotLimiterIp, forgotLimiterEmail, async (req: Request, res: Response) => {
+authRouter.post('/forgot-password', forgotLimiterIp, forgotLimiterEmail, verifyRecaptcha('forgot_password'), async (req: Request, res: Response) => {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email requis' });
   
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user) {
     // Ne pas révéler si l'utilisateur existe
     return res.json({ message: 'Si un compte existe pour cet e-mail, un lien de réinitialisation sera envoyé.' });

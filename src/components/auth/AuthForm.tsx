@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, User, Lock, Shield, Mail } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useNavigate } from "react-router-dom";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
 
 const authSchema = z.object({
   email: z.string().email("Veuillez entrer une adresse email valide"),
@@ -38,6 +39,7 @@ export const AuthForm = () => {
   const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { execute: executeRecaptcha } = useRecaptcha();
 
   const loginForm = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
@@ -58,9 +60,11 @@ export const AuthForm = () => {
   const onLogin = async (data: AuthFormData) => {
     setIsLoading(true);
     try {
+      const recaptchaToken = await executeRecaptcha('login');
       const { data: authData } = await api.auth.signInWithPassword({
         email: data.email,
         password: data.password,
+        recaptchaToken,
       });
 
       if (authData?.user) {
@@ -118,11 +122,13 @@ export const AuthForm = () => {
   const onSignup = async (data: SignupFormData) => {
     setIsLoading(true);
     try {
+      const recaptchaToken = await executeRecaptcha('signup');
       const fullName = `${data.firstName} ${data.lastName}`.trim();
       await api.auth.signUp({
         email: data.email,
         password: data.password,
-        options: { data: { full_name: fullName } }
+        options: { data: { full_name: fullName } },
+        recaptchaToken,
       });
 
       toast({ title: "Inscription réussie", description: "Bienvenue dans votre espace client !" });
@@ -152,7 +158,8 @@ export const AuthForm = () => {
     }
     setIsLoading(true);
     try {
-      await api.auth.forgotPassword(resetEmail);
+      const recaptchaToken = await executeRecaptcha('forgot_password');
+      await api.auth.forgotPassword(resetEmail, recaptchaToken);
       setResetSent(true);
       toast({ title: "Email envoyé", description: "Si cet email existe dans notre système, vous recevrez un lien de réinitialisation." });
     } catch (error) {

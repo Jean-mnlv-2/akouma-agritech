@@ -201,11 +201,11 @@ function createApiClient() {
       },
       onAuthStateChange: (_cb: any) => ({ data: { subscription: { unsubscribe: () => void 0 } } }),
       signInWithPassword: async (args: any) => {
-        const res = await http('POST', '/auth/sign-in', { body: { email: args.email, password: args.password } });
+        const res = await http('POST', '/auth/sign-in', { body: { email: args.email, password: args.password, recaptchaToken: args.recaptchaToken } });
         return { data: { user: res.user }, error: null };
       },
       signUp: async (args: any) => {
-        const res = await http('POST', '/auth/sign-up', { body: { email: args.email, password: args.password, fullName: args.options?.data?.full_name } });
+        const res = await http('POST', '/auth/sign-up', { body: { email: args.email, password: args.password, fullName: args.options?.data?.full_name, recaptchaToken: args.recaptchaToken } });
         return { data: { user: res.user }, error: null };
       },
       signOut: async () => {
@@ -215,8 +215,8 @@ function createApiClient() {
       updateUser: async (args: any) => {
         return { data: { user: args }, error: null };
       },
-      forgotPassword: async (email: string) => {
-        const res = await http('POST', '/auth/forgot-password', { body: { email } });
+      forgotPassword: async (email: string, recaptchaToken?: string) => {
+        const res = await http('POST', '/auth/forgot-password', { body: { email, recaptchaToken } });
         return { data: res, error: null };
       },
       resetPassword: async (args: { token: string; password: any }) => {

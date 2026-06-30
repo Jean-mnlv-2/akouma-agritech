@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useCountries } from "@/hooks/use-countries";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
 
 const newsletterSchema = z.object({
   email: z.string().email("Veuillez entrer une adresse email valide"),
@@ -37,6 +38,7 @@ export const NewsletterForm = ({
   const { toast } = useToast();
   const { t } = useI18n();
   const { countries, updatePhoneWithCode } = useCountries();
+  const { execute: executeRecaptcha } = useRecaptcha();
 
   const form = useForm<NewsletterFormData>({
     resolver: zodResolver(newsletterSchema),
@@ -52,6 +54,7 @@ export const NewsletterForm = ({
     setIsSubmitting(true);
     
     try {
+      const recaptchaToken = await executeRecaptcha('newsletter');
       const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
       const url = new URL('/api/newsletter_subscriptions', apiBaseUrl);
       const res = await fetch(url.toString(), {
@@ -63,7 +66,8 @@ export const NewsletterForm = ({
           country: data.country || null,
           phone: data.phone || null,
           source: source,
-          confirmed_at: new Date().toISOString()
+          confirmed_at: new Date().toISOString(),
+          recaptchaToken
         })
       });
 

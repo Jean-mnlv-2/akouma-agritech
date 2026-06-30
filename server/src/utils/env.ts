@@ -113,6 +113,8 @@ export const env = {
     description: 'Frais de livraison de base (XOF)',
   }),
   SERTIFIER_SECRET_KEY: process.env.SERTIFIER_SECRET_KEY || '',
+  RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY || '',
+  RECAPTCHA_SITE_KEY: process.env.RECAPTCHA_SITE_KEY || '',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
   validateSecrets: () => {
