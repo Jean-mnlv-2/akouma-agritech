@@ -15,6 +15,10 @@ declare module 'react-quill' {
     style?: React.CSSProperties;
     [key: string]: unknown;
   }
-  class ReactQuill extends React.Component<ReactQuillProps> {}
+  class ReactQuill extends React.Component<ReactQuillProps> {
+    getEditor(): any;
+    focus(): void;
+    blur(): void;
+  }
   export default ReactQuill;
 }
