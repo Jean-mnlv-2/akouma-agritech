@@ -125,6 +125,10 @@ export const env = {
       if (JWT_SECRET.length < 32 || JWT_SECRET === DEFAULTS.JWT_SECRET) {
         throw new Error('JWT_SECRET doit être défini et avoir au moins 32 caractères en production');
       }
+      const internalToken = process.env.INTERNAL_API_TOKEN || '';
+      if (!internalToken || internalToken === 'secure_internal_token_change_in_production' || internalToken.length < 24) {
+        throw new Error('INTERNAL_API_TOKEN doit être défini en production, différer de la valeur par défaut et contenir au moins 24 caractères');
+      }
       if (DEFAULT_ADMIN_EMAIL === DEFAULTS.DEFAULT_ADMIN_EMAIL) {
         throw new Error(`DEFAULT_ADMIN_EMAIL doit être défini en production (ne peut pas être "${DEFAULTS.DEFAULT_ADMIN_EMAIL}")`);
       }
