@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
+import { audit, actorFromRequest } from '../utils/audit';
 
 const prisma = new PrismaClient();
 export const genericRouter = Router();
@@ -29,17 +30,45 @@ const publicTables = new Set<string>([
 ]);
 
 const adminOnlyTables = new Set<string>([
-  'donations',
   'contact_messages',
   'content_submissions',
   'demo_requests',
-  'elearning_enrollments',
   'newsletter_subscriptions',
-  'profiles',
-  'user_roles',
 ]);
+// Note: donations, elearning_enrollments, profiles, user_roles ont des routeurs
+// dédiés avec validation Zod + audit + logique métier. Les exposer via CRUD
+// générique permettrait un mass-assignment (role, userId, etc.) ; retiré.
 
 const allowedTables = new Set([...publicTables, ...adminOnlyTables]);
+
+// Colonnes jamais modifiables via CRUD générique, quel que soit le rôle.
+// Empêche l'élévation de privilèges (role), l'usurpation (userId, email) et
+// la corruption des identifiants techniques (id, timestamps, hashes).
+const FORBIDDEN_COLUMNS = new Set<string>([
+  'id',
+  'created_at',
+  'updated_at',
+  'createdAt',
+  'updatedAt',
+  'password_hash',
+  'passwordHash',
+  'password',
+  'role',
+  'user_id',
+  'userId',
+  'auth_user_id',
+  'authUserId',
+  'reset_token',
+  'resetToken',
+  'reset_token_expiry',
+  'resetTokenExpiry',
+  'stripe_customer_id',
+  'stripeCustomerId',
+  'is_admin',
+  'isAdmin',
+  'allowed_modules',
+  'allowedModules',
+]);
 
 function ensureTable(table: string): string {
   if (!allowedTables.has(table)) {
@@ -49,7 +78,7 @@ function ensureTable(table: string): string {
 }
 
 function isValidColumnName(name: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) && !FORBIDDEN_COLUMNS.has(name);
 }
 
 function mapColumnName(table: string, column: string): string {
@@ -217,7 +246,7 @@ genericRouter.post('/:table', authRequired, adminOnly, csrfRequired, async (req:
       const originalKey = keys[idx];
       const val = body[originalKey];
       
-      if (col !== 'id' && col !== 'created_at' && col !== 'updated_at') {
+      if (!FORBIDDEN_COLUMNS.has(col)) {
         let processedVal = val;
         
         if (typeof val === 'string' && (col.includes('_at') || col.includes('_date') || col.includes('At') || col.includes('Date')) && val.match(/^\d{4}-\d{2}-\d{2}/)) {
@@ -242,6 +271,7 @@ genericRouter.post('/:table', authRequired, adminOnly, csrfRequired, async (req:
     const sql = `INSERT INTO "${table}" (${filteredCols.join(', ')}) VALUES (${filteredParams.join(', ')}) RETURNING *`;
     const rows = await prisma.$queryRawUnsafe(sql, ...filteredValues) as Array<Record<string, unknown>>;
     const mappedRow = unmapRow(table, rows[0]);
+    await audit({ ...actorFromRequest(req), action: 'generic.create', entityType: table, entityId: String((mappedRow as any)?.id ?? '') }).catch(() => void 0);
     res.status(201).json({ data: mappedRow });
   } catch (e) {
     const error = e instanceof Error ? e.message : 'Bad request';
@@ -265,7 +295,7 @@ genericRouter.put('/:table/:id', authRequired, adminOnly, csrfRequired, async (r
     const processedKeys: string[] = [];
     const processedValues: unknown[] = [];
     mappedKeys.forEach((mappedKey, idx) => {
-      if (mappedKey !== 'id' && mappedKey !== 'created_at') {
+      if (!FORBIDDEN_COLUMNS.has(mappedKey)) {
         const originalKey = keys[idx];
         const val = body[originalKey];
         let processedVal = val;
@@ -297,6 +327,7 @@ genericRouter.put('/:table/:id', authRequired, adminOnly, csrfRequired, async (r
     const sql = `UPDATE "${table}" SET ${setClause} WHERE "id" = $${processedKeys.length + 1} RETURNING *`;
     const rows = await prisma.$queryRawUnsafe(sql, ...processedValues, finalId) as Array<Record<string, unknown>>;
     const mappedRow = unmapRow(table, rows[0]);
+    await audit({ ...actorFromRequest(req), action: 'generic.update', entityType: table, entityId: String(finalId) }).catch(() => void 0);
     res.json({ data: mappedRow });
   } catch (e) {
     const error = e instanceof Error ? e.message : 'Bad request';
@@ -318,6 +349,7 @@ genericRouter.delete('/:table/:id', authRequired, adminOnly, csrfRequired, async
     
     const sql = `DELETE FROM "${table}" WHERE "id" = $1`;
     await prisma.$queryRawUnsafe(sql, finalId);
+    await audit({ ...actorFromRequest(req), action: 'generic.delete', entityType: table, entityId: String(finalId) }).catch(() => void 0);
     res.json({ success: true });
   } catch (e) {
     const error = e instanceof Error ? e.message : 'Bad request';

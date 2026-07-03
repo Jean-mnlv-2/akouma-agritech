@@ -18,8 +18,17 @@ interface JwtPayload {
   role: string;
 }
 
-function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: '7d' });
+// Access token court (1h) — refresh token 14j pour renouvellement silencieux.
+const ACCESS_TOKEN_TTL = '1h';
+const ACCESS_TOKEN_MAX_AGE_MS = 60 * 60 * 1000;
+const REFRESH_TOKEN_TTL = '14d';
+const REFRESH_TOKEN_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+
+function signAccessToken(payload: JwtPayload): string {
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
+}
+function signRefreshToken(payload: JwtPayload): string {
+  return jwt.sign({ ...payload, typ: 'refresh' }, env.JWT_SECRET, { expiresIn: REFRESH_TOKEN_TTL });
 }
 
 function setAuthCookie(res: Response, token: string): void {
@@ -27,9 +36,23 @@ function setAuthCookie(res: Response, token: string): void {
     httpOnly: true,
     sameSite: env.isProduction() ? 'none' : 'lax',
     secure: env.isProduction(),
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: ACCESS_TOKEN_MAX_AGE_MS,
     path: '/',
   });
+}
+function setRefreshCookie(res: Response, token: string): void {
+  res.cookie('refresh_token', token, {
+    httpOnly: true,
+    sameSite: env.isProduction() ? 'none' : 'lax',
+    secure: env.isProduction(),
+    maxAge: REFRESH_TOKEN_MAX_AGE_MS,
+    // Scope au strict minimum : uniquement les endpoints d'auth
+    path: '/auth',
+  });
+}
+function issueSession(res: Response, payload: JwtPayload): void {
+  setAuthCookie(res, signAccessToken(payload));
+  setRefreshCookie(res, signRefreshToken(payload));
 }
 
 const signInLimiterIp = createRateLimiter({ windowMs: 60_000, max: 20 });
@@ -58,8 +81,7 @@ authRouter.post('/sign-in', signInLimiterIp, signInLimiterEmail, verifyRecaptcha
     logger.info('[AUTH] Login successful', { id: user.id, role: user.role, isActive: user.isActive });
   }
   
-  const token = signToken({ sub: user.id, role: user.role });
-  setAuthCookie(res, token);
+  issueSession(res, { sub: user.id, role: user.role });
   const csrfToken = issueCsrfToken(res);
   res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive }, csrfToken });
 });
@@ -88,16 +110,46 @@ authRouter.post('/sign-up', verifyRecaptcha('signup'), async (req: Request, res:
     logger.info('[AUTH] User created', { id: created.id, role: created.role });
   }
 
-  const token = signToken({ sub: created.id, role: created.role });
-  setAuthCookie(res, token);
+  issueSession(res, { sub: created.id, role: created.role });
   const csrfToken = issueCsrfToken(res);
   res.status(201).json({ user: { id: created.id, email: created.email, fullName: created.fullName, role: created.role, isActive: created.isActive }, csrfToken });
 });
 
 authRouter.post('/sign-out', async (req: Request, res: Response) => {
   res.clearCookie('auth_token', { path: '/' });
+  res.clearCookie('refresh_token', { path: '/auth' });
   res.clearCookie('csrf_token', { path: '/' });
   res.json({ success: true });
+});
+
+// Renouvelle un access token via le refresh token (rotation).
+const refreshLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
+authRouter.post('/refresh', refreshLimiter, async (req: Request, res: Response) => {
+  const refresh = req.cookies?.refresh_token as string | undefined;
+  if (!refresh) return res.status(401).json({ error: 'no_refresh_token' });
+  let decoded: JwtPayload & { typ?: string };
+  try {
+    decoded = jwt.verify(refresh, env.JWT_SECRET) as JwtPayload & { typ?: string };
+  } catch {
+    res.clearCookie('refresh_token', { path: '/auth' });
+    return res.status(401).json({ error: 'invalid_refresh_token' });
+  }
+  if (decoded.typ !== 'refresh') {
+    return res.status(401).json({ error: 'invalid_refresh_token' });
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.sub },
+    select: { id: true, email: true, fullName: true, role: true, isActive: true },
+  });
+  if (!user || !user.isActive) {
+    res.clearCookie('auth_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/auth' });
+    return res.status(401).json({ error: 'account_disabled' });
+  }
+  // Rotation : nouveau access + nouveau refresh à chaque appel
+  issueSession(res, { sub: user.id, role: user.role });
+  const csrfToken = issueCsrfToken(res);
+  res.json({ user, csrfToken });
 });
 
 authRouter.get('/session', async (req: Request, res: Response) => {

@@ -50,11 +50,29 @@ function isContentMalicious(content: string): { isMalicious: boolean; reason?: s
 // Configuration
 const AI_PROVIDER = process.env.AI_PROVIDER || 'lovable'; // 'lovable' or 'ollama'
 const LOVABLE_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const LOVABLE_DEFAULT_MODEL = 'google/gemini-3-flash-preview';
+const LOVABLE_DEFAULT_MODEL = process.env.LOVABLE_CHAT_MODEL || 'google/gemini-2.5-flash';
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
 const OLLAMA_DEFAULT_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 const MAX_HISTORY = 30;
 const MAX_MESSAGE_LENGTH = 4000;
+
+// Budget IA quotidien par utilisateur (nombre de messages/jour).
+// Défaut : 50 messages/jour/utilisateur (override via CHAT_DAILY_BUDGET).
+const CHAT_DAILY_BUDGET = Number(process.env.CHAT_DAILY_BUDGET || 50);
+const dailyUsage = new Map<string, { count: number; resetAt: number }>();
+function checkDailyBudget(userId: string): { ok: boolean; remaining: number } {
+  const now = Date.now();
+  const entry = dailyUsage.get(userId);
+  if (!entry || entry.resetAt < now) {
+    dailyUsage.set(userId, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 });
+    return { ok: true, remaining: CHAT_DAILY_BUDGET - 1 };
+  }
+  if (entry.count >= CHAT_DAILY_BUDGET) {
+    return { ok: false, remaining: 0 };
+  }
+  entry.count += 1;
+  return { ok: true, remaining: CHAT_DAILY_BUDGET - entry.count };
+}
 
 const SYSTEM_PROMPT = `Tu es KILIMO Assistant, l'assistant officiel de KILIMO, une plateforme agritech africaine.
 Tu aides les utilisateurs sur :
@@ -281,6 +299,15 @@ chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messag
 
   const thread = await prisma.chatThread.findFirst({ where: { id: threadId, userId } });
   if (!thread) return res.status(404).json({ error: 'not_found' });
+
+  // Budget IA quotidien
+  const budget = checkDailyBudget(userId);
+  if (!budget.ok) {
+    return res.status(429).json({
+      error: 'daily_budget_exceeded',
+      message: `Vous avez atteint votre limite quotidienne de ${CHAT_DAILY_BUDGET} messages IA. Réessayez demain.`,
+    });
+  }
 
   const userContent = req.body.content as string;
 

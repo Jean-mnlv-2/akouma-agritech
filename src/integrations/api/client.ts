@@ -36,7 +36,18 @@ function getCookieValue(name: string): string | null {
   return null;
 }
 
-async function http(method: string, path: string, options?: { params?: Record<string, any>; body?: any; headers?: Record<string, string> }) {
+async function refreshAccessToken(): Promise<boolean> {
+  try {
+    const baseUrl = (!API_BASE_URL || API_BASE_URL.startsWith('/')) ? window.location.origin : API_BASE_URL;
+    const url = new URL('/auth/refresh', baseUrl);
+    const res = await fetch(url.toString(), { method: 'POST', credentials: 'include' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function http(method: string, path: string, options?: { params?: Record<string, any>; body?: any; headers?: Record<string, string> }, _retried = false): Promise<any> {
   try {
     const isRelative = !API_BASE_URL || API_BASE_URL.startsWith('/');
     const baseUrl = isRelative ? window.location.origin : API_BASE_URL;
@@ -80,6 +91,13 @@ async function http(method: string, path: string, options?: { params?: Record<st
     }
     
     if (!res.ok) {
+      // Tentative silencieuse de rafraîchissement du token sur 401 (une seule fois)
+      if (res.status === 401 && !_retried && !path.startsWith('/auth/')) {
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+          return http(method, path, options, true);
+        }
+      }
       const text = await res.text().catch(() => "");
       if (text && !text.trim().startsWith('{') && !text.trim().startsWith('[')) {
         console.error(`[API] Response non-JSON pour ${method} ${path}:`, text.substring(0, 200));

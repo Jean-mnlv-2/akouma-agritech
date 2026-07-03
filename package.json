@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "predev": "npx tsx scripts/generate-sitemap.ts 2>nul || echo Sitemap generation skipped",
+    "predev": "npx tsx scripts/generate-sitemap.ts 2>/dev/null || echo Sitemap generation skipped",
     "build": "vite build",
-    "prebuild": "npx tsx scripts/generate-sitemap.ts 2>nul || echo Sitemap generation skipped",
+    "prebuild": "npx tsx scripts/generate-sitemap.ts 2>/dev/null || echo Sitemap generation skipped",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build",
     "lint": "eslint .",
