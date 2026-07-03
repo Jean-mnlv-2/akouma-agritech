@@ -20,7 +20,7 @@ export function verifyRecaptcha(
   minScore: number = 0.5
 ) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    // Skip verification in development if secret key not set
+
     if (!env.RECAPTCHA_SECRET_KEY) {
       if (env.isDevelopment()) {
         console.warn('[reCAPTCHA] RECAPTCHA_SECRET_KEY not set, skipping verification');

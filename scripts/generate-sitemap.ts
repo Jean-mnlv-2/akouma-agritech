@@ -6,7 +6,7 @@
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 
-const BASE_URL = process.env.SITE_URL || 'https://akouma-agritech.lovable.app';
+const BASE_URL = process.env.SITE_URL || 'https://kilimo-agritech.lovable.app';
 const API_URL = process.env.API_PUBLIC_URL || process.env.VITE_API_URL || '';
 
 interface SitemapEntry {

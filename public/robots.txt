@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://akouma-agritech.lovable.app/sitemap.xml
+Sitemap: https://kilimo-agritech.lovable.app/sitemap.xml

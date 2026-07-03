@@ -29,6 +29,12 @@ interface NewsArticle {
   imageUrl?: string | null;
   image_url?: string | null;
   slug?: string;
+  sourceType?: "manual" | "auto" | null;
+  sourceName?: string | null;
+  sourceUrl?: string | null;
+  scrapedAt?: string | null;
+  keywords?: string[] | null;
+  language?: string | null;
 }
 
 interface AdminNewsDialogProps {

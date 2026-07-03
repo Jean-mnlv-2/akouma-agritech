@@ -115,6 +115,9 @@ export const env = {
   SERTIFIER_SECRET_KEY: process.env.SERTIFIER_SECRET_KEY || '',
   RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY || '',
   RECAPTCHA_SITE_KEY: process.env.RECAPTCHA_SITE_KEY || '',
+  INTERNAL_API_TOKEN: process.env.INTERNAL_API_TOKEN || 'secure_internal_token_change_in_production',
+  DEERFLOW_URL: process.env.DEERFLOW_URL || 'http://localhost:8000',
+  AUTO_NEWS_CRON_SCHEDULE: process.env.AUTO_NEWS_CRON_SCHEDULE || '0 7 * * *',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
   validateSecrets: () => {

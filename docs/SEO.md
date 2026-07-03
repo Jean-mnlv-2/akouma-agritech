@@ -13,14 +13,14 @@
 
 ## 2. Connecter Google Search Console
 
-1. Aller sur https://search.google.com/search-console et **Ajouter une propriété** → *Préfixe d'URL* → `https://akouma-agritech.lovable.app`.
+1. Aller sur https://search.google.com/search-console et **Ajouter une propriété** → *Préfixe d'URL* → `https://kilimo-agritech.lovable.app`.
 2. Choisir **Balise HTML**. Copier la valeur `content="..."`.
 3. Ouvrir `index.html` et ajouter dans `<head>` (avant ou après le bloc Open Graph) :
    ```html
    <meta name="google-site-verification" content="VOTRE_TOKEN_ICI" />
    ```
 4. Publier (Update). Revenir sur Search Console et cliquer **Valider**.
-5. Sitemaps → soumettre `https://akouma-agritech.lovable.app/sitemap.xml`.
+5. Sitemaps → soumettre `https://kilimo-agritech.lovable.app/sitemap.xml`.
 
 Variante automatisée via le connecteur Google Search Console : voir la knowledge `google_search_console` (méthode `META` → vérification API).
 

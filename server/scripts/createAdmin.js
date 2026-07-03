@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function createAdmin() {
-  const email = 'admin@akouma.com';
+  const email = 'admin@kilimo.com';
   const password = 'admin123';
   const fullName = 'Administrateur';
 

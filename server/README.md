@@ -1,4 +1,4 @@
-# Akouma Backend (Express + Prisma)
+# Kilimo Backend (Express + Prisma)
 
 - Copier `.env.example` en `.env` et renseigner `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_ORIGIN`.
 - `npm i`

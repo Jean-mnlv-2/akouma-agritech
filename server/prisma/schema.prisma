@@ -226,6 +226,15 @@ model News {
   slug            String   @unique
   isFeatured      Boolean  @default(false)
   isCopyProtected Boolean  @default(false)
+
+  /// New fields for auto-news / DeerFlow
+  sourceType      String?  @default("manual") @db.VarChar(50) // "manual" or "auto"
+  sourceName      String?  @db.VarChar(255)
+  sourceUrl       String?  @db.VarChar(500)
+  scrapedAt       DateTime?
+  keywords        String[] @default([])
+  language        String?  @db.VarChar(50) @default("fr")
+  originalId      String?  @db.VarChar(255) // Unique ID from source to prevent duplicates
 }
 
 model ShopProduct {

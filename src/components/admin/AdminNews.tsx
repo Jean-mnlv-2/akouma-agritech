@@ -18,6 +18,10 @@ interface NewsArticle {
   isPublished: boolean;
   createdAt: string;
   imageUrl?: string | null;
+  sourceType?: "manual" | "auto" | null;
+  sourceName?: string | null;
+  sourceUrl?: string | null;
+  category?: string | null;
 }
 
 export function AdminNews() {
@@ -105,6 +109,7 @@ export function AdminNews() {
               <TableHead>Aperçu</TableHead>
               <TableHead>Titre</TableHead>
               <TableHead>Auteur</TableHead>
+              <TableHead>Source</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -128,6 +133,11 @@ export function AdminNews() {
                 </TableCell>
                 <TableCell className="font-medium">{newsItem.title}</TableCell>
                 <TableCell>{newsItem.author || ''}</TableCell>
+                <TableCell>
+                  <Badge variant={newsItem.sourceType === 'auto' ? 'outline' : 'default'}>
+                    {newsItem.sourceType === 'auto' ? 'Automatique' : 'Manuelle'}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <Badge variant={newsItem.isPublished ? 'default' : 'secondary'}>
                     {newsItem.isPublished ? 'Publié' : 'Brouillon'}

@@ -90,7 +90,8 @@ newsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response
       title, slug, content, excerpt, imageUrl, author, category,
       isPublished: Boolean(isPublished),
       isFeatured: Boolean(isFeatured),
-      isCopyProtected: Boolean(isCopyProtected)
+      isCopyProtected: Boolean(isCopyProtected),
+      sourceType: "manual"
     } as any,
   });
   res.status(201).json({ data: created });
@@ -106,6 +107,7 @@ newsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Respon
       isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
       isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured),
       isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
+      // Don't change sourceType when editing
     } as any,
   });
   res.json({ data: updated });

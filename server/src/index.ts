@@ -61,6 +61,8 @@ import { pageHeaderImagesRouter } from './routes/pageHeaderImages';
 import { createRateLimiter } from './middleware/rateLimit';
 import { authRequired, adminOnly } from './middleware/authRequired';
 import { csrfRequired } from './middleware/csrf';
+import { internalAutoNewsRouter } from './routes/internalAutoNews';
+import { newsScraperRouter } from './routes/newsScraper';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -263,6 +265,12 @@ app.use('/api/certificates', certificatePdfRouter);
 app.use('/api/page_header_images', pageHeaderImagesRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api', genericRouter);
+
+// Internal API (DeerFlow only)
+app.use('/api/internal/auto-news', internalAutoNewsRouter);
+
+// News Scraper Admin API
+app.use('/api/admin/news-scraper', newsScraperRouter);
 
 // Middleware de gestion d'erreur centralisée
 const errorHandler: ErrorRequestHandler = (err, req, res, next) => {

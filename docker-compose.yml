@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-akouma}
+      POSTGRES_DB: ${POSTGRES_DB:-kilimo}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
@@ -10,7 +10,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d akouma"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kilimo"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,11 +24,11 @@ services:
       PORT: 4000
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:8080}
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_min_32_chars_for_docker_1234567890}
-      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@akouma.org}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-AkoumaAdmin2026!}
-      DEFAULT_ADMIN_FULL_NAME: ${DEFAULT_ADMIN_FULL_NAME:-AKOUMA Admin}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@kilimo.org}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-KilimoAdmin2026!}
+      DEFAULT_ADMIN_FULL_NAME: ${DEFAULT_ADMIN_FULL_NAME:-KILIMO Admin}
       DEFAULT_ADMIN_FORCE_RESET: ${DEFAULT_ADMIN_FORCE_RESET:-false}
-      MONEYFUSION_API_URL: ${MONEYFUSION_API_URL:-https://pay.moneyfusion.net/Akouma/}
+      MONEYFUSION_API_URL: ${MONEYFUSION_API_URL:-https://pay.moneyfusion.net/Kilimo/}
       MONEYFUSION_TOKEN: ${MONEYFUSION_TOKEN}
       MONEYFUSION_NOTIF_URL: ${MONEYFUSION_NOTIF_URL}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
@@ -39,10 +39,13 @@ services:
       DELIVERY_PICK_ADDRESS_ID: ${DELIVERY_PICK_ADDRESS_ID}
       SHIPPING_FREE_THRESHOLD: ${SHIPPING_FREE_THRESHOLD:-50000}
       SHIPPING_BASE_FEE: ${SHIPPING_BASE_FEE:-5000}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-akouma}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-kilimo}?schema=public
       AI_PROVIDER: ${AI_PROVIDER:-ollama}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-secure_internal_token_change_in_production}
+      DEERFLOW_URL: ${DEERFLOW_URL:-http://deerflow:8000}
+      AUTO_NEWS_CRON_SCHEDULE: ${AUTO_NEWS_CRON_SCHEDULE:-0 7 * * *}
     depends_on:
       db:
         condition: service_healthy
@@ -58,8 +61,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      # Ne pas définir VITE_API_BASE_URL pour utiliser le proxy Nginx automatiquement
-      # Le client API détecte le port 8080 et utilise window.location.origin
     depends_on:
       backend:
         condition: service_started
@@ -68,14 +69,45 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    container_name: akouma-ollama
+    container_name: kilimo-ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
 
+  freshrss:
+    image: freshrss/freshrss:latest
+    container_name: kilimo-freshrss
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - freshrss_data:/var/www/html/data
+    environment:
+      - TZ=Africa/Douala
+
+  deerflow:
+    build:
+      context: ./deerflow-src
+      dockerfile: backend/Dockerfile
+    container_name: kilimo-deerflow
+    restart: unless-stopped
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - KILIMO_API_URL=http://backend:4000
+      - KILIMO_INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-secure_internal_token_change_in_production}
+    volumes:
+      - ./deerflow/config.yaml:/app/config.yaml
+      - ./deerflow/prompts:/app/prompts
+    ports:
+      - "8001:8001"
+    depends_on:
+      - ollama
+      - backend
+
 volumes:
   db_data:
   uploads:
   ollama_data:
+  freshrss_data:

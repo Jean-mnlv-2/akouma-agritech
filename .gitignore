@@ -29,3 +29,7 @@ server/.env.*
 
 # Local Netlify folder
 .netlify
+
+# DeerFlow directories
+deerflow-src/
+deerflow/

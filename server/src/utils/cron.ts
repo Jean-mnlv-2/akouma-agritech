@@ -1,11 +1,13 @@
 import nodeCron from 'node-cron';
 import { PrismaClient } from '@prisma/client';
 import { emailService } from './email';
+import { logger } from './logger';
 
 const prisma = new PrismaClient();
 
 /**
  * Initialise les tâches planifiées (cron jobs)
+ * Note: Le scraping d'actualités est exclusivement piloté par DeerFlow
  */
 export const initCronJobs = () => {
  
@@ -15,7 +17,7 @@ export const initCronJobs = () => {
     try {
       await sendLearningReminders();
     } catch (error) {
-      console.error('[CRON] Erreur lors de l\'envoi des rappels :', error);
+      console.error(`[CRON] Erreur lors de l'envoi des rappels :`, error);
     }
   });
 
@@ -29,7 +31,7 @@ export const initCronJobs = () => {
     }
   });
 
-  console.log('[CRON] Tâches planifiées initialisées (Rappels à 09:00, Commandes à 10:00)');
+  console.log('[CRON] Tâches planifiées initialisées (scraping actualités géré par DeerFlow)');
 };
 
 /**

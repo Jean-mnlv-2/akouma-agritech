@@ -1,4 +1,4 @@
-# Akouma Agritech — Frontend & Backend
+# Kilimo Agritech — Frontend & Backend
 
 ## Structure
 
@@ -10,9 +10,9 @@
 ### Backend
 1. Créez server/.env (voir PROJECT_STRUCTURE.md)
    ```bash
-   DEFAULT_ADMIN_EMAIL=admin@akouma.test
+   DEFAULT_ADMIN_EMAIL=admin@kilimo.test
    DEFAULT_ADMIN_PASSWORD=Admin123!
-   DEFAULT_ADMIN_FULL_NAME="AKOUMA Admin"
+   DEFAULT_ADMIN_FULL_NAME="KILIMO Admin"
    # Facultatif : fixez à true pour forcer la réinitialisation du mot de passe au démarrage
    # DEFAULT_ADMIN_FORCE_RESET=false
    ```
@@ -28,7 +28,7 @@
 3. Vérifiez: GET http://localhost:4000/health
 
 > **Accès administrateur (développement)** : un compte admin est automatiquement créé si nécessaire.
-> - Email : `admin@akouma.test`
+> - Email : `admin@kilimo.test`
 > - Mot de passe : `Admin123!`
 > Modifiez ces valeurs dans `server/.env` ou via les variables d'environnement ci-dessus.
 
@@ -53,14 +53,14 @@
   ```bash
   # Variables pour Docker Compose
   JWT_SECRET=votre_secret_jwt_de_32_caracteres_minimum_1234567890
-  POSTGRES_USER=akouma
-  POSTGRES_PASSWORD=akouma
-  POSTGRES_DB=akouma
+  POSTGRES_USER=kilimo
+  POSTGRES_PASSWORD=kilimo
+  POSTGRES_DB=kilimo
   FRONTEND_ORIGIN=http://localhost:8080
   VITE_API_BASE_URL=http://localhost:4000
-  DEFAULT_ADMIN_EMAIL=admin@akouma.test
+  DEFAULT_ADMIN_EMAIL=admin@kilimo.test
   DEFAULT_ADMIN_PASSWORD=Admin123!
-  DEFAULT_ADMIN_FULL_NAME="AKOUMA Admin"
+  DEFAULT_ADMIN_FULL_NAME="KILIMO Admin"
   # Livraison (ne jamais commiter de clés live)
   DELIVERY_API_URL=https://backend-lelivreur.up.railway.app
   DELIVERY_API_PUBLIC_KEY=pk_live_xxx
@@ -97,7 +97,7 @@ Attendez que les trois services soient healthy, puis :
   ```
 - Appliquer la migration manuelle des promos / historique si nécessaire :
   ```bash
-  docker compose exec db psql -U postgres -d akouma -f /app/prisma/migrations/manual_add_promos.sql
+  docker compose exec db psql -U postgres -d kilimo -f /app/prisma/migrations/manual_add_promos.sql
   ```
 
 - Afficher les logs :

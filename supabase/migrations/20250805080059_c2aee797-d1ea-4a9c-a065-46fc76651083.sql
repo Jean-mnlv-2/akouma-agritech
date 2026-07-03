@@ -1,5 +1,5 @@
 -- =======================
--- MIGRATION COMPLÈTE POUR PROJET AKOUMA
+-- MIGRATION COMPLÈTE POUR PROJET KILIMO
 -- =======================
 
 -- 1. EXTENSION POUR UUID

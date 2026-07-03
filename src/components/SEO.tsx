@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_URL = 'https://akouma-agritech.lovable.app';
+const SITE_URL = 'https://kilimo-agritech.lovable.app';
 const DEFAULT_IMAGE = `${SITE_URL}/kilimo-logo.png`;
 const SITE_NAME = 'KILIMO Agritech';
 
