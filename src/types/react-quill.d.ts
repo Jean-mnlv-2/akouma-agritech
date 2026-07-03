@@ -15,6 +15,6 @@ declare module 'react-quill' {
     style?: React.CSSProperties;
     [key: string]: unknown;
   }
-  const ReactQuill: React.ComponentType<ReactQuillProps>;
+  class ReactQuill extends React.Component<ReactQuillProps> {}
   export default ReactQuill;
 }
