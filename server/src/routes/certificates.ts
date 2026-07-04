@@ -268,7 +268,6 @@ certificatesRouter.post('/request', authRequired, validate(requestCertSchema), a
         if (existing.status === 'processing' || existing.status === 'pending' || existing.status === 'sent') {
           return existing;
         }
-        // failed -> reset
         return tx.certificate.update({
           where: { id: existing.id },
           data: { status: 'pending', attempts: 0, lastError: null },

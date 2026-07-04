@@ -146,8 +146,32 @@ const upload = multer({
 });
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        // React/Vite uses eval in development (HMR)
+        env.isDevelopment() ? "'unsafe-eval'" : undefined,
+      ].filter(Boolean) as string[],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://*"], // Allow HTTPS images for news, courses, products, etc.
+      connectSrc: [
+        "'self'",
+        env.API_PUBLIC_URL,
+        "https://api.lovable.dev",
+        "https://api.resend.com",
+        // Add other external API domains here as needed
+      ],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseURI: ["'none'"],
+      formAction: ["'self'"],
+    },
+  },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  hsts: env.isProduction() ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
 }));
 app.use(morgan('dev'));
 app.use(express.json());

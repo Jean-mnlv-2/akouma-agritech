@@ -25,7 +25,7 @@ export interface ScrapedArticle {
 
 export class NewsScraperService {
   private cache = new Map<string, { data: any; timestamp: number }>();
-  private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+  private readonly CACHE_TTL = 30 * 60 * 1000;
 
   constructor() {
     // Clear cache periodically
@@ -153,31 +153,119 @@ export class NewsScraperService {
   private parseWebPage($: cheerio.CheerioAPI, source: NewsSource): ScrapedArticle[] {
     const articles: ScrapedArticle[] = [];
     
-    $('article, .post, .news-item, .article-item').each((_, element) => {
-      const $el = $(element);
-      const title = $el.find('h1, h2, h3, .title').first().text().trim();
-      const link = $el.find('a').first().attr('href');
-      
-      if (!title || !link) return;
+    // More comprehensive list of selectors for different site structures
+    const selectors = [
+      'article',
+      '.post',
+      '.news-item',
+      '.article-item',
+      '.item',
+      '.card',
+      '.blog-post',
+      '.entry',
+      'li.article',
+      'div.article',
+      '.list-item',
+      '.post-item',
+    ];
 
-      const content = $el.find('.content, .excerpt, p').first().text().trim() || title;
-      
-      articles.push({
-        title,
-        content: this.cleanHTML(content),
-        excerpt: this.createExcerpt(content),
-        imageUrl: $el.find('img').first().attr('src') || null,
-        author: source.name,
-        category: source.category,
-        sourceName: source.name,
-        sourceUrl: this.resolveUrl(link, source.url),
-        language: source.language,
-        publishedAt: null,
-        originalId: link,
+    // Try each selector until we find articles
+    for (const selector of selectors) {
+      const elements = $(selector);
+      if (elements.length > 0) {
+        elements.each((_, element) => {
+          const $el = $(element);
+          
+          // Try multiple selectors for title
+          const titleSelectors = ['h1', 'h2', 'h3', 'h4', '.title', '.post-title', '.entry-title', 'a'];
+          let title = '';
+          for (const sel of titleSelectors) {
+            const text = $el.find(sel).first().text().trim();
+            if (text && text.length > 10) {
+              title = text;
+              break;
+            }
+          }
+          
+          // Try multiple selectors for link
+          const linkSelectors = ['a', '.read-more', '.more-link', 'h2 a', 'h3 a'];
+          let link = '';
+          for (const sel of linkSelectors) {
+            const href = $el.find(sel).first().attr('href');
+            if (href) {
+              link = href;
+              break;
+            }
+          }
+          
+          if (!title || title.length < 10 || !link) return;
+
+          // Try multiple selectors for content
+          const contentSelectors = ['.content', '.excerpt', '.post-content', '.entry-content', 'p', '.description'];
+          let content = title;
+          for (const sel of contentSelectors) {
+            const text = $el.find(sel).first().text().trim();
+            if (text && text.length > 50) {
+              content = text;
+              break;
+            }
+          }
+          
+          // Try multiple selectors for image
+          const imageSelectors = ['img', '.image img', '.thumbnail img', '.post-thumbnail img', 'figure img'];
+          let imageUrl: string | null = null;
+          for (const sel of imageSelectors) {
+            const src = $el.find(sel).first().attr('src') || $el.find(sel).first().attr('data-src');
+            if (src) {
+              imageUrl = this.resolveUrl(src, source.url);
+              break;
+            }
+          }
+          
+          articles.push({
+            title,
+            content: this.cleanHTML(content),
+            excerpt: this.createExcerpt(content),
+            imageUrl,
+            author: source.name,
+            category: source.category,
+            sourceName: source.name,
+            sourceUrl: this.resolveUrl(link, source.url),
+            language: source.language,
+            publishedAt: null,
+            originalId: link,
+          });
+        });
+        break; // Stop after finding a working selector
+      }
+    }
+
+    // Fallback: try to find all links with titles
+    if (articles.length === 0) {
+      $('a').each((_, element) => {
+        const $el = $(element);
+        const title = $el.text().trim();
+        const link = $el.attr('href');
+        
+        if (title && title.length > 15 && link && !link.includes('#')) {
+          articles.push({
+            title,
+            content: title,
+            excerpt: title,
+            imageUrl: null,
+            author: source.name,
+            category: source.category,
+            sourceName: source.name,
+            sourceUrl: this.resolveUrl(link, source.url),
+            language: source.language,
+            publishedAt: null,
+            originalId: link,
+          });
+        }
       });
-    });
+    }
 
-    return articles;
+    return articles.slice(0, 20);
   }
 
   private extractImage(item: Parser.Item): string | null {

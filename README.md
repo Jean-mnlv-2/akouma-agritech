@@ -165,3 +165,5 @@ Consultez PROJECT_STRUCTURE.md pour le détail des routes et le mappage front �
 - Les routes admin nécessitent une authentification (cookie `auth_token`)
 - Les erreurs sont gérées gracieusement (tables manquantes retournent des tableaux vides)
 - Le service worker ne bloque pas les requêtes cross-origin
+
+KilimoFreshRSS2026

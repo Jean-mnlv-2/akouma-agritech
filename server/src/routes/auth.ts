@@ -3,15 +3,37 @@ import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { z } from 'zod';
 import { env } from '../utils/env';
 import { emailService } from '../utils/email';
 import { issueCsrfToken } from '../middleware/csrf';
 import { logger } from '../utils/logger';
 import { createRateLimiter } from '../middleware/rateLimit';
 import { verifyRecaptcha } from '../middleware/recaptcha';
+import { validate } from '../middleware/validate';
 
 const prisma = new PrismaClient();
 export const authRouter = Router();
+
+// Password policy: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character
+const passwordSchema = z
+  .string()
+  .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+  .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une lettre majuscule')
+  .regex(/[a-z]/, 'Le mot de passe doit contenir au moins une lettre minuscule')
+  .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre')
+  .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Le mot de passe doit contenir au moins un caractère spécial');
+
+const signUpSchema = z.object({
+  email: z.string().email('Adresse email invalide'),
+  password: passwordSchema,
+  fullName: z.string().optional(),
+}).strict();
+
+const resetPasswordSchema = z.object({
+  token: z.string(),
+  password: passwordSchema,
+}).strict();
 
 interface JwtPayload {
   sub: string;
@@ -86,9 +108,8 @@ authRouter.post('/sign-in', signInLimiterIp, signInLimiterEmail, verifyRecaptcha
   res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive }, csrfToken });
 });
 
-authRouter.post('/sign-up', verifyRecaptcha('signup'), async (req: Request, res: Response) => {
-  const { email, password, fullName } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+authRouter.post('/sign-up', verifyRecaptcha('signup'), validate(signUpSchema), async (req: Request, res: Response) => {
+  const { email, password, fullName } = req.body;
   const normalizedSignupEmail = email.toLowerCase().trim();
   const exists = await prisma.user.findUnique({ where: { email: normalizedSignupEmail } });
   if (exists) return res.status(409).json({ error: 'email already used' });
@@ -202,9 +223,8 @@ authRouter.post('/forgot-password', forgotLimiterIp, forgotLimiterEmail, verifyR
   }
 });
 
-authRouter.post('/reset-password', async (req: Request, res: Response) => {
-  const { token, password } = req.body || {};
-  if (!token || !password) return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
+authRouter.post('/reset-password', validate(resetPasswordSchema), async (req: Request, res: Response) => {
+  const { token, password } = req.body;
 
   const user = await prisma.user.findFirst({
     where: {
