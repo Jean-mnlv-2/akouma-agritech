@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, User, ArrowRight, Star, MapPin } from 'lucide-react';
+import { Loader2, Calendar, User, ArrowRight, Star, MapPin, Newspaper, CalendarDays } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
 import DOMPurify from 'dompurify';
 import Header from '@/components/Header';
@@ -211,6 +212,23 @@ export default function News() {
       {/* Content Section */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-6">
+          {/* Onglets : Actualités / Événements — même niveau hiérarchique */}
+          <Tabs defaultValue="news" className="w-full">
+            <TabsList className="mx-auto mb-8 grid w-full max-w-md grid-cols-2 h-12">
+              <TabsTrigger value="news" className="text-base gap-2">
+                <Newspaper className="w-4 h-4" />
+                Actualités
+              </TabsTrigger>
+              <TabsTrigger value="events" className="text-base gap-2">
+                <CalendarDays className="w-4 h-4" />
+                Événements
+                {events.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{events.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="news" className="mt-0">
           {/* Filtres par catégorie */}
           <div className="flex flex-wrap justify-center gap-2 mb-8">
             {categories.map((category) => (
@@ -219,7 +237,7 @@ export default function News() {
           </div>
 
           {/* Actualités en vedette - Enhanced */}
-          {selectedCategory !== 'evenements' && featuredNews.length > 0 && (
+          {featuredNews.length > 0 && (
             <div className="mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 <Star className="w-8 h-8 mr-3 text-yellow-500 fill-yellow-500" />
@@ -276,8 +294,7 @@ export default function News() {
           )}
 
           {/* Actualités régulières - Enhanced */}
-          {selectedCategory !== 'evenements' && (
-            regularNews.length > 0 ? (
+          {regularNews.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 {regularNews.map((item, index) => {
                 const delay = index * 50;
@@ -350,11 +367,10 @@ export default function News() {
                   </Button>
                 )}
               </div>
-            )
-          )}
+            )}
 
           {/* Pagination */}
-          {selectedCategory !== 'evenements' && totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-center gap-4 mt-10 mb-16">
               <Button 
                 variant="outline" 
@@ -375,48 +391,98 @@ export default function News() {
               </Button>
             </div>
           )}
+            </TabsContent>
 
-          {events.length > 0 && (
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
-              <div className="lg:col-span-3">
+            {/* ===== Section Événements — plein niveau, plus une sidebar ===== */}
+            <TabsContent value="events" className="mt-0">
+              <div className="mb-10 text-center">
+                <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-flex items-center gap-3">
+                  <CalendarDays className="w-8 h-8 text-primary" />
+                  Événements KILIMO
+                </h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  Rencontres, salons, formations en présentiel et webinaires — retrouvez tous nos rendez-vous à venir.
+                </p>
               </div>
-              <div className="lg:col-span-1 space-y-4">
-                <Card className="bg-gradient-to-br from-primary/5 via-background to-accent/5 border-2 border-border sticky top-24">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Calendar className="w-5 h-5 text-primary" />
-                      Événements à venir
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {events.slice(0, 3).map((event) => (
-                      <Link key={event.id} to={`/events/${event.slug}`} className="block group">
-                        <div className="border border-border rounded-lg p-3 hover:border-primary hover:bg-primary/5 transition-all duration-300">
-                          <div className="flex items-center gap-2 text-xs text-primary mb-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+
+              {events.length === 0 ? (
+                <div className="text-center py-20 bg-muted/10 rounded-3xl border-2 border-dashed border-muted-foreground/20 max-w-3xl mx-auto">
+                  <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CalendarDays className="w-10 h-10 text-primary/40" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground mb-4">Aucun événement programmé</h3>
+                  <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                    De nouveaux événements seront bientôt annoncés. Revenez prochainement !
+                  </p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                  {events.map((event, index) => {
+                    const eventDate = new Date(event.date);
+                    const day = eventDate.toLocaleDateString('fr-FR', { day: '2-digit' });
+                    const month = eventDate.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+                    const isPast = eventDate.getTime() < Date.now();
+                    return (
+                      <Link
+                        key={event.id}
+                        to={`/events/${event.slug}`}
+                        className="group"
+                        style={{ transitionDelay: `${index * 50}ms` }}
+                      >
+                        <Card className="h-full hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative">
+                          <div className="relative overflow-hidden aspect-[16/9] bg-muted">
+                            {event.imageUrl ? (
+                              <img
+                                src={event.imageUrl}
+                                alt={event.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
+                                <CalendarDays className="w-16 h-16 text-primary/40" />
+                              </div>
+                            )}
+                            {/* Badge date en overlay */}
+                            <div className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg text-center min-w-[60px]">
+                              <div className="text-2xl font-bold leading-none text-primary">{day}</div>
+                              <div className="text-xs uppercase font-semibold text-muted-foreground mt-1">{month}</div>
+                            </div>
+                            {isPast && (
+                              <Badge className="absolute top-4 right-4 bg-muted text-muted-foreground border-none">
+                                Passé
+                              </Badge>
+                            )}
                           </div>
-                          <p className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">{event.title}</p>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <MapPin className="w-3 h-3" />
-                            {event.location}
-                          </div>
-                        </div>
+                          <CardHeader>
+                            <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                              {event.title}
+                            </CardTitle>
+                            {event.description && (
+                              <CardDescription className="line-clamp-2 text-sm">
+                                {event.description.replace(/<[^>]*>/g, '')}
+                              </CardDescription>
+                            )}
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <MapPin className="w-4 h-4 text-primary" />
+                                <span className="line-clamp-1">{event.location}</span>
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-primary font-medium group-hover:gap-2 transition-all">
+                                Détails
+                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </Link>
-                    ))}
-                    {events.length > 3 && (
-                      <Button asChild variant="ghost" size="sm" className="w-full text-primary">
-                        <Link to="/events">
-                          Voir tous les événements
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Link>
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
         </div>
       </section>
