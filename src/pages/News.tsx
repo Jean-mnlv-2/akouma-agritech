@@ -212,57 +212,7 @@ export default function News() {
       <section className="py-16 bg-background">
         <div className="container mx-auto px-6">
           {/* Bande supplémentaire compacte "Événements à venir" — rôle secondaire */}
-          {(() => {
-            const upcoming = events
-              .filter(e => new Date(e.date).getTime() >= Date.now() - 86400000)
-              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-              .slice(0, 4);
-            if (upcoming.length === 0) return null;
-            return (
-              <aside
-                aria-label="Événements à venir"
-                className="mb-12 rounded-2xl border border-border bg-muted/30 p-4 md:p-5"
-              >
-                <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <CalendarDays className="w-4 h-4 text-primary" />
-                    Événements à venir
-                    <span className="text-xs font-normal text-muted-foreground">
-                      · info complémentaire
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
-                  {upcoming.map((event) => {
-                    const d = new Date(event.date);
-                    const day = d.toLocaleDateString('fr-FR', { day: '2-digit' });
-                    const month = d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
-                    return (
-                      <Link
-                        key={event.id}
-                        to={`/events/${event.slug}`}
-                        className="group flex items-center gap-3 flex-shrink-0 w-[280px] snap-start rounded-xl bg-background border border-border px-3 py-2.5 hover:border-primary/40 hover:shadow-sm transition-all"
-                      >
-                        <div className="flex-shrink-0 text-center bg-primary/10 rounded-lg px-2.5 py-1.5 min-w-[52px]">
-                          <div className="text-lg font-bold leading-none text-primary">{day}</div>
-                          <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{month}</div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                            {event.title}
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                            <MapPin className="w-3 h-3" />
-                            <span className="line-clamp-1">{event.location}</span>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </aside>
-            );
-          })()}
+          <UpcomingEventsStrip events={events} />
 
           {/* Filtres par catégorie */}
           <div className="flex flex-wrap justify-center gap-2 mb-8">
