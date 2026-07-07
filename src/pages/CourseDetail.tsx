@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import DOMPurify from 'dompurify';
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -402,7 +403,7 @@ const CourseDetail = () => {
                   <span className="font-medium">{course.rating}</span>
                 </div>
               </div>
-              <div className="text-muted-foreground leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: course.longDescription }} />
+              <div className="text-muted-foreground leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.longDescription)}} />
             </div>
 
             {/* Programme — Modules en accordéon (données backend) */}

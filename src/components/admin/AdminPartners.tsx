@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -239,7 +240,7 @@ export function AdminPartners() {
                 <div>
                   <div className="font-medium">{p.logo || '🤝'} {p.name}</div>
                   <div className="text-xs text-muted-foreground">{p.type} {p.year ? `• ${p.year}` : ''}</div>
-                  {p.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: p.description }} />}
+                  {p.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description)}} />}
                   <div className="text-xs text-muted-foreground mt-1">{p.website} {p.contact ? `• ${p.contact}` : ''}</div>
                 </div>
                 <div className="flex gap-2">

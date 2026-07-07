@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import DOMPurify from 'dompurify';
 import { useParams, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, MapPin } from "lucide-react";
@@ -171,7 +172,7 @@ const EventDetail = () => {
           {event.description && (
             <div 
               className="text-foreground leading-relaxed whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: event.description }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(event.description)}}
             />
           )}
         </div>
