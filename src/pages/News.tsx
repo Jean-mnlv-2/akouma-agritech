@@ -4,13 +4,101 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, User, ArrowRight, Star, MapPin, CalendarDays } from 'lucide-react';
+import { Loader2, Calendar, User, ArrowRight, Star, MapPin, CalendarDays, CalendarX2 } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
 import DOMPurify from 'dompurify';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n';
 import PageHeaderCarousel from '@/components/PageHeaderCarousel';
+
+interface UpcomingEventsStripProps {
+  events: EventItem[];
+}
+
+function UpcomingEventsStrip({ events }: UpcomingEventsStripProps) {
+  const [showAll, setShowAll] = useState(false);
+  const upcoming = events
+    .filter((e) => new Date(e.date).getTime() >= Date.now() - 86400000)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const visible = showAll ? upcoming : upcoming.slice(0, 4);
+  const hasMore = upcoming.length > 4;
+
+  return (
+    <aside
+      aria-label="Événements à venir"
+      className="mb-12 rounded-2xl border border-border bg-muted/30 p-4 md:p-5"
+    >
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <CalendarDays className="w-4 h-4 text-primary" aria-hidden="true" />
+          <h2 className="text-sm font-semibold">Événements à venir</h2>
+          <span className="text-xs font-normal text-muted-foreground">
+            · info complémentaire
+          </span>
+        </div>
+        {hasMore && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs h-8"
+            aria-expanded={showAll}
+          >
+            {showAll ? 'Réduire' : `Voir tous (${upcoming.length})`}
+            <ArrowRight className="w-3 h-3 ml-1" aria-hidden="true" />
+          </Button>
+        )}
+      </div>
+
+      {upcoming.length === 0 ? (
+        <div className="flex items-center gap-3 rounded-xl bg-background border border-dashed border-border px-4 py-4 text-sm text-muted-foreground">
+          <CalendarX2 className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" aria-hidden="true" />
+          <span>Aucun événement programmé pour le moment. Revenez bientôt pour découvrir nos prochains rendez-vous.</span>
+        </div>
+      ) : (
+        <div
+          className={
+            showAll
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
+              : 'flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x'
+          }
+        >
+          {visible.map((event) => {
+            const d = new Date(event.date);
+            const day = d.toLocaleDateString('fr-FR', { day: '2-digit' });
+            const month = d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+            return (
+              <Link
+                key={event.id}
+                to={`/events/${event.slug}`}
+                aria-label={`Événement ${event.title} le ${d.toLocaleDateString('fr-FR')} à ${event.location}`}
+                className={
+                  'group flex items-center gap-3 rounded-xl bg-background border border-border px-3 py-2.5 hover:border-primary/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
+                  (showAll ? '' : 'flex-shrink-0 w-[280px] snap-start')
+                }
+              >
+                <div className="flex-shrink-0 text-center bg-primary/10 rounded-lg px-2.5 py-1.5 min-w-[52px]">
+                  <div className="text-lg font-bold leading-none text-primary">{day}</div>
+                  <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{month}</div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                    {event.title}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                    <MapPin className="w-3 h-3" aria-hidden="true" />
+                    <span className="line-clamp-1">{event.location}</span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </aside>
+  );
+}
 
 interface NewsItem {
   id: string;
