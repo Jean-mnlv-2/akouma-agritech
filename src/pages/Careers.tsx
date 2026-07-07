@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import DOMPurify from 'dompurify';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -252,11 +253,11 @@ const Careers = () => {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-muted-foreground mb-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: career.description }} />
+                        <div className="text-muted-foreground mb-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(career.description)}} />
                         {career.requirements && (
                           <div>
                             <h4 className="font-semibold mb-2">Compétences requises :</h4>
-                            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: career.requirements }} />
+                            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(career.requirements)}} />
                           </div>
                         )}
                       </CardContent>

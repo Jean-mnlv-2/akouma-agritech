@@ -243,120 +243,176 @@ const NewsDetail = () => {
         />
       )}
 
-      {/* Hero image - full width, large */}
-      <div className="w-full bg-muted/20">
-        <div className="max-w-5xl mx-auto">
-          <div className="aspect-[21/9] md:aspect-[2.5/1] w-full overflow-hidden">
-            <img
-              src={article.image}
-              alt={article.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-      </div>
-
-      <article className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
+      <main>
         {/* Breadcrumb + back */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-6 mb-4 flex-wrap">
-          <Link to="/" className="hover:text-primary">Accueil</Link>
-          <span>/</span>
-          <Link to="/news" className="hover:text-primary">Actualités</Link>
-          <span>/</span>
-          <span className="text-foreground truncate max-w-[200px]">{article.title}</span>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6">
+          <nav aria-label="Fil d'Ariane" className="flex items-center gap-2 text-sm text-muted-foreground mb-3 flex-wrap">
+            <Link to="/" className="hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">Accueil</Link>
+            <span aria-hidden="true">/</span>
+            <Link to="/news" className="hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">Actualités</Link>
+            <span aria-hidden="true">/</span>
+            <span className="text-foreground truncate max-w-[200px]" aria-current="page">{article.title}</span>
+          </nav>
+          <Link
+            to="/news"
+            className="inline-flex items-center text-primary hover:text-primary/80 text-sm mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" aria-hidden="true" />
+            Retour aux actualités
+          </Link>
         </div>
 
-        <Link to="/news" className="inline-flex items-center text-primary hover:text-primary/80 text-sm mb-6">
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Retour aux actualités
-        </Link>
+        <article className="max-w-4xl mx-auto px-4 sm:px-6 pb-16">
+          {/* En-tête */}
+          <header className="mb-8">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
+                {article.category}
+              </Badge>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                {article.readTime} de lecture
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
+                {formatDate(article.date)}
+              </span>
+            </div>
 
-        {/* Article header */}
-        <header className="mb-8">
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-xs">
-              {article.category}
-            </Badge>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              {article.readTime} de lecture
-            </span>
-          </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight tracking-tight mb-5">
+              {article.title}
+            </h1>
 
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight mb-6">
-            {article.title}
-          </h1>
+            {article.excerpt && (
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+                {article.excerpt}
+              </p>
+            )}
+          </header>
 
-          {article.excerpt && (
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-              {article.excerpt}
-            </p>
-          )}
+          {/* Hero image */}
+          <figure className="mb-8 -mx-4 sm:-mx-6 md:mx-0">
+            <div className="aspect-[16/9] md:aspect-[2.4/1] w-full overflow-hidden md:rounded-2xl bg-muted">
+              <img
+                src={article.image}
+                alt={article.title}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
+            </div>
+          </figure>
 
-          <div className="flex items-center justify-between flex-wrap gap-4 pb-6 border-b border-border">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary" />
-                </div>
-                <span className="font-medium">{article.author}</span>
+          {/* Méta : auteur + partage */}
+          <div className="flex items-center justify-between flex-wrap gap-4 py-4 mb-8 border-y border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center" aria-hidden="true">
+                <User className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>{formatDate(article.date)}</span>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-foreground leading-tight">{article.author}</div>
+                <div className="text-xs text-muted-foreground">Publié le {formatDate(article.date)}</div>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleShare} className="gap-2">
-              <Share2 className="w-4 h-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              disabled={isSharing}
+              className="gap-2 min-h-11"
+              aria-label="Partager cet article"
+            >
+              <Share2 className="w-4 h-4" aria-hidden="true" />
               Partager
             </Button>
           </div>
-        </header>
 
-        {/* Article body - rich content with inline images supported via HTML */}
-        <div
-          className="prose prose-lg max-w-none dark:prose-invert
-            prose-headings:text-foreground prose-p:text-foreground/85 prose-p:leading-relaxed
-            prose-a:text-primary prose-strong:text-foreground
-            prose-img:rounded-xl prose-img:shadow-md prose-img:mx-auto prose-img:my-8
-            prose-blockquote:border-primary/40 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:px-4
-            prose-li:text-foreground/85"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
-        />
+          {/* Corps de l'article */}
+          <div
+            className="prose prose-lg max-w-none dark:prose-invert
+              prose-headings:text-foreground prose-headings:tracking-tight
+              prose-p:text-foreground/85 prose-p:leading-relaxed
+              prose-a:text-primary prose-strong:text-foreground
+              prose-img:rounded-xl prose-img:shadow-md prose-img:mx-auto prose-img:my-8
+              prose-blockquote:border-primary/40 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:px-4
+              prose-li:text-foreground/85"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
+          />
 
-        {/* Related articles */}
-        {article.relatedArticles.length > 0 && (
-          <section className="mt-16 pt-8 border-t border-border">
-            <h2 className="text-2xl font-bold text-foreground mb-8">
-              À lire aussi
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {article.relatedArticles.map((related) => (
-                <Link
-                  key={related.id}
-                  to={`/news/${related.slug}`}
-                  className="group block rounded-xl overflow-hidden border border-border bg-card hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="aspect-[16/9] overflow-hidden bg-muted">
-                    <img
-                      src={related.image}
-                      alt={related.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+          {/* Tags + auteur */}
+          <footer className="mt-12 pt-8 border-t border-border">
+            <div className="grid gap-6 md:grid-cols-2">
+              <section aria-labelledby="tags-heading">
+                <h2 id="tags-heading" className="text-sm font-semibold text-foreground uppercase tracking-wide mb-3">
+                  Thématiques
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
+                    {article.category}
+                  </Badge>
+                  <Badge variant="outline">Agritech</Badge>
+                  <Badge variant="outline">KILIMO</Badge>
+                </div>
+              </section>
+              <section aria-labelledby="author-heading" className="rounded-2xl border border-border bg-muted/30 p-4">
+                <h2 id="author-heading" className="sr-only">À propos de l'auteur</h2>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                    <User className="w-6 h-6 text-primary" />
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
-                      {related.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{related.excerpt}</p>
-                    <span className="text-xs text-muted-foreground">{formatDate(related.date)}</span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground">{article.author}</div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      Contributeur KILIMO Agritech — actualités et analyses du secteur agricole.
+                    </p>
                   </div>
-                </Link>
-              ))}
+                </div>
+              </section>
             </div>
-          </section>
-        )}
-      </article>
+          </footer>
+
+          {/* Related articles */}
+          {article.relatedArticles.length > 0 && (
+            <section aria-labelledby="related-heading" className="mt-16 pt-8 border-t border-border">
+              <h2 id="related-heading" className="text-2xl font-bold text-foreground mb-8">
+                À lire aussi
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {article.relatedArticles.map((related) => (
+                  <Link
+                    key={related.id}
+                    to={`/news/${related.slug}`}
+                    className="group block rounded-xl overflow-hidden border border-border bg-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div className="aspect-[16/9] overflow-hidden bg-muted">
+                      <img
+                        src={related.image}
+                        alt={related.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="p-4">
+                      {related.category && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none mb-2">
+                          {related.category}
+                        </Badge>
+                      )}
+                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                        {related.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{related.excerpt}</p>
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3" aria-hidden="true" />
+                        {formatDate(related.date)}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+        </article>
+      </main>
 
       <Footer />
     </div>

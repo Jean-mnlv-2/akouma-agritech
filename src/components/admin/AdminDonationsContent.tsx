@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -236,7 +237,7 @@ export function AdminDonationsContent() {
                 <div>
                   <div className="font-medium">{i.icon || '🎯'} {i.title}</div>
                   <div className="text-xs text-muted-foreground">{i.target} • {i.progress}%</div>
-                  {i.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: i.description }} />}
+                  {i.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(i.description)}} />}
                 </div>
                 <div className="flex gap-2">
                   <Button 
@@ -346,7 +347,7 @@ export function AdminDonationsContent() {
                   <div>
                     <div className="font-medium">{s.title} {s.year ? `• ${s.year}` : ''}</div>
                     <div className="text-xs text-muted-foreground">{s.impact}</div>
-                    {s.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: s.description }} />}
+                    {s.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(s.description)}} />}
                   </div>
                 </div>
                 <div className="flex gap-2">

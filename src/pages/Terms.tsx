@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DOMPurify from 'dompurify';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -78,7 +79,7 @@ const Terms = () => {
                 <CardContent className="pt-6">
                   <div 
                     className="prose prose-gray max-w-none"
-                    dangerouslySetInnerHTML={{ __html: termsPage.content }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(termsPage.content)}}
                   />
                 </CardContent>
               </Card>
