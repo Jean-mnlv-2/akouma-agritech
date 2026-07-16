@@ -40,7 +40,7 @@ describe('NewsCard XSS sanitization', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((window as any).__xss).toBeUndefined();
     expect(container.innerHTML).not.toContain('<script');
-    expect(screen.getByText('Safe text')).toBeInTheDocument();
+    expect(screen.getByText('Safe text')).toBeTruthy();
   });
 
   it('strips inline event handlers like onerror on images', () => {
