@@ -11,6 +11,7 @@ import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import TitleManager from "@/components/TitleManager";
+import { RelatedArticleSkeleton } from "@/components/news/CardSkeletons";
 
 interface Article {
   id: string;
@@ -40,6 +41,7 @@ const NewsDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
+  const [relatedLoading, setRelatedLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const { toast } = useToast();
 
@@ -118,6 +120,7 @@ const NewsDetail = () => {
       };
 
       try {
+        setRelatedLoading(true);
         const relRes = await fetch(`${apiBaseUrl}/api/news?is_published=true`, { credentials: 'include' });
         if (relRes.ok) {
           const relBody = await relRes.json();
@@ -149,6 +152,8 @@ const NewsDetail = () => {
         }
       } catch (err) {
         console.warn('Error fetching related articles:', err);
+      } finally {
+        setRelatedLoading(false);
       }
 
       setArticle(normalized);
@@ -371,22 +376,41 @@ const NewsDetail = () => {
           </footer>
 
           {/* Related articles */}
-          {article.relatedArticles.length > 0 && (
-            <section aria-labelledby="related-heading" className="mt-16 pt-8 border-t border-border">
-              <h2 id="related-heading" className="text-2xl font-bold text-foreground mb-8">
-                À lire aussi
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <section aria-labelledby="related-heading" className="mt-16 pt-8 border-t border-border">
+            <h2 id="related-heading" className="text-2xl font-bold text-foreground mb-8">
+              À lire aussi
+            </h2>
+            {relatedLoading ? (
+              <div
+                aria-busy="true"
+                aria-label="Chargement des articles liés"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <RelatedArticleSkeleton key={i} />
+                ))}
+              </div>
+            ) : article.relatedArticles.length === 0 ? (
+              <p
+                role="status"
+                className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground text-center"
+              >
+                Aucun autre article à recommander pour le moment. Revenez bientôt !
+              </p>
+            ) : (
+              <ul role="list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 list-none p-0">
                 {article.relatedArticles.map((related) => (
+                  <li key={related.id}>
                   <Link
-                    key={related.id}
                     to={`/news/${related.slug}`}
-                    className="group block rounded-xl overflow-hidden border border-border bg-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Lire l'article : ${related.title}`}
+                    className="group block h-full rounded-xl overflow-hidden border border-border bg-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div className="aspect-[16/9] overflow-hidden bg-muted">
                       <img
                         src={related.image}
-                        alt={related.title}
+                        alt=""
+                        aria-hidden="true"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
@@ -403,14 +427,15 @@ const NewsDetail = () => {
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{related.excerpt}</p>
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" aria-hidden="true" />
-                        {formatDate(related.date)}
+                        <time dateTime={related.date}>{formatDate(related.date)}</time>
                       </span>
                     </div>
                   </Link>
+                  </li>
                 ))}
-              </div>
-            </section>
-          )}
+              </ul>
+            )}
+          </section>
         </article>
       </main>
 
