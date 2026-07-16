@@ -1,104 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, User, ArrowRight, Star, MapPin, CalendarDays, CalendarX2 } from 'lucide-react';
+import { Calendar, Star } from 'lucide-react';
 import TitleManager from '@/components/TitleManager';
-import DOMPurify from 'dompurify';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n';
 import PageHeaderCarousel from '@/components/PageHeaderCarousel';
-
-interface UpcomingEventsStripProps {
-  events: EventItem[];
-}
-
-function UpcomingEventsStrip({ events }: UpcomingEventsStripProps) {
-  const [showAll, setShowAll] = useState(false);
-  const upcoming = events
-    .filter((e) => new Date(e.date).getTime() >= Date.now() - 86400000)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const visible = showAll ? upcoming : upcoming.slice(0, 4);
-  const hasMore = upcoming.length > 4;
-
-  return (
-    <aside
-      aria-label="Événements à venir"
-      className="mb-12 rounded-2xl border border-border bg-muted/30 p-4 md:p-5"
-    >
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <CalendarDays className="w-4 h-4 text-primary" aria-hidden="true" />
-          <h2 className="text-sm font-semibold">Événements à venir</h2>
-          <span className="text-xs font-normal text-muted-foreground">
-            · info complémentaire
-          </span>
-        </div>
-        {hasMore && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowAll((v) => !v)}
-            className="text-xs h-8"
-            aria-expanded={showAll}
-          >
-            {showAll ? 'Réduire' : `Voir tous (${upcoming.length})`}
-            <ArrowRight className="w-3 h-3 ml-1" aria-hidden="true" />
-          </Button>
-        )}
-      </div>
-
-      {upcoming.length === 0 ? (
-        <div className="flex items-center gap-3 rounded-xl bg-background border border-dashed border-border px-4 py-4 text-sm text-muted-foreground">
-          <CalendarX2 className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" aria-hidden="true" />
-          <span>Aucun événement programmé pour le moment. Revenez bientôt pour découvrir nos prochains rendez-vous.</span>
-        </div>
-      ) : (
-        <div
-          className={
-            showAll
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
-              : 'flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x'
-          }
-        >
-          {visible.map((event) => {
-            const d = new Date(event.date);
-            const day = d.toLocaleDateString('fr-FR', { day: '2-digit' });
-            const month = d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
-            return (
-              <Link
-                key={event.id}
-                to={`/events/${event.slug}`}
-                aria-label={`Événement ${event.title} le ${d.toLocaleDateString('fr-FR')} à ${event.location}`}
-                className={
-                  'group flex items-center gap-3 rounded-xl bg-background border border-border px-3 py-2.5 hover:border-primary/40 hover:shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
-                  (showAll ? '' : 'flex-shrink-0 w-[280px] snap-start')
-                }
-              >
-                <div className="flex-shrink-0 text-center bg-primary/10 rounded-lg px-2.5 py-1.5 min-w-[52px]">
-                  <div className="text-lg font-bold leading-none text-primary">{day}</div>
-                  <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{month}</div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                    {event.title}
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                    <MapPin className="w-3 h-3" aria-hidden="true" />
-                    <span className="line-clamp-1">{event.location}</span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-    </aside>
-  );
-}
+import { NewsCard } from '@/components/news/NewsCard';
+import { NewsCardSkeleton } from '@/components/news/CardSkeletons';
+import { UpcomingEventsStrip } from '@/components/news/UpcomingEventsStrip';
 
 interface NewsItem {
   id: string;
@@ -115,7 +27,7 @@ interface NewsItem {
 }
 
 interface EventItem {
-  id: number;
+  id: number | string;
   title: string;
   slug: string;
   description?: string;
@@ -128,6 +40,7 @@ export default function News() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(9);
@@ -204,12 +117,15 @@ export default function News() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
+        setEventsLoading(true);
         const res = await fetch(`${apiBaseUrl}/api/events`, { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load events');
         const body = await res.json();
         setEvents(Array.isArray(body) ? body : (body.data || []));
       } catch (e) {
         console.error('Error fetching events:', e);
+      } finally {
+        setEventsLoading(false);
       }
     };
     fetchEvents();
@@ -239,23 +155,6 @@ export default function News() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <TitleManager
-          title={t('nav.news')}
-          description={t('news.meta.desc')}
-          image="/kilimo-logo.png"
-        />
-        <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <TitleManager
@@ -281,7 +180,7 @@ export default function News() {
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
               <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">{t('news.hero.title1')}</span> {t('news.hero.title2')}
             </h1>
-            <p className="text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">{t('news.hero.desc')}</p>
+            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">{t('news.hero.desc')}</p>
             <div className="flex flex-wrap gap-4">
               <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 hover:scale-105 transition-transform">
                 <Calendar className="w-4 h-4 mr-2" />
@@ -297,133 +196,81 @@ export default function News() {
       </section>
 
       {/* Content Section */}
-      <section className="py-16 bg-background">
+      <main id="main-content" className="py-16 bg-background">
         <div className="container mx-auto px-6">
           {/* Bande supplémentaire compacte "Événements à venir" — rôle secondaire */}
-          <UpcomingEventsStrip events={events} />
+          <UpcomingEventsStrip events={events} loading={eventsLoading} />
 
           {/* Filtres par catégorie */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <div
+            role="tablist"
+            aria-label="Filtrer les actualités par catégorie"
+            className="flex flex-wrap justify-center gap-2 mb-8"
+          >
             {categories.map((category) => (
-              <Button key={category.id} variant={selectedCategory === category.id ? 'default' : 'outline'} onClick={() => { setPage(1); setSelectedCategory(category.id); }} className="transition-all duration-200 hover:scale-105">{category.name}</Button>
+              <Button
+                key={category.id}
+                role="tab"
+                aria-selected={selectedCategory === category.id}
+                variant={selectedCategory === category.id ? 'default' : 'outline'}
+                onClick={() => { setPage(1); setSelectedCategory(category.id); }}
+                className="min-h-11 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {category.name}
+              </Button>
             ))}
           </div>
 
+          {loading ? (
+            <div
+              aria-busy="true"
+              aria-label="Chargement des actualités"
+              className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+            >
+              {Array.from({ length: 6 }).map((_, i) => (
+                <NewsCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <>
           {/* Actualités en vedette - Enhanced */}
           {featuredNews.length > 0 && (
-            <div className="mb-16">
+            <section aria-labelledby="featured-heading" className="mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8 flex items-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                <Star className="w-8 h-8 mr-3 text-yellow-500 fill-yellow-500" />
-                {t('news.featured')}
+                <Star className="w-8 h-8 mr-3 text-yellow-500 fill-yellow-500" aria-hidden="true" />
+                <span id="featured-heading">{t('news.featured')}</span>
               </h2>
               <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-                {featuredNews.slice(0, 2).map((item, index) => {
-                  const delay = index * 100;
-                  return (
-                    <Card 
-                      key={item.id} 
-                      className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative"
-                      style={{ transitionDelay: `${delay}ms` }}
-                    >
-                      <div className="relative overflow-hidden">
-                        <img 
-                          src={item.image} 
-                          alt={item.title} 
-                          className="w-full h-64 object-contain bg-muted/30 group-hover:scale-105 transition-transform duration-500" 
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                        <Badge className="absolute top-4 left-4 bg-yellow-500 text-white shadow-lg">{t('news.featured')}</Badge>
-                      </div>
-                      <CardHeader className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                          <Badge variant="secondary" className="bg-primary/10 text-primary border border-primary/20">{item.category}</Badge>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            {new Date(item.date).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors mb-2">{item.title}</CardTitle>
-                        <CardDescription className="line-clamp-2 text-sm">{item.excerpt}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="relative z-10">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <User className="w-4 h-4 mr-1" />
-                            {item.author}
-                          </div>
-                          <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                            <Link to={`/news/${item.slug}`}>
-                              {t('news.read_more')}
-                              <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                {featuredNews.slice(0, 2).map((item) => (
+                  <NewsCard
+                    key={item.id}
+                    item={item}
+                    variant="featured"
+                    readMoreLabel={t('news.read_more')}
+                    readTimeLabel={t('news.read_time')}
+                    featuredLabel={t('news.featured')}
+                  />
+                ))}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Actualités régulières - Enhanced */}
           {regularNews.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {regularNews.map((item, index) => {
-                const delay = index * 50;
-                return (
-                  <Card 
-                    key={item.id} 
-                    className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative"
-                    style={{ transitionDelay: `${delay}ms` }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <div className="relative overflow-hidden">
-                      <img 
-                        src={item.image} 
-                        alt={item.title} 
-                        className="w-full h-56 object-contain bg-muted/30 group-hover:scale-105 transition-transform duration-500" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground shadow-lg border-none font-semibold">
-                        {item.category}
-                      </Badge>
-                    </div>
-                    <CardHeader className="relative z-10">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          {new Date(item.date).toLocaleDateString()}
-                        </div>
-                        <span className="text-sm text-muted-foreground">{item.read_time} {t('news.read_time')}</span>
-                      </div>
-                      <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2 mb-2">{item.title}</CardTitle>
-                      <CardDescription className="line-clamp-3 text-sm">
-                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.excerpt) }} />
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="w-4 h-4 mr-1" />
-                          {item.author}
-                        </div>
-                        <Button asChild variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                          <Link to={`/news/${item.slug}`}>
-                            {t('news.read_more')}
-                            <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+              <section aria-label="Liste des actualités" className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {regularNews.map((item) => (
+                  <NewsCard
+                    key={item.id}
+                    item={item}
+                    readMoreLabel={t('news.read_more')}
+                    readTimeLabel={t('news.read_time')}
+                  />
+                ))}
+              </section>
             ) : !loading && featuredNews.length === 0 && (
               <div className="text-center py-20 bg-muted/10 rounded-3xl border-2 border-dashed border-muted-foreground/20 max-w-3xl mx-auto">
                 <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Star className="w-10 h-10 text-primary/40" />
+                  <Star className="w-10 h-10 text-primary/60" aria-hidden="true" />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-4">
                   {selectedCategory === 'all' 
@@ -435,7 +282,7 @@ export default function News() {
                   Nous préparons actuellement du nouveau contenu passionnant pour cette section. Restez à l'écoute !
                 </p>
                 {selectedCategory !== 'all' && (
-                  <Button onClick={() => setSelectedCategory('all')} variant="outline" className="hover:bg-primary hover:text-primary-foreground transition-all">
+                  <Button onClick={() => setSelectedCategory('all')} variant="outline" className="min-h-11 hover:bg-primary hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     Voir toutes les actualités
                   </Button>
                 )}
@@ -444,28 +291,34 @@ export default function News() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-4 mt-10 mb-16">
+            <nav aria-label="Pagination des actualités" className="flex items-center justify-center gap-4 mt-10 mb-16">
               <Button 
                 variant="outline" 
                 disabled={page === 1} 
                 onClick={() => handlePageChange('prev')}
+                className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Page précédente"
               >
                 Précédent
               </Button>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground" aria-live="polite">
                 Page {page} sur {totalPages}
               </span>
               <Button 
                 variant="outline" 
                 disabled={page === totalPages} 
                 onClick={() => handlePageChange('next')}
+                className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Page suivante"
               >
                 Suivant
               </Button>
-            </div>
+            </nav>
+          )}
+            </>
           )}
         </div>
-      </section>
+      </main>
       <Footer />
     </div>
   );
