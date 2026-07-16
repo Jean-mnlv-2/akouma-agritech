@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, User, ArrowRight, Star } from 'lucide-react';
@@ -83,14 +83,10 @@ export function NewsCard({
         <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2">
           {item.title}
         </CardTitle>
-        <CardDescription
-          asChild
-        >
-          <div
-            className="line-clamp-3 text-sm text-muted-foreground"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.excerpt) }}
-          />
-        </CardDescription>
+        <div
+          className="line-clamp-3 text-sm text-muted-foreground"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.excerpt) }}
+        />
       </CardHeader>
       <CardContent className="mt-auto pt-0">
         <div className="flex items-center justify-between gap-2">
