@@ -43,7 +43,6 @@ export function NewsCard({
 
   return (
     <Card
-      as-child="article"
       className="group h-full flex flex-col overflow-hidden border-2 border-border bg-card/90 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus-within:ring-2 focus-within:ring-ring"
     >
       <div className="relative overflow-hidden">
@@ -84,7 +83,9 @@ export function NewsCard({
         <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2">
           {item.title}
         </CardTitle>
-        <CardDescription asChild>
+        <CardDescription
+          asChild
+        >
           <div
             className="line-clamp-3 text-sm text-muted-foreground"
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.excerpt) }}
