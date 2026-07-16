@@ -361,19 +361,6 @@ const Header = () => {
                     ))}
                   </nav>
 
-                  <div className="mb-4">
-                    <Button
-                      variant="default"
-                      asChild
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="w-full justify-start py-5 text-base"
-                    >
-                      <Link to={isLoggedIn ? "/assistant" : "/auth?redirect=%2Fassistant"}>
-                        <MessageSquare className="w-5 h-5 mr-2" />
-                        Assistant KILIMO
-                      </Link>
-                    </Button>
-                  </div>
                   <div className="pt-4 border-t border-border">
                     <Button
                       variant="outline"
