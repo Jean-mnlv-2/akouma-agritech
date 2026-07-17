@@ -56,6 +56,7 @@ import { AdminSertifierSettings } from '@/components/admin/AdminSertifierSetting
 import { AdminCertificates } from '@/components/admin/AdminCertificates';
 import AdminElearningEnrollments from '@/pages/AdminElearningEnrollments';
 import { AdminPageHeaderImages } from '@/components/admin/AdminPageHeaderImages';
+import { AdminCookieConsents } from '@/components/admin/AdminCookieConsents';
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
@@ -139,7 +140,8 @@ const tabGroups = [
       { value: 'submissions', label: 'Soumissions', icon: FileText },
       { value: 'reviews', label: 'Avis Clients', icon: StarIcon },
       { value: 'page-header-images', label: "Images d'en-tête", icon: Eye },
-      { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText }
+      { value: 'contact-settings', label: 'Contacts & Réseaux', icon: FileText },
+      { value: 'cookie-consents', label: 'Consentements Cookies', icon: Shield }
     ]
   },
   {
@@ -452,6 +454,7 @@ function AdminContent() {
               {(activeTab === 'affiliates' && isAdmin) && <AdminAffiliateLeaderboard />}
       {(activeTab === 'page-header-images' && isAdmin) && <AdminPageHeaderImages />}
               {(activeTab === 'contact-settings' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('contact-settings')))) && <AdminContactSettings />}
+              {(activeTab === 'cookie-consents' && isAdmin) && <AdminCookieConsents />}
             </div>
           </Tabs>
         </div>

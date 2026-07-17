@@ -849,3 +849,24 @@ model ChatMessage {
 
   @@index([threadId, createdAt])
 }
+
+model CookieConsent {
+  id          String   @id @default(uuid())
+  userId      String?
+  anonId      String
+  version     String
+  necessary   Boolean  @default(true)
+  analytics   Boolean  @default(false)
+  marketing   Boolean  @default(false)
+  preferences Boolean  @default(false)
+  method      String   // "accept_all" | "reject_all" | "custom" | "revoked"
+  ipHash      String?
+  userAgent   String?
+  url         String?
+  locale      String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([anonId, createdAt])
+  @@index([createdAt])
+}
