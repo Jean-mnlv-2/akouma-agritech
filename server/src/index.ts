@@ -58,6 +58,7 @@ import { sertifierRouter } from './routes/sertifier';
 import { certificatesRouter } from './routes/certificates';
 import { certificatePdfRouter } from './routes/certificatePdf';
 import { pageHeaderImagesRouter } from './routes/pageHeaderImages';
+import { cookieConsentsRouter } from './routes/cookieConsents';
 import { createRateLimiter } from './middleware/rateLimit';
 import { authRequired, adminOnly } from './middleware/authRequired';
 import { csrfRequired } from './middleware/csrf';
@@ -287,6 +288,7 @@ app.use('/api/sertifier', sertifierRouter);
 app.use('/api/certificates', certificatesRouter);
 app.use('/api/certificates', certificatePdfRouter);
 app.use('/api/page_header_images', pageHeaderImagesRouter);
+app.use('/api/cookie-consents', cookieConsentsRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api', genericRouter);
 
