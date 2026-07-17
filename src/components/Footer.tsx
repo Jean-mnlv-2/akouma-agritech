@@ -158,9 +158,15 @@ const Footer = () => {
               <a href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
                 {t("footer.terms")}
               </a>
-              <a href="/cookies" className="text-muted-foreground hover:text-primary transition-colors">
-                Cookies
-              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  import("@/lib/cookieConsent").then((m) => m.openCookiePreferences());
+                }}
+                className="text-muted-foreground hover:text-primary transition-colors underline-offset-4"
+              >
+                Gérer les cookies
+              </button>
               <a href="/legal" className="text-muted-foreground hover:text-primary transition-colors">
                 {t("footer.legal")}
               </a>
