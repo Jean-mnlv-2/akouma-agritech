@@ -22,16 +22,12 @@ describe('CookieConsent banner (E2E-style)', () => {
   beforeEach(() => {
     localStorage.clear();
     requestMock.mockClear();
-    vi.useFakeTimers();
   });
 
   it('shows the banner on first visit and hides it after "Tout accepter"', async () => {
     renderBanner();
-    act(() => { vi.advanceTimersByTime(1000); });
-    const accept = await screen.findByRole('button', { name: /tout accepter/i });
+    const accept = await screen.findByRole('button', { name: /tout accepter/i }, { timeout: 2000 });
     expect(accept).toBeTruthy();
-
-    vi.useRealTimers();
     fireEvent.click(accept);
 
     await waitFor(() => {
@@ -58,7 +54,7 @@ describe('CookieConsent banner (E2E-style)', () => {
       }),
     );
     renderBanner();
-    act(() => { vi.advanceTimersByTime(2000); });
+    await new Promise((r) => setTimeout(r, 1200));
     expect(screen.queryByRole('button', { name: /tout accepter/i })).toBeNull();
   });
 
@@ -78,8 +74,6 @@ describe('CookieConsent banner (E2E-style)', () => {
       }),
     );
     renderBanner();
-    vi.useRealTimers();
-
     act(() => { window.dispatchEvent(new CustomEvent(OPEN_PREFERENCES_EVENT)); });
 
     const analyticsSwitch = await screen.findByRole('switch', { name: /mesure d'audience/i });
@@ -115,7 +109,6 @@ describe('CookieConsent banner (E2E-style)', () => {
       }),
     );
     renderBanner();
-    act(() => { vi.advanceTimersByTime(1000); });
-    expect(await screen.findByRole('button', { name: /tout accepter/i })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /tout accepter/i }, { timeout: 2000 })).toBeTruthy();
   });
 });
