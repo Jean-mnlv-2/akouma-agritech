@@ -3,6 +3,9 @@ import { HelmetProvider } from 'react-helmet-async'
 import App from './App.tsx'
 import './index.css'
 import { I18nProvider } from '@/i18n/i18n'
+import { initConsentGating } from '@/lib/consentGating'
+
+initConsentGating();
 
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
