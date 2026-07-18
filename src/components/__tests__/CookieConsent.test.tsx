@@ -29,7 +29,7 @@ describe('CookieConsent banner (E2E-style)', () => {
     renderBanner();
     act(() => { vi.advanceTimersByTime(1000); });
     const accept = await screen.findByRole('button', { name: /tout accepter/i });
-    expect(accept).toBeInTheDocument();
+    expect(accept).toBeTruthy();
 
     vi.useRealTimers();
     fireEvent.click(accept);
@@ -38,7 +38,7 @@ describe('CookieConsent banner (E2E-style)', () => {
       expect(readConsent()?.method).toBe('accept_all');
     });
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /tout accepter/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /tout accepter/i })).toBeNull();
     });
     expect(requestMock).toHaveBeenCalledWith('POST', '/api/cookie-consents', expect.any(Object));
   });
@@ -59,7 +59,7 @@ describe('CookieConsent banner (E2E-style)', () => {
     );
     renderBanner();
     act(() => { vi.advanceTimersByTime(2000); });
-    expect(screen.queryByRole('button', { name: /tout accepter/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tout accepter/i })).toBeNull();
   });
 
   it('opens preferences via the global event, lets user customize, and persists their choice', async () => {
@@ -94,7 +94,8 @@ describe('CookieConsent banner (E2E-style)', () => {
       expect(state?.marketing).toBe(false);
     });
     expect(requestMock).toHaveBeenCalled();
-    const lastCall = requestMock.mock.calls.at(-1)!;
+    const calls = requestMock.mock.calls;
+    const lastCall = calls[calls.length - 1];
     expect((lastCall[2] as { body: any }).body).toMatchObject({ method: 'custom', analytics: true, marketing: false });
   });
 
@@ -115,6 +116,6 @@ describe('CookieConsent banner (E2E-style)', () => {
     );
     renderBanner();
     act(() => { vi.advanceTimersByTime(1000); });
-    expect(await screen.findByRole('button', { name: /tout accepter/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /tout accepter/i })).toBeTruthy();
   });
 });
