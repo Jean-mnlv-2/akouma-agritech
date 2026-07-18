@@ -81,6 +81,7 @@ const Orders = lazy(() => import("./pages/Orders"));
 const MyCashback = lazy(() => import("./pages/MyCashback"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const Assistant = lazy(() => import("./pages/Assistant"));
+const Cookies = lazy(() => import("./pages/Cookies"));
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -119,7 +120,7 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />
-                <Route path="/cookies" element={<Legal />} />
+                <Route path="/cookies" element={<Cookies />} />
                 <Route path="/careers" element={<Careers />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/confirm" element={<AuthConfirm />} />
