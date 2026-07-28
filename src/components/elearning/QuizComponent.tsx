@@ -4,17 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CheckCircle, XCircle, Award, RotateCcw, ArrowRight, Timer, HelpCircle } from "lucide-react";
+import { CheckCircle, XCircle, Award, RotateCcw, ArrowRight, Timer, HelpCircle, Loader2 } from "lucide-react";
+import { api } from "@/integrations/api/client";
 
 interface QuizQuestion {
   id: string;
   question: string;
   options: string[];
-  correctAnswer: number;
   explanation?: string;
 }
 
+interface QuizCheckResult {
+  correct: boolean;
+  correctAnswer: number;
+  explanation?: string | null;
+}
+
 interface QuizComponentProps {
+  moduleId: number;
   title: string;
   questions: QuizQuestion[];
   passingScore?: number;
@@ -22,14 +29,16 @@ interface QuizComponentProps {
   onRetry?: () => void;
 }
 
-const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetry }: QuizComponentProps) => {
+const QuizComponent = ({ moduleId, title, questions, passingScore = 70, onComplete, onRetry }: QuizComponentProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [results, setResults] = useState<Record<string, QuizCheckResult>>({});
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [showResult, setShowResult] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
 
   const question = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
@@ -47,11 +56,27 @@ const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetr
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleAnswer = () => {
-    if (!selectedAnswer) return;
+  const computeScore = (finalResults: Record<string, QuizCheckResult>) => {
+    const correctCount = Object.values(finalResults).filter(r => r.correct).length;
+    return Math.round((correctCount / questions.length) * 100);
+  };
+
+  const handleAnswer = async () => {
+    if (!selectedAnswer || checking) return;
     const answerIndex = parseInt(selectedAnswer);
-    setAnswers({ ...answers, [question.id]: answerIndex });
-    setShowExplanation(true);
+    setChecking(true);
+    setCheckError(null);
+    try {
+      const res = await api.request('POST', `/api/course_modules/${moduleId}/quiz/check`, {
+        body: { questionId: question.id, answer: answerIndex },
+      });
+      setResults(prev => ({ ...prev, [question.id]: res.data }));
+      setShowExplanation(true);
+    } catch {
+      setCheckError("Impossible de vérifier votre réponse. Réessayez.");
+    } finally {
+      setChecking(false);
+    }
   };
 
   const handleNext = () => {
@@ -62,14 +87,7 @@ const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetr
       if (currentQuestion < questions.length - 1) {
         setCurrentQuestion(currentQuestion + 1);
       } else {
-        // Calculate final score
-        const finalAnswers = { ...answers, [question.id]: parseInt(selectedAnswer) };
-        const correctCount = Object.entries(finalAnswers)
-          .filter(([qId, ans]) => {
-            const q = questions.find(qq => qq.id === qId);
-            return q && q.correctAnswer === ans;
-          }).length;
-        const score = Math.round((correctCount / questions.length) * 100);
+        const score = computeScore(results);
         setShowResult(true);
         onComplete(score, score >= passingScore);
       }
@@ -79,22 +97,18 @@ const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetr
 
   const handleRetry = () => {
     setCurrentQuestion(0);
-    setAnswers({});
+    setResults({});
     setSelectedAnswer("");
     setShowResult(false);
     setShowExplanation(false);
+    setCheckError(null);
     setTimeElapsed(0);
     setIsTransitioning(false);
     onRetry?.();
   };
 
-  const score = (() => {
-    const correctCount = Object.entries(answers).filter(([qId, ans]) => {
-      const q = questions.find(qq => qq.id === qId);
-      return q && q.correctAnswer === ans;
-    }).length;
-    return Math.round((correctCount / questions.length) * 100);
-  })();
+  const score = computeScore(results);
+  const currentResult = results[question?.id];
 
   if (showResult) {
     const passed = score >= passingScore;
@@ -104,11 +118,11 @@ const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetr
           <div className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center transition-all duration-700 ${passed ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-200 dark:shadow-green-900/30' : 'bg-gradient-to-br from-red-400 to-orange-500 shadow-lg shadow-red-200 dark:shadow-red-900/30'}`}>
             {passed ? <Award className="w-12 h-12 text-white" /> : <XCircle className="w-12 h-12 text-white" />}
           </div>
-          
+
           <h3 className="text-2xl sm:text-3xl font-bold mb-3">
             {passed ? '🎉 Félicitations !' : '📚 Continuez vos efforts'}
           </h3>
-          
+
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             {passed
               ? `Excellent travail ! Vous avez obtenu ${score}% et pouvez passer au module suivant.`
@@ -197,9 +211,9 @@ const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetr
 
         <h3 className="text-lg font-semibold mb-6 leading-relaxed">{question.question}</h3>
 
-        <RadioGroup value={selectedAnswer} onValueChange={setSelectedAnswer} className="space-y-3" disabled={showExplanation}>
+        <RadioGroup value={selectedAnswer} onValueChange={setSelectedAnswer} className="space-y-3" disabled={showExplanation || checking}>
           {question.options.map((option, i) => {
-            const isCorrect = i === question.correctAnswer;
+            const isCorrect = showExplanation && currentResult ? i === currentResult.correctAnswer : false;
             const isSelected = parseInt(selectedAnswer) === i;
             let optionClass = "border-2 border-border rounded-xl p-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-200";
             if (showExplanation) {
@@ -221,11 +235,17 @@ const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetr
           })}
         </RadioGroup>
 
-        {showExplanation && question.explanation && (
+        {showExplanation && currentResult?.explanation && (
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl animate-in slide-in-from-bottom-2 duration-300">
             <p className="text-sm text-blue-800 dark:text-blue-300">
-              <strong>💡 Explication :</strong> {question.explanation}
+              <strong>💡 Explication :</strong> {currentResult.explanation}
             </p>
+          </div>
+        )}
+
+        {checkError && (
+          <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl">
+            <p className="text-sm text-red-700 dark:text-red-300">{checkError}</p>
           </div>
         )}
 
@@ -234,7 +254,8 @@ const QuizComponent = ({ title, questions, passingScore = 70, onComplete, onRetr
             Question {currentQuestion + 1} sur {questions.length}
           </span>
           {!showExplanation ? (
-            <Button onClick={handleAnswer} disabled={!selectedAnswer} size="lg">
+            <Button onClick={handleAnswer} disabled={!selectedAnswer || checking} size="lg">
+              {checking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Valider
             </Button>
           ) : (

@@ -29,8 +29,12 @@ const CertificateGenerator = ({ data }: CertificateGeneratorProps) => {
   const [sertifierStatus, setSertifierStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [sertifierUrl, setSertifierUrl] = useState<string>('');
 
+  // Domaine aligné sur src/components/SEO.tsx (VITE_SITE_URL) ; le chemin doit
+  // correspondre à la route déclarée dans App.tsx
+  // (/certificates/verify/:number), pas à un chemin inventé.
+  const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://kilimo-agritech.lovable.app';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-    sertifierUrl || `https://kilimo-agritech.lovable.app/verify-certificate/${data.certificateNumber}`
+    sertifierUrl || `${SITE_URL}/certificates/verify/${data.certificateNumber}`
   )}`;
 
   const handleIssueSertifierCertificate = async () => {

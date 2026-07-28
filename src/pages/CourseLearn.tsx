@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import QuizComponent from "@/components/elearning/QuizComponent";
 import CertificateGenerator from "@/components/elearning/CertificateGenerator";
 import CourseComments from "@/components/elearning/CourseComments";
@@ -17,7 +17,7 @@ import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   BookOpen, Video, FileText, CheckCircle, Lock, Play,
-  ChevronRight, Award, Clock, ArrowLeft, MessageCircle
+  ChevronRight, Award, Clock, ArrowLeft, MessageCircle, Loader2
 } from "lucide-react";
 
 interface Module {
@@ -42,6 +42,8 @@ const CourseLearn = () => {
   const [activeModule, setActiveModule] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
+  const [certificateRecord, setCertificateRecord] = useState<any>(null);
+  const [certificateFailed, setCertificateFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [course, setCourse] = useState<any>(null);
@@ -76,38 +78,46 @@ const CourseLearn = () => {
 
       if (!courseData) { setLoading(false); return; }
 
-      // Get modules
-      const modulesRes = await api.request("GET", `/api/course_modules/course/${courseData.id}`);
-      const rawModules: any[] = modulesRes.data || [];
-
-      // Get enrollment
+      // Get enrollment first : ce cours n'est accessible qu'aux inscrits (ou
+      // admin/superviseur) — vérifié aussi côté serveur, mais rediriger tôt
+      // évite un écran de contenu vide/cassé pour un visiteur non inscrit.
+      const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
       let enrId: number | null = null;
-      const pMap: Record<number, boolean> = {};
+      let myEnrFull: any = null;
       if (currentUser) {
         try {
           const enrRes = await api.request("GET", "/api/elearning_enrollments");
           const enrollments = enrRes.data || [];
-          const myEnr = enrollments.find((e: any) => 
+          myEnrFull = enrollments.find((e: any) =>
             String(e.userId) === String(currentUser.id) && String(e.courseId) === String(courseData.id)
           );
-          if (myEnr) {
-            enrId = myEnr.id;
-            // Get progress
-            try {
-              const progRes = await api.request("GET", `/api/course_modules/progress/${myEnr.id}`);
-              (progRes.data || []).forEach((p: any) => {
-                if (p.completed) pMap[p.moduleId] = true;
-              });
-            } catch { /* no progress yet */ }
-          }
+          if (myEnrFull) enrId = myEnrFull.id;
         } catch { /* not enrolled */ }
+      }
+
+      if (!isPrivileged && !enrId) {
+        toast({ title: "Accès refusé", description: "Vous devez être inscrit à ce cours pour accéder à son contenu.", variant: "destructive" });
+        navigate(`/elearning/${courseData.slug || courseData.id}`);
+        setLoading(false);
+        return;
+      }
+
+      // Get modules (le backend revérifie aussi l'inscription — défense en profondeur)
+      const modulesRes = await api.request("GET", `/api/course_modules/course/${courseData.id}`);
+      const rawModules: any[] = modulesRes.data || [];
+
+      const pMap: Record<number, boolean> = {};
+      if (enrId) {
+        try {
+          const progRes = await api.request("GET", `/api/course_modules/progress/${enrId}`);
+          (progRes.data || []).forEach((p: any) => {
+            if (p.completed) pMap[p.moduleId] = true;
+          });
+        } catch { /* no progress yet */ }
       }
       setEnrollmentId(enrId);
       setProgressMap(pMap);
 
-      // Restore resume state from enrollment row
-      const myEnrFull = (await api.request("GET", "/api/elearning_enrollments").catch(() => ({ data: [] }))).data
-        ?.find?.((e: any) => e.id === enrId);
       if (myEnrFull) {
         setResumeVideoSec(Number(myEnrFull.videoPositionSec || 0));
         setPdfPage(Math.max(1, Number(myEnrFull.pdfPage || 1)));
@@ -133,7 +143,7 @@ const CourseLearn = () => {
       console.error("Error loading course data:", e);
     }
     setLoading(false);
-  }, [id]);
+  }, [id, navigate, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -165,6 +175,53 @@ const CourseLearn = () => {
     return () => el.removeEventListener('loadedmetadata', onLoaded);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModule]);
+
+  // Poll le vrai statut d'émission du certificat plutôt que d'afficher un
+  // numéro généré côté client sans rapport avec l'enregistrement réel :
+  // l'ancien écran ne correspondait à aucune ligne en base, la vérification
+  // publique (/certificates/verify/:number) l'aurait déclaré introuvable.
+  useEffect(() => {
+    if (!showCertificate || !course?.id) return;
+    if (certificateRecord?.status === 'sent') return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 20; // ~1 minute à 3s d'intervalle
+
+    const poll = async () => {
+      attempts++;
+      try {
+        const res = await api.request("GET", "/api/certificates/my");
+        if (cancelled) return;
+        const cert = (res.data || []).find((c: any) => c.courseId === course.id || c.course?.id === course.id);
+        if (cert) {
+          setCertificateRecord(cert);
+          if (cert.status === 'sent' || cert.status === 'failed') return;
+        }
+      } catch {
+        // ignore, on retente au prochain tick
+      }
+      if (!cancelled && attempts < MAX_ATTEMPTS) {
+        setTimeout(poll, 3000);
+      } else if (!cancelled && attempts >= MAX_ATTEMPTS) {
+        setCertificateFailed(true);
+      }
+    };
+
+    poll();
+    return () => { cancelled = true; };
+  }, [showCertificate, course?.id, certificateRecord?.status]);
+
+  const retryCertificateRequest = async () => {
+    if (!course?.id) return;
+    setCertificateFailed(false);
+    setCertificateRecord(null);
+    try {
+      await api.request("POST", "/api/certificates/request", { body: { courseId: course.id, score: quizScore ?? undefined } });
+    } catch {
+      setCertificateFailed(true);
+    }
+  };
 
   const currentModule = modules.find(m => m.id === activeModule);
   const completedCount = modules.filter(m => m.completed).length;
@@ -261,10 +318,10 @@ const CourseLearn = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title={`${course.title} - KILIMO E-Learning`}
         description="Suivez votre formation"
-        canonical={window.location.origin + `/elearning/${id}/learn`}
+        path={window.location.origin + `/elearning/${id}/learn`}
         image={kilimoLogo}
       />
       <Header />
@@ -361,15 +418,40 @@ const CourseLearn = () => {
           {/* Main content */}
           <div className="lg:col-span-3 order-1 lg:order-2 space-y-6">
             {showCertificate ? (
-              <CertificateGenerator data={{
-                studentName: user?.fullName || "Apprenant KILIMO",
-                courseName: course.title,
-                completionDate: new Date().toISOString(),
-                score: quizScore || 85,
-                certificateNumber: `KLM-CERT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
-              }} />
+              certificateRecord?.status === 'sent' ? (
+                <CertificateGenerator data={{
+                  studentName: user?.fullName || "Apprenant KILIMO",
+                  courseName: course.title,
+                  completionDate: certificateRecord.completionDate || new Date().toISOString(),
+                  score: certificateRecord.score ?? quizScore ?? 100,
+                  certificateNumber: certificateRecord.certificateNumber,
+                }} />
+              ) : certificateFailed || certificateRecord?.status === 'failed' ? (
+                <Card>
+                  <CardContent className="p-8 text-center space-y-4">
+                    <p className="text-destructive font-medium">
+                      L'émission de votre certificat a rencontré un problème.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Votre progression est bien enregistrée. Réessayez ou contactez le support si le problème persiste.
+                    </p>
+                    <Button onClick={retryCertificateRequest}>Réessayer</Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center space-y-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+                    <p className="font-medium">Émission de votre certificat en cours…</p>
+                    <p className="text-sm text-muted-foreground">
+                      Cela peut prendre quelques instants. Cette page se mettra à jour automatiquement.
+                    </p>
+                  </CardContent>
+                </Card>
+              )
             ) : currentModule?.type === "quiz" && renderQuizQuestions(currentModule.quizQuestions) ? (
               <QuizComponent
+                moduleId={currentModule.id}
                 title={currentModule.title}
                 questions={renderQuizQuestions(currentModule.quizQuestions)!}
                 passingScore={70}

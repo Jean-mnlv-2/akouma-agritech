@@ -2,21 +2,46 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Plus, Send, Trash2, Loader2, MessageSquare, Bot, User as UserIcon, ArrowLeft, Search, Download } from "lucide-react";
+import { Plus, Send, Trash2, Loader2, MessageSquare, Bot, User as UserIcon, ArrowLeft, Search, Download, Zap, Crown, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { api } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { cn } from "@/lib/utils";
 
 type ThreadSummary = { id: string; title: string; updatedAt: string };
-type ChatMsg = { id: string; role: "user" | "assistant"; content: string; pending?: boolean };
+type ChatSource = { title: string; score: number; sourceType: string };
+type ChatMsg = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; sources?: ChatSource[] };
 type ApiMessage = { id: string; role: "user" | "assistant"; content: string };
+type UsageData = {
+  freeUsage: number;
+  proUsage: number;
+  proLimit: number;
+  isUnlimited: boolean;
+};
+type Plan = {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string | null;
+  price: number;
+  currency: string;
+  dailyProMessageLimit: number;
+  hasCustomDocuments: boolean;
+  hasPrioritySupport: boolean;
+  hasApiAccess: boolean;
+  maxCustomDocuments: number;
+  trialDays: number;
+  isActive: boolean;
+  sortOrder: number;
+};
 
 function getApiBase(): string {
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL as string;
@@ -49,6 +74,9 @@ export default function Assistant() {
   const [authReady, setAuthReady] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -86,11 +114,42 @@ export default function Assistant() {
     }
   }, [searchQuery]);
 
+  // Load usage
+  const refreshUsage = useCallback(async () => {
+    try {
+      const res = await api.request("GET", "/api/subscriptions/usage");
+      setUsage(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  // Load plans
+  const refreshPlans = useCallback(async () => {
+    try {
+      const res = await api.request("GET", "/api/subscriptions/plans");
+      setPlans(res.data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  // Load subscription
+  const refreshSubscription = useCallback(async () => {
+    try {
+      const res = await api.request("GET", "/api/subscriptions/my-subscription");
+      setCurrentSubscription(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   // Bootstrap: load threads, navigate to first or create one
   useEffect(() => {
     if (!authed) return;
     (async () => {
       const list = await refreshThreads();
+      await Promise.all([refreshUsage(), refreshPlans(), refreshSubscription()]);
       if (!threadId) {
         if (list.length > 0) {
           navigate(`/assistant/${list[0].id}`, { replace: true });
@@ -105,7 +164,7 @@ export default function Assistant() {
         }
       }
     })();
-  }, [authed, threadId, navigate, refreshThreads]);
+  }, [authed, threadId, navigate, refreshThreads, refreshUsage, refreshPlans, refreshSubscription]);
 
   // Load messages for active thread
   useEffect(() => {
@@ -231,6 +290,15 @@ export default function Assistant() {
             if (event === "delta" && typeof payload.content === "string") {
               acc += payload.content;
               setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: acc, pending: false } : m));
+            } else if (event === "done") {
+              // Le serveur envoie déjà les sources documentaires utilisées
+              // (fiches semences, cours, actualités...) — jusqu'ici jamais
+              // affichées côté client malgré le prompt système qui demande
+              // à l'assistant de les citer.
+              const sources = Array.isArray(payload.sources) ? payload.sources as ChatSource[] : undefined;
+              if (sources && sources.length > 0) {
+                setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, sources } : m));
+              }
             } else if (event === "error") {
               errorPayload = payload;
             }
@@ -245,6 +313,7 @@ export default function Assistant() {
         setMessages(prev => prev.filter(m => m.id !== assistantId));
       } else {
         refreshThreads();
+        refreshUsage();
       }
     } catch (e: unknown) {
       if (e instanceof Error && e.name !== "AbortError") {
@@ -393,6 +462,42 @@ export default function Assistant() {
                 />
               </div>
             </div>
+            {/* Usage & Subscription Info */}
+            <div className="p-3 border-b">
+              {usage && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {usage.isUnlimited ? (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <Crown className="h-3 w-3" />
+                          Messages PRO illimités
+                        </span>
+                      ) : (
+                        `Messages PRO: ${usage.proUsage}/${usage.proLimit}`
+                      )}
+                    </span>
+                    <span className="text-xs text-muted-foreground">Aujourd'hui</span>
+                  </div>
+                  {!usage.isUnlimited && (
+                    <Progress
+                      value={(usage.proUsage / usage.proLimit) * 100}
+                      className="h-2"
+                    />
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs"
+                    onClick={() => navigate("/pricing")}
+                  >
+                    <Zap className="h-3 w-3 mr-1" />
+                    Passer à un forfait supérieur
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <ScrollArea className="flex-1">
               <ul className="p-2">
                 {threads.length === 0 && (
@@ -501,9 +606,25 @@ export default function Assistant() {
                               <span className="text-sm font-medium">Assistant écrit...</span>
                             </div>
                           ) : (
-                            <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-2 prose-ol:my-2 prose-pre:my-2">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                            </div>
+                            <>
+                              <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-2 prose-ol:my-2 prose-pre:my-2">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                              </div>
+                              {m.sources && m.sources.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
+                                  <span className="text-[11px] text-muted-foreground">Sources :</span>
+                                  {m.sources.map((s, i) => (
+                                    <span
+                                      key={`${s.title}-${i}`}
+                                      className="rounded-full bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground border border-border/50"
+                                      title={`Pertinence : ${Math.round((s.score ?? 0) * 100)}%`}
+                                    >
+                                      {s.title}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </>
                           )
                         ) : (
                           <p className="whitespace-pre-wrap">{m.content}</p>
