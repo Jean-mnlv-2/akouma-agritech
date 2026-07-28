@@ -1,6 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Sprout, Globe2, Mail } from "lucide-react";
@@ -9,10 +9,10 @@ import { Link } from "react-router-dom";
 const Investors = () => {
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title="Investisseurs - KILIMO Agritech | Opportunités d'investissement"
         description="Découvrez les opportunités d'investissement chez KILIMO Agritech : agriculture intelligente, e-learning et impact social en Afrique."
-        canonical={typeof window !== 'undefined' ? `${window.location.origin}/investors` : undefined}
+        path={typeof window !== 'undefined' ? `${window.location.origin}/investors` : undefined}
       />
       <Header />
       <main className="container mx-auto px-4 sm:px-6 py-12 max-w-5xl">

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Loader2, ShieldCheck, ShieldAlert } from 'lucide-react';
 import CertificateGenerator from '@/components/elearning/CertificateGenerator';
-import TitleManager from '@/components/TitleManager';
+import { SEO } from '@/components/SEO';
 
 interface Course {
   id: number;
@@ -54,7 +54,7 @@ const AdminCertificatePreview = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title={`Aperçu certificat — ${course.title}`} noIndex />
+      <SEO title={`Aperçu certificat — ${course.title}`} description="" noindex />
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <Button variant="outline" onClick={() => navigate(-1)}><ArrowLeft className="w-4 h-4 mr-2" /> Retour</Button>

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Star } from 'lucide-react';
-import TitleManager from '@/components/TitleManager';
+import { SEO } from '@/components/SEO';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n';
@@ -157,17 +157,43 @@ export default function News() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title={t('nav.news')}
         description={t('news.meta.desc')}
         image="/kilimo-logo.png"
+        type="website"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": t('nav.news'),
+            "description": t('news.meta.desc'),
+            "url": window.location.href,
+            "publisher": {
+              "@type": "Organization",
+              "name": "KILIMO Agritech",
+              "logo": {
+                "@type": "ImageObject",
+                "url": `${window.location.origin}/kilimo-logo.png`
+              }
+            }
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Accueil", "item": window.location.origin + "/" },
+              { "@type": "ListItem", "position": 2, "name": "Actualités & Événements", "item": window.location.href }
+            ]
+          }
+        ]}
       />
       <Header />
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <PageHeaderCarousel
           pageKey="news"
-          fallbackImage="/lovable-uploads/4fa2637d-1bbd-47d7-aceb-da19ce83532d.png"
+          fallbackImage="/kilimo-logo.png"
           fallbackAlt={t('news.hero.alt')}
           overlayClassName="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/50"
         />

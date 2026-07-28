@@ -6,7 +6,7 @@ import { ArrowLeft, Calendar, MapPin } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 
 interface Event {
   id: number;
@@ -76,11 +76,11 @@ const EventDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager 
-        title={event.title} 
-        description={event.description?.substring(0, 160)} 
+      <SEO
+        title={event.title}
+        description={event.description?.substring(0, 160) || ""}
         image={event.imageUrl}
-        ogType="article"
+        type="article"
         jsonLd={[
           {
             "@context": "https://schema.org",

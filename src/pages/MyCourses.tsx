@@ -12,7 +12,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Skeleton } from "@/components/ui/skeleton";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -302,10 +302,10 @@ const MyCourses = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title="Mes cours - KILIMO"
         description="Vos cours, progressions, présences et certificats"
-        canonical={window.location.origin + '/my-courses'}
+        path={window.location.origin + '/my-courses'}
       />
       <Header />
 

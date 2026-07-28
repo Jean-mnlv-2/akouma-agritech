@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 
 interface LegalPage {
   id: number;
@@ -53,10 +53,10 @@ const Legal = () => {
 
   return (
     <div className="min-h-screen">
-      <TitleManager
+      <SEO
         title="Mentions Légales"
         description="Informations légales sur KILIMO et nos services agricoles."
-        canonical={window.location.origin + "/legal"}
+        path={window.location.origin + "/legal"}
         image="/kilimo-logo.png"
       />
       <Header />

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
 import PageHeaderCarousel from "@/components/PageHeaderCarousel";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 
 const About = () => {
   const sectors = [
@@ -94,10 +94,10 @@ const About = () => {
 
   return (
     <div className="min-h-screen">
-      <TitleManager
+      <SEO
         title="À propos"
         description="KILIMO accompagne les producteurs, coopératives et territoires dans la transition vers une agriculture moderne, résiliente et connectée."
-        canonical={window.location.origin + "/about"}
+        path={window.location.origin + "/about"}
         image="/kilimo-logo.png"
       />
       <Header />

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -192,7 +192,7 @@ const LearningDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title="Mon Espace E-Learning - KILIMO" description="Tableau de bord de votre apprentissage" canonical={window.location.origin + "/dashboard/learning"} image={kilimoLogo} />
+      <SEO title="Mon Espace E-Learning - KILIMO" description="Tableau de bord de votre apprentissage" path={window.location.origin + "/dashboard/learning"} image={kilimoLogo} />
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 py-8">

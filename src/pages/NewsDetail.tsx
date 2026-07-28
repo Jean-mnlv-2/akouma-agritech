@@ -10,7 +10,7 @@ import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { RelatedArticleSkeleton } from "@/components/news/CardSkeletons";
 
 interface Article {
@@ -198,11 +198,11 @@ const NewsDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       {article && (
-        <TitleManager
+        <SEO
           title={article.title}
           description={article.excerpt}
           image={article.image}
-          ogType="article"
+          type="article"
           jsonLd={[
             {
               "@context": "https://schema.org",

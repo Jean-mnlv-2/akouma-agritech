@@ -22,7 +22,7 @@ import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
@@ -282,7 +282,7 @@ const ELearning = () => {
       })) : [
     { icon: Video, title: t("elearning.preview.video1"), desc: t("elearning.preview.video1_desc"), type: "video", duration: "12 min", url: "https://www.youtube.com/embed/ysz5S6PUM-U" },
     { icon: Video, title: t("elearning.preview.video2"), desc: t("elearning.preview.video2_desc"), type: "video", duration: "8 min", url: "https://www.youtube.com/embed/X2tZcCO5bQk" },
-    { icon: Download, title: t("elearning.preview.pdf"), desc: t("elearning.preview.pdf_desc"), type: "pdf", url: "/lovable-uploads/agritech-guide.pdf" },
+    { icon: Download, title: t("elearning.preview.pdf"), desc: t("elearning.preview.pdf_desc"), type: "pdf", url: "#" },
   ];
 
 
@@ -330,10 +330,10 @@ const ELearning = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title={t("elearning.meta.title")}
         description={t("elearning.meta.desc")}
-        canonical={window.location.origin + '/elearning'}
+        path={window.location.origin + '/elearning'}
         image={kilimoLogo}
       />
       <Header />

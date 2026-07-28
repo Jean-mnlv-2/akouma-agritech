@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,7 +87,7 @@ const MyCashback = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager title="Mon Cashback" description="Consultez votre solde cashback et utilisez-le lors de vos achats" />
+      <SEO title="Mon Cashback" description="Consultez votre solde cashback et utilisez-le lors de vos achats" />
       <Header />
 
       <div className="pt-8 pb-16">

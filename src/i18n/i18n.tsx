@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { LanguageCode, I18nContextValue } from "./types";
 import { I18nContext } from "./context";
 
@@ -392,7 +392,13 @@ const resources: Resources = {
     "auth.confirm.welcome": "Bienvenue !",
     "auth.confirm.disabled": "Compte désactivé",
     "auth.confirm.disabled_desc": "Contactez un administrateur.",
-    "auth.confirm.session_error": "Session introuvable après confirmation."
+    "auth.confirm.session_error": "Session introuvable après confirmation.",
+    "notfound.meta.title": "Page introuvable",
+    "notfound.meta.desc": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "notfound.heading": "Page introuvable",
+    "notfound.desc": "Désolé, la page que vous cherchez n'existe pas, a été déplacée ou retirée.",
+    "notfound.cta.home": "Retour à l'accueil",
+    "notfound.cta.back": "Page précédente"
   },
   en: {
     "lang.name": "English",
@@ -732,7 +738,13 @@ const resources: Resources = {
     "auth.confirm.welcome": "Welcome!",
     "auth.confirm.disabled": "Account disabled",
     "auth.confirm.disabled_desc": "Contact an administrator.",
-    "auth.confirm.session_error": "Session not found after confirmation."
+    "auth.confirm.session_error": "Session not found after confirmation.",
+    "notfound.meta.title": "Page not found",
+    "notfound.meta.desc": "The page you are looking for does not exist or has been moved.",
+    "notfound.heading": "Page not found",
+    "notfound.desc": "Sorry, the page you're looking for doesn't exist, was moved, or was removed.",
+    "notfound.cta.home": "Back to home",
+    "notfound.cta.back": "Previous page"
   },
   sw: {
     "lang.name": "Kiswahili",
@@ -2129,6 +2141,8 @@ const resources: Resources = {
   }
 };
 
+const RTL_LANGUAGES: LanguageCode[] = ["ar"];
+
 const STORAGE_KEY = "KILIMO-lang";
 
 function detectLanguage(): LanguageCode {
@@ -2153,6 +2167,13 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Failed to save language to localStorage:", e);
     }
   }, []);
+
+  // Garde <html lang>/<html dir> synchronisés — nécessaire pour l'accessibilité,
+  // le SEO, et pour que les langues RTL (arabe) s'affichent correctement.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = RTL_LANGUAGES.includes(lang) ? "rtl" : "ltr";
+  }, [lang]);
 
   const t = useCallback(
     (key: string) => {

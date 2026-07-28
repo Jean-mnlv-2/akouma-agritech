@@ -5,7 +5,7 @@ import About from "@/components/About";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 import AdSpace from "@/components/AdSpace";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import NewsSection from "@/components/NewsSection";
 import SeedsSection from "@/components/SeedsSection";
 import ShopSection from "@/components/ShopSection";
@@ -39,10 +39,10 @@ const Index = () => {
           fetchpriority="high"
         />
       </Helmet>
-      <TitleManager
+      <SEO
         title="KILIMO Agritech - Agriculture Intelligente & Formations"
         description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées et accompagnement expert pour les agriculteurs africains."
-        canonical={window.location.origin + '/'}
+        path={window.location.origin + '/'}
         image="/kilimo-logo.png"
         jsonLd={{
           "@context": "https://schema.org",

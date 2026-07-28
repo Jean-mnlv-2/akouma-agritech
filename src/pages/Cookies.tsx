@@ -1,5 +1,5 @@
-import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { SEO } from "@/components/SEO";
 import { Cookie, ShieldCheck, BarChart3, Megaphone, SlidersHorizontal, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -82,14 +82,11 @@ const CATEGORIES: Category[] = [
 const Cookies = () => {
   return (
     <>
-      <Helmet>
-        <title>Politique de cookies — KILIMO</title>
-        <meta
-          name="description"
-          content="Politique de cookies KILIMO : finalités, durée et fournisseurs pour chaque catégorie. Gérez librement vos préférences, à tout moment."
-        />
-        <link rel="canonical" href="https://akouma-agritech.lovable.app/cookies" />
-      </Helmet>
+      <SEO
+        title="Politique de cookies"
+        description="Politique de cookies KILIMO : finalités, durée et fournisseurs pour chaque catégorie. Gérez librement vos préférences, à tout moment."
+        path="/cookies"
+      />
       <Header />
       <main className="container mx-auto px-4 py-12 max-w-5xl">
         <div className="flex items-center gap-3 mb-4">

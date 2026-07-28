@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Award } from "lucide-react";
@@ -37,10 +37,10 @@ const CertificateVerify = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title={`Vérification du certificat ${number} - KILIMO`}
         description="Vérifiez l'authenticité d'un certificat KILIMO E-Learning."
-        canonical={typeof window !== 'undefined' ? `${window.location.origin}/certificates/verify/${number}` : undefined}
+        path={typeof window !== 'undefined' ? `${window.location.origin}/certificates/verify/${number}` : undefined}
       />
       <Header />
       <main className="container mx-auto px-4 sm:px-6 py-12 max-w-2xl">

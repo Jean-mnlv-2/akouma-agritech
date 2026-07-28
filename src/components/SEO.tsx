@@ -1,20 +1,24 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_URL = 'https://kilimo-agritech.lovable.app';
-const DEFAULT_IMAGE = `${SITE_URL}/kilimo-logo.png`;
+// Domaine canonique unique : doit rester cohérent avec index.html (%VITE_SITE_URL%),
+// public/robots.txt, public/llms.txt et scripts/generate-sitemap.ts. Un domaine
+// divergent entre ces sources casse le SEO (canonical/OG incohérents, sitemap
+// invalide). Redéfinir VITE_SITE_URL dans .env lors du passage à un domaine final.
+const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://kilimo-agritech.lovable.app';
+const DEFAULT_IMAGE = '/kilimo-logo.png';
 const SITE_NAME = 'KILIMO Agritech';
 
 export type JsonLd = Record<string, unknown> | Record<string, unknown>[];
 
 export interface SEOProps {
-  /** 50–60 caractères recommandés. */
+  /** 50–60 caractères recommandés. Le suffixe " | KILIMO Agritech" est ajouté automatiquement. */
   title: string;
   /** 140–155 caractères recommandés. */
   description: string;
   /** Chemin relatif (ex: "/shop") OU URL absolue. */
   path?: string;
   image?: string;
-  type?: 'website' | 'article' | 'product';
+  type?: 'website' | 'article' | 'product' | 'course' | 'book';
   locale?: string;
   /** Données structurées JSON-LD (objet ou tableau d'objets). */
   jsonLd?: JsonLd;
@@ -24,6 +28,8 @@ export interface SEOProps {
 /**
  * SEO/GEO réutilisable: Title, Description, Canonical, OpenGraph, Twitter,
  * et JSON-LD (Schema.org). À placer en tête de chaque page publique.
+ * Composant unique pour tout le site — voir CLAUDE.md / audit pour l'historique
+ * de l'ancien doublon `TitleManager` (retiré, cette API le remplace partout).
  */
 export function SEO({
   title,
@@ -36,8 +42,10 @@ export function SEO({
   noindex = false,
 }: SEOProps) {
   const url = path.startsWith('http') ? path : `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
-  const safeTitle = title.length > 60 ? `${title.slice(0, 57)}…` : title;
+  const computedTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
+  const safeTitle = computedTitle.length > 60 ? `${computedTitle.slice(0, 57)}…` : computedTitle;
   const safeDesc = description.length > 160 ? `${description.slice(0, 157)}…` : description;
+  const absoluteImage = image.startsWith('http') ? image : `${SITE_URL}${image.startsWith('/') ? image : `/${image}`}`;
   const schemas = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
   return (
@@ -45,7 +53,7 @@ export function SEO({
       <title>{safeTitle}</title>
       <meta name="description" content={safeDesc} />
       <link rel="canonical" href={url} />
-      {noindex && <meta name="robots" content="noindex,nofollow" />}
+      <meta name="robots" content={noindex ? 'noindex,nofollow' : 'index,follow'} />
 
       {/* Open Graph */}
       <meta property="og:site_name" content={SITE_NAME} />
@@ -53,14 +61,14 @@ export function SEO({
       <meta property="og:description" content={safeDesc} />
       <meta property="og:url" content={url} />
       <meta property="og:type" content={type} />
-      <meta property="og:image" content={image} />
+      <meta property="og:image" content={absoluteImage} />
       <meta property="og:locale" content={locale} />
 
       {/* Twitter / X */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={safeTitle} />
       <meta name="twitter:description" content={safeDesc} />
-      <meta name="twitter:image" content={image} />
+      <meta name="twitter:image" content={absoluteImage} />
 
       {schemas.map((s, i) => (
         <script key={i} type="application/ld+json">
