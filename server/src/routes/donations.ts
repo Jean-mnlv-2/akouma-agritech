@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { verifyRecaptcha } from '../middleware/recaptcha';
+import { prisma } from '../db';
 export const donationsRouter = Router();
 
 donationsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
@@ -10,7 +9,7 @@ donationsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Res
   res.json({ data: items });
 });
 
-donationsRouter.post('/', async (req: Request, res: Response) => {
+donationsRouter.post('/', verifyRecaptcha('donations'), async (req: Request, res: Response) => {
   // public submission
   const { donorName, email, amount, country, message } = req.body || {};
   if (!donorName || !email || amount == null || !country) return res.status(400).json({ error: 'missing fields' });
