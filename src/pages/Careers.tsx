@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MapPin, Clock, Users, Briefcase, Send, Loader2, Upload, FileText } from "lucide-react";
 import { api } from "@/integrations/api/client";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
 import { useToast } from "@/hooks/use-toast";
 
 interface Career {
@@ -41,6 +42,7 @@ const Careers = () => {
   const [cvFileName, setCvFileName] = useState("");
   const cvInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { execute: executeRecaptcha } = useRecaptcha();
 
   const [applyForm, setApplyForm] = useState({
     name: "",
@@ -93,7 +95,7 @@ const Careers = () => {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const data = await api.request('POST', '/api/upload', { body: fd });
+      const data = await api.request('POST', '/api/upload/public', { body: fd });
       setApplyForm(f => ({ ...f, cvUrl: data.url }));
       setCvFileName(file.name);
       toast({ title: "Fichier uploadé", description: file.name });
@@ -113,6 +115,7 @@ const Careers = () => {
     }
     setIsSubmitting(true);
     try {
+      const recaptchaToken = await executeRecaptcha('job_application');
       await api.request('POST', '/api/job-applications', {
         body: {
           careerId: applyCareerId,
@@ -122,6 +125,7 @@ const Careers = () => {
           phone: applyForm.phone || null,
           message: applyForm.message || null,
           cvUrl: applyForm.cvUrl || null,
+          recaptchaToken,
         },
       });
       toast({ title: "Candidature envoyée !", description: "Nous examinerons votre candidature rapidement." });

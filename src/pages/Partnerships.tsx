@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from "@/hooks/use-toast";
 import ContactForm from "@/components/forms/ContactForm";
 import { useCountries } from "@/hooks/use-countries";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { api } from "@/integrations/api/client";
 import { 
   Handshake, 
   Users, 
@@ -47,6 +49,7 @@ const Partnerships = () => {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isPartnershipOpen, setIsPartnershipOpen] = useState(false);
   const { countries, updatePhoneWithCode } = useCountries();
+  const { execute: executeRecaptcha } = useRecaptcha();
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [_contactForm] = useState({
     name: "",
@@ -145,28 +148,27 @@ const Partnerships = () => {
 
   const handlePartnershipSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!partnershipForm.name || !partnershipForm.email || !partnershipForm.description || !partnershipForm.partnershipType) {
+    if (!partnershipForm.name || !partnershipForm.email || !partnershipForm.description || !partnershipForm.partnershipType || !partnershipForm.country_id) {
       toast({ title: "Erreur de validation", description: "Champs requis manquants", variant: "destructive" });
       return;
     }
     try {
-      const res = await fetch('/api/partnerships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: partnershipForm.name,
+      const countryName = countries.find(c => String(c.id) === partnershipForm.country_id)?.name || null;
+      const recaptchaToken = await executeRecaptcha('partnerships');
+      await api.request('POST', '/api/partnerships', {
+        body: {
+          contactName: partnershipForm.name,
+          companyName: partnershipForm.company || partnershipForm.name,
           email: partnershipForm.email,
-          company: partnershipForm.company || null,
           phone: partnershipForm.phone || null,
-          country_id: partnershipForm.country_id ? parseInt(partnershipForm.country_id) : null,
-          partnership_type: partnershipForm.partnershipType,
-          description: partnershipForm.description,
+          country: countryName,
+          partnershipType: partnershipForm.partnershipType,
+          message: partnershipForm.description,
           budget: partnershipForm.budget || null,
           timeline: partnershipForm.timeline || null,
-        })
+          recaptchaToken,
+        },
       });
-      if (!res.ok) throw new Error(await res.text());
       toast({ title: "Demande envoyée", description: "Nous vous recontactons rapidement." });
       setPartnershipForm({
         name: "",
@@ -198,7 +200,7 @@ const Partnerships = () => {
 
   return (
     <div className="min-h-screen">
-      <TitleManager 
+      <SEO
         title="Partenariats"
         description="Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner l'agriculture africaine avec des solutions technologiques durables."
         image="/kilimo-logo.png"

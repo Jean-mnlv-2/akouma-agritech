@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ContactComponent from "@/components/Contact";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { useI18n } from "@/i18n";
 
 const ContactPage = () => {
@@ -9,9 +9,9 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager 
-        title={t("contact.title")} 
-        description={t("contact.subtitle")} 
+      <SEO
+        title={t("contact.title")}
+        description={t("contact.subtitle")}
       />
       <Header />
       <main className="pt-16">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import ContactForm from "@/components/forms/ContactForm";
 import { useCountries } from "@/hooks/use-countries";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { api } from "@/integrations/api/client";
 import { 
   Heart, 
   Gift,
@@ -32,6 +34,7 @@ const Donations = () => {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string>("");
   const { countries, updatePhoneWithCode } = useCountries();
+  const { execute: executeRecaptcha } = useRecaptcha();
   const [donationForm, setDonationForm] = useState({
     name: "",
     email: "",
@@ -42,7 +45,7 @@ const Donations = () => {
     paymentMethod: "card",
     anonymous: false,
     message: "",
-    newsletter: true
+    newsletter: false
   });
   // contactForm state removed - using ContactForm component instead
 
@@ -137,8 +140,8 @@ const Donations = () => {
 
   const handleDonationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!donationForm.name || !donationForm.email || !donationForm.amount) {
-      toast({ title: "Erreur de validation", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
+    if (!donationForm.name || !donationForm.email || !donationForm.amount || !donationForm.country_id) {
+      toast({ title: "Erreur de validation", description: "Veuillez remplir tous les champs obligatoires (nom, email, pays, montant).", variant: "destructive" });
       return;
     }
     const amountNumber = parseFloat(donationForm.amount.replace(/[^\d.]/g, ''));
@@ -147,25 +150,18 @@ const Donations = () => {
       return;
     }
     try {
-      const res = await fetch('/api/donations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: donationForm.name,
+      const countryName = countries.find(c => String(c.id) === donationForm.country_id)?.name || null;
+      const recaptchaToken = await executeRecaptcha('donations');
+      await api.request('POST', '/api/donations', {
+        body: {
+          donorName: donationForm.name,
           email: donationForm.email,
-          phone: donationForm.phone || null,
-          company: donationForm.company || null,
-          country_id: donationForm.country_id ? parseInt(donationForm.country_id) : null,
           amount: amountNumber,
-          payment_method: donationForm.paymentMethod,
-          anonymous: donationForm.anonymous,
+          country: countryName,
           message: donationForm.message || null,
-          newsletter: donationForm.newsletter,
-          payment_reference: null,
-        })
+          recaptchaToken,
+        },
       });
-      if (!res.ok) throw new Error(await res.text());
       toast({ title: "Don enregistré", description: "Merci pour votre générosité. Un reçu vous sera envoyé." });
       setDonationForm({
         name: "",
@@ -177,7 +173,7 @@ const Donations = () => {
         paymentMethod: "card",
         anonymous: false,
         message: "",
-        newsletter: true
+        newsletter: false
       });
       setSelectedTier("");
       setIsDonationOpen(false);
@@ -221,7 +217,7 @@ const Donations = () => {
 
   return (
     <div className="min-h-screen">
-      <TitleManager 
+      <SEO
         title="Dons"
         description="Votre don contribue directement à révolutionner l'agriculture africaine. Chaque contribution fait une différence réelle dans la vie des agriculteurs."
         image="/kilimo-logo.png"

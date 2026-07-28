@@ -92,12 +92,15 @@ const ContactForm = ({
 
     try {
       const recaptchaToken = await executeRecaptcha('contact');
+      const selectedCountry = countries.find(c => c.id?.toString() === formData.country_id);
       const basePayload: Record<string, unknown> = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone || null,
           company: formData.company || null,
+          subject: formData.subject || null,
           project_type: formData.subject || 'general',
+          country: selectedCountry?.name || null,
           message: formData.message,
           recaptchaToken
         };
