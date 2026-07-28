@@ -7,10 +7,24 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import multer from 'multer';
 import fs from 'fs';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { env } from './utils/env';
 import { logger } from './utils/logger';
+import { initSentry, Sentry } from './utils/sentry';
+
+// Doit être initialisé avant toute autre logique applicative pour capturer
+// les erreurs le plus tôt possible. No-op complet si SENTRY_DSN est absent.
+initSentry();
+
+// Filet de sécurité : en Express 4, une promesse rejetée dans un handler
+// async sans try/catch ne passe pas par le middleware d'erreur — elle devient
+// une "unhandled rejection" que Node (>=15) termine par défaut. Ceci évite
+// qu'un oubli de try/catch dans une route ne fasse planter tout le process
+// pour l'ensemble des utilisateurs. Complète, ne remplace pas, la gestion
+// d'erreur locale de chaque route.
+process.on('unhandledRejection', (reason) => {
+  logger.error('[process] Unhandled promise rejection', reason instanceof Error ? reason.message : String(reason));
+});
 import { initCronJobs } from './utils/cron';
 import * as deliveryService from './services/deliveryService';
 import { authRouter } from './routes/auth';
@@ -27,6 +41,7 @@ import { coursePreviewItemsRouter } from './routes/coursePreviewItems';
 import { reminderLogsRouter } from './routes/reminderLogs';
 import { chatRouter } from './routes/chat';
 import { ensureCoursePreviewTypes } from './utils/seedPreviewTypes';
+import { ensureDefaultPlans } from './utils/seedPlans';
 import { donationsRouter } from './routes/donations';
 import { contactMessagesRouter } from './routes/contactMessages';
 import { contentSubmissionsRouter } from './routes/contentSubmissions';
@@ -59,15 +74,16 @@ import { certificatesRouter } from './routes/certificates';
 import { certificatePdfRouter } from './routes/certificatePdf';
 import { pageHeaderImagesRouter } from './routes/pageHeaderImages';
 import { cookieConsentsRouter } from './routes/cookieConsents';
+import { subscriptionsRouter } from './routes/subscriptions';
+import { meRouter } from './routes/me';
 import { createRateLimiter } from './middleware/rateLimit';
 import { authRequired, adminOnly } from './middleware/authRequired';
 import { csrfRequired } from './middleware/csrf';
 import { internalAutoNewsRouter } from './routes/internalAutoNews';
 import { newsScraperRouter } from './routes/newsScraper';
+import { prisma } from './db';
 
 const app = express();
-const prisma = new PrismaClient();
-
 app.set('trust proxy', 1);
 
 // Configuration d'upload générique
@@ -130,9 +146,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    // Accepter images et documents (validation approfondie après écriture)
     const allowedMimes = [
       'image/', 'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -157,11 +172,12 @@ app.use(helmet({
       ].filter(Boolean) as string[],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://*"], // Allow HTTPS images for news, courses, products, etc.
+      imgSrc: ["'self'", "data:", "https://*", "http://localhost:4000", "http://127.0.0.1:4000"], // Allow HTTPS images for news, courses, products, etc.
       connectSrc: [
         "'self'",
         env.API_PUBLIC_URL,
-        "https://api.lovable.dev",
+        "http://localhost:4000",
+        "http://127.0.0.1:4000",
         "https://api.resend.com",
         // Add other external API domains here as needed
       ],
@@ -234,10 +250,57 @@ app.post('/api/upload', uploadLimiter, authRequired, adminOnly, csrfRequired, up
   try {
     await validateUploadedFile(file.path, file.originalname, file.mimetype);
     const relative = `/uploads/${file.filename}`;
-    const publicUrl = `${env.API_PUBLIC_URL}${relative}`;
+    // For backward compatibility, keep publicUrl as relative path instead of absolute
+    const publicUrl = relative;
     res.json({ url: publicUrl, path: relative });
   } catch (e) {
     // Supprimer le fichier rejeté
+    await fs.promises.unlink(file.path).catch(() => void 0);
+    const msg = e instanceof Error ? e.message : 'Fichier invalide';
+    res.status(400).json({ error: msg });
+  }
+});
+
+// Upload public dédié aux CV de candidature : /api/upload (ci-dessus) exige
+// authRequired+adminOnly, ce qui rend l'upload de CV impossible pour un
+// candidat non connecté. Ce point d'entrée est volontairement restreint
+// (PDF/DOCX uniquement, taille plus faible, pas d'auth requise) et
+// rate-limité plus strictement pour compenser l'absence d'authentification.
+const publicUploadStorage = multer.diskStorage({
+  destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+    cb(null, uploadDir);
+  },
+  filename: (_req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+const publicUpload = multer({
+  storage: publicUploadStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    const allowedMimes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Type de fichier non autorisé (PDF ou DOCX uniquement)'));
+    }
+  },
+});
+const publicUploadLimiter = createRateLimiter({ windowMs: 60_000, max: 5 });
+app.post('/api/upload/public', publicUploadLimiter, publicUpload.single('file'), async (req: Request, res: Response) => {
+  const file = req.file;
+  if (!file) {
+    return res.status(400).json({ error: 'Aucun fichier fourni' });
+  }
+  try {
+    await validateUploadedFile(file.path, file.originalname, file.mimetype);
+    const relative = `/uploads/${file.filename}`;
+    res.json({ url: relative, path: relative });
+  } catch (e) {
     await fs.promises.unlink(file.path).catch(() => void 0);
     const msg = e instanceof Error ? e.message : 'Fichier invalide';
     res.status(400).json({ error: msg });
@@ -290,6 +353,8 @@ app.use('/api/certificates', certificatePdfRouter);
 app.use('/api/page_header_images', pageHeaderImagesRouter);
 app.use('/api/cookie-consents', cookieConsentsRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/subscriptions', subscriptionsRouter);
+app.use('/api/me', meRouter);
 app.use('/api', genericRouter);
 
 // Internal API (DeerFlow only)
@@ -298,11 +363,18 @@ app.use('/api/internal/auto-news', internalAutoNewsRouter);
 // News Scraper Admin API
 app.use('/api/admin/news-scraper', newsScraperRouter);
 
+// Capture les erreurs pour Sentry (no-op si SENTRY_DSN absent) avant notre
+// propre gestionnaire, qui reste responsable du formatage de la réponse JSON.
+if (env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
+
 // Middleware de gestion d'erreur centralisée
 const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Fichier trop volumineux (maximum 10MB)' });
+      // Limite variable selon le point d'upload (100MB admin, 10MB CV public).
+      return res.status(400).json({ error: 'Fichier trop volumineux pour ce type d\'envoi' });
     }
     return res.status(400).json({ error: err.message });
   }
@@ -365,6 +437,7 @@ async function bootstrap() {
   try {
     await ensureDefaultAdmin();
     await ensureCoursePreviewTypes(prisma);
+    await ensureDefaultPlans(prisma);
     await deliveryService.ensurePartnerExists();
     initCronJobs();
     app.listen(env.PORT, () => {

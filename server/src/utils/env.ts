@@ -116,6 +116,11 @@ export const env = {
   RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY || '',
   RECAPTCHA_SITE_KEY: process.env.RECAPTCHA_SITE_KEY || '',
   INTERNAL_API_TOKEN: process.env.INTERNAL_API_TOKEN || 'secure_internal_token_change_in_production',
+  // Optionnel : sans valeur, le rate-limiting retombe sur un stockage en
+  // mémoire par instance (suffisant en développement / mono-instance, mais
+  // incorrect derrière plusieurs instances backend en production).
+  REDIS_URL: process.env.REDIS_URL || '',
+  SENTRY_DSN: process.env.SENTRY_DSN || '',
   DEERFLOW_URL: process.env.DEERFLOW_URL || 'http://localhost:8000',
   AUTO_NEWS_CRON_SCHEDULE: process.env.AUTO_NEWS_CRON_SCHEDULE || '0 7 * * *',
   isProduction: () => isProduction,
@@ -134,6 +139,13 @@ export const env = {
       }
       if (DEFAULT_ADMIN_PASSWORD === DEFAULTS.DEFAULT_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD.length < 8) {
         throw new Error('DEFAULT_ADMIN_PASSWORD doit être défini en production, différer de la valeur par défaut et contenir au moins 8 caractères');
+      }
+      // reCAPTCHA protège sign-in/sign-up/forgot-password contre le bourrage de comptes.
+      // Une clé absente en production ne doit jamais dégénérer en contournement silencieux
+      // (voir middleware/recaptcha.ts, qui bloque déjà la requête, mais on échoue aussi au
+      // démarrage pour rendre l'oubli impossible à manquer en déploiement).
+      if (!process.env.RECAPTCHA_SECRET_KEY || process.env.RECAPTCHA_SECRET_KEY.trim().length === 0) {
+        throw new Error('RECAPTCHA_SECRET_KEY doit être défini en production pour protéger les routes d\'authentification');
       }
       // Si les paiements sont activés, exiger au moins un mécanisme de vérification webhook
       const hasToken = process.env.MONEYFUSION_TOKEN && 
