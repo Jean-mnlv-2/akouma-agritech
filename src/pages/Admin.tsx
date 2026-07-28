@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star as StarIcon } from 'lucide-react';
 import { api } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Loader2, 
-  LogOut, 
-  User, 
-  Lock, 
-  Users, 
-  FileText, 
+import {
+  Loader2,
+  LogOut,
+  User,
+  Lock,
+  Users,
+  FileText,
   BookOpen,
   Sprout,
   Newspaper,
@@ -25,38 +25,50 @@ import {
   Eye,
   History
 } from 'lucide-react';
-import TitleManager from '@/components/TitleManager';
-import { AdminCourses } from '@/components/admin/AdminCourses';
-import { AdminCoursePreviews } from '@/components/admin/AdminCoursePreviews';
-import { AdminReminderLogs } from '@/components/admin/AdminReminderLogs';
-import { AdminNews } from '@/components/admin/AdminNews';
-import { AdminSeeds } from '@/components/admin/AdminSeeds';
-import { AdminProducts } from '@/components/admin/AdminProducts';
-import { AdminLegalPages } from '@/components/admin/AdminLegalPages';
-import { AdminSubmissions } from '@/components/admin/AdminSubmissions';
-import { AdminCareers } from '@/components/admin/AdminCareers';
-import { AdminEvents } from '@/components/admin/AdminEvents';
-import { AdminPartners } from '@/components/admin/AdminPartners';
-import AdminLiveStreams from '@/pages/AdminLiveStreams';
-import { AdminDonationsContent } from '@/components/admin/AdminDonationsContent';
-import { AdminContactSettings } from '@/components/admin/AdminContactSettings';
-import { AdminUserManagement } from '@/components/admin/AdminUserManagement';
-import { AdminOrders } from '@/components/admin/AdminOrders';
-import { AdminDeliveries } from '@/components/admin/AdminDeliveries';
-import { AdminProvider } from '@/contexts/AdminContext';
+import { SEO } from '@/components/SEO';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
 import { Badge } from '@/components/ui/badge';
-import { AdminReviews } from '@/components/admin/AdminReviews';
-import { AdminDashboardCharts } from '@/components/admin/AdminDashboardCharts';
 import { AdminNotifications } from '@/components/admin/AdminNotifications';
-import { AdminAffiliateLeaderboard } from '@/components/admin/AdminAffiliateLeaderboard';
-import { AdminCourseModules } from '@/components/admin/AdminCourseModules';
-import { AdminAttendance } from '@/components/admin/AdminAttendance';
-import { AdminSertifierSettings } from '@/components/admin/AdminSertifierSettings';
-import { AdminCertificates } from '@/components/admin/AdminCertificates';
-import AdminElearningEnrollments from '@/pages/AdminElearningEnrollments';
-import { AdminPageHeaderImages } from '@/components/admin/AdminPageHeaderImages';
-import { AdminCookieConsents } from '@/components/admin/AdminCookieConsents';
+
+// Chaque onglet n'est monté que lorsqu'il est actif (voir la zone de contenu
+// des tabs plus bas) : les charger en lazy() permet à Vite de les découper
+// en chunks séparés au lieu de tout empaqueter dans le seul chunk "Admin"
+// (auparavant ~1.5MB, chargé même pour n'afficher que le tableau de bord).
+const AdminCourses = lazy(() => import('@/components/admin/AdminCourses').then(m => ({ default: m.AdminCourses })));
+const AdminCoursePreviews = lazy(() => import('@/components/admin/AdminCoursePreviews').then(m => ({ default: m.AdminCoursePreviews })));
+const AdminReminderLogs = lazy(() => import('@/components/admin/AdminReminderLogs').then(m => ({ default: m.AdminReminderLogs })));
+const AdminNews = lazy(() => import('@/components/admin/AdminNews').then(m => ({ default: m.AdminNews })));
+const AdminSeeds = lazy(() => import('@/components/admin/AdminSeeds').then(m => ({ default: m.AdminSeeds })));
+const AdminProducts = lazy(() => import('@/components/admin/AdminProducts').then(m => ({ default: m.AdminProducts })));
+const AdminLegalPages = lazy(() => import('@/components/admin/AdminLegalPages').then(m => ({ default: m.AdminLegalPages })));
+const AdminSubmissions = lazy(() => import('@/components/admin/AdminSubmissions').then(m => ({ default: m.AdminSubmissions })));
+const AdminCareers = lazy(() => import('@/components/admin/AdminCareers').then(m => ({ default: m.AdminCareers })));
+const AdminEvents = lazy(() => import('@/components/admin/AdminEvents').then(m => ({ default: m.AdminEvents })));
+const AdminPartners = lazy(() => import('@/components/admin/AdminPartners').then(m => ({ default: m.AdminPartners })));
+const AdminLiveStreams = lazy(() => import('@/pages/AdminLiveStreams'));
+const AdminDonationsContent = lazy(() => import('@/components/admin/AdminDonationsContent').then(m => ({ default: m.AdminDonationsContent })));
+const AdminContactSettings = lazy(() => import('@/components/admin/AdminContactSettings').then(m => ({ default: m.AdminContactSettings })));
+const AdminUserManagement = lazy(() => import('@/components/admin/AdminUserManagement').then(m => ({ default: m.AdminUserManagement })));
+const AdminOrders = lazy(() => import('@/components/admin/AdminOrders').then(m => ({ default: m.AdminOrders })));
+const AdminDeliveries = lazy(() => import('@/components/admin/AdminDeliveries').then(m => ({ default: m.AdminDeliveries })));
+const AdminReviews = lazy(() => import('@/components/admin/AdminReviews').then(m => ({ default: m.AdminReviews })));
+const AdminDashboardCharts = lazy(() => import('@/components/admin/AdminDashboardCharts').then(m => ({ default: m.AdminDashboardCharts })));
+const AdminAffiliateLeaderboard = lazy(() => import('@/components/admin/AdminAffiliateLeaderboard').then(m => ({ default: m.AdminAffiliateLeaderboard })));
+const AdminCourseModules = lazy(() => import('@/components/admin/AdminCourseModules').then(m => ({ default: m.AdminCourseModules })));
+const AdminAttendance = lazy(() => import('@/components/admin/AdminAttendance').then(m => ({ default: m.AdminAttendance })));
+const AdminSertifierSettings = lazy(() => import('@/components/admin/AdminSertifierSettings').then(m => ({ default: m.AdminSertifierSettings })));
+const AdminCertificates = lazy(() => import('@/components/admin/AdminCertificates').then(m => ({ default: m.AdminCertificates })));
+const AdminElearningEnrollments = lazy(() => import('@/pages/AdminElearningEnrollments'));
+const AdminPageHeaderImages = lazy(() => import('@/components/admin/AdminPageHeaderImages').then(m => ({ default: m.AdminPageHeaderImages })));
+const AdminCookieConsents = lazy(() => import('@/components/admin/AdminCookieConsents').then(m => ({ default: m.AdminCookieConsents })));
+const AdminSubscriptions = lazy(() => import('@/components/admin/AdminSubscriptions').then(m => ({ default: m.AdminSubscriptions })));
+
+const TabLoadingFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  </div>
+);
+
 interface DashboardStats {
   totalUsers: number;
   totalCourses: number;
@@ -112,6 +124,12 @@ const tabGroups = [
     tabs: [
       { value: 'orders', label: 'Ventes & Promos', icon: Receipt },
       { value: 'deliveries', label: 'Livraisons', icon: Truck }
+    ]
+  },
+  {
+    title: "🤖 Chatbot & Abonnements",
+    tabs: [
+      { value: 'subscriptions', label: 'Forfaits Chatbot', icon: Crown }
     ]
   },
   {
@@ -327,7 +345,7 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen bg-background admin-responsive" translate="no">
-      <TitleManager title="Administration" description="Dashboard d'administration KILIMO Agritech - Gestion du contenu et des utilisateurs" noIndex={true} image="/kilimo-logo.png" />
+      <SEO title="Administration" description="Dashboard d'administration KILIMO Agritech - Gestion du contenu et des utilisateurs" noindex={true} image="/kilimo-logo.png" />
       
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
@@ -409,11 +427,13 @@ function AdminContent() {
               })}
             </div>
 
+            <Suspense fallback={<TabLoadingFallback />}>
             <div className="mt-6">
               {(activeTab === 'dashboard' && (isAdmin || isSupervisor)) && <AdminDashboardCharts />}
               {(activeTab === 'users' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('users')))) && <AdminUserManagement />}
               {(activeTab === 'orders' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('orders')))) && <AdminOrders />}
               {(activeTab === 'deliveries' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('deliveries')))) && <AdminDeliveries />}
+              {(activeTab === 'subscriptions' && isAdmin) && <AdminSubscriptions />}
               {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && (
                 <AdminCourses 
                   onViewInscriptions={(id) => { setSelectedCourseId(id); setActiveTab('elearning-enrollments'); }}
@@ -456,6 +476,7 @@ function AdminContent() {
               {(activeTab === 'contact-settings' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('contact-settings')))) && <AdminContactSettings />}
               {(activeTab === 'cookie-consents' && isAdmin) && <AdminCookieConsents />}
             </div>
+            </Suspense>
           </Tabs>
         </div>
       </div>
@@ -467,9 +488,5 @@ function AdminContent() {
 }
 
 export default function Admin() {
-  return (
-    <AdminProvider>
-      <AdminContent />
-    </AdminProvider>
-  );
+  return <AdminContent />;
 }

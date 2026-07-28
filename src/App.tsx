@@ -55,7 +55,6 @@ const Terms = lazy(() => import("./pages/Terms"));
 const Legal = lazy(() => import("./pages/Legal"));
 const Careers = lazy(() => import("./pages/Careers"));
 const Admin = lazy(() => import("./pages/Admin"));
-const AdminAccess = lazy(() => import("./pages/AdminAccess"));
 const Auth = lazy(() => import("./pages/Auth"));
 const AuthConfirm = lazy(() => import("./pages/AuthConfirm"));
 const AdminTasks = lazy(() => import("./pages/AdminTasks"));
@@ -81,7 +80,9 @@ const Orders = lazy(() => import("./pages/Orders"));
 const MyCashback = lazy(() => import("./pages/MyCashback"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const Assistant = lazy(() => import("./pages/Assistant"));
+const Pricing = lazy(() => import("./pages/Pricing"));
 const Cookies = lazy(() => import("./pages/Cookies"));
+const PrivacySettings = lazy(() => import("./pages/PrivacySettings"));
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -113,6 +114,7 @@ const App = () => (
                 <Route path="/shop/:slug" element={<ProductDetail />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<ContactPage />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/news" element={<News />} />
                 <Route path="/news/:slug" element={<NewsDetail />} />
                 <Route path="/events/:slug" element={<EventDetail />} />
@@ -121,6 +123,7 @@ const App = () => (
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal" element={<Legal />} />
                 <Route path="/cookies" element={<Cookies />} />
+                <Route path="/privacy-settings" element={<PrivacySettings />} />
                 <Route path="/careers" element={<Careers />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/confirm" element={<AuthConfirm />} />
@@ -131,7 +134,6 @@ const App = () => (
                 <Route path="/admin/elearning-stats" element={<AdminRoute><AdminElearningStats /></AdminRoute>} />
                 <Route path="/admin/courses/:id/certificate-preview" element={<AdminRoute><AdminCertificatePreview /></AdminRoute>} />
                 <Route path="/supervisor" element={<SupervisorRoute><Supervisor /></SupervisorRoute>} />
-                <Route path="/admin-access" element={<AdminAccess />} />
                 <Route path="/agri-consulting" element={<AgriConsulting />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
