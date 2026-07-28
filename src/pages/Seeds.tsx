@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Leaf, Star, Package, Truck, Shield, RefreshCw, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 import DOMPurify from 'dompurify';
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 import { useI18n } from "@/i18n";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
@@ -150,10 +150,10 @@ const Seeds = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title={t("seeds.meta.title")}
         description={t("seeds.meta.desc")}
-        canonical={window.location.origin + '/seeds'}
+        path={window.location.origin + '/seeds'}
         image={kilimoLogo}
         jsonLd={{
           "@context": "https://schema.org",
@@ -297,37 +297,6 @@ const Seeds = () => {
                   </CardHeader>
 
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="font-medium">{t("seeds.variety")}:</span>
-                        <p className="text-muted-foreground">{product.variety}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium">{t("seeds.harvest")}:</span>
-                        <p className="text-muted-foreground">{product.harvestTime}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium">{t("seeds.yield")}:</span>
-                        <p className="text-muted-foreground">{product.yield}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <span className="font-medium text-sm">{t("seeds.features")}:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {product.features.slice(0, 2).map((feature, index) => (
-                          <Badge key={`${product.id}-feature-${index}-${feature.slice(0, 15)}`} variant="outline" className="text-xs">
-                            {feature}
-                          </Badge>
-                        ))}
-                        {product.features.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{product.features.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
                     <div className="flex items-center justify-between pt-4 border-t">
                       <div>
                         <p className="text-2xl font-bold text-primary">
@@ -343,6 +312,7 @@ const Seeds = () => {
                           onClick={async () => {
                             await addToCart({
                               id: String(product.id),
+                              productType: 'seed',
                               name: product.name,
                               price: product.price,
                               image: product.image,

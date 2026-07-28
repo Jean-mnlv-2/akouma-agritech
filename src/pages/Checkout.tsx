@@ -37,7 +37,6 @@ const Checkout = () => {
   // Cashback state
   const [cashbackBalance, setCashbackBalance] = useState(0);
   const [cashbackToUse, setCashbackToUse] = useState(0);
-  const [_loadingCashback, setLoadingCashback] = useState(false);
   
   const { countries, updatePhoneWithCode } = useCountries();
   
@@ -202,22 +201,8 @@ const Checkout = () => {
     }
 
     setSubmitting(true);
-    setLoadingCashback(true);
 
     try {
-      // Deduct cashback if used
-      if (cashbackToUse > 0) {
-        try {
-          await api.request('POST', '/api/promo-codes/use-cashback', { body: { amount: cashbackToUse } });
-        } catch (cbErr: unknown) {
-          const e = cbErr as { message?: string };
-          toast({ title: "Erreur cashback", description: e?.message || "Impossible d'utiliser le cashback", variant: "destructive" });
-          setSubmitting(false);
-          setLoadingCashback(false);
-          return;
-        }
-      }
-      setLoadingCashback(false);
       const orderItems = items.map(item => {
         const productId = Number(item.id);
         if (!Number.isFinite(productId)) {
@@ -225,7 +210,7 @@ const Checkout = () => {
         }
         return {
           productId,
-          productType: 'shop_product',
+          productType: item.productType,
           name: item.name,
           price: item.price,
           quantity: item.quantity,
@@ -247,6 +232,7 @@ const Checkout = () => {
           shippingFee: shipping,
           notes,
           promoCode: validatedPromo?.code || appliedPromo?.code || null,
+          cashbackAmount: cashbackToUse > 0 ? cashbackToUse : undefined,
         },
       });
 

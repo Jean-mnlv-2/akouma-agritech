@@ -5,8 +5,8 @@ interface CartContextType {
   items: CartItem[];
   isLoading: boolean;
   addToCart: (product: Omit<CartItem, "quantity">) => Promise<void>;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, newQuantity: number) => void;
+  removeFromCart: (target: Pick<CartItem, 'id' | 'productType'>) => void;
+  updateQuantity: (target: Pick<CartItem, 'id' | 'productType'>, newQuantity: number) => void;
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemsCount: () => number;

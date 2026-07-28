@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, ShoppingCart, Star, Package } from 'lucide-react';
-import TitleManager from '@/components/TitleManager';
+import { SEO } from '@/components/SEO';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n';
@@ -144,14 +144,14 @@ export default function Shop() {
     });
 
   const handleAddToCart = (product: Product) => {
-    addToCart({ id: product.id, name: product.name, price: product.price, image: product.image, inStock: product.inStock });
+    addToCart({ id: product.id, productType: 'shop_product', name: product.name, price: product.price, image: product.image, inStock: product.inStock });
     toast({ title: t('shop.added'), description: `${product.name} ${t('shop.added_desc')}` });
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <TitleManager
+        <SEO
           title={t('shop.meta.title')}
           description={t('shop.meta.desc')}
           image={kilimoLogo}
@@ -167,7 +167,7 @@ export default function Shop() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager
+      <SEO
         title={t('shop.meta.title')}
         description={t('shop.meta.desc')}
         image={kilimoLogo}

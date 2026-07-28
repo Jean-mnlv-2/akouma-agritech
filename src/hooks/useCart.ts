@@ -1,14 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 
+export type CartProductType = 'seed' | 'shop_product' | 'course';
+
 export interface CartItem {
   id: string;
+  productType: CartProductType;
   name: string;
   price: number;
   image: string;
   quantity: number;
   inStock: boolean;
 }
+
+/**
+ * Clé d'identité unique d'un article panier. `id` seul ne suffit pas : les
+ * compteurs auto-incrémentés de Seed/ShopProduct/Course sont indépendants,
+ * donc une semence #1 et un produit boutique #1 partagent le même `id`.
+ */
+const cartItemKey = (item: Pick<CartItem, 'id' | 'productType'>) => `${item.productType}:${item.id}`;
 
 export type CartPromoType = 'PERCENTAGE' | 'FIXED';
 
@@ -112,15 +122,15 @@ export const useCart = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     setItems(currentItems => {
-      const existingItem = currentItems.find(item => item.id === product.id);
-      
+      const existingItem = currentItems.find(item => cartItemKey(item) === cartItemKey(product));
+
       if (existingItem) {
         toast({
           title: "Quantité mise à jour",
           description: `${product.name} quantité augmentée dans le panier`,
         });
         return currentItems.map(item =>
-          item.id === product.id
+          cartItemKey(item) === cartItemKey(product)
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
@@ -135,16 +145,17 @@ export const useCart = () => {
     setIsLoading(false);
   };
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = (target: Pick<CartItem, 'id' | 'productType'>) => {
+    const targetKey = cartItemKey(target);
     setItems(currentItems => {
-      const item = currentItems.find(item => item.id === productId);
+      const item = currentItems.find(item => cartItemKey(item) === targetKey);
       if (item) {
         toast({
           title: "Produit retiré",
           description: `${item.name} retiré du panier`,
         });
       }
-      const updated = currentItems.filter(item => item.id !== productId);
+      const updated = currentItems.filter(item => cartItemKey(item) !== targetKey);
       if (updated.length === 0) {
         setAppliedPromo(null);
         setDeliveryMethodState('PICKUP');
@@ -154,15 +165,16 @@ export const useCart = () => {
     });
   };
 
-  const updateQuantity = (productId: string, newQuantity: number) => {
+  const updateQuantity = (target: Pick<CartItem, 'id' | 'productType'>, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(target);
       return;
     }
 
+    const targetKey = cartItemKey(target);
     setItems(currentItems =>
       currentItems.map(item =>
-        item.id === productId
+        cartItemKey(item) === targetKey
           ? { ...item, quantity: newQuantity }
           : item
       )

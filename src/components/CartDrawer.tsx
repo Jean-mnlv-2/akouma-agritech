@@ -60,7 +60,7 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                             variant="outline"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item, item.quantity - 1)}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
@@ -71,7 +71,7 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                             variant="outline"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item, item.quantity + 1)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -80,7 +80,7 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item)}
                         >
                           <Trash2 className="w-3 h-3" />
                         </Button>

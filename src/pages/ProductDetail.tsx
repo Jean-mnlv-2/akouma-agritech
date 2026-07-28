@@ -14,7 +14,7 @@ import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import { useNavigate } from "react-router-dom";
-import TitleManager from "@/components/TitleManager";
+import { SEO } from "@/components/SEO";
 
 interface Product {
   id: string;
@@ -137,6 +137,7 @@ const ProductDetail = () => {
       for (let i = 0; i < quantity; i++) {
         addToCart({
           id: product.id,
+          productType: 'shop_product',
           name: product.name,
           price: product.price,
           image: product.image,
@@ -217,11 +218,11 @@ const ProductDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       {product && (
-        <TitleManager
+        <SEO
           title={product.name}
           description={product.description.replace(/<[^>]*>/g, '')}
           image={product.image}
-          ogType="product"
+          type="product"
           jsonLd={[
             {
               "@context": "https://schema.org",
@@ -256,7 +257,6 @@ const ProductDetail = () => {
         />
       )}
       <Header />
-      
       {product && (
         <CopyProtectionDialog
           isOpen={isDialogOpen}

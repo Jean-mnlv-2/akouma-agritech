@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import TitleManager from '@/components/TitleManager';
+import { SEO } from '@/components/SEO';
 import { api } from '@/integrations/api/client';
 import kilimoLogo from '@/assets/kilimo-logo.png';
 import { useContactSettings } from '@/hooks/use-contact-settings';
@@ -130,69 +130,90 @@ export default function SeedDetail() {
   );
 
   useEffect(() => {
-    const cachedUser = sessionStorage.getItem('kilimo_auth_user');
-    setIsLoggedIn(!!cachedUser);
+    const checkAuth = async () => {
+      try {
+        const { data: sessionData } = await api.auth.getSession();
+        const user = sessionData?.session?.user;
+        if (user?.id) {
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
+        }
+      } catch {
+        setIsLoggedIn(false);
+      }
+    };
+
+    const handleAuthChange = () => {
+      checkAuth();
+    };
+
+    checkAuth();
+
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => window.removeEventListener('auth-change', handleAuthChange);
   }, []);
 
   const fetchSeed = useCallback(async () => {
     if (!slug) return;
     try {
-      const { data } = await api.request('GET', `/api/seeds/slug/${slug}`);
+      const apiResponse = await api.request('GET', `/api/seeds/slug/${slug}`);
+      const seedData = (apiResponse && 'data' in apiResponse) ? apiResponse.data : apiResponse;
       
-      let images = [data.imageUrl || data.image_url || kilimoLogo];
-      if (Array.isArray(data.gallery) && data.gallery.length > 0) {
-        images = data.gallery;
-      } else if (typeof data.gallery === 'string' && data.gallery.length > 0) {
+      let images = [seedData.imageUrl || seedData.image_url || kilimoLogo];
+      if (Array.isArray(seedData.gallery) && seedData.gallery.length > 0) {
+        images = seedData.gallery;
+      } else if (typeof seedData.gallery === 'string' && seedData.gallery.length > 0) {
         try {
-          const parsed = JSON.parse(data.gallery);
+          const parsed = JSON.parse(seedData.gallery);
           if (Array.isArray(parsed) && parsed.length > 0) images = parsed;
         } catch {
-          const split = data.gallery.split(',').map((u: string) => u.trim()).filter(Boolean);
+          const split = seedData.gallery.split(',').map((u: string) => u.trim()).filter(Boolean);
           if (split.length > 0) images = split;
         }
-      } else if (Array.isArray(data.images) && data.images.length > 0) {
-        images = data.images;
+      } else if (Array.isArray(seedData.images) && seedData.images.length > 0) {
+        images = seedData.images;
       }
 
-      const primaryImage = data.imageUrl || data.image_url;
+      const primaryImage = seedData.imageUrl || seedData.image_url;
       if (primaryImage && !images.includes(primaryImage)) {
         images = [primaryImage, ...images];
       }
 
-      const reviewsList: ReviewData[] = Array.isArray(data.reviews) ? data.reviews : [];
+      const reviewsList: ReviewData[] = Array.isArray(seedData.reviews) ? seedData.reviews : [];
 
       setProduct({
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        category: data.category || 'Général',
-        variety: data.variety || '',
-        price: Number(data.price) || Number(data.price_fcfa) || 0,
-        unit: data.unit || 'kg',
+        id: seedData.id,
+        name: seedData.name,
+        description: seedData.description,
+        category: seedData.category || 'Général',
+        variety: seedData.variety || '',
+        price: Number(seedData.price) || Number(seedData.price_fcfa) || 0,
+        unit: seedData.unit || 'kg',
         images,
-        rating: Number(data.rating) || 0,
-        reviews: Number(data.totalReviews) || Number(data.total_reviews) || 0,
+        rating: Number(seedData.rating) || 0,
+        reviews: Number(seedData.totalReviews) || Number(seedData.total_reviews) || 0,
         reviewsList,
-        availability: data.availability || 'En stock',
-        harvestTime: data.harvestTime || data.harvest_time || '120-140 jours',
-        yield: data.yield || data.yield_info || '8-12 tonnes/ha',
-        features: Array.isArray(data.features) ? data.features : [],
-        fullDescription: data.fullDescription || data.description,
-        isCopyProtected: !!(data.isCopyProtected || data.is_copy_protected),
+        availability: seedData.availability || 'En stock',
+        harvestTime: seedData.harvestTime || seedData.harvest_time || '120-140 jours',
+        yield: seedData.yield || seedData.yield_info || '8-12 tonnes/ha',
+        features: Array.isArray(seedData.features) ? seedData.features : [],
+        fullDescription: seedData.fullDescription || seedData.description,
+        isCopyProtected: !!(seedData.isCopyProtected || seedData.is_copy_protected),
         specifications: {
-          origin: data.origin || 'Local',
-          purity: data.purity || '99%',
-          germination: data.germination || '95%',
-          moisture: data.moisture || '12%',
-          packaging: data.packaging || 'Sachet 25kg'
+          origin: seedData.origin || 'Local',
+          purity: seedData.purity || '99%',
+          germination: seedData.germination || '95%',
+          moisture: seedData.moisture || '12%',
+          packaging: seedData.packaging || 'Sachet 25kg'
         },
         growingGuide: {
-          soilType: data.soilType || 'Sol bien drainé',
-          plantingDepth: data.plantingDepth || '2-3 cm',
-          spacing: data.spacing || '75x25 cm',
-          watering: data.watering || 'Régulier',
-          fertilizer: data.fertilizer || 'NPK équilibré',
-          diseases: Array.isArray(data.diseases) ? data.diseases : []
+          soilType: seedData.soilType || 'Sol bien drainé',
+          plantingDepth: seedData.plantingDepth || '2-3 cm',
+          spacing: seedData.spacing || '75x25 cm',
+          watering: seedData.watering || 'Régulier',
+          fertilizer: seedData.fertilizer || 'NPK équilibré',
+          diseases: Array.isArray(seedData.diseases) ? seedData.diseases : []
         }
       });
     } catch (err) {
@@ -284,11 +305,11 @@ export default function SeedDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TitleManager 
+      <SEO
         title={product.name}
         description={product.description.replace(/<[^>]*>/g, '')}
         image={product.images[0]}
-        ogType="product"
+        type="product"
         jsonLd={[
           {
             "@context": "https://schema.org",
@@ -443,6 +464,7 @@ export default function SeedDetail() {
                   onClick={() => {
                     addToCart({
                       id: product.id,
+                      productType: 'seed',
                       name: product.name,
                       price: product.price,
                       image: product.images[0] || kilimoLogo,
@@ -544,6 +566,20 @@ export default function SeedDetail() {
                       <span className="text-foreground font-bold">{product.specifications.origin}</span>
                     </div>
                     <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><Sprout className="w-4 h-4 mr-2" /> Variété</span>
+                      <span className="text-foreground font-bold">{product.variety}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><Calendar className="w-4 h-4 mr-2" /> Récolte</span>
+                      <span className="text-foreground font-bold">{product.harvestTime}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <span className="text-muted-foreground font-medium flex items-center"><TrendingUp className="w-4 h-4 mr-2" /> Rendement</span>
+                      <span className="text-foreground font-bold">{product.yield}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 border-b border-border">
                       <span className="text-muted-foreground font-medium flex items-center"><ShieldCheck className="w-4 h-4 mr-2" /> Pureté</span>
                       <span className="text-foreground font-bold">{product.specifications.purity}</span>
                     </div>
@@ -551,8 +587,6 @@ export default function SeedDetail() {
                       <span className="text-muted-foreground font-medium flex items-center"><Sprout className="w-4 h-4 mr-2" /> Germination</span>
                       <span className="text-foreground font-bold">{product.specifications.germination}</span>
                     </div>
-                  </div>
-                  <div className="space-y-6">
                     <div className="flex items-center justify-between p-4 border-b border-border">
                       <span className="text-muted-foreground font-medium flex items-center"><Droplets className="w-4 h-4 mr-2" /> Humidité</span>
                       <span className="text-foreground font-bold">{product.specifications.moisture}</span>
@@ -563,6 +597,24 @@ export default function SeedDetail() {
                     </div>
                   </div>
                 </div>
+                {product.features.length > 0 && (
+                  <div className="mt-12">
+                    <h3 className="text-xl font-bold text-foreground mb-6 flex items-center">
+                      <Zap className="w-5 h-5 mr-2 text-primary" />
+                      Caractéristiques
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {product.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-start p-4 rounded-xl bg-muted/50 border border-border">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3 shrink-0">
+                            <Zap className="w-4 h-4 text-primary" />
+                          </div>
+                          <span className="text-foreground font-medium">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="guide" className="bg-card rounded-3xl p-8 md:p-12 shadow-sm border border-border focus-visible:outline-none">
