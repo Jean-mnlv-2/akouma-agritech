@@ -14,14 +14,16 @@ vi.mock('@prisma/client', () => {
       findMany: vi.fn(),
     },
   };
-  return { PrismaClient: vi.fn(() => mockPrisma) };
+  // Une fonction fléchée n'est pas instanciable via `new` : src/db.ts fait
+  // `new PrismaClient(...)`, il faut donc une fonction/classe "normale".
+  return { PrismaClient: vi.fn(function PrismaClient() { return mockPrisma; }) };
 });
 
-// Mock rss-parser
+// Mock rss-parser (fonction normale, pas fléchée : instanciée via `new Parser()`)
 vi.mock('rss-parser', () => ({
-  default: vi.fn(() => ({
-    parseURL: vi.fn(),
-  })),
+  default: vi.fn(function Parser() {
+    return { parseURL: vi.fn() };
+  }),
 }));
 
 describe('NewsScraperService', () => {

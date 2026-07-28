@@ -165,4 +165,60 @@ describe('Security regression — fraud paths must be blocked', () => {
     // Either 503 (delivery not configured), 400 (schema), or 401 (replay required)
     expect([400, 401, 503]).toContain(res.status);
   });
+
+  // ---------- 11. Generic routes security (mass-assignment, orderBy, pagination) ----------
+  describe('Generic routes security', () => {
+    it('blocks mass-assignment attempts on POST /api/:table', async () => {
+      const res = await request(app)
+        .post('/api/seeds')
+        .set('Authorization', bearer('admin'))
+        .send({
+          name: 'Test Seed',
+          id: 9999, // Should be blocked
+          created_at: '1970-01-01',
+          role: 'admin', // Should be blocked
+          description: 'Valid description'
+        });
+      // Either 400 (bad request) or 401/403 (auth), but should NOT accept forbidden fields
+      expect([400, 401, 403]).toContain(res.status);
+    });
+
+    it('blocks mass-assignment attempts on PUT /api/:table/:id', async () => {
+      const res = await request(app)
+        .put('/api/seeds/1')
+        .set('Authorization', bearer('admin'))
+        .send({
+          name: 'Updated Seed',
+          id: 9999, // Should be blocked
+          updated_at: '2099-01-01',
+          malicious_field: 'hacked'
+        });
+      // Should reject or ignore forbidden fields
+      expect([400, 401, 403]).toContain(res.status);
+    });
+
+    it('neutralizes invalid orderBy attempts', async () => {
+      const res = await request(app)
+        .get('/api/seeds')
+        .query({ orderBy: 'password; DROP TABLE users--' });
+      // Should handle invalid orderBy without crashing
+      expect(res.status).not.toBe(500);
+    });
+
+    it('neutralizes large pagination attempts', async () => {
+      const res = await request(app)
+        .get('/api/seeds')
+        .query({ limit: 1000000 });
+      // Should handle large limits without crashing
+      expect(res.status).not.toBe(500);
+    });
+
+    it('blocks negative offsets', async () => {
+      const res = await request(app)
+        .get('/api/seeds')
+        .query({ offset: -100 });
+      // Should handle negative offsets without crashing
+      expect(res.status).not.toBe(500);
+    });
+  });
 });

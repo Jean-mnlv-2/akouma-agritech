@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { vi } from 'vitest';
 import { createRateLimiter } from '../../src/middleware/rateLimit';
 
 function createMockReq(): Request {
@@ -27,7 +28,7 @@ describe('rateLimit middleware', () => {
     const limiter = createRateLimiter({ windowMs: 1000, max: 2 });
     const req = createMockReq();
     const res = createMockRes();
-    const next = jest.fn() as unknown as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     limiter(req, res, next);
     limiter(req, res, next);
@@ -39,7 +40,7 @@ describe('rateLimit middleware', () => {
     const limiter = createRateLimiter({ windowMs: 1000, max: 1 });
     const req = createMockReq();
     const res = createMockRes();
-    const next = jest.fn() as unknown as NextFunction;
+    const next = vi.fn() as unknown as NextFunction;
 
     limiter(req, res, next);
     limiter(req, res, next);
