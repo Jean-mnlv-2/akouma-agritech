@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Menu, ShoppingCart, LogIn, User as UserIcon, LogOut, LayoutDashboard, History, PiggyBank, GraduationCap } from "lucide-react";
+import { Menu, ShoppingCart, LogIn, User as UserIcon, LogOut, LayoutDashboard, History, PiggyBank, GraduationCap, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCartContext } from "@/context/CartContext";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -265,9 +265,15 @@ const Header = () => {
                           <span>Mes cours</span>
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/privacy-settings" className="cursor-pointer">
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                          <span>Confidentialité et données</span>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        className="cursor-pointer text-destructive focus:text-destructive" 
+                      <DropdownMenuItem
+                        className="cursor-pointer text-destructive focus:text-destructive"
                         onClick={handleLogout}
                       >
                         <LogOut className="mr-2 h-4 w-4" />
@@ -329,6 +335,12 @@ const Header = () => {
                           <Link to="/my-courses">
                             <GraduationCap className="mr-2 h-4 w-4" />
                             Mes cours
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" className="w-full justify-start" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                          <Link to="/privacy-settings">
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                            Confidentialité et données
                           </Link>
                         </Button>
                         <Button variant="outline" size="sm" className="w-full justify-start text-destructive" onClick={handleLogout}>
