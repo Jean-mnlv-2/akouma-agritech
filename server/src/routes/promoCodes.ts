@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
+import { prisma } from '../db';
 const prismaAny = prisma as any;
 type DiscountType = 'PERCENTAGE' | 'FIXED';
 export const promoCodesRouter = Router();
@@ -16,7 +15,7 @@ function validateDiscount(type: DiscountType, value: number) {
   }
 }
 
-promoCodesRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
+promoCodesRouter.get('/', authRequired, moduleAccess('orders'), async (_req: Request, res: Response) => {
   try {
     const codes = await prismaAny.promoCode.findMany({
       orderBy: { createdAt: 'desc' },
@@ -29,7 +28,7 @@ promoCodesRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Re
 });
 
 // GET /api/promo-codes/leaderboard - Affiliate leaderboard sorted by totalCashbackEarned
-promoCodesRouter.get('/leaderboard', authRequired, adminOnly, async (_req: Request, res: Response) => {
+promoCodesRouter.get('/leaderboard', authRequired, moduleAccess('orders'), async (_req: Request, res: Response) => {
   try {
     const affiliates = await prismaAny.promoCode.findMany({
       where: { ownerEmail: { not: null } },
@@ -47,7 +46,7 @@ promoCodesRouter.get('/leaderboard', authRequired, adminOnly, async (_req: Reque
   }
 });
 
-promoCodesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+promoCodesRouter.post('/', authRequired, moduleAccess('orders'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const {
       code,
@@ -93,7 +92,7 @@ promoCodesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Re
   }
 });
 
-promoCodesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+promoCodesRouter.put('/:id', authRequired, moduleAccess('orders'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) {
@@ -149,7 +148,7 @@ promoCodesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: 
   }
 });
 
-promoCodesRouter.patch('/:id/toggle', authRequired, adminOnly, async (req: Request, res: Response) => {
+promoCodesRouter.patch('/:id/toggle', authRequired, moduleAccess('orders'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) {
@@ -212,64 +211,12 @@ promoCodesRouter.get('/my-cashback', authRequired, async (req: Request, res: Res
   }
 });
 
-// POST /api/promo-codes/use-cashback - Apply cashback balance as discount
-promoCodesRouter.post('/use-cashback', authRequired, async (req: Request, res: Response) => {
-  try {
-    const authReq = req as any;
-    const userId = authReq.user?.id ?? authReq.userId;
-    const { amount } = req.body || {};
-    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
-
-    const numAmount = Number(amount);
-    if (!Number.isFinite(numAmount) || numAmount <= 0) {
-      return res.status(400).json({ error: 'Montant invalide' });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-    if (!user?.email) return res.status(404).json({ error: 'Utilisateur introuvable' });
-
-    const promo = await prismaAny.promoCode.findFirst({
-      where: { ownerEmail: user.email, isActive: true },
-    });
-
-    if (!promo) {
-      return res.status(404).json({ error: 'Aucun code affilié trouvé' });
-    }
-
-    const balance = Number(promo.cashbackBalance);
-    if (numAmount > balance) {
-      return res.status(400).json({ error: `Solde insuffisant. Disponible: ${Math.round(balance)} FCFA` });
-    }
-
-    await prismaAny.promoCode.update({
-      where: { id: promo.id },
-      data: { cashbackBalance: { decrement: numAmount } },
-    });
-
-    const newBalance = balance - numAmount;
-
-    // Log the usage transaction
-    await prismaAny.cashbackTransaction.create({
-      data: {
-        promoCodeId: promo.id,
-        type: 'USE',
-        amount: numAmount,
-        description: 'Utilisation cashback au checkout',
-        balanceAfter: newBalance,
-      },
-    });
-
-    res.json({
-      data: {
-        deducted: numAmount,
-        newBalance,
-      },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Bad request';
-    res.status(400).json({ error: message });
-  }
-});
+// NOTE: l'ancienne route POST /use-cashback a été retirée. Le débit de
+// cashback est désormais intégré atomiquement à la création de commande
+// (OrdersService.resolveCashback, appelé depuis POST /api/orders via le champ
+// `cashbackAmount`) : l'ancien flux débitait le solde AVANT la commande, sans
+// jamais déduire ce montant du total réellement payé via Money Fusion, et son
+// décrément n'était pas protégé contre la concurrence (pas de clause `gte`).
 
 // GET /api/promo-codes/my-cashback/transactions - Get cashback transaction history
 promoCodesRouter.get('/my-cashback/transactions', authRequired, async (req: Request, res: Response) => {

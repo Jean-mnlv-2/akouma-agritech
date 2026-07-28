@@ -3,6 +3,7 @@ import { env } from '../utils/env';
 import * as deliveryService from './deliveryService';
 import { logger } from '../utils/logger';
 import { emailService } from '../utils/email';
+import { SubscriptionService } from './subscriptionService';
 import { randomUUID, createHash } from 'crypto';
 
 export type DeliveryMethod = 'PICKUP' | 'DELIVERY';
@@ -37,13 +38,16 @@ export type CreateOrderPayload = {
   deliveryMethod: DeliveryMethod;
   deliveryPartnerId?: number | null;
   shippingFee?: number | null;
+  cashbackAmount?: number | null;
 };
 
 export class OrdersService {
   private prisma: PrismaClient;
+  private subscriptionService: SubscriptionService;
 
   constructor(prismaClient: PrismaClient) {
     this.prisma = prismaClient;
+    this.subscriptionService = new SubscriptionService();
   }
 
   generateOrderNumber(): string {
@@ -111,6 +115,108 @@ export class OrdersService {
       throw new Error('Ce code promo ne peut pas être appliqué');
     }
     return { promo, discountAmount };
+  }
+
+  /**
+   * Décrémente le stock de manière atomique (WHERE stock >= qty) pour éviter
+   * la survente sous concurrence : deux commandes simultanées ne peuvent pas
+   * toutes les deux réussir sur le dernier article en stock. Doit être appelé
+   * à l'intérieur de la transaction de création de commande ; un stock
+   * insuffisant lève une erreur qui fait échouer (rollback) toute la commande.
+   * Les cours n'ont pas de notion de stock et sont ignorés.
+   */
+  private async reserveStock(tx: any, items: NormalizedOrderItem[]): Promise<void> {
+    for (const item of items) {
+      if (item.productType === 'course') continue;
+      const model = item.productType === 'seed' ? tx.seed : tx.shopProduct;
+      const result = await model.updateMany({
+        where: { id: item.productId, stock: { gte: item.quantity } },
+        data: { stock: { decrement: item.quantity } },
+      });
+      if (result.count === 0) {
+        throw new Error(`Stock insuffisant pour "${item.name}"`);
+      }
+    }
+  }
+
+  /**
+   * Débite atomiquement le solde de cashback de l'utilisateur (son propre
+   * code affilié, identifié par email) et retourne l'id du code débité pour
+   * qu'il soit rattaché à la commande (nécessaire pour un remboursement
+   * ultérieur si la commande est annulée/expire impayée). Remplace l'ancienne
+   * route POST /api/promo-codes/use-cashback, appelée séparément AVANT la
+   * commande : ce montant n'était alors jamais déduit du total réellement
+   * payé via Money Fusion, l'utilisateur perdait son solde sans réduction
+   * effective. Intégré ici, dans la même transaction que la commande, le
+   * débit et la réduction de prix sont désormais atomiques et cohérents.
+   */
+  private async resolveCashback(
+    tx: any,
+    userId: string,
+    cashbackAmount: number,
+  ): Promise<{ promoCodeId: number; amount: number }> {
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user?.email) {
+      throw new Error('Utilisateur introuvable pour l’utilisation du cashback');
+    }
+    const promo = await tx.promoCode.findFirst({
+      where: { ownerEmail: user.email, isActive: true },
+    });
+    if (!promo) {
+      throw new Error('Aucun code affilié trouvé pour utiliser du cashback');
+    }
+    const updateResult = await tx.promoCode.updateMany({
+      where: { id: promo.id, cashbackBalance: { gte: cashbackAmount } },
+      data: { cashbackBalance: { decrement: cashbackAmount } },
+    });
+    if (updateResult.count === 0) {
+      throw new Error('Solde de cashback insuffisant');
+    }
+    return { promoCodeId: promo.id, amount: cashbackAmount };
+  }
+
+  /**
+   * Restaure le stock des articles et rembourse le cashback éventuellement
+   * utilisé sur une commande annulée/expirée impayée. Appelé depuis le cron
+   * de nettoyage des commandes impayées (utils/cron.ts) et depuis la route
+   * admin d'annulation de commande (routes/orders.ts), pour garder ces deux
+   * points de vérité en phase.
+   */
+  async reverseOrderEffects(
+    tx: any,
+    order: {
+      id: number;
+      items: Array<{ productId: number; productType: string; quantity: number }>;
+      cashbackUsed: any;
+      cashbackPromoCodeId: number | null;
+    },
+  ): Promise<void> {
+    for (const item of order.items) {
+      if (item.productType === 'course') continue;
+      const model = item.productType === 'seed' ? tx.seed : tx.shopProduct;
+      await model.updateMany({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+
+    const cashbackUsed = Number(order.cashbackUsed || 0);
+    if (cashbackUsed > 0 && order.cashbackPromoCodeId) {
+      const updatedPromo = await tx.promoCode.update({
+        where: { id: order.cashbackPromoCodeId },
+        data: { cashbackBalance: { increment: cashbackUsed } },
+      });
+      await tx.cashbackTransaction.create({
+        data: {
+          promoCodeId: order.cashbackPromoCodeId,
+          type: 'REFUND',
+          amount: cashbackUsed,
+          description: 'Remboursement cashback (commande annulée)',
+          orderId: order.id,
+          balanceAfter: Number(updatedPromo.cashbackBalance),
+        },
+      });
+    }
   }
 
   private async createOrderEvent(
@@ -216,22 +322,45 @@ export class OrdersService {
     );
 
     const order = await this.prisma.$transaction(async (tx: any) => {
-      let promoRecord: { id: number; code: string; cashbackPercent: number; ownerEmail: string | null; ownerName: string | null } | null = null;
+      // Vérifie et réserve le stock avant toute autre écriture : en cas de
+      // rupture, la transaction échoue et aucune commande n'est créée.
+      await this.reserveStock(tx, trustedItems);
+
+      let promoRecord: { id: number; code: string; maxUses: number | null; cashbackPercent: number; ownerEmail: string | null; ownerName: string | null } | null = null;
       let discountAmount = 0;
 
       if (payload.promoCode) {
         const resolved = await this.resolvePromoCode(tx, payload.promoCode, computedSubtotal);
         promoRecord = resolved.promo
-          ? { id: resolved.promo.id, code: resolved.promo.code, cashbackPercent: Number(resolved.promo.cashbackPercent || 0), ownerEmail: resolved.promo.ownerEmail || null, ownerName: resolved.promo.ownerName || null }
+          ? { id: resolved.promo.id, code: resolved.promo.code, maxUses: resolved.promo.maxUses ?? null, cashbackPercent: Number(resolved.promo.cashbackPercent || 0), ownerEmail: resolved.promo.ownerEmail || null, ownerName: resolved.promo.ownerName || null }
           : null;
         discountAmount = resolved.discountAmount;
       }
 
-      const total = Math.max(0, computedSubtotal - discountAmount + shippingAmount);
+      // Cashback : débité atomiquement dans cette même transaction, borné au
+      // sous-total restant après la remise du code promo pour ne jamais
+      // produire un total négatif.
+      let cashbackUsed = 0;
+      let cashbackPromoCodeId: number | null = null;
+      const requestedCashback = Math.max(0, Math.floor(Number(payload.cashbackAmount) || 0));
+      if (requestedCashback > 0) {
+        const maxCashback = Math.max(0, computedSubtotal - discountAmount);
+        const cappedCashback = Math.min(requestedCashback, maxCashback);
+        if (cappedCashback > 0) {
+          const resolved = await this.resolveCashback(tx, payload.userId, cappedCashback);
+          cashbackUsed = resolved.amount;
+          cashbackPromoCodeId = resolved.promoCodeId;
+        }
+      }
+
+      const total = Math.max(0, computedSubtotal - discountAmount - cashbackUsed + shippingAmount);
       const eventNotes: string[] = [];
 
       if (promoRecord) {
         eventNotes.push(`Code promo appliqué: ${promoRecord.code}`);
+      }
+      if (cashbackUsed > 0) {
+        eventNotes.push(`Cashback utilisé: ${cashbackUsed}`);
       }
       if (payload.deliveryMethod === DeliveryMethod.DELIVERY && deliveryPartnerRecord) {
         eventNotes.push(`Livraison: ${deliveryPartnerRecord.name}`);
@@ -247,6 +376,8 @@ export class OrdersService {
           subtotal: computedSubtotal,
           shipping: shippingAmount,
           discount: discountAmount,
+          cashbackUsed,
+          cashbackPromoCodeId,
           total,
           shippingAddress: payload.shippingAddress || null,
           shippingCity: payload.shippingCity || null,
@@ -285,14 +416,36 @@ export class OrdersService {
         eventNotes.length > 0 ? eventNotes.join(' | ') : undefined,
       );
 
+      if (cashbackUsed > 0 && cashbackPromoCodeId) {
+        const promoAfterCashback = await tx.promoCode.findUnique({ where: { id: cashbackPromoCodeId } });
+        await tx.cashbackTransaction.create({
+          data: {
+            promoCodeId: cashbackPromoCodeId,
+            type: 'USE',
+            amount: cashbackUsed,
+            description: 'Utilisation cashback au checkout',
+            orderId: created.id,
+            balanceAfter: Number(promoAfterCashback?.cashbackBalance ?? 0),
+          },
+        });
+      }
+
       if (promoRecord) {
-        // Increment usage count
-        await tx.promoCode.update({
-          where: { id: promoRecord.id },
+        // Incrément atomique borné par maxUses : évite qu'une course entre deux
+        // commandes concurrentes ne dépasse le nombre d'utilisations autorisé
+        // (le contrôle fait dans resolvePromoCode seul ne suffit pas sous charge).
+        const promoUpdate = await tx.promoCode.updateMany({
+          where: {
+            id: promoRecord.id,
+            ...(promoRecord.maxUses != null ? { usesCount: { lt: promoRecord.maxUses } } : {}),
+          },
           data: {
             usesCount: { increment: 1 },
           },
         });
+        if (promoUpdate.count === 0) {
+          throw new Error('Ce code promo a atteint le nombre maximal d’utilisations');
+        }
 
         // Calculate and credit cashback to the promo owner
         if (promoRecord.cashbackPercent > 0 && promoRecord.ownerEmail) {
@@ -357,6 +510,11 @@ export class OrdersService {
       if (order.paymentStatus !== 'paid') {
         logger.warn(`[OrdersService] Order ${order.orderNumber} is not paid, skipping processing`);
         return;
+      }
+
+      if (order.subscriptionPlanId) {
+        await this.subscriptionService.activatePaidSubscriptionFromOrder(order.id);
+        logger.info(`[OrdersService] Subscription activated from order ${order.orderNumber}`);
       }
 
       // Traitement pour les cours E-learning

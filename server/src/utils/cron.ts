@@ -1,9 +1,70 @@
 import nodeCron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
 import { emailService } from './email';
-import { logger } from './logger';
+import { RagSystem } from '../rag';
+import { SubscriptionService } from '../services/subscriptionService';
+import { OrdersService } from '../services/ordersService';
+import { prisma } from '../db';
+const subscriptionService = new SubscriptionService();
+const ordersService = new OrdersService(prisma);
 
-const prisma = new PrismaClient();
+/**
+ * Vérifie la connexion à Ollama et s'assure que le modèle est disponible
+ */
+async function checkOllama() {
+  const ollamaUrl = process.env.OLLAMA_URL || 'http://ollama:11434';
+  const model = process.env.OLLAMA_MODEL || 'llama3.2';
+  
+  try {
+    console.log('[Ollama] Vérification de la connexion et du modèle...');
+    
+    // Vérifier la disponibilité d'Ollama
+    const healthCheck = await fetch(`${ollamaUrl}/api/tags`);
+    if (!healthCheck.ok) {
+      throw new Error(`Ollama health check failed: ${healthCheck.statusText}`);
+    }
+    
+    const tagsData = await healthCheck.json();
+    const models = tagsData.models || [];
+    const modelExists = models.some((m: any) => m.name === model || m.name === `${model}:latest`);
+    
+    if (!modelExists) {
+      console.log(`[Ollama] Le modèle ${model} n'est pas trouvé. Tentative de téléchargement...`);
+      const pullResponse = await fetch(`${ollamaUrl}/api/pull`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: model }),
+      });
+      
+      if (!pullResponse.ok) {
+        throw new Error(`Échec du téléchargement du modèle ${model}: ${pullResponse.statusText}`);
+      }
+      
+      console.log(`[Ollama] Modèle ${model} téléchargé avec succès !`);
+    } else {
+      console.log(`[Ollama] Modèle ${model} déjà disponible.`);
+    }
+  } catch (error) {
+    console.error('[Ollama] Échec de la vérification :', error);
+  }
+}
+
+/**
+ * Synchronise automatiquement la base de connaissances RAG
+ */
+async function syncKnowledgeBase() {
+  try {
+    console.log('[CRON] Synchronisation automatique de la base de connaissances...');
+    
+    const rag = RagSystem.getInstance(prisma);
+    const { KilimoKnowledgeAdapter } = await import('../rag/adapters/KilimoKnowledgeAdapter');
+    const adapter = new KilimoKnowledgeAdapter(prisma, rag.indexer);
+    
+    await adapter.indexAllContent();
+    console.log('[CRON] Synchronisation terminée avec succès !');
+  } catch (error) {
+    console.error('[CRON] Erreur lors de la synchronisation de la base de connaissances :', error);
+  }
+}
 
 /**
  * Initialise les tâches planifiées (cron jobs)
@@ -30,6 +91,39 @@ export const initCronJobs = () => {
       console.error('[CRON] Erreur lors du traitement des commandes impayées :', error);
     }
   });
+
+  // Synchronisation automatique de la base de connaissances toutes les 6 heures
+  nodeCron.schedule('0 */6 * * *', async () => {
+    console.log('[CRON] Synchronisation de la base de connaissances...');
+    try {
+      await syncKnowledgeBase();
+    } catch (error) {
+      console.error('[CRON] Erreur lors de la synchronisation de la base de connaissances :', error);
+    }
+  });
+
+  // Notifications de fin d'essai chaque matin à 08:00
+  nodeCron.schedule('0 8 * * *', async () => {
+    console.log('[CRON] Vérification des essais d’abonnement arrivant à échéance...');
+    try {
+      await subscriptionService.checkExpiringTrials();
+    } catch (error) {
+      console.error('[CRON] Erreur lors de la vérification des essais :', error);
+    }
+  });
+
+  // Agrégation analytique des abonnements chaque nuit à 23:55
+  nodeCron.schedule('55 23 * * *', async () => {
+    console.log('[CRON] Mise à jour des analytiques d’abonnement...');
+    try {
+      await subscriptionService.updateAnalytics();
+    } catch (error) {
+      console.error('[CRON] Erreur lors de la mise à jour analytique des abonnements :', error);
+    }
+  });
+
+  // Vérification d'Ollama au démarrage
+  checkOllama();
 
   console.log('[CRON] Tâches planifiées initialisées (scraping actualités géré par DeerFlow)');
 };
@@ -115,6 +209,7 @@ async function processUnpaidOrders() {
     },
     include: {
       user: true,
+      items: true,
     },
   });
 
@@ -129,9 +224,12 @@ async function processUnpaidOrders() {
         orderNumber: order.orderNumber,
       });
 
-      // Supprimer la commande (la suppression en cascade gérera les items et events)
-      await prisma.order.delete({
-        where: { id: order.id }
+      // Restaure le stock et rembourse le cashback éventuellement utilisé
+      // avant de supprimer (la commande n'a jamais été payée, ces effets
+      // n'auraient jamais dû devenir permanents).
+      await prisma.$transaction(async (tx: any) => {
+        await ordersService.reverseOrderEffects(tx, order);
+        await tx.order.delete({ where: { id: order.id } });
       });
 
       console.log(`[CRON] Commande #${order.orderNumber} supprimée (impayée depuis 7 jours). Notification envoyée à ${order.user.email}`);

@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
 import { validate } from '../middleware/validate';
 import { audit, actorFromRequest } from '../utils/audit';
 import { OrdersService, NormalizedOrderItem, DeliveryMethod } from '../services/ordersService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 const ordersService = new OrdersService(prisma);
 export const ordersRouter = Router();
 
@@ -32,6 +32,7 @@ const createOrderSchema = z.object({
   deliveryMethod: z.string().max(20).optional(),
   deliveryPartnerId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/), z.null()]).optional(),
   shippingFee: z.union([z.number(), z.string(), z.null()]).optional(),
+  cashbackAmount: z.number().min(0).optional(),
 }).strict();
 
 const updateOrderSchema = z.object({
@@ -149,7 +150,7 @@ ordersRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
 });
 
 // POST /api/orders - Create a new order
-ordersRouter.post('/', authRequired, validate(createOrderSchema), async (req: Request, res: Response) => {
+ordersRouter.post('/', authRequired, csrfRequired, validate(createOrderSchema), async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const authUser: AuthenticatedUser = authReq.user || {};
@@ -166,6 +167,7 @@ ordersRouter.post('/', authRequired, validate(createOrderSchema), async (req: Re
       deliveryMethod,
       deliveryPartnerId,
       shippingFee,
+      cashbackAmount,
     } = req.body;
 
     if (!userId) {
@@ -221,6 +223,7 @@ ordersRouter.post('/', authRequired, validate(createOrderSchema), async (req: Re
         deliveryMethod: selectedDeliveryMethod,
         deliveryPartnerId: deliveryPartnerId != null ? Number(deliveryPartnerId) : null,
         shippingFee: shippingFee != null ? Number(shippingFee) : null,
+        cashbackAmount: cashbackAmount != null ? Number(cashbackAmount) : null,
       });
       await audit({ ...actorFromRequest(req), action: 'order.create', entityType: 'order', entityId: (result as any)?.id, metadata: { itemCount: normalizedItems.length, deliveryMethod: selectedDeliveryMethod, promoCode: promoCode || undefined } });
       res.status(201).json({ data: result });
@@ -242,7 +245,7 @@ ordersRouter.post('/', authRequired, validate(createOrderSchema), async (req: Re
 });
 
 // PUT /api/orders/:id - Update order status (admin only)
-ordersRouter.put('/:id', authRequired, adminOnly, validate(updateOrderSchema), async (req: Request, res: Response) => {
+ordersRouter.put('/:id', authRequired, moduleAccess('orders'), csrfRequired, validate(updateOrderSchema), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const { status, paymentStatus, note } = req.body;
@@ -256,6 +259,9 @@ ordersRouter.put('/:id', authRequired, adminOnly, validate(updateOrderSchema), a
     if (paymentStatus) updateData.paymentStatus = paymentStatus;
 
     const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const existing = await (tx as any).order.findUnique({ where: { id }, select: { status: true, paymentStatus: true } });
+      const wasReversed = existing ? (existing.status === 'cancelled' || existing.paymentStatus === 'refunded') : false;
+
       const order = await tx.order.update({
         where: { id },
         data: updateData,
@@ -286,6 +292,14 @@ ordersRouter.put('/:id', authRequired, adminOnly, validate(updateOrderSchema), a
             note: note || undefined,
           },
         });
+      }
+
+      // Restaure le stock et rembourse le cashback une seule fois, à la
+      // première transition vers annulé/remboursé (jamais si déjà dans cet
+      // état) : symétrique au nettoyage cron des commandes impayées.
+      const isNowReversed = order.status === 'cancelled' || order.paymentStatus === 'refunded';
+      if (isNowReversed && !wasReversed) {
+        await ordersService.reverseOrderEffects(tx, order);
       }
 
       return order;
