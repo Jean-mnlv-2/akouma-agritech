@@ -95,9 +95,6 @@ Attendez que les trois services soient healthy, puis :
   ```bash
   docker compose exec backend npx prisma migrate deploy
   ```
-- Appliquer la migration manuelle des promos / historique si nécessaire :
-  ```bash
-  docker compose exec db psql -U postgres -d kilimo -f /app/prisma/migrations/manual_add_promos.sql
   ```
 
 - Afficher les logs :

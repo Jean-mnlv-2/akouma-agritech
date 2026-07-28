@@ -6,7 +6,10 @@
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 
-const BASE_URL = process.env.SITE_URL || 'https://kilimo-agritech.lovable.app';
+// Même domaine que src/components/SEO.tsx (VITE_SITE_URL) et index.html
+// (%VITE_SITE_URL%) : les trois doivent toujours pointer vers le même hôte,
+// sous peine de sitemap/canonical/OG incohérents.
+const BASE_URL = process.env.VITE_SITE_URL || process.env.SITE_URL || 'https://kilimo-agritech.lovable.app';
 const API_URL = process.env.API_PUBLIC_URL || process.env.VITE_API_URL || '';
 
 interface SitemapEntry {

@@ -15,6 +15,38 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_CHAT_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+    # L'image de base ne télécharge aucun modèle : sans ce pull explicite, le
+    # chat et le RAG échouent silencieusement au premier appel (404 Ollama).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        sleep 5
+        ollama pull "$$OLLAMA_CHAT_MODEL" || true
+        ollama pull "$$OLLAMA_EMBEDDING_MODEL" || true
+        wait
+
   backend:
     build:
       context: ./server
@@ -40,10 +72,26 @@ services:
       SHIPPING_FREE_THRESHOLD: ${SHIPPING_FREE_THRESHOLD:-50000}
       SHIPPING_BASE_FEE: ${SHIPPING_BASE_FEE:-5000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-kilimo}?schema=public
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      SENTRY_DSN: ${SENTRY_DSN:-}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-secure_internal_token_change_in_production}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+      OLLAMA_EMBEDDING_DIMENSIONS: ${OLLAMA_EMBEDDING_DIMENSIONS:-768}
+      CHAT_DAILY_BUDGET: ${CHAT_DAILY_BUDGET:-50}
+      CHAT_DAILY_PRO_BUDGET: ${CHAT_DAILY_PRO_BUDGET:-10}
+      RAG_CHUNK_SIZE: ${RAG_CHUNK_SIZE:-1000}
+      RAG_CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-200}
+      RAG_RETRIEVER_TOP_K: ${RAG_RETRIEVER_TOP_K:-5}
+      RAG_RETRIEVER_SCORE_THRESHOLD: ${RAG_RETRIEVER_SCORE_THRESHOLD:-0.7}
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
     volumes:
       - ./server/prisma:/app/prisma
       - uploads:/app/uploads
@@ -63,3 +111,5 @@ services:
 volumes:
   db_data:
   uploads:
+  ollama_data:
+  redis_data:

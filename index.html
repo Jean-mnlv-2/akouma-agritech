@@ -12,21 +12,26 @@
     <meta property="og:title" content="KILIMO Agritech — E-learning, semences et outils" />
     <meta property="og:description" content="Plateforme agritech : formations en ligne, semences certifiées et outils agricoles pour les producteurs africains." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://kilimo-agritech.lovable.app/kilimo-logo.png" />
+    <meta property="og:image" content="/kilimo-logo.png" />
     <meta property="og:locale" content="fr_FR" />
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="KILIMO Agritech" />
     <meta name="twitter:description" content="Formations, semences certifiées et outils agricoles pour les producteurs africains." />
-    <meta name="twitter:image" content="https://kilimo-agritech.lovable.app/kilimo-logo.png" />
+    <meta name="twitter:image" content="/kilimo-logo.png" />
 
-    <!-- JSON-LD sitewide -->
+    <!--
+      JSON-LD sitewide. %VITE_SITE_URL% est substitué par Vite au build depuis
+      la variable d'environnement du même nom (voir .env / .env.example) : c'est
+      la même valeur que src/components/SEO.tsx, pour garder canonical/OG/JSON-LD
+      cohérents entre toutes les pages.
+    -->
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Organization","name":"KILIMO Agritech","url":"https://kilimo-agritech.lovable.app","logo":"https://kilimo-agritech.lovable.app/kilimo-logo.png"}
+      {"@context":"https://schema.org","@type":"Organization","name":"KILIMO Agritech","url":"%VITE_SITE_URL%","logo":"/kilimo-logo.png"}
     </script>
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"WebSite","name":"KILIMO Agritech","url":"https://kilimo-agritech.lovable.app","potentialAction":{"@type":"SearchAction","target":"https://kilimo-agritech.lovable.app/shop?search={search_term_string}","query-input":"required name=search_term_string"}}
+      {"@context":"https://schema.org","@type":"WebSite","name":"KILIMO Agritech","url":"%VITE_SITE_URL%","potentialAction":{"@type":"SearchAction","target":"%VITE_SITE_URL%/shop?search={search_term_string}","query-input":"required name=search_term_string"}}
     </script>
 
     <!-- PWA Meta Tags -->
@@ -35,7 +40,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="KILIMO" />
     
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://translate.google.com https://translate.googleapis.com; style-src 'self' 'unsafe-inline' https://translate.googleapis.com https://fonts.googleapis.com https://www.gstatic.com; img-src 'self' data: https: blob: http://localhost:4000; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: ws: wss: http://localhost:4000 http://127.0.0.1:4000; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
+    <!--
+      script-src ne comporte volontairement pas 'unsafe-inline' : le seul script
+      du document est le module externe /src/main.tsx, et les blocs JSON-LD
+      (type="application/ld+json") sont des données inertes non concernées par
+      script-src. L'ajouter annulerait la majeure partie de la protection
+      anti-XSS alors que du contenu éditorial est injecté via
+      dangerouslySetInnerHTML côté React (actualités, cours, pages légales).
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob: http://localhost:4000; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: ws: wss: http://localhost:4000 http://127.0.0.1:4000; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
 
     <link rel="icon" type="image/png" href="/kilimo-logo.png" />
     <link rel="shortcut icon" type="image/png" href="/kilimo-logo.png" />
