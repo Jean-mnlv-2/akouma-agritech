@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 import { useToast } from '@/hooks/use-toast';
+import { escapeHtml } from '@/lib/utils';
 import { Loader2, CheckCircle, XCircle, Calendar, AlertTriangle, Users, Download, FileText } from 'lucide-react';
 
 interface Schedule {
@@ -112,12 +113,15 @@ export function AdminAttendance() {
       return;
     }
 
+    // Nom/email d'utilisateur et titre de cours viennent de la base : à
+    // échapper avant injection dans du HTML construit à la main, sans quoi
+    // une valeur piégée s'exécute dans la session admin (XSS stocké).
     const tableRows = filtered.map(s => `
       <tr style="${s.absenceCount >= 3 ? 'background:#fef2f2;' : ''}">
-        <td style="padding:8px;border:1px solid #e5e7eb;">${s.user?.fullName || '—'}<br/><small style="color:#666;">${s.user?.email || ''}</small></td>
-        <td style="padding:8px;border:1px solid #e5e7eb;">${s.course?.title || `Cours #${s.courseId}`}</td>
-        <td style="padding:8px;border:1px solid #e5e7eb;">${formatDate(s.scheduledDate)}</td>
-        <td style="padding:8px;border:1px solid #e5e7eb;">${s.timeSlot}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(s.user?.fullName || '—')}<br/><small style="color:#666;">${escapeHtml(s.user?.email || '')}</small></td>
+        <td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(s.course?.title || `Cours #${s.courseId}`)}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(formatDate(s.scheduledDate))}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(s.timeSlot)}</td>
         <td style="padding:8px;border:1px solid #e5e7eb;text-align:center;">
           <span style="padding:2px 8px;border-radius:12px;font-size:12px;${
             s.status === 'attended' ? 'background:#dcfce7;color:#166534;' :

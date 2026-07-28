@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/integrations/api/client';
+import { escapeHtml } from '@/lib/utils';
 import { Award, Download, FileText, Loader2, RefreshCw, ShieldCheck, ShieldAlert, Clock, ExternalLink, ScrollText, AlertCircle } from 'lucide-react';
 
 interface CertRow {
@@ -142,15 +143,19 @@ export function AdminCertificates() {
   const exportPDF = () => {
     const w = window.open('', '_blank');
     if (!w) return;
+    // Toutes les valeurs interpolées viennent de la base (nom/email d'utilisateur,
+    // titre de cours) et doivent être échappées avant injection dans du HTML
+    // construit à la main : sans ça, une valeur piégée s'exécute dans la
+    // session admin dès l'export (XSS stocké).
     const rowsHtml = filtered.map(c => `
       <tr>
-        <td>${c.certificateNumber}</td>
-        <td>${c.user?.fullName || ''}<br/><small>${c.user?.email || ''}</small></td>
-        <td>${c.course?.title || ''}</td>
-        <td>${c.score ?? '-'}%</td>
-        <td>${new Date(c.completionDate).toLocaleDateString('fr-FR')}</td>
-        <td>${c.status}</td>
-        <td>${c.issuedAt ? new Date(c.issuedAt).toLocaleDateString('fr-FR') : '-'}</td>
+        <td>${escapeHtml(c.certificateNumber)}</td>
+        <td>${escapeHtml(c.user?.fullName || '')}<br/><small>${escapeHtml(c.user?.email || '')}</small></td>
+        <td>${escapeHtml(c.course?.title || '')}</td>
+        <td>${escapeHtml(c.score ?? '-')}%</td>
+        <td>${escapeHtml(new Date(c.completionDate).toLocaleDateString('fr-FR'))}</td>
+        <td>${escapeHtml(c.status)}</td>
+        <td>${c.issuedAt ? escapeHtml(new Date(c.issuedAt).toLocaleDateString('fr-FR')) : '-'}</td>
       </tr>
     `).join('');
     w.document.write(`<!DOCTYPE html><html><head><title>Certificats KILIMO</title>

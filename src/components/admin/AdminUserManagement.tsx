@@ -32,6 +32,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 import AdminDetailsDialog from './AdminDetailsDialog';
+import { ADMIN_MODULES } from '@/lib/adminModules';
 
 const userSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -55,20 +56,7 @@ type User = {
   temp_password?: string;
 };
 
-const MODULES = [
-  { id: 'users', label: 'Utilisateurs' },
-  { id: 'orders', label: 'Ventes & Promos' },
-  { id: 'courses', label: 'Cours' },
-  { id: 'news', label: 'Actualités' },
-  { id: 'seeds', label: 'Semences' },
-  { id: 'products', label: 'Produits' },
-  { id: 'partners', label: 'Partenaires' },
-  { id: 'careers', label: 'Emplois' },
-  { id: 'events', label: 'Événements' },
-  { id: 'livestreams', label: 'Live Streams' },
-  { id: 'submissions', label: 'Soumissions' },
-  { id: 'contact-settings', label: 'Contacts & Réseaux' },
-];
+const MODULES = ADMIN_MODULES;
 
 const STATUS_FILTER = ['all', 'active', 'inactive'] as const;
 type StatusFilter = typeof STATUS_FILTER[number];

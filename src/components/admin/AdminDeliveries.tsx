@@ -44,6 +44,7 @@ import {
   DialogFooter 
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/integrations/api/client';
 
 interface Delivery {
   id: string;
@@ -102,6 +103,22 @@ const getErrorMessage = (payload: unknown, fallback: string) => {
   return fallback;
 };
 
+/**
+ * `api.request` (client partagé) rejette avec le corps de réponse brut comme
+ * message d'erreur ; on tente de le parser en JSON pour en extraire le champ
+ * `error` renvoyé par le backend, sinon on retombe sur un message générique.
+ */
+const extractApiErrorMessage = (err: unknown, fallback: string): string => {
+  if (err instanceof Error && err.message) {
+    try {
+      return getErrorMessage(JSON.parse(err.message), fallback);
+    } catch {
+      return err.message || fallback;
+    }
+  }
+  return fallback;
+};
+
 export const AdminDeliveries: React.FC = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [livreurs, setLivreurs] = useState<Livreur[]>([]);
@@ -117,23 +134,15 @@ export const AdminDeliveries: React.FC = () => {
   const fetchDeliveries = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams({
-        page: String(page),
-        limit: '10',
-      });
-      if (statusFilter !== 'all') queryParams.append('status', statusFilter);
+      const params: Record<string, string> = { page: String(page), limit: '10' };
+      if (statusFilter !== 'all') params.status = statusFilter;
 
-      const response = await fetch(`/api/deliveries?${queryParams.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const data = await response.json().catch(() => null) as DeliveriesResponse | null;
-
-      if (!response.ok) {
-        throw new Error(getErrorMessage(data, "Impossible de charger les livraisons."));
-      }
+      // Client API partagé : cookie httpOnly + en-tête CSRF gérés automatiquement,
+      // et résolution correcte de l'hôte backend (ex: domaines séparés en prod).
+      // L'ancien fetch() direct avec `Authorization: Bearer localStorage.getItem('token')`
+      // ne fonctionnait pas : cette clé n'est écrite nulle part, l'authentification
+      // réelle de l'app repose sur un cookie.
+      const data = await api.request('GET', '/api/deliveries', { params }) as DeliveriesResponse;
 
       const nextDeliveries = Array.isArray(data?.data) ? data.data as Delivery[] : [];
       const nextPagination = data?.pagination ?? DEFAULT_PAGINATION;
@@ -150,7 +159,7 @@ export const AdminDeliveries: React.FC = () => {
       setPagination(DEFAULT_PAGINATION);
       toast({
         title: "Erreur",
-        description: err instanceof Error ? err.message : "Impossible de charger les livraisons.",
+        description: extractApiErrorMessage(err, "Impossible de charger les livraisons."),
         variant: "destructive",
       });
     } finally {
@@ -160,25 +169,14 @@ export const AdminDeliveries: React.FC = () => {
 
   const fetchLivreurs = useCallback(async () => {
     try {
-      const response = await fetch('/api/deliveries/livreurs', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const data = await response.json().catch(() => null) as DeliveriesResponse | null;
-
-      if (!response.ok) {
-        throw new Error(getErrorMessage(data, "Impossible de charger les livreurs."));
-      }
-
+      const data = await api.request('GET', '/api/deliveries/livreurs') as DeliveriesResponse;
       setLivreurs(Array.isArray(data?.data) ? data.data as Livreur[] : []);
     } catch (err) {
       console.error('Error fetching livreurs:', err);
       setLivreurs([]);
       toast({
         title: "Erreur",
-        description: err instanceof Error ? err.message : "Impossible de charger les livreurs.",
+        description: extractApiErrorMessage(err, "Impossible de charger les livreurs."),
         variant: "destructive",
       });
     }
@@ -193,33 +191,23 @@ export const AdminDeliveries: React.FC = () => {
     if (!selectedDelivery || !selectedLivreurId) return;
 
     try {
-      const response = await fetch('/api/deliveries/assign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
+      await api.request('POST', '/api/deliveries/assign', {
+        body: {
           livraisonId: selectedDelivery.id,
           livreurId: selectedLivreurId,
-        }),
+        },
       });
-
-      if (response.ok) {
-        toast({
-          title: "Succès",
-          description: "Livreur assigné avec succès.",
-        });
-        setIsAssignDialogOpen(false);
-        fetchDeliveries(pagination.page);
-      } else {
-        throw new Error('Assignment failed');
-      }
+      toast({
+        title: "Succès",
+        description: "Livreur assigné avec succès.",
+      });
+      setIsAssignDialogOpen(false);
+      fetchDeliveries(pagination.page);
     } catch (err) {
       console.error('Error assigning livreur:', err);
       toast({
         title: "Erreur",
-        description: "Échec de l'assignation du livreur.",
+        description: extractApiErrorMessage(err, "Échec de l'assignation du livreur."),
         variant: "destructive",
       });
     }

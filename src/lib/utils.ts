@@ -5,6 +5,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Échappe les caractères HTML spéciaux d'une valeur avant de l'interpoler
+ * dans du HTML construit à la main (ex: `document.write`, exports PDF/print).
+ * À utiliser chaque fois que du HTML est assemblé par concaténation de
+ * chaînes plutôt que par le DOM/React — sans quoi une valeur utilisateur
+ * (nom, email...) contenant du balisage s'exécute dans la page.
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function slugify(text: string): string {
   return text
     .toString()
