@@ -1,13 +1,15 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { verifyRecaptcha } from '../middleware/recaptcha';
+import { createRateLimiter } from '../middleware/rateLimit';
 import { emailService } from '../utils/email';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const jobApplicationsRouter = Router();
 
+const jobApplicationLimiter = createRateLimiter({ windowMs: 60_000, max: 10 });
+
 // Public: submit application
-jobApplicationsRouter.post('/', async (req: Request, res: Response) => {
+jobApplicationsRouter.post('/', jobApplicationLimiter, verifyRecaptcha('job_application'), async (req: Request, res: Response) => {
   try {
     const { careerId, careerTitle, fullName, email, phone, message, cvUrl, attachments } = req.body || {};
     if (!fullName || !email || !careerTitle) {
@@ -52,7 +54,7 @@ jobApplicationsRouter.post('/', async (req: Request, res: Response) => {
 });
 
 // Admin: list all applications
-jobApplicationsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
+jobApplicationsRouter.get('/', authRequired, moduleAccess('careers'), async (_req: Request, res: Response) => {
   try {
     const items = await prisma.jobApplication.findMany({
       orderBy: { createdAt: 'desc' },
@@ -68,7 +70,7 @@ jobApplicationsRouter.get('/', authRequired, adminOnly, async (_req: Request, re
 });
 
 // Admin: update status
-jobApplicationsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+jobApplicationsRouter.put('/:id', authRequired, moduleAccess('careers'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const { status } = req.body || {};
@@ -83,7 +85,7 @@ jobApplicationsRouter.put('/:id', authRequired, adminOnly, async (req: Request, 
 });
 
 // Admin: delete
-jobApplicationsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+jobApplicationsRouter.delete('/:id', authRequired, moduleAccess('careers'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     await prisma.jobApplication.delete({ where: { id } });

@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -8,8 +7,7 @@ import { validate } from '../middleware/validate';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { createRateLimiter } from '../middleware/rateLimit';
 import { audit, actorFromRequest } from '../utils/audit';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const cookieConsentsRouter = Router();
 
 const consentSchema = z.object({

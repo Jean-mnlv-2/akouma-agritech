@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const coursePreviewItemsRouter = Router();
 
 coursePreviewItemsRouter.get('/', async (req: Request, res: Response) => {
@@ -20,7 +18,7 @@ coursePreviewItemsRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
-coursePreviewItemsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursePreviewItemsRouter.post('/', authRequired, moduleAccess('course-previews'), async (req: Request, res: Response) => {
   try {
     const { typeId, ...rest } = req.body;
     
@@ -54,7 +52,7 @@ coursePreviewItemsRouter.post('/', authRequired, adminOnly, async (req: Request,
   }
 });
 
-coursePreviewItemsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursePreviewItemsRouter.put('/:id', authRequired, moduleAccess('course-previews'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const { typeId, ...rest } = req.body;
@@ -76,7 +74,7 @@ coursePreviewItemsRouter.put('/:id', authRequired, adminOnly, async (req: Reques
   }
 });
 
-coursePreviewItemsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursePreviewItemsRouter.delete('/:id', authRequired, moduleAccess('course-previews'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     await prisma.coursePreviewItem.delete({ where: { id } });

@@ -1,10 +1,8 @@
 import axios, { AxiosError } from 'axios';
-import { PrismaClient } from '@prisma/client';
 import { env } from '../utils/env';
 import { logger } from '../utils/logger';
 import { createHash } from 'crypto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 const prismaAny = prisma as any;
 const apiClient = axios.create({
   baseURL: env.DELIVERY_API_URL,

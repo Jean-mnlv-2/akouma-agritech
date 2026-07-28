@@ -1,11 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const contentSubmissionsRouter = Router();
 
-contentSubmissionsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
+contentSubmissionsRouter.get('/', authRequired, moduleAccess('submissions'), async (_req: Request, res: Response) => {
   const items = await prisma.contentSubmission.findMany({ orderBy: { createdAt: 'desc' } });
   res.json({ data: items });
 });
@@ -57,14 +55,14 @@ contentSubmissionsRouter.post('/', async (req: Request, res: Response) => {
   }
 });
 
-contentSubmissionsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+contentSubmissionsRouter.put('/:id', authRequired, moduleAccess('submissions'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { title, content, author, email, status } = req.body || {};
   const updated = await prisma.contentSubmission.update({ where: { id }, data: { title, content, author, email, status } });
   res.json({ data: updated });
 });
 
-contentSubmissionsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+contentSubmissionsRouter.delete('/:id', authRequired, moduleAccess('submissions'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.contentSubmission.delete({ where: { id } });
   res.json({ success: true });

@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { env } from '../utils/env';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const liveStreamsRouter = Router();
 
 // Public list (optionally filter upcoming/published)
@@ -21,7 +19,7 @@ liveStreamsRouter.get('/', async (req: Request, res: Response) => {
 });
 
 // Admin CRUD
-liveStreamsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+liveStreamsRouter.post('/', authRequired, moduleAccess('livestreams'), async (req: Request, res: Response) => {
   try {
     if (env.isDevelopment()) {
       // eslint-disable-next-line no-console
@@ -79,7 +77,7 @@ liveStreamsRouter.post('/', authRequired, adminOnly, async (req: Request, res: R
   }
 });
 
-liveStreamsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+liveStreamsRouter.put('/:id', authRequired, moduleAccess('livestreams'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
 
@@ -124,7 +122,7 @@ liveStreamsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res:
   }
 });
 
-liveStreamsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+liveStreamsRouter.delete('/:id', authRequired, moduleAccess('livestreams'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     await prisma.liveStream.delete({ where: { id } });

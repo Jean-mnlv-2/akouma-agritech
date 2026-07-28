@@ -1,11 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { validate } from '../middleware/validate';
 import { audit, actorFromRequest } from '../utils/audit';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const elearningEnrollmentsRouter = Router();
 
 const createEnrollmentSchema = z.object({
@@ -49,7 +47,7 @@ elearningEnrollmentsRouter.get('/', authRequired, async (req: Request, res: Resp
   res.json({ data: items });
 });
 
-elearningEnrollmentsRouter.post('/', authRequired, adminOnly, validate(createEnrollmentSchema), async (req: Request, res: Response) => {
+elearningEnrollmentsRouter.post('/', authRequired, moduleAccess('elearning-enrollments'), validate(createEnrollmentSchema), async (req: Request, res: Response) => {
   const { courseId, professionalActivity, organization, sector, experienceLevel, expectations, userId: targetUserId } = req.body;
   const u = (req as any).user;
   const userId = targetUserId && (u.role === 'admin' || u.role === 'supervisor') ? targetUserId : u.id;

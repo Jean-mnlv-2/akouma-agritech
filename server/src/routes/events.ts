@@ -1,13 +1,20 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess, optionalAuth } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
+import { handlePrismaWriteError } from '../utils/prismaErrors';
+import { prisma } from '../db';
 export const eventsRouter = Router();
 
-eventsRouter.get('/', async (_req: Request, res: Response) => {
+// Route unique consommée par la page publique événements et par le
+// back-office (qui doit voir les événements non publiés pour les gérer) —
+// voir seeds.ts pour le même principe.
+eventsRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const items = await prisma.event.findMany({ orderBy: { createdAt: 'desc' } });
+    const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'supervisor';
+    const items = await prisma.event.findMany({
+      where: isPrivileged ? undefined : ({ isPublished: true } as any),
+      orderBy: { createdAt: 'desc' },
+    });
     res.json({ data: items });
   } catch (error: any) {
     if (error?.code === 'P2021') {
@@ -17,11 +24,12 @@ eventsRouter.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-eventsRouter.get('/slug/:slug', async (req: Request, res: Response) => {
+eventsRouter.get('/slug/:slug', optionalAuth, async (req: Request, res: Response) => {
   try {
+    const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'supervisor';
     const { slug } = req.params;
     const item = await prisma.event.findUnique({ where: { slug } as any });
-    if (!item) {
+    if (!item || (!isPrivileged && !(item as any).isPublished)) {
       return res.status(404).json({ error: 'Not found' });
     }
     res.json({ data: item });
@@ -31,22 +39,34 @@ eventsRouter.get('/slug/:slug', async (req: Request, res: Response) => {
   }
 });
 
-eventsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { title, slug, description, date, location, imageUrl, isPublished } = req.body || {};
-  if (!title || !slug || !date || !location) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.event.create({ data: { title, slug, description, date: new Date(date), location, imageUrl, isPublished: isPublished ?? false } as any });
-  res.status(201).json({ data: created });
+eventsRouter.post('/', authRequired, moduleAccess('events'), csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const { title, slug, description, date, location, imageUrl, isPublished } = req.body || {};
+    if (!title || !slug || !date || !location) return res.status(400).json({ error: 'missing fields' });
+    const created = await prisma.event.create({ data: { title, slug, description, date: new Date(date), location, imageUrl, isPublished: isPublished ?? false } as any });
+    res.status(201).json({ data: created });
+  } catch (e) {
+    handlePrismaWriteError(e, res);
+  }
 });
 
-eventsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  const { title, slug, description, date, location, imageUrl, isPublished } = req.body || {};
-  const updated = await prisma.event.update({ where: { id }, data: { title, slug, description, date: date ? new Date(date) : undefined, location, imageUrl, isPublished } as any });
-  res.json({ data: updated });
+eventsRouter.put('/:id', authRequired, moduleAccess('events'), csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const { title, slug, description, date, location, imageUrl, isPublished } = req.body || {};
+    const updated = await prisma.event.update({ where: { id }, data: { title, slug, description, date: date ? new Date(date) : undefined, location, imageUrl, isPublished } as any });
+    res.json({ data: updated });
+  } catch (e) {
+    handlePrismaWriteError(e, res);
+  }
 });
 
-eventsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  await prisma.event.delete({ where: { id } });
-  res.json({ success: true });
+eventsRouter.delete('/:id', authRequired, moduleAccess('events'), csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    await prisma.event.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (e) {
+    handlePrismaWriteError(e, res);
+  }
 });

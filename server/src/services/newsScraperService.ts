@@ -1,12 +1,11 @@
 import Parser from 'rss-parser';
-import { PrismaClient, News } from '@prisma/client';
+import { News } from '@prisma/client';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { NEWS_SOURCES, NewsSource, getEnabledSources } from '../config/newsSources';
 import { logger } from '../utils/logger';
 import { slugify } from '../utils/slugify';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 const parser = new Parser();
 
 export interface ScrapedArticle {

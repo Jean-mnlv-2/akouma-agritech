@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { verifyRecaptcha } from '../middleware/recaptcha';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const contactMessagesRouter = Router();
 
 contactMessagesRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
@@ -12,9 +10,20 @@ contactMessagesRouter.get('/', authRequired, adminOnly, async (_req: Request, re
 });
 
 contactMessagesRouter.post('/', verifyRecaptcha('contact'), async (req: Request, res: Response) => {
-  const { name, email, subject, message, country } = req.body || {};
+  const { name, email, subject, message, country, phone, company, project_type } = req.body || {};
   if (!name || !email || !message) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.contactMessage.create({ data: { name, email, subject, message, country } });
+  const created = await prisma.contactMessage.create({ 
+    data: { 
+      name, 
+      email, 
+      subject, 
+      message, 
+      country, 
+      phone, 
+      company, 
+      project_type 
+    } 
+  });
   res.status(201).json({ data: created });
 });
 

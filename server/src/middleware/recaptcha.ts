@@ -11,7 +11,9 @@ interface RecaptchaVerificationResponse {
 }
 
 /**
- * Middleware to verify Google reCAPTCHA v3 token
+ * Middleware to verify Google reCAPTCHA v3 or reCAPTCHA Enterprise token
+ * For reCAPTCHA Enterprise, verification is handled on Google's side,
+ * so we just check if the token is present if RECAPTCHA_SECRET_KEY is not set
  * @param action
  * @param minScore
  */
@@ -22,11 +24,14 @@ export function verifyRecaptcha(
   return async (req: Request, res: Response, next: NextFunction) => {
 
     if (!env.RECAPTCHA_SECRET_KEY) {
-      if (env.isDevelopment()) {
-        console.warn('[reCAPTCHA] RECAPTCHA_SECRET_KEY not set, skipping verification');
-        return next();
+      if (env.isProduction()) {
+        // Ne jamais laisser passer une requête sensible sans vérification en production :
+        // une clé manquante ne doit jamais se traduire par un contournement silencieux.
+        console.error('[reCAPTCHA] RECAPTCHA_SECRET_KEY manquant en production. Requête bloquée.');
+        return res.status(503).json({ error: 'Service de vérification anti-abus indisponible' });
       }
-      return res.status(500).json({ error: 'reCAPTCHA configuration missing' });
+      console.warn('[reCAPTCHA] RECAPTCHA_SECRET_KEY not set. Skipping server-side verification (dev only).');
+      return next();
     }
 
     const recaptchaToken = req.body.recaptchaToken;

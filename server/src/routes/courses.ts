@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { isValidSertifierId } from '../utils/sertifierClient';
+import { RagSystem } from '../rag';
+import { prisma } from '../db';
 
 function validateSertifierIds(body: any): string | null {
   const ids = [
@@ -20,8 +21,6 @@ function validateSertifierIds(body: any): string | null {
   }
   return null;
 }
-
-const prisma = new PrismaClient();
 export const coursesRouter = Router();
 
 const parseDuration = (dur: string | null): number => {
@@ -66,7 +65,7 @@ coursesRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-coursesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursesRouter.post('/', authRequired, moduleAccess('courses'), async (req: Request, res: Response) => {
   const { 
     title, slug, description, content, price, duration, level, 
     thumbnailUrl, videoUrl, isPublished, isCopyProtected, 
@@ -93,7 +92,7 @@ coursesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respo
   res.status(201).json({ data: created });
 });
 
-coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursesRouter.put('/:id', authRequired, moduleAccess('courses'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { 
     title, slug, description, content, price, duration, level, 
@@ -143,9 +142,11 @@ coursesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Res
   res.json({ data: updated });
 });
 
-coursesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursesRouter.delete('/:id', authRequired, moduleAccess('courses'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.course.delete({ where: { id } });
+  // Best-effort : purge la source RAG associée (voir seeds.ts pour la rationale).
+  RagSystem.getInstance(prisma).indexer.deleteSource(`course-${id}`).catch(() => void 0);
   res.json({ success: true });
 });
 

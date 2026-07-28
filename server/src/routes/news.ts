@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
 import { logger } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import { handlePrismaWriteError } from '../utils/prismaErrors';
+import { RagSystem } from '../rag';
+import { prisma } from '../db';
 export const newsRouter = Router();
 
 newsRouter.get('/', async (req: Request, res: Response) => {
@@ -82,41 +83,55 @@ newsRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-newsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { title, slug, content, excerpt, imageUrl, author, category, isPublished, isFeatured, isCopyProtected } = req.body || {};
-  if (!title || !slug || !content) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.news.create({
-    data: { 
-      title, slug, content, excerpt, imageUrl, author, category,
-      isPublished: Boolean(isPublished),
-      isFeatured: Boolean(isFeatured),
-      isCopyProtected: Boolean(isCopyProtected),
-      sourceType: "manual"
-    } as any,
-  });
-  res.status(201).json({ data: created });
+newsRouter.post('/', authRequired, moduleAccess('news'), csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const { title, slug, content, excerpt, imageUrl, author, category, isPublished, isFeatured, isCopyProtected } = req.body || {};
+    if (!title || !slug || !content) return res.status(400).json({ error: 'missing fields' });
+    const created = await prisma.news.create({
+      data: {
+        title, slug, content, excerpt, imageUrl, author, category,
+        isPublished: Boolean(isPublished),
+        isFeatured: Boolean(isFeatured),
+        isCopyProtected: Boolean(isCopyProtected),
+        sourceType: "manual"
+      } as any,
+    });
+    res.status(201).json({ data: created });
+  } catch (e) {
+    handlePrismaWriteError(e, res);
+  }
 });
 
-newsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  const { title, slug, content, excerpt, imageUrl, author, category, isPublished, isFeatured, isCopyProtected } = req.body || {};
-  const updated = await prisma.news.update({
-    where: { id },
-    data: { 
-      title, slug, content, excerpt, imageUrl, author, category,
-      isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
-      isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured),
-      isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
-      // Don't change sourceType when editing
-    } as any,
-  });
-  res.json({ data: updated });
+newsRouter.put('/:id', authRequired, moduleAccess('news'), csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const { title, slug, content, excerpt, imageUrl, author, category, isPublished, isFeatured, isCopyProtected } = req.body || {};
+    const updated = await prisma.news.update({
+      where: { id },
+      data: {
+        title, slug, content, excerpt, imageUrl, author, category,
+        isPublished: isPublished === undefined ? undefined : Boolean(isPublished),
+        isFeatured: isFeatured === undefined ? undefined : Boolean(isFeatured),
+        isCopyProtected: isCopyProtected === undefined ? undefined : Boolean(isCopyProtected)
+        // Don't change sourceType when editing
+      } as any,
+    });
+    res.json({ data: updated });
+  } catch (e) {
+    handlePrismaWriteError(e, res);
+  }
 });
 
-newsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  await prisma.news.delete({ where: { id } });
-  res.json({ success: true });
+newsRouter.delete('/:id', authRequired, moduleAccess('news'), csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    await prisma.news.delete({ where: { id } });
+    // Best-effort : purge la source RAG associée (voir seeds.ts pour la rationale).
+    RagSystem.getInstance(prisma).indexer.deleteSource(`news-${id}`).catch(() => void 0);
+    res.json({ success: true });
+  } catch (e) {
+    handlePrismaWriteError(e, res);
+  }
 });
 
 

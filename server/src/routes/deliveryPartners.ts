@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
+import { prisma } from '../db';
 const prismaAny = prisma as any;
 export const deliveryPartnersRouter = Router();
 
@@ -31,7 +30,7 @@ deliveryPartnersRouter.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-deliveryPartnersRouter.get('/admin', authRequired, adminOnly, async (_req: Request, res: Response) => {
+deliveryPartnersRouter.get('/admin', authRequired, moduleAccess('deliveries'), async (_req: Request, res: Response) => {
   try {
     const partners = await prismaAny.deliveryPartner.findMany({
       orderBy: { createdAt: 'desc' },
@@ -43,7 +42,7 @@ deliveryPartnersRouter.get('/admin', authRequired, adminOnly, async (_req: Reque
   }
 });
 
-deliveryPartnersRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+deliveryPartnersRouter.post('/', authRequired, moduleAccess('deliveries'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const {
       name,
@@ -89,7 +88,7 @@ deliveryPartnersRouter.post('/', authRequired, adminOnly, async (req: Request, r
   }
 });
 
-deliveryPartnersRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+deliveryPartnersRouter.put('/:id', authRequired, moduleAccess('deliveries'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
@@ -141,7 +140,7 @@ deliveryPartnersRouter.put('/:id', authRequired, adminOnly, async (req: Request,
   }
 });
 
-deliveryPartnersRouter.patch('/:id/toggle', authRequired, adminOnly, async (req: Request, res: Response) => {
+deliveryPartnersRouter.patch('/:id/toggle', authRequired, moduleAccess('deliveries'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
@@ -167,7 +166,7 @@ deliveryPartnersRouter.patch('/:id/toggle', authRequired, adminOnly, async (req:
   }
 });
 
-deliveryPartnersRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+deliveryPartnersRouter.delete('/:id', authRequired, moduleAccess('deliveries'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {

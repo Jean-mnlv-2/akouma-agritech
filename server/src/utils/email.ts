@@ -360,4 +360,79 @@ export const emailService = {
       console.error('[EMAIL] Notif e-learning échouée:', e);
     }
   },
+
+  async sendSubscriptionTrialEndingEmail(data: {
+    email: string;
+    userName: string;
+    planName: string;
+    trialEndDate: Date;
+    pricingUrl?: string;
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configuré. Notification fin d’essai pour', data.email);
+      return;
+    }
+
+    const pricingUrl = data.pricingUrl || `${env.FRONTEND_ORIGINS[0]}/pricing`;
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject: `Votre essai ${data.planName} arrive à échéance - KILIMO`,
+        html: `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+            <h2 style="color:#1E5B37;margin-top:0">Bonjour ${data.userName},</h2>
+            <p>Votre période d’essai du forfait <strong>${data.planName}</strong> se termine le <strong>${new Date(data.trialEndDate).toLocaleDateString('fr-FR')}</strong>.</p>
+            <p>Pour conserver l’accès aux fonctionnalités avancées du chatbot et aux documents personnalisés, activez votre abonnement dès maintenant.</p>
+            <p style="margin:24px 0">
+              <a href="${pricingUrl}" style="display:inline-block;padding:12px 24px;background:#1E5B37;color:#fff;border-radius:8px;text-decoration:none">Choisir mon forfait</a>
+            </p>
+            <p style="font-size:12px;color:#9ca3af">L’équipe KILIMO Agritech</p>
+          </div>
+        `,
+      });
+    } catch (e) {
+      console.error('[EMAIL] Notification fin d’essai échouée:', e);
+    }
+  },
+
+  async sendSubscriptionInvoiceEmail(data: {
+    email: string;
+    userName: string;
+    planName: string;
+    invoiceNumber: string;
+    amount: number;
+    pdfUrl: string;
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configuré. Facture abonnement pour', data.email);
+      return;
+    }
+
+    const formattedAmount = new Intl.NumberFormat('fr-FR').format(Math.round(data.amount));
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject: `Votre facture ${data.invoiceNumber} - KILIMO`,
+        html: `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+            <h2 style="color:#1E5B37;margin-top:0">Facture d’abonnement disponible</h2>
+            <p>Bonjour ${data.userName},</p>
+            <p>Votre paiement pour le forfait <strong>${data.planName}</strong> a été confirmé.</p>
+            <p>Montant facturé : <strong>${formattedAmount} FCFA</strong></p>
+            <p>Numéro de facture : <strong>${data.invoiceNumber}</strong></p>
+            <p style="margin:24px 0">
+              <a href="${data.pdfUrl}" style="display:inline-block;padding:12px 24px;background:#1E5B37;color:#fff;border-radius:8px;text-decoration:none">Télécharger la facture PDF</a>
+            </p>
+            <p style="font-size:12px;color:#9ca3af">Merci pour votre confiance. L’équipe KILIMO Agritech</p>
+          </div>
+        `,
+      });
+    } catch (e) {
+      console.error('[EMAIL] Envoi facture abonnement échoué:', e);
+    }
+  },
 };

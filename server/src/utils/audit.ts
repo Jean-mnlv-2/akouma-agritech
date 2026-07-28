@@ -1,9 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { Request } from 'express';
 import { logger } from './logger';
-
-const prisma = new PrismaClient();
-
+import { prisma } from '../db';
 export type AuditEntry = {
   actorId?: string | null;
   actorRole?: string | null;

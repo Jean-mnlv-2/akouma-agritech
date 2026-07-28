@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { emailService } from '../utils/email';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const courseModulesRouter = Router();
 
 const parseDuration = (dur: string | null): number => {
@@ -12,23 +10,53 @@ const parseDuration = (dur: string | null): number => {
   return match ? parseInt(match[1], 10) : 0;
 };
 
-// Get modules for a course (public)
-courseModulesRouter.get('/course/:courseId', async (req: Request, res: Response) => {
+/**
+ * Retire les réponses correctes des questions de quiz avant renvoi au client.
+ * `quizQuestions` est un JSON libre (Prisma `Json?`) ; on ne connaît sa forme
+ * qu'à l'exécution, d'où le traitement défensif plutôt qu'un typage strict.
+ */
+function stripQuizAnswers(module: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(module.quizQuestions)) return module;
+  return {
+    ...module,
+    quizQuestions: (module.quizQuestions as Array<Record<string, unknown>>).map((q) => {
+      const { correctAnswer, ...rest } = q || {};
+      return rest;
+    }),
+  };
+}
+
+// Get modules for a course — réservé aux utilisateurs inscrits (ou admin/superviseur).
+// Le contenu complet (vidéo, PDF, questions de quiz) ne doit jamais être
+// accessible sans inscription réelle : sans ce contrôle, le paywall du cours
+// est entièrement contournable via un appel API direct.
+courseModulesRouter.get('/course/:courseId', authRequired, async (req: Request, res: Response) => {
   try {
     const courseId = Number(req.params.courseId);
     if (isNaN(courseId)) return res.status(400).json({ error: 'Invalid courseId' });
+
+    const user = (req as any).user;
+    const isPrivileged = user.role === 'admin' || user.role === 'supervisor';
+    if (!isPrivileged) {
+      const enrollment = await prisma.eLearningEnrollment.findUnique({
+        where: { userId_courseId: { userId: user.id, courseId } },
+      });
+      if (!enrollment) return res.status(403).json({ error: 'not_enrolled' });
+    }
+
     const modules = await prisma.courseModule.findMany({
       where: { courseId, isActive: true },
       orderBy: { order: 'asc' },
     });
-    res.json({ data: modules });
+    const sanitized = isPrivileged ? modules : modules.map((m) => stripQuizAnswers(m as unknown as Record<string, unknown>));
+    res.json({ data: sanitized });
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch modules' });
   }
 });
 
 // Admin: create module
-courseModulesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+courseModulesRouter.post('/', authRequired, moduleAccess('course-modules'), async (req: Request, res: Response) => {
   try {
     const { courseId, title, type, duration, content, videoUrl, pdfUrl, order, quizQuestions } = req.body;
     if (!courseId || !title) return res.status(400).json({ error: 'courseId and title required' });
@@ -69,7 +97,7 @@ courseModulesRouter.post('/', authRequired, adminOnly, async (req: Request, res:
 });
 
 // Admin: update module
-courseModulesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+courseModulesRouter.put('/:id', authRequired, moduleAccess('course-modules'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const { title, type, duration, content, videoUrl, pdfUrl, order, isActive, quizQuestions } = req.body;
@@ -124,13 +152,55 @@ courseModulesRouter.put('/:id', authRequired, adminOnly, async (req: Request, re
 });
 
 // Admin: delete module
-courseModulesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+courseModulesRouter.delete('/:id', authRequired, moduleAccess('course-modules'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     await prisma.courseModule.delete({ where: { id } });
     res.json({ success: true });
   } catch (e) {
     res.status(400).json({ error: 'Failed to delete module' });
+  }
+});
+
+// User: valider la réponse à une question de quiz. Le corrigé n'est renvoyé
+// qu'après soumission de CETTE question précise (jamais en bulk à l'avance,
+// cf. stripQuizAnswers dans GET /course/:courseId) — évite de faire confiance
+// au `correctAnswer` client, qui n'existe plus côté front depuis ce fix.
+courseModulesRouter.post('/:id/quiz/check', authRequired, async (req: Request, res: Response) => {
+  try {
+    const moduleId = Number(req.params.id);
+    if (isNaN(moduleId)) return res.status(400).json({ error: 'Invalid id' });
+    const { questionId, answer } = req.body || {};
+    if (typeof questionId !== 'string' || typeof answer !== 'number') {
+      return res.status(400).json({ error: 'questionId and answer required' });
+    }
+
+    const user = (req as any).user;
+    const module = await prisma.courseModule.findUnique({ where: { id: moduleId } });
+    if (!module) return res.status(404).json({ error: 'Not found' });
+
+    const isPrivileged = user.role === 'admin' || user.role === 'supervisor';
+    if (!isPrivileged) {
+      const enrollment = await prisma.eLearningEnrollment.findUnique({
+        where: { userId_courseId: { userId: user.id, courseId: module.courseId } },
+      });
+      if (!enrollment) return res.status(403).json({ error: 'not_enrolled' });
+    }
+
+    const questions = Array.isArray(module.quizQuestions) ? (module.quizQuestions as Array<Record<string, unknown>>) : [];
+    const question = questions.find((q) => q?.id === questionId);
+    if (!question) return res.status(404).json({ error: 'question_not_found' });
+
+    const correctAnswer = question.correctAnswer as number;
+    res.json({
+      data: {
+        correct: answer === correctAnswer,
+        correctAnswer,
+        explanation: (question.explanation as string | undefined) ?? null,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to check answer' });
   }
 });
 

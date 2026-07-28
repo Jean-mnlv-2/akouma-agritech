@@ -1,11 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { validate } from '../middleware/validate';
 import { audit, actorFromRequest } from '../utils/audit';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const tasksRouter = Router();
 
 const createTaskSchema = z.object({

@@ -1,12 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const reminderLogsRouter = Router();
 
 // Admin read with basic filters
-reminderLogsRouter.get('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+reminderLogsRouter.get('/', authRequired, moduleAccess('reminder-logs'), async (req: Request, res: Response) => {
   try {
     const { email, status, courseId } = req.query;
     const where: any = {};

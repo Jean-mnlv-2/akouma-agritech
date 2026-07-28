@@ -1,10 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { internalApiAuth } from '../middleware/internalApiAuth';
 import { logger } from '../utils/logger';
 import { slugify } from '../utils/slugify';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const internalAutoNewsRouter = Router();
 
 // Apply auth middleware to all routes on this router

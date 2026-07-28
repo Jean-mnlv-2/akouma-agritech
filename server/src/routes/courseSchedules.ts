@@ -1,12 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { validate } from '../middleware/validate';
 import { audit, actorFromRequest } from '../utils/audit';
 import { emailService } from '../utils/email';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const courseSchedulesRouter = Router();
 
 const createScheduleSchema = z.object({
@@ -93,7 +91,7 @@ courseSchedulesRouter.put('/:id/attend', authRequired, async (req: Request, res:
 });
 
 // Mark absence (admin/system - increments absence count with penalty + email notification)
-courseSchedulesRouter.put('/:id/absent', authRequired, adminOnly, async (req: Request, res: Response) => {
+courseSchedulesRouter.put('/:id/absent', authRequired, moduleAccess('attendance'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const existing = await prisma.courseSchedule.findUnique({
@@ -155,7 +153,7 @@ courseSchedulesRouter.put('/:id/absent', authRequired, adminOnly, async (req: Re
 });
 
 // Admin: get all schedules
-courseSchedulesRouter.get('/admin', authRequired, adminOnly, async (_req: Request, res: Response) => {
+courseSchedulesRouter.get('/admin', authRequired, moduleAccess('attendance'), async (_req: Request, res: Response) => {
   try {
     const schedules = await prisma.courseSchedule.findMany({
       include: {

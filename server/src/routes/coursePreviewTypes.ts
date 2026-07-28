@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const coursePreviewTypesRouter = Router();
 
 // Public read
@@ -16,7 +14,7 @@ coursePreviewTypesRouter.get('/', async (_req: Request, res: Response) => {
 });
 
 // Admin CRUD
-coursePreviewTypesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursePreviewTypesRouter.post('/', authRequired, moduleAccess('course-previews'), async (req: Request, res: Response) => {
   try {
     const created = await prisma.coursePreviewType.create({ data: req.body });
     res.json({ data: created });
@@ -25,7 +23,7 @@ coursePreviewTypesRouter.post('/', authRequired, adminOnly, async (req: Request,
   }
 });
 
-coursePreviewTypesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursePreviewTypesRouter.put('/:id', authRequired, moduleAccess('course-previews'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const updated = await prisma.coursePreviewType.update({ where: { id }, data: req.body });
@@ -35,7 +33,7 @@ coursePreviewTypesRouter.put('/:id', authRequired, adminOnly, async (req: Reques
   }
 });
 
-coursePreviewTypesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+coursePreviewTypesRouter.delete('/:id', authRequired, moduleAccess('course-previews'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     await prisma.coursePreviewType.delete({ where: { id } });

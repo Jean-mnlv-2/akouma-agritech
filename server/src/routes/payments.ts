@@ -1,17 +1,16 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { authRequired } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
 import { createRateLimiter } from '../middleware/rateLimit';
 import { validate } from '../middleware/validate';
-import { antiReplay } from '../middleware/webhookReplay';
+import { antiReplay, timingSafeEqualStr } from '../middleware/webhookReplay';
 import { audit, actorFromRequest } from '../utils/audit';
 import { env } from '../utils/env';
 import { OrdersService } from '../services/ordersService';
 import { logger } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 const ordersService = new OrdersService(prisma);
 export const paymentsRouter = Router();
 
@@ -194,7 +193,10 @@ paymentsRouter.post(
     const webhookSecret = env.MONEYFUSION_WEBHOOK_SECRET;
     if (webhookSecret) {
       const provided = String(req.headers['x-webhook-secret'] || '');
-      if (!provided || provided !== webhookSecret) {
+      // Comparaison à temps constant : `!==` fuit la longueur du préfixe correct
+      // via le temps de réponse (timing attack), ce qui permet en théorie de
+      // reconstituer le secret octet par octet.
+      if (!provided || !timingSafeEqualStr(provided, webhookSecret)) {
         return res.status(401).json({ error: 'Webhook non autorisé' });
       }
     }

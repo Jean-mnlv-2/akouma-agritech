@@ -1,10 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authRequired } from '../middleware/authRequired';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const certificatePdfRouter = Router();
 
 function publicBase(req: Request): string {

@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, supervisorOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, supervisorOnly, adminOnly } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const statsRouter = Router();
 
-// Admin/supervisor only — exposes counts across the platform.
+// Ouvert à tout superviseur (quel que soit son module) : ce ne sont que des
+// compteurs agrégés pour le tableau de bord partagé — pas de PII individuelle.
 statsRouter.get('/', authRequired, supervisorOnly, async (_req: Request, res: Response) => {
   try {
     const [
@@ -51,8 +50,11 @@ statsRouter.get('/', authRequired, supervisorOnly, async (_req: Request, res: Re
   }
 });
 
-// Time-series stats for charts (last 30 days) — admin/supervisor only.
-statsRouter.get('/charts', authRequired, supervisorOnly, async (req: Request, res: Response) => {
+// Admin uniquement : contrairement à `/`, cet endpoint expose des données
+// granulaires (montants de commandes par jour, notes individuelles) qui
+// dépassent le simple compteur d'aperçu — un superviseur limité à un module
+// sans rapport (ex. "seeds") n'a pas à voir le détail du chiffre d'affaires.
+statsRouter.get('/charts', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days as string) || 30, 1), 365);
     const since = new Date();
@@ -132,8 +134,9 @@ statsRouter.get('/charts', authRequired, supervisorOnly, async (req: Request, re
   }
 });
 
-// Notifications endpoint - returns recent unread items (admin/supervisor only).
-statsRouter.get('/notifications', authRequired, supervisorOnly, async (req: Request, res: Response) => {
+// Admin uniquement : expose des PII individuelles (nom/email de client, nom
+// et poste de candidat) — même rationale que /charts ci-dessus.
+statsRouter.get('/notifications', authRequired, adminOnly, async (req: Request, res: Response) => {
   try {
     const since = req.query.since ? new Date(req.query.since as string) : new Date(Date.now() - 24 * 60 * 60 * 1000);
 

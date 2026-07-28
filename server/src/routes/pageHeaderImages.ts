@@ -1,10 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const pageHeaderImagesRouter = Router();
 
 const PageKeySchema = z

@@ -1,10 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
-
-const prisma = new PrismaClient();
-
+import { prisma } from '../db';
 const DEFAULT_MAX_SKEW_SEC = 300; // 5 minutes
 const NONCE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 

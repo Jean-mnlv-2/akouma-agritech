@@ -1,16 +1,27 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const legalPagesRouter = Router();
 
-legalPagesRouter.get('/', async (_req: Request, res: Response) => {
+legalPagesRouter.get('/', async (req: Request, res: Response) => {
+  // Le front (Privacy/Terms/Legal) filtre par slug : sans ce filtre, les 3
+  // pages recevaient toutes la même ligne (la plus récemment créée), quel
+  // que soit le slug demandé — risque de conformité (mauvais contenu légal
+  // affiché). `isActive` est le seul champ de publication du modèle
+  // (le paramètre `isPublished` envoyé par le front n'existe pas dessus).
+  const { slug } = req.query;
+  if (typeof slug === 'string' && slug.trim().length > 0) {
+    const item = await prisma.legalPage.findFirst({
+      where: { slug, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return res.json({ data: item ? [item] : [] });
+  }
   const items = await prisma.legalPage.findMany({ orderBy: { createdAt: 'desc' } });
   res.json({ data: items });
 });
 
-legalPagesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+legalPagesRouter.post('/', authRequired, moduleAccess('legal'), async (req: Request, res: Response) => {
   const { title, content, slug, isActive, type, version, effectiveDate } = req.body || {};
   if (!title || !content || !slug) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.legalPage.create({ 
@@ -27,7 +38,7 @@ legalPagesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Re
   res.status(201).json({ data: created });
 });
 
-legalPagesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+legalPagesRouter.put('/:id', authRequired, moduleAccess('legal'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { title, content, slug, isActive, type, version, effectiveDate } = req.body || {};
   const updated = await prisma.legalPage.update({ 
@@ -45,7 +56,7 @@ legalPagesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: 
   res.json({ data: updated });
 });
 
-legalPagesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+legalPagesRouter.delete('/:id', authRequired, moduleAccess('legal'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.legalPage.delete({ where: { id } });
   res.json({ success: true });

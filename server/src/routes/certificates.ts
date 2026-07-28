@@ -1,18 +1,16 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { validate } from '../middleware/validate';
 import { audit, actorFromRequest } from '../utils/audit';
 import { sertifierFetch, isSertifierConfigured, isValidSertifierId } from '../utils/sertifierClient';
 import { emailService } from '../utils/email';
+import { prisma } from '../db';
 
 const requestCertSchema = z.object({
   courseId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
   score: z.number().min(0).max(100).optional(),
 }).strict();
-
-const prisma = new PrismaClient();
 export const certificatesRouter = Router();
 
 // =============== Issuance Queue ===============

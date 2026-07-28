@@ -1,12 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const reviewsRouter = Router();
 
 // GET /api/reviews — admin: all reviews with user & seed info
-reviewsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Response) => {
+reviewsRouter.get('/', authRequired, moduleAccess('reviews'), async (_req: Request, res: Response) => {
   try {
     const reviews = await (prisma as any).review.findMany({
       include: {
@@ -23,7 +21,7 @@ reviewsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Respo
 });
 
 // DELETE /api/reviews/:id — admin: delete a review and recalc seed rating
-reviewsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+reviewsRouter.delete('/:id', authRequired, moduleAccess('reviews'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });

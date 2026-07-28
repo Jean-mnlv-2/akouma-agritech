@@ -1,10 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { env } from '../utils/env';
-
-const prisma = new PrismaClient();
-
+import { prisma } from '../db';
 interface JwtPayload {
   sub: string;
   role: string;
@@ -65,6 +62,28 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
   }
 }
 
+/**
+ * Comme `authRequired`, mais ne rejette jamais la requête : renseigne
+ * `req.user` si un cookie/jeton valide est présent, sinon laisse passer sans
+ * utilisateur. Utile pour les routes publiques (catalogue semences, offres
+ * d'emploi, événements) qui doivent rester accessibles sans connexion tout en
+ * révélant le contenu non publié aux seuls admin/superviseur.
+ */
+export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  const token = (req.cookies?.auth_token as string | undefined) || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : undefined);
+  if (!token) return next();
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const status = await loadUserStatus(decoded.sub);
+    if (status?.isActive) {
+      req.user = { id: decoded.sub, role: status.role };
+    }
+  } catch {
+    // Jeton invalide/expiré : traité comme un visiteur anonyme, pas une erreur.
+  }
+  next();
+}
+
 export function adminOnly(req: Request, res: Response, next: NextFunction) {
   const user = req.user;
   if (!user) return res.status(401).json({ error: 'unauthorized' });
@@ -72,26 +91,35 @@ export function adminOnly(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export async function adminOrSupervisorWithUsers(req: Request, res: Response, next: NextFunction) {
-  const user = req.user;
-  if (!user) return res.status(401).json({ error: 'unauthorized' });
-  if (user.role === 'admin') return next();
-  
-  if (user.role === 'supervisor') {
-    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-    if (dbUser?.allowedModules.includes('users')) {
-      return next();
-    }
-  }
-  
-  return res.status(403).json({ error: 'forbidden' });
-}
-
 export function supervisorOnly(req: Request, res: Response, next: NextFunction) {
   const user = req.user;
   if (!user) return res.status(401).json({ error: 'unauthorized' });
   if (!(user.role === 'admin' || user.role === 'supervisor')) return res.status(403).json({ error: 'forbidden' });
   next();
+}
+
+/**
+ * Autorise un admin (toujours) ou un superviseur dont `allowedModules`
+ * contient `moduleKey` (à charger depuis la base, `req.user.role` seul ne
+ * suffit pas — c'est exactement ce que l'UI admin (Admin.tsx) promet déjà à
+ * l'utilisateur : sans ce contrôle backend, un superviseur voit les
+ * formulaires de gestion pour un module qui lui a été accordé, mais toute
+ * soumission échoue en 403 puisque les routes n'étaient protégées que par
+ * `adminOnly`. Remplace `adminOnly` sur les routes d'écriture des modules
+ * assignables (voir la liste `ADMIN_MODULES` côté frontend, src/lib/adminModules.ts,
+ * qui doit rester synchronisée avec les clés utilisées ici).
+ */
+export function moduleAccess(moduleKey: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'unauthorized' });
+    if (user.role === 'admin') return next();
+    if (user.role === 'supervisor') {
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { allowedModules: true } });
+      if (dbUser?.allowedModules.includes(moduleKey)) return next();
+    }
+    return res.status(403).json({ error: 'forbidden' });
+  };
 }
 
 

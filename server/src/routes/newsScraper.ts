@@ -1,12 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { newsScraper } from '../services/newsScraperService';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
 import { logger } from '../utils/logger';
 import { getEnabledSources, NEWS_SOURCES } from '../config/newsSources';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const newsScraperRouter = Router();
 
 // Apply auth middleware to all routes

@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -11,8 +10,7 @@ import { logger } from '../utils/logger';
 import { createRateLimiter } from '../middleware/rateLimit';
 import { verifyRecaptcha } from '../middleware/recaptcha';
 import { validate } from '../middleware/validate';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const authRouter = Router();
 
 // Password policy: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character

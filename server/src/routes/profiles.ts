@@ -1,18 +1,16 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly, adminOrSupervisorWithUsers, invalidateAuthCache } from '../middleware/authRequired';
+import { authRequired, moduleAccess, invalidateAuthCache } from '../middleware/authRequired';
 import { emailService } from '../utils/email';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 const ALLOWED_ROLES = ['admin', 'supervisor', 'customer'] as const;
 const isAllowedRole = (value: unknown): value is (typeof ALLOWED_ROLES)[number] =>
   typeof value === 'string' && (ALLOWED_ROLES as readonly string[]).includes(value);
 export const profilesRouter = Router();
 
 // List profiles (compat)
-profilesRouter.get('/', authRequired, adminOrSupervisorWithUsers, async (req: Request, res: Response) => {
+profilesRouter.get('/', authRequired, moduleAccess('users'), async (req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({ 
       orderBy: { createdAt: 'desc' },
@@ -52,7 +50,7 @@ profilesRouter.get('/', authRequired, adminOrSupervisorWithUsers, async (req: Re
   }
 });
 
-profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+profilesRouter.post('/', authRequired, moduleAccess('users'), async (req: Request, res: Response) => {
   const {
     user_id, id,
     email,
@@ -67,8 +65,13 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
 
   const normalizedIsActive = typeof isActive === 'boolean' ? isActive : (is_active !== false);
   const fullName = [first_name ?? firstName, last_name ?? lastName].filter(Boolean).join(' ').trim() || null;
-  const providedRole = isAllowedRole(role) ? role : null;
-  const normalizedModules = Array.isArray(allowedModules || allowed_modules) ? (allowedModules || allowed_modules) : [];
+  // SÉCURITÉ: `role`/`allowedModules` ne sont modifiables que par un admin.
+  // Un superviseur autorisé sur le module "users" (gestion des profils
+  // clients) ne doit jamais pouvoir s'auto-promouvoir admin ou s'accorder
+  // d'autres modules via ce même endpoint.
+  const isAdmin = req.user?.role === 'admin';
+  const providedRole = isAdmin && isAllowedRole(role) ? role : null;
+  const normalizedModules = isAdmin && Array.isArray(allowedModules || allowed_modules) ? (allowedModules || allowed_modules) : [];
 
   const targetId = String(user_id || id || '');
 
@@ -82,7 +85,7 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
         fullName,
         isActive: normalizedIsActive,
         ...(providedRole ? { role: providedRole } : {}),
-        allowedModules: normalizedModules,
+        ...(isAdmin ? { allowedModules: normalizedModules } : {}),
       },
       select: { id: true, email: true, fullName: true, isActive: true, role: true, createdAt: true, allowedModules: true },
     });
@@ -124,7 +127,7 @@ profilesRouter.post('/', authRequired, adminOnly, async (req: Request, res: Resp
   }});
 });
 
-profilesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+profilesRouter.put('/:id', authRequired, moduleAccess('users'), async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const { email, first_name, last_name, firstName, lastName, is_active, isActive, role, allowed_modules, allowedModules } = req.body || {};
@@ -132,8 +135,10 @@ profilesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Re
     const normalizedIsActive = typeof isActive === 'boolean'
       ? isActive
       : (typeof is_active === 'string' ? is_active === 'true' : is_active);
-    const normalizedRole = isAllowedRole(role) ? role : undefined;
-    const normalizedModules = Array.isArray(allowedModules || allowed_modules) ? (allowedModules || allowed_modules) : undefined;
+    // SÉCURITÉ: voir POST ci-dessus — seul un admin peut changer role/allowedModules.
+    const isAdmin = req.user?.role === 'admin';
+    const normalizedRole = isAdmin && isAllowedRole(role) ? role : undefined;
+    const normalizedModules = isAdmin && Array.isArray(allowedModules || allowed_modules) ? (allowedModules || allowed_modules) : undefined;
 
     const updated = await prisma.user.update({
       where: { id },
@@ -170,7 +175,7 @@ profilesRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Re
   }
 });
 
-profilesRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+profilesRouter.delete('/:id', authRequired, moduleAccess('users'), async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
     await prisma.user.delete({ where: { id } });

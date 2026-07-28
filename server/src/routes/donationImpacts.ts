@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { prisma } from '../db';
 export const donationImpactsRouter = Router();
 
 // Public list
@@ -20,26 +18,26 @@ donationImpactsRouter.get('/', async (_req: Request, res: Response) => {
 });
 
 // Admin list
-donationImpactsRouter.get('/admin', authRequired, adminOnly, async (_req: Request, res: Response) => {
+donationImpactsRouter.get('/admin', authRequired, moduleAccess('donations-content'), async (_req: Request, res: Response) => {
   const items = await prisma.donationImpact.findMany({ orderBy: [{ order: 'asc' }, { id: 'desc' }] });
   res.json({ data: items });
 });
 
-donationImpactsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+donationImpactsRouter.post('/', authRequired, moduleAccess('donations-content'), async (req: Request, res: Response) => {
   const { title, slug, description, icon, progress, target, order, isActive } = req.body || {};
   if (!title || !slug || !description) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.donationImpact.create({ data: { title, slug, description, icon, progress: progress ?? 0, target, order: order ?? 0, isActive: isActive ?? true } as any });
   res.status(201).json({ data: created });
 });
 
-donationImpactsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+donationImpactsRouter.put('/:id', authRequired, moduleAccess('donations-content'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { title, slug, description, icon, progress, target, order, isActive } = req.body || {};
   const updated = await prisma.donationImpact.update({ where: { id }, data: { title, slug, description, icon, progress, target, order, isActive } as any });
   res.json({ data: updated });
 });
 
-donationImpactsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+donationImpactsRouter.delete('/:id', authRequired, moduleAccess('donations-content'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.donationImpact.delete({ where: { id } });
   res.json({ success: true });

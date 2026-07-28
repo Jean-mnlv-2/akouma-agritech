@@ -1,12 +1,24 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { authRequired } from '../middleware/authRequired';
+import { authRequired, adminOnly } from '../middleware/authRequired';
 import { validate } from '../middleware/validate';
 import { createRateLimiter } from '../middleware/rateLimit';
-
-const prisma = new PrismaClient();
+import { RagSystem, ChatMessage as RagChatMessage } from '../rag';
+import { SubscriptionService } from '../services/subscriptionService';
+import { env } from '../utils/env';
+import { parsePaginationAndSort } from '../utils/pagination';
+import { prisma } from '../db';
+const subscriptionService = new SubscriptionService();
 export const chatRouter = Router();
+
+// Initialize RAG system lazily
+let ragSystem: RagSystem | null = null;
+function getRagSystem(): RagSystem {
+  if (!ragSystem) {
+    ragSystem = RagSystem.getInstance(prisma);
+  }
+  return ragSystem;
+}
 
 // User-specific rate limiter for chat messages: 10 messages per minute
 const chatMessageRateLimiter = createRateLimiter({
@@ -48,45 +60,78 @@ function isContentMalicious(content: string): { isMalicious: boolean; reason?: s
 }
 
 // Configuration
-const AI_PROVIDER = process.env.AI_PROVIDER || 'lovable'; // 'lovable' or 'ollama'
-const LOVABLE_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const LOVABLE_DEFAULT_MODEL = process.env.LOVABLE_CHAT_MODEL || 'google/gemini-2.5-flash';
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
-const OLLAMA_DEFAULT_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 const MAX_HISTORY = 30;
 const MAX_MESSAGE_LENGTH = 4000;
 
-// Budget IA quotidien par utilisateur (nombre de messages/jour).
-// Défaut : 50 messages/jour/utilisateur (override via CHAT_DAILY_BUDGET).
-const CHAT_DAILY_BUDGET = Number(process.env.CHAT_DAILY_BUDGET || 50);
-const dailyUsage = new Map<string, { count: number; resetAt: number }>();
-function checkDailyBudget(userId: string): { ok: boolean; remaining: number } {
-  const now = Date.now();
-  const entry = dailyUsage.get(userId);
-  if (!entry || entry.resetAt < now) {
-    dailyUsage.set(userId, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 });
-    return { ok: true, remaining: CHAT_DAILY_BUDGET - 1 };
+class ProQuotaExceededError extends Error {
+  constructor(public readonly limit: number) {
+    super('daily_pro_budget_exceeded');
+    this.name = 'ProQuotaExceededError';
   }
-  if (entry.count >= CHAT_DAILY_BUDGET) {
-    return { ok: false, remaining: 0 };
-  }
-  entry.count += 1;
-  return { ok: true, remaining: CHAT_DAILY_BUDGET - entry.count };
 }
 
-const SYSTEM_PROMPT = `Tu es KILIMO Assistant, l'assistant officiel de KILIMO, une plateforme agritech africaine.
-Tu aides les utilisateurs sur :
-- Les formations e-learning (catalogue, inscription, certification)
-- La boutique (semences, produits agricoles, commandes, livraison)
-- Le conseil agricole, les bonnes pratiques de culture et d'élevage
-- Les partenariats, dons et opportunités de carrière
+function buildProUpgradeMessage(limit: number): string {
+  return `Vous avez atteint votre quota quotidien de ${limit} requêtes avancées liées aux documents personnalisés. Les contenus standards KILIMO restent accessibles gratuitement. Pour continuer à exploiter les documents personnalisés de votre module Agriconsulting, merci de passer au Plan PRO ou de contacter l'équipe commerciale KILIMO.`;
+}
 
-Règles :
-- Réponds en français par défaut, ou dans la langue de l'utilisateur s'il écrit autrement.
-- Sois concis, professionnel, chaleureux. Utilise le markdown (titres courts, listes, gras) pour structurer.
-- Si tu ne sais pas, dis-le honnêtement et oriente vers le formulaire de contact (/contact).
-- Ne donne jamais d'avis médical, financier ou juridique engageant.
-- N'invente pas d'informations sur les prix exacts, stocks ou dates ; invite l'utilisateur à consulter la page concernée.`;
+/**
+ * Track free usage separately from advanced Agriconsulting usage.
+ * Free sources: seed, course, news.
+ * Pro sources: custom documents and any future premium source type.
+ */
+async function checkAndUpdateBudget(
+  userId: string,
+  usesProSources: boolean
+): Promise<{ ok: true; remaining?: number } | { ok: false; remaining: 0 }> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Get user's current PRO limit from subscription
+  const { limit: proLimit } = await subscriptionService.getUserProLimit(userId);
+
+  // Get or create budget entry
+  let budget = await prisma.chatDailyBudget.findUnique({
+    where: { userId_date: { userId, date: today } },
+  });
+
+  if (!budget) {
+    budget = await prisma.chatDailyBudget.create({
+      data: {
+        userId,
+        date: today,
+        freeUsage: usesProSources ? 0 : 1,
+        proUsage: usesProSources ? 1 : 0,
+      },
+    });
+    
+    const remaining = usesProSources && proLimit !== 0 ? proLimit - 1 : undefined;
+    return { 
+      ok: true, 
+      remaining,
+    };
+  }
+
+  if (usesProSources && proLimit !== 0 && budget.proUsage >= proLimit) {
+    return { ok: false, remaining: 0 };
+  }
+
+  // Increment appropriate usage counter
+  budget = await prisma.chatDailyBudget.update({
+    where: { id: budget.id },
+    data: usesProSources 
+      ? { proUsage: { increment: 1 } } 
+      : { freeUsage: { increment: 1 } }
+  });
+
+  const remaining = usesProSources && proLimit !== 0 
+    ? proLimit - budget.proUsage 
+    : undefined;
+
+  return { 
+    ok: true,
+    remaining,
+  };
+}
 
 chatRouter.use(authRequired);
 
@@ -180,136 +225,15 @@ chatRouter.get("/threads/:id/export/json", async (req, res) => {
   res.json(thread);
 });
 
-// Helper to stream from Lovable API
-async function streamFromLovable(messages: any[], send: (event: string, data: unknown) => void) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) {
-    throw new Error('LOVABLE_API_KEY non configurée.');
-  }
-
-  const upstream = await fetch(LOVABLE_GATEWAY_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: LOVABLE_DEFAULT_MODEL,
-      stream: true,
-      messages,
-    }),
-  });
-
-  if (!upstream.ok || !upstream.body) {
-    const text = await upstream.text().catch(() => '');
-    if (upstream.status === 429) {
-      send('error', { code: 'rate_limited', message: 'Trop de requêtes. Réessayez dans un instant.' });
-    } else if (upstream.status === 402) {
-      send('error', { code: 'credits_exhausted', message: 'Crédits IA épuisés. Contactez l\'administrateur.' });
-    } else {
-      send('error', { code: 'upstream_error', message: text.slice(0, 200) || 'Erreur du modèle.' });
-    }
-    return '';
-  }
-
-  let assistantText = '';
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      const payload = trimmed.slice(5).trim();
-      if (!payload || payload === '[DONE]') continue;
-      try {
-        const json = JSON.parse(payload);
-        const delta = json?.choices?.[0]?.delta?.content;
-        if (typeof delta === 'string' && delta.length > 0) {
-          assistantText += delta;
-          send('delta', { content: delta });
-        }
-      } catch {
-        // ignore parse errors on keep-alive lines
-      }
-    }
-  }
-  return assistantText;
-}
-
-// Helper to stream from Ollama API
-async function streamFromOllama(messages: any[], send: (event: string, data: unknown) => void) {
-  const upstream = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: OLLAMA_DEFAULT_MODEL,
-      stream: true,
-      messages,
-    }),
-  });
-
-  if (!upstream.ok || !upstream.body) {
-    const text = await upstream.text().catch(() => '');
-    send('error', { code: 'upstream_error', message: text.slice(0, 200) || 'Erreur Ollama.' });
-    return '';
-  }
-
-  let assistantText = '';
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const json = JSON.parse(trimmed);
-        const delta = json?.message?.content;
-        if (typeof delta === 'string' && delta.length > 0) {
-          assistantText += delta;
-          send('delta', { content: delta });
-        }
-        if (json?.done) break;
-      } catch {
-        // ignore parse errors
-      }
-    }
-  }
-  return assistantText;
-}
-
-// Stream a chat completion
+// Stream a chat completion with RAG
 const messageSchema = z.object({ content: z.string().min(1).max(MAX_MESSAGE_LENGTH) }).strict();
 chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messageSchema), async (req, res) => {
   const userId = req.user!.id;
   const threadId = req.params.id;
+  const userContent = req.body.content as string;
 
   const thread = await prisma.chatThread.findFirst({ where: { id: threadId, userId } });
   if (!thread) return res.status(404).json({ error: 'not_found' });
-
-  // Budget IA quotidien
-  const budget = checkDailyBudget(userId);
-  if (!budget.ok) {
-    return res.status(429).json({
-      error: 'daily_budget_exceeded',
-      message: `Vous avez atteint votre limite quotidienne de ${CHAT_DAILY_BUDGET} messages IA. Réessayez demain.`,
-    });
-  }
-
-  const userContent = req.body.content as string;
 
   // Check for malicious/inappropriate content
   const moderation = isContentMalicious(userContent);
@@ -342,10 +266,11 @@ chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messag
     take: MAX_HISTORY,
   });
 
-  const messages = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    ...history.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
-  ];
+  const conversationHistory: RagChatMessage[] = history.map(m => ({
+    role: m.role as 'user' | 'assistant' | 'system',
+    content: m.content,
+    timestamp: m.createdAt,
+  }));
 
   // SSE setup
   res.setHeader('Content-Type', 'text/event-stream');
@@ -360,28 +285,314 @@ chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messag
   };
 
   try {
-    let assistantText = '';
-
-    if (AI_PROVIDER === 'ollama') {
-      assistantText = await streamFromOllama(messages, send);
-    } else {
-      assistantText = await streamFromLovable(messages, send);
-    }
+    const rag = getRagSystem();
+    const response = await rag.orchestrator.queryStream(
+      {
+        query: userContent,
+        conversationHistory,
+      },
+      (chunk: string) => {
+        send('delta', { content: chunk });
+      },
+      async ({ usesProSources }) => {
+        const budgetCheck = await checkAndUpdateBudget(userId, usesProSources);
+        if (!budgetCheck.ok) {
+          const { limit } = await subscriptionService.getUserProLimit(userId);
+          throw new ProQuotaExceededError(limit);
+        }
+      }
+    );
 
     // Persist assistant message
-    if (assistantText.trim().length > 0) {
+    if (response.answer.trim().length > 0) {
       const saved = await prisma.chatMessage.create({
-        data: { threadId, role: 'assistant', content: assistantText },
+        data: { threadId, role: 'assistant', content: response.answer },
       });
       await prisma.chatThread.update({ where: { id: threadId }, data: { updatedAt: new Date() } });
-      send('done', { id: saved.id });
+      
+      // Send done event with sources metadata
+      send('done', { 
+        id: saved.id,
+        usesProSources: response.usesProSources,
+        sources: response.sources.map(s => ({
+          title: s.source.title,
+          score: s.score,
+          sourceType: s.source.sourceType,
+        })),
+      });
     } else {
       send('error', { code: 'empty_response', message: 'Aucune réponse générée.' });
     }
   } catch (e: any) {
-    console.error('[chat] stream error', e);
+    if (e instanceof ProQuotaExceededError) {
+      send('error', {
+        code: 'daily_pro_budget_exceeded',
+        message: buildProUpgradeMessage(e.limit),
+      });
+      return;
+    }
+    console.error('[chat] RAG stream error', e);
     send('error', { code: 'stream_failed', message: e?.message || 'Erreur réseau.' });
   } finally {
     res.end();
+  }
+});
+
+// ================================
+// RAG Admin routes for knowledge base management
+// ================================
+
+// Sync all knowledge base
+chatRouter.get('/admin/knowledge/sync', authRequired, adminOnly, async (req, res) => {
+  try {
+    const rag = getRagSystem();
+    const { KilimoKnowledgeAdapter } = await import('../rag/adapters/KilimoKnowledgeAdapter');
+    const adapter = new KilimoKnowledgeAdapter(prisma, rag.indexer);
+    
+    await adapter.indexAllContent();
+    res.json({ success: true, message: 'Knowledge base synchronization started' });
+  } catch (error) {
+    console.error('[rag] Knowledge sync error:', error);
+    res.status(500).json({ error: 'Failed to sync knowledge base' });
+  }
+});
+
+// ================================
+// Document CRUD routes
+// ================================
+
+// Get all documents
+chatRouter.get('/admin/documents', authRequired, adminOnly, async (req, res) => {
+  try {
+    const documents = await prisma.document.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ data: documents });
+  } catch (error) {
+    console.error('[documents] Get all error:', error);
+    res.status(500).json({ error: 'Failed to get documents' });
+  }
+});
+
+// Get single document
+chatRouter.get('/admin/documents/:id', authRequired, adminOnly, async (req, res) => {
+  try {
+    const document = await prisma.document.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    res.json({ data: document });
+  } catch (error) {
+    console.error('[documents] Get one error:', error);
+    res.status(500).json({ error: 'Failed to get document' });
+  }
+});
+
+// Create document
+const createDocumentSchema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+  description: z.string().optional(),
+  sourceType: z.string().optional().default('manual'),
+  metadata: z.record(z.any()).optional().default({}),
+  isActive: z.boolean().optional().default(true),
+}).strict();
+
+chatRouter.post('/admin/documents', authRequired, adminOnly, validate(createDocumentSchema), async (req, res) => {
+  try {
+    const document = await prisma.document.create({
+      data: req.body,
+    });
+    res.status(201).json({ data: document });
+  } catch (error) {
+    console.error('[documents] Create error:', error);
+    res.status(500).json({ error: 'Failed to create document' });
+  }
+});
+
+// Update document
+const updateDocumentSchema = z.object({
+  title: z.string().min(1).optional(),
+  content: z.string().min(1).optional(),
+  description: z.string().optional(),
+  sourceType: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+  isActive: z.boolean().optional(),
+}).strict();
+
+chatRouter.put('/admin/documents/:id', authRequired, adminOnly, validate(updateDocumentSchema), async (req, res) => {
+  try {
+    const document = await prisma.document.update({
+      where: { id: req.params.id },
+      data: {
+        ...req.body,
+        isIndexed: false,
+      },
+    });
+    res.json({ data: document });
+  } catch (error) {
+    console.error('[documents] Update error:', error);
+    res.status(500).json({ error: 'Failed to update document' });
+  }
+});
+
+// Delete document
+chatRouter.delete('/admin/documents/:id', authRequired, adminOnly, async (req, res) => {
+  try {
+    // First delete from knowledge base
+    const rag = getRagSystem();
+    try {
+      await rag.indexer.deleteSource(`document-${req.params.id}`);
+    } catch (e) {
+      // Ignore if not in index yet
+    }
+    
+    // Then delete from DB
+    await prisma.document.delete({
+      where: { id: req.params.id },
+    });
+    
+    res.json({ success: true, message: 'Document deleted' });
+  } catch (error) {
+    console.error('[documents] Delete error:', error);
+    res.status(500).json({ error: 'Failed to delete document' });
+  }
+});
+
+// Index a single document
+chatRouter.post('/admin/documents/:id/index', authRequired, adminOnly, async (req, res) => {
+  try {
+    const document = await prisma.document.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    const rag = getRagSystem();
+    const { KilimoKnowledgeAdapter } = await import('../rag/adapters/KilimoKnowledgeAdapter');
+    const adapter = new KilimoKnowledgeAdapter(prisma, rag.indexer);
+    
+    // Delete existing index if any
+    try {
+      await rag.indexer.deleteSource(`document-${req.params.id}`);
+    } catch (e) {
+      // Ignore
+    }
+    
+    // Index the document
+    await adapter.indexDocuments();
+    
+    res.json({ success: true, message: 'Document indexed successfully' });
+  } catch (error) {
+    console.error('[documents] Index error:', error);
+    res.status(500).json({ error: 'Failed to index document' });
+  }
+});
+
+// ================================
+// Consumption Admin routes
+// ================================
+
+// Get chat consumption stats
+chatRouter.get('/admin/consumption', authRequired, adminOnly, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const where: any = {};
+
+    if (startDate) {
+      where.date = { ...where.date, gte: new Date(startDate as string) };
+    }
+    if (endDate) {
+      where.date = { ...where.date, lte: new Date(endDate as string) };
+    }
+
+    const { page, pageSize, skip, take } = parsePaginationAndSort(req, { defaultPageSize: 50, maxPageSize: 200 });
+
+    // Le résumé est calculé par agrégation SQL sur l'ensemble filtré, pas sur
+    // la seule page chargée : avant ce correctif, "totalFreeUsage"/
+    // "totalProUsage" ne portaient que sur les 100 premières lignes (`take:
+    // 100` fixe), donnant un total silencieusement faux dès que le filtre
+    // couvrait plus de lignes que la page.
+    const [budgets, total, aggregate] = await Promise.all([
+      prisma.chatDailyBudget.findMany({
+        where,
+        include: { user: { select: { id: true, email: true, fullName: true } } },
+        orderBy: { date: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.chatDailyBudget.count({ where }),
+      prisma.chatDailyBudget.aggregate({ where, _sum: { freeUsage: true, proUsage: true } }),
+    ]);
+
+    const totalFreeUsage = aggregate._sum.freeUsage || 0;
+    const totalProUsage = aggregate._sum.proUsage || 0;
+
+    res.json({
+      data: budgets,
+      page,
+      pageSize,
+      total,
+      summary: {
+        totalFreeUsage,
+        totalProUsage,
+        totalUsage: totalFreeUsage + totalProUsage,
+      },
+    });
+  } catch (error) {
+    console.error('[consumption] Get error:', error);
+    res.status(500).json({ error: 'Failed to get consumption stats' });
+  }
+});
+
+// Get user consumption summary
+chatRouter.get('/admin/consumption/users', authRequired, adminOnly, async (req, res) => {
+  try {
+    const { page, pageSize, skip, take } = parsePaginationAndSort(req, { defaultPageSize: 50, maxPageSize: 200 });
+
+    // Agrégation + tri + pagination effectués en base : évite de charger tous
+    // les utilisateurs et tout leur historique de budget en mémoire Node pour
+    // ne garder ensuite que quelques dizaines de lignes triées.
+    const [rows, totalRow] = await Promise.all([
+      prisma.$queryRaw<Array<{
+        id: string;
+        email: string;
+        fullName: string | null;
+        totalFreeUsage: number;
+        totalProUsage: number;
+        lastActivity: Date | null;
+      }>>`
+        SELECT u.id, u.email, u."fullName",
+               COALESCE(SUM(b."freeUsage"), 0)::int AS "totalFreeUsage",
+               COALESCE(SUM(b."proUsage"), 0)::int AS "totalProUsage",
+               MAX(b.date) AS "lastActivity"
+        FROM "User" u
+        INNER JOIN "ChatDailyBudget" b ON b."userId" = u.id
+        GROUP BY u.id, u.email, u."fullName"
+        ORDER BY (COALESCE(SUM(b."freeUsage"), 0) + COALESCE(SUM(b."proUsage"), 0)) DESC
+        LIMIT ${take} OFFSET ${skip}
+      `,
+      prisma.$queryRaw<Array<{ count: number }>>`
+        SELECT COUNT(DISTINCT b."userId")::int AS count FROM "ChatDailyBudget" b
+      `,
+    ]);
+
+    const userConsumption = rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      fullName: row.fullName,
+      totalFreeUsage: row.totalFreeUsage,
+      totalProUsage: row.totalProUsage,
+      totalUsage: row.totalFreeUsage + row.totalProUsage,
+      lastActivity: row.lastActivity,
+    }));
+
+    res.json({ data: userConsumption, page, pageSize, total: totalRow[0]?.count ?? 0 });
+  } catch (error) {
+    console.error('[consumption] Users error:', error);
+    res.status(500).json({ error: 'Failed to get user consumption' });
   }
 });

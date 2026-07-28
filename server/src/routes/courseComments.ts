@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authRequired } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const courseCommentsRouter = Router();
 
 // Get comments for a course (public)

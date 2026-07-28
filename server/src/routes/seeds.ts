@@ -1,22 +1,28 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess, optionalAuth } from '../middleware/authRequired';
+import { RagSystem } from '../rag';
+import { prisma } from '../db';
 export const seedsRouter = Router();
 
-seedsRouter.get('/', async (req: Request, res: Response) => {
-  const items = await prisma.seed.findMany({ 
+// Route unique consommée à la fois par le catalogue public et par le
+// back-office (qui a besoin de voir les brouillons pour les gérer) :
+// `optionalAuth` détermine si l'appelant est admin/superviseur sans jamais
+// rejeter un visiteur anonyme, seul le filtre `isPublished` en dépend.
+seedsRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
+  const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'supervisor';
+  const items = await prisma.seed.findMany({
+    where: isPrivileged ? undefined : { isPublished: true },
     include: { reviews: true },
-    orderBy: { createdAt: 'desc' } 
+    orderBy: { createdAt: 'desc' }
   } as any);
   res.json({ data: items });
 });
 
-seedsRouter.get('/slug/:slug', async (req: Request, res: Response) => {
+seedsRouter.get('/slug/:slug', optionalAuth, async (req: Request, res: Response) => {
   try {
+    const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'supervisor';
     const { slug } = req.params;
-    const item = await prisma.seed.findUnique({ 
+    const item = await prisma.seed.findUnique({
       where: { slug },
       include: {
         reviews: {
@@ -28,7 +34,7 @@ seedsRouter.get('/slug/:slug', async (req: Request, res: Response) => {
         }
       }
     } as any);
-    if (!item) {
+    if (!item || (!isPrivileged && !(item as any).isPublished)) {
       return res.status(404).json({ error: 'Not found' });
     }
     res.json({ data: item });
@@ -38,14 +44,15 @@ seedsRouter.get('/slug/:slug', async (req: Request, res: Response) => {
   }
 });
 
-seedsRouter.get('/:id', async (req: Request, res: Response) => {
+seedsRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   try {
+    const isPrivileged = req.user?.role === 'admin' || req.user?.role === 'supervisor';
     const id = Number(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ error: 'Invalid id' });
     }
     const item = await prisma.seed.findUnique({ where: { id } });
-    if (!item) {
+    if (!item || (!isPrivileged && !item.isPublished)) {
       return res.status(404).json({ error: 'Not found' });
     }
     res.json({ data: item });
@@ -55,7 +62,7 @@ seedsRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+seedsRouter.post('/', authRequired, moduleAccess('seeds'), async (req: Request, res: Response) => {
   const { 
     name, slug, description, price, stock, category, variety, unit, 
     imageUrl, gallery, availability, harvestTime, yield: yield_info, features, 
@@ -87,7 +94,7 @@ seedsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Respons
   }
 });
 
-seedsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+seedsRouter.put('/:id', authRequired, moduleAccess('seeds'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { 
     name, slug, description, price, stock, category, variety, unit, 
@@ -162,9 +169,14 @@ seedsRouter.post('/:id/reviews', authRequired, async (req: Request, res: Respons
   }
 });
 
-seedsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+seedsRouter.delete('/:id', authRequired, moduleAccess('seeds'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.seed.delete({ where: { id } });
+  // Best-effort : purge la source RAG associée pour que l'assistant ne cite
+  // plus jamais une semence supprimée définitivement. La sync périodique
+  // n'ajoute/actualise que le contenu publié, elle ne nettoie jamais ce qui
+  // a disparu — sans cet appel, la source resterait indexée indéfiniment.
+  RagSystem.getInstance(prisma).indexer.deleteSource(`seed-${id}`).catch(() => void 0);
   res.json({ success: true });
 });
 

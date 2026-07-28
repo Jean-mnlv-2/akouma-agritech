@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+// SÉCURITÉ: contrairement à profiles.ts (superviseurs autorisés sur le module
+// "users"), l'attribution de rôles reste strictement admin-only : l'ouvrir
+// aux superviseurs permettrait à l'un d'eux de se (ou de) promouvoir admin.
+import { prisma } from '../db';
 const ALLOWED_ROLES = ['admin', 'supervisor', 'customer'] as const;
 export const userRolesRouter = Router();
 

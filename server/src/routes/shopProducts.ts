@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
+import { prisma } from '../db';
 export const shopProductsRouter = Router();
 
 shopProductsRouter.get('/', async (req: Request, res: Response) => {
@@ -46,7 +45,7 @@ shopProductsRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+shopProductsRouter.post('/', authRequired, moduleAccess('products'), csrfRequired, async (req: Request, res: Response) => {
   const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected, features, specifications } = req.body || {};
   if (!name || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const created = await prisma.shopProduct.create({
@@ -65,7 +64,7 @@ shopProductsRouter.post('/', authRequired, adminOnly, async (req: Request, res: 
   res.status(201).json({ data: created });
 });
 
-shopProductsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+shopProductsRouter.put('/:id', authRequired, moduleAccess('products'), csrfRequired, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { name, slug, description, price, stock, category, imageUrl, gallery, isActive, isPublished, isFeatured, isNew, isCopyProtected, features, specifications } = req.body || {};
   const updated = await prisma.shopProduct.update({
@@ -85,7 +84,7 @@ shopProductsRouter.put('/:id', authRequired, adminOnly, async (req: Request, res
   res.json({ data: updated });
 });
 
-shopProductsRouter.delete('/:id', authRequired, adminOnly, async (req: Request, res: Response) => {
+shopProductsRouter.delete('/:id', authRequired, moduleAccess('products'), csrfRequired, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.shopProduct.delete({ where: { id } });
   res.json({ success: true });

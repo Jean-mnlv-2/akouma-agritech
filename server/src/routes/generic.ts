@@ -1,10 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
 import { audit, actorFromRequest } from '../utils/audit';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const genericRouter = Router();
 
 // Liste blanche des tables gérées par CRUD générique
@@ -218,13 +216,24 @@ async function handleGenericGet(req: Request, res: Response, table: string) {
     orderClause = `ORDER BY 1`;
   }
 
-  const limitClause = limit ? `LIMIT ${limit}` : 'LIMIT 1000';
-  const offsetClause = offset ? `OFFSET ${offset}` : '';
+  const effectiveLimit = limit ?? 1000;
+  const effectiveOffset = offset ?? 0;
+  const limitClause = `LIMIT ${effectiveLimit}`;
+  const offsetClause = effectiveOffset ? `OFFSET ${effectiveOffset}` : '';
 
   const sql = `SELECT * FROM "${table}" ${whereClause} ${orderClause} ${limitClause} ${offsetClause}`;
-  const rows = await prisma.$queryRawUnsafe(sql, ...values) as Array<Record<string, unknown>>;
+  const countSql = `SELECT COUNT(*)::int AS count FROM "${table}" ${whereClause}`;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRawUnsafe(sql, ...values) as Promise<Array<Record<string, unknown>>>,
+    prisma.$queryRawUnsafe(countSql, ...values) as Promise<Array<{ count: number }>>,
+  ]);
+
   const mappedRows = rows.map(row => unmapRow(table, row));
-  res.json({ data: mappedRows });
+  // Enveloppe standardisée : le total permet au front de calculer le nombre
+  // de pages sans devoir tout charger (limit/offset restent les mêmes noms
+  // de paramètres qu'avant, pour ne pas casser le client existant).
+  res.json({ data: mappedRows, total: countRows[0]?.count ?? 0, limit: effectiveLimit, offset: effectiveOffset });
 }
 
 // CREATE

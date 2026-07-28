@@ -1,14 +1,13 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { env } from '../utils/env';
-import { authRequired, adminOnly } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { csrfRequired } from '../middleware/csrf';
 import { validate } from '../middleware/validate';
 import { antiReplay, timingSafeEqualStr } from '../middleware/webhookReplay';
 import { audit, actorFromRequest } from '../utils/audit';
 import * as deliveryService from '../services/deliveryService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const deliveriesRouter = Router();
 
 const webhookSchema = z.object({
@@ -34,7 +33,7 @@ deliveriesRouter.use((req, res, next) => {
 });
 
 // GET /api/deliveries - List all deliveries
-deliveriesRouter.get('/', authRequired, adminOnly, async (req: Request, res: Response) => {
+deliveriesRouter.get('/', authRequired, moduleAccess('deliveries'), async (req: Request, res: Response) => {
   try {
     const { page, limit, status, isDelegated } = req.query;
     const deliveries = await deliveryService.getDeliveries({
@@ -51,7 +50,7 @@ deliveriesRouter.get('/', authRequired, adminOnly, async (req: Request, res: Res
 });
 
 // GET /api/deliveries/livreurs - List available livreurs
-deliveriesRouter.get('/livreurs', authRequired, adminOnly, async (req: Request, res: Response) => {
+deliveriesRouter.get('/livreurs', authRequired, moduleAccess('deliveries'), async (req: Request, res: Response) => {
   try {
     const { page, limit, availability, search } = req.query;
     const livreurs = await deliveryService.getLivreurs({
@@ -68,7 +67,7 @@ deliveriesRouter.get('/livreurs', authRequired, adminOnly, async (req: Request, 
 });
 
 // POST /api/deliveries/assign - Assign a livreur to a delivery
-deliveriesRouter.post('/assign', authRequired, adminOnly, async (req: Request, res: Response) => {
+deliveriesRouter.post('/assign', authRequired, moduleAccess('deliveries'), csrfRequired, async (req: Request, res: Response) => {
   try {
     const { livraisonId, livreurId } = req.body;
 

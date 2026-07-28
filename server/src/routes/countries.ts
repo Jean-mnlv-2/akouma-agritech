@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authRequired, adminOnly } from '../middleware/authRequired';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 export const countriesRouter = Router();
 
 countriesRouter.get('/', async (req: Request, res: Response) => {
