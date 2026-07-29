@@ -4,7 +4,7 @@ import { newsScraper } from '../services/newsScraperService';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
 import { logger } from '../utils/logger';
-import { NEWS_SOURCE_CATEGORIES, NEWS_SOURCE_LANGUAGES, NEWS_SOURCE_TYPES } from '../config/newsSources';
+import { NEWS_SOURCE_CATEGORIES, NEWS_SOURCE_LANGUAGES, NEWS_SOURCE_TYPES, SOURCE_CONTENT_TYPES, SCHEDULE_TIME_PATTERN } from '../config/newsSources';
 import { handlePrismaWriteError } from '../utils/prismaErrors';
 import { prisma } from '../db';
 export const newsScraperRouter = Router();
@@ -82,9 +82,11 @@ newsScraperRouter.post('/scrape/:sourceId', csrfRequired, async (req: Request, r
       : await newsScraper.scrapeWeb(source);
 
     let savedCount = 0;
+    let skippedCount = 0;
     for (const article of articles) {
-      const saved = await newsScraper.saveArticle(article);
-      if (saved) savedCount++;
+      const result = await newsScraper.saveScrapedItem(article, source);
+      if (result.saved) savedCount++;
+      else if (result.skippedReason && result.skippedReason !== 'duplicate') skippedCount++;
     }
 
     res.json({
@@ -93,6 +95,7 @@ newsScraperRouter.post('/scrape/:sourceId', csrfRequired, async (req: Request, r
       result: {
         total: articles.length,
         saved: savedCount,
+        skipped: skippedCount,
         source: source.name,
       },
     });
@@ -114,9 +117,14 @@ const sourceSchema = z.object({
   name: z.string().trim().min(2).max(200),
   url: z.string().trim().url().max(500),
   type: z.enum(NEWS_SOURCE_TYPES),
+  contentType: z.enum(SOURCE_CONTENT_TYPES).optional(),
   language: z.enum(NEWS_SOURCE_LANGUAGES),
   category: z.enum(NEWS_SOURCE_CATEGORIES),
   enabled: z.boolean().optional(),
+  // Horaires "HH:MM" auxquels le scheduler déclenche automatiquement cette
+  // source — validés strictement pour ne jamais laisser une valeur
+  // inexploitable atteindre node-cron (voir sourceScheduler.ts).
+  scheduleTimes: z.array(z.string().regex(SCHEDULE_TIME_PATTERN, 'Format attendu : HH:MM')).max(24).optional(),
 });
 
 newsScraperRouter.get('/sources', async (_req: Request, res: Response) => {
@@ -135,11 +143,15 @@ newsScraperRouter.get('/sources', async (_req: Request, res: Response) => {
 // que l'URL répond et que le flux/la page est effectivement analysable.
 newsScraperRouter.post('/sources/test', csrfRequired, async (req: Request, res: Response) => {
   try {
-    const testSchema = z.object({ url: z.string().trim().url(), type: z.enum(NEWS_SOURCE_TYPES) });
+    const testSchema = z.object({
+      url: z.string().trim().url(),
+      type: z.enum(NEWS_SOURCE_TYPES),
+      contentType: z.enum(SOURCE_CONTENT_TYPES).optional(),
+    });
     const parsed = testSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'url et type (rss|web) requis' });
 
-    const result = await newsScraper.testSource(parsed.data.url, parsed.data.type);
+    const result = await newsScraper.testSource(parsed.data.url, parsed.data.type, parsed.data.contentType || 'news');
     res.json({ data: result });
   } catch (error) {
     logger.error('[NewsScraper] Error testing source:', error);

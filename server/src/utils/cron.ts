@@ -3,6 +3,7 @@ import { emailService } from './email';
 import { RagSystem } from '../rag';
 import { SubscriptionService } from '../services/subscriptionService';
 import { OrdersService } from '../services/ordersService';
+import { initSourceScheduler } from './sourceScheduler';
 import { prisma } from '../db';
 const subscriptionService = new SubscriptionService();
 const ordersService = new OrdersService(prisma);
@@ -122,10 +123,16 @@ export const initCronJobs = () => {
     }
   });
 
+  // Sources avec horaires admin-configurés (NewsSource.scheduleTimes) —
+  // déclenchement fiable indépendant de la disponibilité de DeerFlow. Les
+  // sources sans horaire configuré restent manuelles/pilotées par DeerFlow,
+  // comme avant.
+  initSourceScheduler();
+
   // Vérification d'Ollama au démarrage
   checkOllama();
 
-  console.log('[CRON] Tâches planifiées initialisées (scraping actualités géré par DeerFlow)');
+  console.log('[CRON] Tâches planifiées initialisées');
 };
 
 /**

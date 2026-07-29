@@ -35,6 +35,7 @@ export interface SourceScrapeResult {
   status: 'ok' | 'not_modified' | 'error';
   found: number;
   saved: number;
+  skipped?: number;
   error?: string;
   durationMs: number;
 }
@@ -214,6 +215,17 @@ export class NewsScraperService {
       const $ = cheerio.load(response.data);
       const articles = this.parseWebPage($, source);
 
+      // Une source "événement" peut être soit une page calendrier qui liste
+      // plusieurs événements (les liens extraits par parseWebPage couvrent
+      // ce cas), soit le site dédié d'un seul événement (le JSON-LD décrit
+      // alors la page elle-même, pas une page liée) — ex: le site officiel
+      // d'un salon professionnel. On vérifie donc aussi la page chargée
+      // elle-même, sans refetch supplémentaire puisque $ est déjà en main.
+      if (source.contentType === 'event') {
+        const selfCandidate = this.selfPageAsEventCandidate($, source);
+        if (selfCandidate) articles.unshift(selfCandidate);
+      }
+
       this.setCache(source.id, articles);
       await this.recordHealth(source.id, 'ok', articles.length);
       logger.info(`[NewsScraper] Successfully scraped ${articles.length} articles from ${source.name}`);
@@ -233,7 +245,7 @@ export class NewsScraperService {
    * utilisé par l'UI admin pour "Tester la source" avant d'autoriser
    * l'enregistrement (garde-fou contre une URL cassée/mal configurée).
    */
-  async testSource(url: string, type: 'rss' | 'web'): Promise<SourceTestResult> {
+  async testSource(url: string, type: 'rss' | 'web', contentType: 'news' | 'event' = 'news'): Promise<SourceTestResult> {
     const pseudoSource = { id: 0, name: 'test', url, type, language: 'fr', category: 'Test', enabled: true } as unknown as NewsSource;
     try {
       let articles: ScrapedArticle[];
@@ -253,12 +265,49 @@ export class NewsScraperService {
         });
         const $ = cheerio.load(response.data);
         articles = this.parseWebPage($, pseudoSource);
+        if (contentType === 'event') {
+          const selfCandidate = this.selfPageAsEventCandidate($, pseudoSource);
+          if (selfCandidate) articles.unshift(selfCandidate);
+        }
       }
+
+      if (articles.length === 0) {
+        return { ok: false, articlesFound: 0, sample: [], error: "Aucun article détecté (flux vide ou structure de page non reconnue)" };
+      }
+
+      // Pour une source "événement", trouver des candidats ne suffit pas :
+      // seuls ceux dont la page expose des données structurées Schema.org
+      // deviendront un jour un vrai événement (voir saveEventFromArticle).
+      // Le test doit donc vérifier ça, pas juste "des liens ont été trouvés".
+      if (contentType === 'event') {
+        const sampleToCheck = articles.slice(0, 3);
+        let structuredCount = 0;
+        for (const article of sampleToCheck) {
+          try {
+            const pageResponse = await this.fetchWithRetry(article.sourceUrl, {
+              'User-Agent': USER_AGENT,
+              Accept: 'text/html,application/xhtml+xml',
+            });
+            const page$ = cheerio.load(pageResponse.data);
+            if (this.extractJsonLdEvent(page$)) structuredCount++;
+          } catch {
+            // ignorer — comptera comme non structuré
+          }
+        }
+        return {
+          ok: structuredCount > 0,
+          articlesFound: articles.length,
+          sample: sampleToCheck.map((a) => ({ title: a.title, sourceUrl: a.sourceUrl })),
+          error: structuredCount === 0
+            ? `${articles.length} lien(s) détecté(s), mais aucun ne contient de données d'événement structurées (Schema.org). Cette source ne produira jamais d'événement automatiquement — DeerFlow (navigation + raisonnement) reste nécessaire pour ce site.`
+            : undefined,
+        };
+      }
+
       return {
-        ok: articles.length > 0,
+        ok: true,
         articlesFound: articles.length,
         sample: articles.slice(0, 3).map((a) => ({ title: a.title, sourceUrl: a.sourceUrl })),
-        error: articles.length === 0 ? "Aucun article détecté (flux vide ou structure de page non reconnue)" : undefined,
       };
     } catch (error: any) {
       const message = error?.response?.status ? `HTTP ${error.response.status}` : (error?.message || 'unknown_error');
@@ -585,6 +634,206 @@ export class NewsScraperService {
     }
   }
 
+  /**
+   * Point d'entrée unique pour la sauvegarde d'un candidat scrapé, quel que
+   * soit le type de contenu de la source — c'est ce que `scrapeAllSources()`
+   * et les routes "scraper une seule source" appellent, pour ne jamais
+   * avoir à dupliquer la logique de branchement news/event à chaque site
+   * d'appel.
+   */
+  async saveScrapedItem(article: ScrapedArticle, source: NewsSource): Promise<{ saved: boolean; skippedReason?: string }> {
+    if (source.contentType === 'event') {
+      return this.saveEventFromArticle(article);
+    }
+    const saved = await this.saveArticle(article);
+    return { saved: !!saved };
+  }
+
+  /**
+   * Contrairement aux actualités, un événement a des champs obligatoires
+   * (date, lieu) qu'un flux RSS/une page listing générique ne fournit
+   * presque jamais correctement — les deviner produirait de fausses
+   * informations affichées publiquement. On ne crée un événement QUE si la
+   * page source expose des données structurées Schema.org
+   * (`<script type="application/ld+json">`, `@type: "Event"`), le standard
+   * qu'utilisent réellement les sites d'événements/billetterie modernes.
+   * Sans ça, le candidat est silencieusement écarté (santé de la source
+   * reflète quand même le nombre trouvé vs. réellement créé) — c'est
+   * DeerFlow (raisonnement + navigation) qui reste responsable des sources
+   * sans données structurées, pas ce moteur déterministe.
+   */
+  private async saveEventFromArticle(article: ScrapedArticle): Promise<{ saved: boolean; skippedReason?: string }> {
+    const slug = slugify(article.title);
+    const existing = await prisma.event.findFirst({
+      where: { OR: [{ slug: { startsWith: slug } }, { title: article.title }] },
+    });
+    if (existing) {
+      logger.debug(`[NewsScraper] Event candidate already exists: ${article.title}`);
+      return { saved: false, skippedReason: 'duplicate' };
+    }
+
+    try {
+      const response = await this.fetchWithRetry(article.sourceUrl, {
+        'User-Agent': USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml',
+      });
+      const $ = cheerio.load(response.data);
+      const eventData = this.extractJsonLdEvent($);
+
+      if (!eventData) {
+        logger.info(`[NewsScraper] Skipped event candidate (no structured Schema.org date/location found): ${article.title}`);
+        return { saved: false, skippedReason: 'no_structured_data' };
+      }
+
+      // Deuxième vérification de doublon, APRÈS extraction : plusieurs
+      // candidats (des pages différentes du même site) peuvent partager le
+      // même JSON-LD (ex: bandeau/pied de page commun à tout le site) et
+      // n'auraient pas été détectés par le premier contrôle, qui ne
+      // connaissait que le titre brut du lien scrapé — pas le vrai titre/
+      // date/lieu de l'événement. La date+lieu exacts sont le signal fiable
+      // qu'il s'agit du même événement réel, même si le titre diffère
+      // légèrement.
+      const realTitle = this.decodeEntities(eventData.title || article.title);
+      const realSlug = slugify(realTitle);
+      const duplicateAfterExtraction = await prisma.event.findFirst({
+        where: {
+          OR: [
+            { slug: { startsWith: realSlug } },
+            { AND: [{ date: eventData.date }, { location: eventData.location }] },
+          ],
+        },
+      });
+      if (duplicateAfterExtraction) {
+        logger.debug(`[NewsScraper] Event candidate resolved to an already-known event, skipping: ${realTitle}`);
+        return { saved: false, skippedReason: 'duplicate' };
+      }
+
+      let finalSlug = realSlug;
+      const baseSlug = finalSlug;
+      let counter = 1;
+      while (await prisma.event.findUnique({ where: { slug: finalSlug } })) {
+        counter++;
+        finalSlug = `${baseSlug}-${counter}`;
+      }
+
+      const og = $('meta[property="og:image"]').attr('content');
+      const imageUrl = eventData.imageUrl
+        ? this.resolveUrl(eventData.imageUrl, article.sourceUrl)
+        : (og ? this.resolveUrl(og, article.sourceUrl) : article.imageUrl);
+
+      await prisma.event.create({
+        data: {
+          title: this.decodeEntities(eventData.title || article.title),
+          description: eventData.description
+            ? this.decodeEntities(eventData.description)
+            : (article.excerpt || article.content || null),
+          date: eventData.date,
+          location: eventData.location,
+          imageUrl,
+          slug: finalSlug,
+          isPublished: false,
+        } as any,
+      });
+      logger.info(`[NewsScraper] Saved new event: ${article.title} (${eventData.date.toISOString()} — ${eventData.location})`);
+      return { saved: true };
+    } catch (error) {
+      logger.warn(`[NewsScraper] Event enrichment failed for ${article.sourceUrl}, skipping:`, error);
+      return { saved: false, skippedReason: 'fetch_failed' };
+    }
+  }
+
+  /**
+   * Cherche un bloc JSON-LD Schema.org `@type: "Event"` (ou `@graph` en
+   * contenant un) dans la page. Exige `startDate` (date parsable) ET
+   * `location` (nom ou adresse) — un événement sans l'un des deux n'est pas
+   * assez fiable pour être publié tel quel.
+   */
+  private extractJsonLdEvent($: cheerio.CheerioAPI): { date: Date; location: string; title?: string; description?: string; imageUrl?: string } | null {
+    const scripts = $('script[type="application/ld+json"]');
+    for (let i = 0; i < scripts.length; i++) {
+      const raw = $(scripts[i]).contents().text();
+      if (!raw) continue;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        continue;
+      }
+
+      const candidates: any[] = [];
+      const collect = (node: any) => {
+        if (!node) return;
+        if (Array.isArray(node)) { node.forEach(collect); return; }
+        if (node['@graph']) { collect(node['@graph']); return; }
+        candidates.push(node);
+      };
+      collect(parsed);
+
+      for (const node of candidates) {
+        const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+        if (!types.some((t: unknown) => typeof t === 'string' && t.toLowerCase() === 'event')) continue;
+
+        const startDate = node.startDate ? new Date(node.startDate) : null;
+        if (!startDate || isNaN(startDate.getTime())) continue;
+
+        let location = '';
+        const loc = node.location;
+        if (typeof loc === 'string') {
+          location = loc;
+        } else if (loc?.name) {
+          location = loc.name;
+        } else if (loc?.address) {
+          const addr = loc.address;
+          location = typeof addr === 'string'
+            ? addr
+            : [addr.streetAddress, addr.addressLocality, addr.addressCountry].filter(Boolean).join(', ');
+        }
+        if (!location) continue;
+
+        const imageRaw = Array.isArray(node.image) ? node.image[0] : node.image;
+        const imageUrl = typeof imageRaw === 'string' ? imageRaw : imageRaw?.url;
+
+        return {
+          date: startDate,
+          location,
+          title: typeof node.name === 'string' ? node.name : undefined,
+          description: typeof node.description === 'string' ? node.description : undefined,
+          imageUrl,
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Représente la page elle-même comme candidat "article" si elle porte du
+   * JSON-LD Event — cas du site dédié d'un seul événement (ex: le site
+   * officiel d'un salon), où il n'y a aucun lien à extraire, juste la page
+   * chargée qui EST l'événement. `saveEventFromArticle` re-fetchera
+   * `sourceUrl` pour l'extraction finale (source de vérité unique), ce
+   * candidat sert seulement à ce que la page soit prise en compte comme un
+   * élément détecté par `parseWebPage`/`testSource`.
+   */
+  private selfPageAsEventCandidate($: cheerio.CheerioAPI, source: NewsSource): ScrapedArticle | null {
+    const eventData = this.extractJsonLdEvent($);
+    if (!eventData) return null;
+    const title = eventData.title || $('title').first().text().trim() || source.name;
+    return {
+      title,
+      content: eventData.description || '',
+      excerpt: eventData.description ? this.createExcerpt(eventData.description, 200) : null,
+      imageUrl: eventData.imageUrl ? this.resolveUrl(eventData.imageUrl, source.url) : null,
+      author: source.name,
+      category: source.category,
+      sourceName: source.name,
+      sourceUrl: source.url,
+      language: source.language,
+      publishedAt: null,
+      originalId: source.url,
+    };
+  }
+
   private extractKeywords(article: ScrapedArticle): string[] {
     const text = `${article.title} ${article.content} ${article.category}`.toLowerCase();
     const words = text.match(/[a-zàâäéèêëîïôöùûüÿçœæ]+/g) || [];
@@ -633,9 +882,11 @@ export class NewsScraperService {
             : await this.scrapeWeb(source);
 
           let saved = 0;
+          let skipped = 0;
           for (const article of articles.slice(0, 10)) { // Limit to 10 per source to prevent overload
-            const wasSaved = await this.saveArticle(article);
-            if (wasSaved) saved++;
+            const result = await this.saveScrapedItem(article, source);
+            if (result.saved) saved++;
+            else if (result.skippedReason && result.skippedReason !== 'duplicate') skipped++;
           }
 
           const refreshed = await prisma.newsSource.findUnique({ where: { id: source.id }, select: { lastStatus: true } });
@@ -646,6 +897,7 @@ export class NewsScraperService {
             status: (refreshed?.lastStatus as SourceScrapeResult['status']) || 'ok',
             found: articles.length,
             saved,
+            skipped,
             durationMs: Date.now() - start,
           });
         } catch (error) {

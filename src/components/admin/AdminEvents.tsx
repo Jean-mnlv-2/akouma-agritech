@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Calendar, MapPin, Eye, EyeOff } from 'lucide-react';
 import { EventDialog } from './EventDialog';
 import AdminDetailsDialog from './AdminDetailsDialog';
+import { AdminNewsSources } from './AdminNewsSources';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 
@@ -106,7 +108,13 @@ export const AdminEvents = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="events" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="events">Événements</TabsTrigger>
+        <TabsTrigger value="sources">Sources & Automatisation</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="events" className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Gestion des Événements</h2>
@@ -202,6 +210,11 @@ export const AdminEvents = () => {
         data={viewingEvent as any}
         type="event"
       />
-    </div>
+      </TabsContent>
+
+      <TabsContent value="sources">
+        <AdminNewsSources />
+      </TabsContent>
+    </Tabs>
   );
 };

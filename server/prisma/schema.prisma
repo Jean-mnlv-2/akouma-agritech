@@ -272,21 +272,35 @@ model PhytosanitaryProduct {
   updatedAt          DateTime @updatedAt
 }
 
-// Sources RSS/scraping gérées par l'admin (UI dans AdminNews > Sources &
-// Automatisation) au lieu d'un fichier de config codé en dur — permet
-// d'ajouter/désactiver une source sans déploiement, avec validation stricte
-// côté serveur (URL testée avant sauvegarde, catégorie/langue/type limités
-// à un enum fermé) pour éviter une prolifération de sources mal formées.
-// Santé (lastStatus/lastError/consecutiveFailures) persistée ici plutôt
-// qu'en mémoire : survit aux redémarrages du serveur.
+// Sources RSS/scraping gérées par l'admin (UI dans AdminNews/AdminEvents >
+// Sources & Automatisation) au lieu d'un fichier de config codé en dur —
+// permet d'ajouter/désactiver une source sans déploiement, avec validation
+// stricte côté serveur (URL testée avant sauvegarde, catégorie/langue/type
+// limités à un enum fermé) pour éviter une prolifération de sources mal
+// formées. Santé (lastStatus/lastError/consecutiveFailures) persistée ici
+// plutôt qu'en mémoire : survit aux redémarrages du serveur.
+//
+// `contentType` distingue actualités et événements : le moteur de scraping
+// (fetch RSS/web) est identique pour les deux, mais la sauvegarde diverge —
+// un événement exige une date/lieu réels, jamais devinés (voir
+// NewsScraperService.saveEvent : extraction JSON-LD schema.org uniquement,
+// aucun événement créé si aucune date structurée n'est trouvée).
+//
+// `scheduleTimes` : horaires "HH:MM" (heure serveur) auxquels cette source
+// doit être scrapée automatiquement, gérés par le scheduler KILIMO
+// (server/src/utils/sourceScheduler.ts) plutôt que de dépendre de DeerFlow
+// (processus externe, pas garanti actif à un instant précis). Liste vide =
+// aucune automatisation, déclenchement manuel/DeerFlow uniquement.
 model NewsSource {
   id                  Int       @id @default(autoincrement())
   name                String
   url                 String    @unique
   type                String // "rss" | "web"
+  contentType         String    @default("news") // "news" | "event"
   language            String // "fr" | "en"
   category            String
   enabled             Boolean   @default(true)
+  scheduleTimes       String[]  @default([])
   lastStatus          String? // "ok" | "not_modified" | "error"
   lastError           String?
   lastRunAt           DateTime?

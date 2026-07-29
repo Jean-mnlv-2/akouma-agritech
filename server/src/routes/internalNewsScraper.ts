@@ -56,13 +56,16 @@ internalNewsScraperRouter.post('/run/:sourceId', async (req: Request, res: Respo
       : await newsScraper.scrapeWeb(source);
 
     let saved = 0;
+    let skipped = 0;
     for (const article of articles) {
-      if (await newsScraper.saveArticle(article)) saved++;
+      const result = await newsScraper.saveScrapedItem(article, source);
+      if (result.saved) saved++;
+      else if (result.skippedReason && result.skippedReason !== 'duplicate') skipped++;
     }
 
     res.json({
       status: 'success',
-      result: { source: source.name, total: articles.length, saved },
+      result: { source: source.name, total: articles.length, saved, skipped },
     });
   } catch (error) {
     logger.error('[internal-news-scraper] Error during source scrape:', error);
