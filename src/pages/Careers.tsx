@@ -325,7 +325,7 @@ const Careers = () => {
                 <input
                   ref={cvInputRef}
                   type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  accept=".pdf,.docx"
                   onChange={handleCvUpload}
                   className="hidden"
                 />
@@ -341,10 +341,14 @@ const Careers = () => {
                   ) : cvFileName ? (
                     <><FileText className="w-4 h-4 mr-2" />{cvFileName}</>
                   ) : (
-                    <><Upload className="w-4 h-4 mr-2" />Joindre votre CV (PDF, DOC, Image)</>
+                    <><Upload className="w-4 h-4 mr-2" />Joindre votre CV (PDF, DOCX)</>
                   )}
                 </Button>
-                <p className="text-xs text-muted-foreground mt-1">Formats acceptés : PDF, DOC, DOCX, JPG, PNG — Max 10 Mo</p>
+                {/* Doit rester synchronisé avec les mimetypes acceptés par
+                    POST /api/upload/public (server/src/index.ts) — un écart
+                    ici fait échouer l'upload après coup avec une erreur peu
+                    claire pour le candidat. */}
+                <p className="text-xs text-muted-foreground mt-1">Formats acceptés : PDF, DOCX — Max 10 Mo</p>
               </div>
             </div>
             <div>

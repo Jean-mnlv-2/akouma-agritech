@@ -18,9 +18,11 @@ import {
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
 import PageHeaderCarousel from "@/components/PageHeaderCarousel";
+import { usePublicStats } from "@/hooks/use-public-stats";
 import { SEO } from "@/components/SEO";
 
 const About = () => {
+  const { data: publicStats } = usePublicStats();
   const sectors = [
     {
       icon: Sprout,
@@ -85,11 +87,14 @@ const About = () => {
     }
   ];
 
+  // Chiffres réels uniquement (GET /api/stats/public) — voir la note de
+  // l'audit UI/UX : les anciens chiffres ("500+ producteurs", "95%
+  // satisfaction"...) n'étaient adossés à aucune donnée réelle.
   const stats = [
-    { value: "500+", label: "Producteurs accompagnés" },
-    { value: "50+", label: "Coopératives partenaires" },
-    { value: "15", label: "Régions couvertes" },
-    { value: "95%", label: "Satisfaction client" }
+    { value: publicStats ? `${publicStats.totalCourses}+` : "—", label: "Cours disponibles" },
+    { value: publicStats ? `${publicStats.totalSeeds}+` : "—", label: "Semences certifiées" },
+    { value: publicStats ? `${publicStats.totalLearners}+` : "—", label: "Apprenants actifs" },
+    { value: publicStats ? `${publicStats.totalCertificates}` : "—", label: "Certificats délivrés" },
   ];
 
   return (
@@ -130,10 +135,6 @@ const About = () => {
 
       {/* Stats Section - Enhanced */}
       <section className="py-20 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-20 left-10 w-24 h-24 bg-accent/5 rounded-full blur-xl"></div>
-        
         <div className="container mx-auto px-6 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             {stats.map((stat, index) => {

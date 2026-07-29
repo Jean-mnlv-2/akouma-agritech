@@ -23,6 +23,9 @@ import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n";
 import { SEO } from "@/components/SEO";
+import { usePublicStats } from "@/hooks/use-public-stats";
+import { useElearningStats } from "@/hooks/use-elearning-stats";
+import type { LucideIcon } from "lucide-react";
 
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
@@ -37,7 +40,7 @@ interface UICourse {
   level: string;
   duration: string;
   students: number;
-  rating: number;
+  rating: number | null;
   isCertifying: boolean;
   thumbnail: string;
   instructor: string;
@@ -100,11 +103,13 @@ interface PreviewDisplayItem {
 }
 
 const ELearning = () => {
-  
+
   const { toast } = useToast();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { data: publicStats } = usePublicStats();
+  const { data: adminStats } = useElearningStats();
 
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || "");
   const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get('cat') || "Tous");
@@ -158,12 +163,12 @@ const ELearning = () => {
           category?: string; 
           level?: string; 
           duration?: string; 
-          students?: number; 
-          enrollmentsCount?: number; 
-          rating?: number; 
-          isCertifying?: boolean; 
-          is_certifying?: boolean; 
-          thumbnailUrl?: string; 
+          students?: number;
+          enrollmentsCount?: number;
+          rating?: number | null;
+          sertifierDesignId?: string | null;
+          sertifierDetailId?: string | null;
+          thumbnailUrl?: string;
           image_url?: string; 
           instructor?: string; 
           instructorName?: string; 
@@ -180,8 +185,11 @@ const ELearning = () => {
           level: String(c.level ?? 'Débutant'),
           duration: String(c.duration ?? '—'),
           students: Number(c.students ?? c.enrollmentsCount ?? 0),
-          rating: Number(c.rating ?? 4.5),
-          isCertifying: Boolean(c.isCertifying ?? c.is_certifying ?? true),
+          // Aucune note fabriquée : un cours sans avis réel n'affiche pas de note.
+          rating: c.rating != null ? Number(c.rating) : null,
+          // "Certifiant" reflète une vraie intégration Sertifier configurée sur
+          // le cours, jamais une valeur par défaut supposée.
+          isCertifying: Boolean(c.sertifierDesignId && c.sertifierDetailId),
           thumbnail: String(c.thumbnailUrl ?? c.image_url ?? courseThumbnail),
           instructor: String(c.instructor ?? c.instructorName ?? 'KILIMO Team'),
           isPreviewAvailable: Boolean(c.isPreviewAvailable ?? c.is_preview_available ?? false),
@@ -321,12 +329,26 @@ const ELearning = () => {
     }
   };
 
-  const stats = [
-    { icon: BookOpen, value: "25+", label: t("elearning.stat.courses"), color: "from-blue-500 to-cyan-500" },
-    { icon: Users, value: "500+", label: t("elearning.stat.students"), color: "from-green-500 to-emerald-500" },
-    { icon: Award, value: "95%", label: t("elearning.stat.satisfaction"), color: "from-yellow-500 to-orange-500" },
-    { icon: Clock, value: "24/7", label: t("elearning.stat.access"), color: "from-purple-500 to-pink-500" },
-  ];
+  // Priorité aux stats saisies par l'admin (AdminElearningStats.tsx,
+  // GET /api/elearning_stats — existait déjà mais n'était consommé nulle
+  // part côté vitrine). Si l'admin n'a rien configuré, repli sur des
+  // chiffres réels calculés (GET /api/stats/public) — jamais un chiffre
+  // inventé. "24/7" reste une affirmation factuelle de disponibilité, pas
+  // une métrique.
+  const STAT_ICONS: Record<string, LucideIcon> = { BookOpen, Users, Award, Clock, GraduationCap, CheckCircle };
+  const stats = adminStats && adminStats.length > 0
+    ? adminStats.map((s, i) => ({
+        icon: (s.icon && STAT_ICONS[s.icon]) || STAT_ICONS[['BookOpen', 'Users', 'Award', 'Clock'][i % 4]],
+        value: s.value,
+        label: s.label,
+        color: ['from-blue-500 to-cyan-500', 'from-green-500 to-emerald-500', 'from-yellow-500 to-orange-500', 'from-purple-500 to-pink-500'][i % 4],
+      }))
+    : [
+        { icon: BookOpen, value: publicStats ? `${publicStats.totalCourses}+` : "—", label: t("elearning.stat.courses"), color: "from-blue-500 to-cyan-500" },
+        { icon: Users, value: publicStats ? `${publicStats.totalLearners}+` : "—", label: t("elearning.stat.students"), color: "from-green-500 to-emerald-500" },
+        { icon: Award, value: publicStats ? `${publicStats.totalCertificates}` : "—", label: "Certificats délivrés", color: "from-yellow-500 to-orange-500" },
+        { icon: Clock, value: "24/7", label: t("elearning.stat.access"), color: "from-purple-500 to-pink-500" },
+      ];
 
   return (
     <div className="min-h-screen bg-background">

@@ -7,11 +7,13 @@ import heroImageWebp from "@/assets/hero-agritech.jpg?format=webp&quality=75";
 import { useI18n } from "@/i18n";
 import { useEffect, useState } from "react";
 import PageHeaderCarousel from "@/components/PageHeaderCarousel";
+import { usePublicStats } from "@/hooks/use-public-stats";
 
 const Hero = () => {
   const { t } = useI18n();
   const [isLoaded, setIsLoaded] = useState(false);
   const currentYear = new Date().getFullYear();
+  const { data: stats } = usePublicStats();
 
   useEffect(() => {
     setIsLoaded(true);
@@ -90,7 +92,7 @@ const Hero = () => {
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             {[
-              { icon: BookOpen, label: "E-Learning", desc: "150+ cours", href: "/elearning", color: "from-blue-500/20 to-cyan-500/20 border-blue-400/30" },
+              { icon: BookOpen, label: "E-Learning", desc: stats ? `${stats.totalCourses} cours` : "Cours certifiés", href: "/elearning", color: "from-blue-500/20 to-cyan-500/20 border-blue-400/30" },
               { icon: Leaf, label: "Semences", desc: "Qualité certifiée", href: "/seeds", color: "from-green-500/20 to-emerald-500/20 border-green-400/30" },
               { icon: ShoppingBag, label: "Boutique", desc: "Équipements pro", href: "/shop", color: "from-orange-500/20 to-amber-500/20 border-orange-400/30" },
             ].map((item) => (

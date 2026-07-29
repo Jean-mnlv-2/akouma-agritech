@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 type ThreadSummary = { id: string; title: string; updatedAt: string };
 type ChatSource = { title: string; score: number; sourceType: string };
-type ChatMsg = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; sources?: ChatSource[] };
+type ChatMsg = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; sources?: ChatSource[]; upsellCode?: string };
 type ApiMessage = { id: string; role: "user" | "assistant"; content: string };
 type UsageData = {
   freeUsage: number;
@@ -268,7 +268,7 @@ export default function Assistant() {
       const decoder = new TextDecoder();
       let buffer = "";
       let acc = "";
-      let errorPayload: { message?: string } | null = null;
+      let errorPayload: { message?: string; code?: string } | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -307,7 +307,10 @@ export default function Assistant() {
       }
 
       if (errorPayload) {
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `⚠️ ${errorPayload?.message || "Erreur"}`, pending: false } : m));
+        const upsellCode = errorPayload.code === "tier_locked" || errorPayload.code === "daily_pro_budget_exceeded"
+          ? errorPayload.code as string
+          : undefined;
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `⚠️ ${errorPayload?.message || "Erreur"}`, pending: false, upsellCode } : m));
         toast.error(errorPayload.message || "Erreur");
       } else if (!acc) {
         setMessages(prev => prev.filter(m => m.id !== assistantId));
@@ -628,6 +631,17 @@ export default function Assistant() {
                           )
                         ) : (
                           <p className="whitespace-pre-wrap">{m.content}</p>
+                        )}
+                        {m.role === "assistant" && m.upsellCode && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="mt-2"
+                            onClick={() => navigate("/pricing")}
+                          >
+                            <Crown className="h-3.5 w-3.5 mr-1.5" />
+                            Voir les forfaits
+                          </Button>
                         )}
                       </div>
                       {m.role === "user" && (

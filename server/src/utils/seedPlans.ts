@@ -7,7 +7,7 @@ export async function ensureDefaultPlans(prisma: PrismaClient): Promise<void> {
       {
         name: 'free',
         displayName: 'Gratuit',
-        description: 'Accès aux fonctionnalités de base avec des limitations',
+        description: 'Découvrez KILIMO : contenus vitrine en accès libre, plus un aperçu quotidien de nos fiches techniques.',
         price: 0,
         currency: 'XOF',
         dailyProMessageLimit: 10,
@@ -21,8 +21,8 @@ export async function ensureDefaultPlans(prisma: PrismaClient): Promise<void> {
       },
       {
         name: 'starter',
-        displayName: 'Starter',
-        description: 'Essai gratuit de 7 jours avec accès aux documents personnalisés',
+        displayName: 'Standard',
+        description: "L'expertise technique au quotidien : itinéraires techniques des cultures, fiches sanitaires et conseils de lutte. 7 jours d'essai inclus.",
         price: 5000,
         currency: 'XOF',
         dailyProMessageLimit: 20,
@@ -36,8 +36,8 @@ export async function ensureDefaultPlans(prisma: PrismaClient): Promise<void> {
       },
       {
         name: 'pro',
-        displayName: 'Pro',
-        description: 'Accès complet avec support prioritaire',
+        displayName: 'Premium',
+        description: "L'accompagnement agroconsulting complet : diagnostic environnemental, planification technico-économique et accès marché.",
         price: 15000,
         currency: 'XOF',
         dailyProMessageLimit: 100,
@@ -51,8 +51,8 @@ export async function ensureDefaultPlans(prisma: PrismaClient): Promise<void> {
       },
       {
         name: 'enterprise',
-        displayName: 'Enterprise',
-        description: 'Solution complète avec API dédiée et support premium',
+        displayName: 'Entreprise',
+        description: 'Tout Premium, sans limite de requêtes, avec un accès API dédié pour vos intégrations.',
         price: 50000,
         currency: 'XOF',
         dailyProMessageLimit: 0,

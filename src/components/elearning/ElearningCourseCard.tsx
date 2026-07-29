@@ -39,7 +39,7 @@ interface CourseCardProps {
     level: string;
     duration: string;
     students: number;
-    rating: number;
+    rating: number | null;
     isCertifying: boolean;
     thumbnail: string;
     instructor: string;
@@ -94,10 +94,14 @@ const ElearningCourseCard = ({ course, currentUser, isEnrolled, previewItems, on
       <CardHeader className="pb-2 flex-1">
         <div className="flex items-center justify-between mb-2">
           <Badge variant="outline" className="text-xs">{course.category || t("elearning.category")}</Badge>
-          <div className="flex items-center gap-1 text-sm">
-            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-            <span className="font-semibold">{course.rating}</span>
-          </div>
+          {course.rating != null ? (
+            <div className="flex items-center gap-1 text-sm">
+              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+              <span className="font-semibold">{course.rating.toFixed(1)}</span>
+            </div>
+          ) : (
+            <Badge variant="outline" className="text-xs text-muted-foreground">Nouveau</Badge>
+          )}
         </div>
         <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2">
           {course.title}

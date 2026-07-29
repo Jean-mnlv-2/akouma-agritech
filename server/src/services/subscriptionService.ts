@@ -11,93 +11,6 @@ function addOneMonth(date: Date): Date {
 
 export class SubscriptionService {
   /**
-   * Ensure default plans exist in the database
-   */
-  async ensureDefaultPlans(): Promise<void> {
-    const defaultPlans = [
-      {
-        name: 'free',
-        displayName: 'Gratuit',
-        description: 'Accès aux fonctionnalités de base avec des limitations',
-        price: 0,
-        currency: 'XOF',
-        dailyProMessageLimit: 10,
-        hasCustomDocuments: false,
-        hasPrioritySupport: false,
-        hasApiAccess: false,
-        maxCustomDocuments: 0,
-        trialDays: 0,
-        sortOrder: 0,
-        isActive: true,
-      },
-      {
-        name: 'starter',
-        displayName: 'Starter',
-        description: 'Essai gratuit de 7 jours avec accès aux documents personnalisés',
-        price: 5000,
-        currency: 'XOF',
-        dailyProMessageLimit: 20,
-        hasCustomDocuments: true,
-        hasPrioritySupport: false,
-        hasApiAccess: false,
-        maxCustomDocuments: 5,
-        trialDays: 7,
-        sortOrder: 1,
-        isActive: true,
-      },
-      {
-        name: 'pro',
-        displayName: 'Pro',
-        description: 'Accès complet avec support prioritaire',
-        price: 15000,
-        currency: 'XOF',
-        dailyProMessageLimit: 100,
-        hasCustomDocuments: true,
-        hasPrioritySupport: true,
-        hasApiAccess: false,
-        maxCustomDocuments: 20,
-        trialDays: 0,
-        sortOrder: 2,
-        isActive: true,
-      },
-      {
-        name: 'enterprise',
-        displayName: 'Entreprise',
-        description: 'Solution complète avec API dédiée et support premium',
-        price: 50000,
-        currency: 'XOF',
-        dailyProMessageLimit: 0, // 0 = unlimited
-        hasCustomDocuments: true,
-        hasPrioritySupport: true,
-        hasApiAccess: true,
-        maxCustomDocuments: 0, // 0 = unlimited
-        trialDays: 0,
-        sortOrder: 3,
-        isActive: true,
-      },
-    ];
-
-    for (const planData of defaultPlans) {
-      const existing = await prisma.plan.findUnique({
-        where: { name: planData.name },
-      });
-
-      if (!existing) {
-        await prisma.plan.create({
-          data: planData,
-        });
-        logger.info(`[SubscriptionService] Created plan: ${planData.name}`);
-      } else {
-        await prisma.plan.update({
-          where: { name: planData.name },
-          data: planData,
-        });
-        logger.info(`[SubscriptionService] Updated plan: ${planData.name}`);
-      }
-    }
-  }
-
-  /**
    * Get a user's current subscription
    */
   async getUserSubscription(userId: string): Promise<(Subscription & { plan: Plan }) | null> {
@@ -135,7 +48,7 @@ export class SubscriptionService {
    */
   async getUserProLimit(userId: string): Promise<{ limit: number; isPro: boolean }> {
     const subscription = await this.getUserSubscription(userId);
-    const defaultLimit = Number(process.env.CHAT_DAILY_PRO_BUDGET || 10);
+    const defaultLimit = Number(process.env.CHAT_DAILY_PRO_BUDGET || 2);
 
     if (!this.isSubscriptionActive(subscription)) {
       return { limit: defaultLimit, isPro: false };
@@ -145,6 +58,32 @@ export class SubscriptionService {
       limit: subscription!.plan.dailyProMessageLimit,
       isPro: subscription!.plan.dailyProMessageLimit !== defaultLimit,
     };
+  }
+
+  /**
+   * Maps the user's plan to a RAG content tier (free/standard/premium — see
+   * RagWorkflow's tier classification) plus their daily quota for non-free
+   * content at that tier. "starter" maps to standard, "pro"/"enterprise"
+   * both map to premium (premium subscribers also get standard content).
+   * No active subscription (or the "free" plan itself) maps to free, with a
+   * small daily allowance for standard-tier content only — never premium.
+   */
+  async getUserAccessTier(userId: string): Promise<{ tier: 'free' | 'standard' | 'premium'; dailyLimit: number }> {
+    const subscription = await this.getUserSubscription(userId);
+    const freeDailyLimit = Number(process.env.CHAT_DAILY_PRO_BUDGET || 2);
+
+    if (!this.isSubscriptionActive(subscription)) {
+      return { tier: 'free', dailyLimit: freeDailyLimit };
+    }
+
+    const planName = subscription!.plan.name;
+    if (planName === 'starter') {
+      return { tier: 'standard', dailyLimit: subscription!.plan.dailyProMessageLimit };
+    }
+    if (planName === 'pro' || planName === 'enterprise') {
+      return { tier: 'premium', dailyLimit: subscription!.plan.dailyProMessageLimit };
+    }
+    return { tier: 'free', dailyLimit: freeDailyLimit };
   }
 
   /**

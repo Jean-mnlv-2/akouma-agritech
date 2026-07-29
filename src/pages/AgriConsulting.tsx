@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,20 +7,23 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { ContactForm } from "@/components/forms/ContactForm";
-import { 
-  Target, 
-  TrendingUp, 
-  Users, 
-  BookOpen, 
-  BarChart3, 
-  Leaf, 
+import {
+  Target,
+  TrendingUp,
+  Users,
+  BookOpen,
+  BarChart3,
+  Leaf,
   Cpu,
   FileText,
   CheckCircle,
   ArrowRight,
   Phone,
   Mail,
-  Calendar
+  Calendar,
+  MessageSquare,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { useContactSettings } from "@/hooks/use-contact-settings";
 
@@ -191,6 +195,65 @@ const AgriConsulting = () => {
               la <span className="text-primary font-bold">durabilité</span> et 
               la <span className="text-primary font-bold">résilience</span> de leurs activités.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Accès instantané via l'assistant IA — complément aux consultants humains */}
+      <section className="py-20 bg-primary/5">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/10">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Accès immédiat
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+                Besoin d'une réponse tout de suite ?
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                En complément de l'accompagnement humain ci-dessous, notre assistant IA donne un accès
+                instantané à une partie de cette expertise agronomique, 24h/24 — sans rendez-vous.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="border-2">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
+                    <ShieldCheck className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle>Forfait Standard</CardTitle>
+                  <CardDescription>
+                    Itinéraires techniques des cultures, fiches sanitaires et conseils de lutte —
+                    l'expertise technique au quotidien.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Card className="border-2 border-primary/40">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
+                    <TrendingUp className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle>Forfait Premium</CardTitle>
+                  <CardDescription>
+                    Diagnostic environnemental, planification technico-économique complète, stratégie
+                    de gestion et accès marché — l'équivalent digital de ce que nos consultants
+                    proposent ci-dessous.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+
+            <div className="text-center mt-8">
+              <Button asChild size="lg">
+                <Link to="/pricing">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Voir les forfaits de l'assistant IA
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

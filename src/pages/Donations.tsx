@@ -18,6 +18,7 @@ import ContactForm from "@/components/forms/ContactForm";
 import { useCountries } from "@/hooks/use-countries";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
 import { api } from "@/integrations/api/client";
+import { usePublicStats } from "@/hooks/use-public-stats";
 import { 
   Heart, 
   Gift,
@@ -30,6 +31,7 @@ import heroAgritech from "@/assets/hero-agritech.jpg";
 
 const Donations = () => {
   const { toast } = useToast();
+  const { data: publicStats } = usePublicStats();
   const [isDonationOpen, setIsDonationOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string>("");
@@ -131,11 +133,16 @@ const Donations = () => {
     fetchSections();
   }, []);
 
+  // Chiffres réels uniquement — seuls les dons dont le statut a été changé
+  // manuellement par un admin après réception effective du paiement sont
+  // comptés (voir GET /api/stats/public côté serveur). Un don "pending"
+  // n'est pas de l'argent réellement collecté.
+  const formatEuros = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}K€` : `${n}€`;
   const donationStats = [
-    { value: "1500+", label: "Donateurs" },
-    { value: "250K€", label: "Collectés" },
-    { value: "15", label: "Projets Financés" },
-    { value: "5000+", label: "Vies Impactées" }
+    { value: publicStats ? `${publicStats.totalDonors}` : "—", label: "Donateurs" },
+    { value: publicStats ? formatEuros(publicStats.totalDonated) : "—", label: "Collectés" },
+    { value: publicStats ? `${publicStats.totalDonationImpacts}` : "—", label: "Projets Financés" },
+    { value: publicStats ? `${publicStats.totalConfirmedDonations}` : "—", label: "Dons Reçus" },
   ];
 
   const handleDonationSubmit = async (e: React.FormEvent) => {

@@ -47,10 +47,6 @@ const Services = () => {
   const { t } = useI18n();
   return (
     <section className="py-20 bg-gradient-nature relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-10 right-10 w-40 h-40 bg-accent/5 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 left-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
-      
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">

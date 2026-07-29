@@ -3,6 +3,56 @@ import { authRequired, supervisorOnly, adminOnly } from '../middleware/authRequi
 import { prisma } from '../db';
 export const statsRouter = Router();
 
+// Compteurs publics réels pour les sections "chiffres clés" du site vitrine
+// (accueil, e-learning) — remplace les chiffres marketing codés en dur qui
+// ne correspondaient à rien de réel et se contredisaient d'une page à
+// l'autre. Aucune donnée sensible : uniquement des comptages agrégés sur du
+// contenu déjà public.
+statsRouter.get('/public', async (_req: Request, res: Response) => {
+  try {
+    const [
+      totalCourses,
+      totalSeeds,
+      totalNews,
+      totalLearners,
+      totalCertificates,
+      confirmedDonors,
+      donationSum,
+      totalConfirmedDonations,
+      totalDonationImpacts,
+    ] = await Promise.all([
+      prisma.course.count({ where: { isPublished: true } }),
+      prisma.seed.count({ where: { isPublished: true } }),
+      prisma.news.count({ where: { isPublished: true } }),
+      prisma.user.count({ where: { enrollments: { some: {} } } }),
+      prisma.certificate.count({ where: { status: 'sent' } }),
+      // "Collecté"/"Donateurs" ne comptent que les dons dont le statut a été
+      // changé manuellement par un admin après réception réelle du paiement
+      // — un don encore "pending" n'est pas de l'argent effectivement reçu.
+      prisma.donation.groupBy({ by: ['email'], where: { status: { not: 'pending' } } }),
+      prisma.donation.aggregate({ where: { status: { not: 'pending' } }, _sum: { amount: true } }),
+      prisma.donation.count({ where: { status: { not: 'pending' } } }),
+      prisma.donationImpact.count({ where: { isActive: true } }),
+    ]);
+
+    res.json({
+      data: {
+        totalCourses,
+        totalSeeds,
+        totalNews,
+        totalLearners,
+        totalCertificates,
+        totalDonors: confirmedDonors.length,
+        totalDonated: Number(donationSum._sum.amount || 0),
+        totalConfirmedDonations,
+        totalDonationImpacts,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch public stats' });
+  }
+});
+
 // Ouvert à tout superviseur (quel que soit son module) : ce ne sont que des
 // compteurs agrégés pour le tableau de bord partagé — pas de PII individuelle.
 statsRouter.get('/', authRequired, supervisorOnly, async (_req: Request, res: Response) => {
