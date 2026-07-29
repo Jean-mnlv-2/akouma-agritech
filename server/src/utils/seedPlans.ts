@@ -62,7 +62,10 @@ export async function ensureDefaultPlans(prisma: PrismaClient): Promise<void> {
         maxCustomDocuments: 0,
         trialDays: 0,
         sortOrder: 3,
-        isActive: true,
+        // Désactivé temporairement à la demande — masqué de /api/subscriptions/plans
+        // (GET filtre isActive:true) et bloqué côté POST /subscribe. Remettre à
+        // `true` pour le republier ; les données du plan restent en base.
+        isActive: false,
       },
     ];
 
