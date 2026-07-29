@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authRequired } from '../middleware/authRequired';
+import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { prisma } from '../db';
 export const courseCommentsRouter = Router();
 
@@ -54,6 +54,25 @@ courseCommentsRouter.post('/', authRequired, async (req: Request, res: Response)
     res.status(201).json({ data: comment });
   } catch (e) {
     res.status(400).json({ error: e instanceof Error ? e.message : 'Failed to post comment' });
+  }
+});
+
+// Moderate a comment (admin/supervisor with 'courses' module): approve or
+// hide, without deleting it outright (keeps a trace, reversible).
+courseCommentsRouter.put('/:id/moderate', authRequired, moduleAccess('courses'), async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const { isApproved } = req.body || {};
+    if (typeof isApproved !== 'boolean') {
+      return res.status(400).json({ error: 'isApproved (boolean) required' });
+    }
+    const comment = await prisma.courseComment.update({
+      where: { id },
+      data: { isApproved },
+    });
+    res.json({ data: comment });
+  } catch (e) {
+    res.status(400).json({ error: 'Failed to moderate comment' });
   }
 });
 

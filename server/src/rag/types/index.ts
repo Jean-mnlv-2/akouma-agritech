@@ -112,12 +112,14 @@ export interface RagQueryResponse {
   answer: string;
   sources: SearchResult[];
   usesProSources: boolean;
+  requiredTier: 'free' | 'standard' | 'premium';
   metadata?: Record<string, any>;
 }
 
 export interface RagRetrievedSourcesInfo {
   sources: SearchResult[];
   usesProSources: boolean;
+  requiredTier: 'free' | 'standard' | 'premium';
 }
 
 /**

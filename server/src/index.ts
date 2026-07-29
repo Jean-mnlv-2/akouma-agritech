@@ -80,6 +80,10 @@ import { createRateLimiter } from './middleware/rateLimit';
 import { authRequired, adminOnly } from './middleware/authRequired';
 import { csrfRequired } from './middleware/csrf';
 import { internalAutoNewsRouter } from './routes/internalAutoNews';
+import { internalElearningRouter } from './routes/internalElearning';
+import { internalEventsRouter } from './routes/internalEvents';
+import { internalNewsScraperRouter } from './routes/internalNewsScraper';
+import { phytosanitaryProductsRouter } from './routes/phytosanitaryProducts';
 import { newsScraperRouter } from './routes/newsScraper';
 import { prisma } from './db';
 
@@ -359,6 +363,10 @@ app.use('/api', genericRouter);
 
 // Internal API (DeerFlow only)
 app.use('/api/internal/auto-news', internalAutoNewsRouter);
+app.use('/api/internal/elearning', internalElearningRouter);
+app.use('/api/internal/events', internalEventsRouter);
+app.use('/api/internal/news-scraper', internalNewsScraperRouter);
+app.use('/api/admin/phytosanitary-products', phytosanitaryProductsRouter);
 
 // News Scraper Admin API
 app.use('/api/admin/news-scraper', newsScraperRouter);

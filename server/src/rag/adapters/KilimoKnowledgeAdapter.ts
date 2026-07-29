@@ -23,6 +23,9 @@ export class KilimoKnowledgeAdapter {
       this.indexCourses(),
       this.indexNews(),
       this.indexDocuments(),
+      this.indexShopProducts(),
+      this.indexLegalPages(),
+      this.indexPhytosanitaryProducts(),
     ]);
   }
 
@@ -42,6 +45,7 @@ export class KilimoKnowledgeAdapter {
       metadata: {
         documentId: doc.id,
         description: doc.description,
+        tier: doc.tier,
         ...(doc.metadata as Record<string, any>),
       },
       createdAt: doc.createdAt,
@@ -129,6 +133,117 @@ export class KilimoKnowledgeAdapter {
     }));
 
     await this.indexer.indexSources(sources);
+  }
+
+  /**
+   * Index boutique products (agritech tools/equipment, not seeds)
+   */
+  async indexShopProducts(): Promise<void> {
+    const products = await this.prisma.shopProduct.findMany({
+      where: { isPublished: true, isActive: true },
+    });
+
+    const sources: KnowledgeSource[] = products.map((product) => ({
+      id: `shopProduct-${product.id}`,
+      title: product.name,
+      content: this.formatShopProductContent(product),
+      sourceType: 'shopProduct',
+      metadata: {
+        productId: product.id,
+        price: product.price,
+        category: product.category,
+        slug: product.slug,
+      },
+      createdAt: product.createdAt,
+    }));
+
+    await this.indexer.indexSources(sources);
+  }
+
+  /**
+   * Index legal/informational pages (terms, privacy, etc.)
+   */
+  async indexLegalPages(): Promise<void> {
+    const pages = await this.prisma.legalPage.findMany({
+      where: { isActive: true },
+    });
+
+    const sources: KnowledgeSource[] = pages.map((page) => ({
+      id: `legalPage-${page.id}`,
+      title: page.title,
+      content: page.content,
+      sourceType: 'legalPage',
+      metadata: {
+        legalPageId: page.id,
+        slug: page.slug,
+        type: page.type,
+      },
+      createdAt: page.createdAt,
+    }));
+
+    await this.indexer.indexSources(sources);
+  }
+
+  /**
+   * Index les produits phytosanitaires — modèle structuré dédié (formulaire
+   * admin), distinct des Document génériques. Le contenu indexé inclut
+   * `commercialName` (voir formatPhytosanitaryProductContent) : la règle
+   * métier n'est PAS "jamais de nom commercial", mais "jamais de nom
+   * commercial sauf correspondance EXACTE" — si le produit retrouvé
+   * correspond précisément à la culture et au ravageur/maladie de la
+   * question (filtré par RagWorkflow.PHYTO_STRICT_SCORE_THRESHOLD), on
+   * donne l'info complète, marque incluse ; sinon le produit n'est pas
+   * retenu du tout et l'assistant retombe sur un conseil générique par
+   * matière active (voir buildSystemPrompt). La `metadata` porte les
+   * champs structurés (culture/ravageur ciblés) pour permettre un filtrage
+   * strict côté RagWorkflow, en plus du filtrage sémantique par embedding.
+   */
+  async indexPhytosanitaryProducts(): Promise<void> {
+    const products = await this.prisma.phytosanitaryProduct.findMany({
+      where: { isActive: true },
+    });
+
+    const sources: KnowledgeSource[] = products.map((product) => ({
+      id: `phytosanitaryProduct-${product.id}`,
+      title: `${product.productType} — ${product.activeIngredient}`,
+      content: this.formatPhytosanitaryProductContent(product),
+      sourceType: 'phytosanitaryProduct',
+      metadata: {
+        productId: product.id,
+        tier: product.tier,
+        productType: product.productType,
+        targetCrops: product.targetCrops,
+        targetPests: product.targetPests,
+        regulatoryStatus: product.regulatoryStatus,
+      },
+      createdAt: product.createdAt,
+    }));
+
+    await this.indexer.indexSources(sources);
+
+    await this.prisma.phytosanitaryProduct.updateMany({
+      where: { id: { in: products.map((p) => p.id) } },
+      data: { isIndexed: true },
+    });
+  }
+
+  private formatPhytosanitaryProductContent(product: any): string {
+    return `Produit phytosanitaire — matière active: ${product.activeIngredient}
+${product.commercialName ? `Nom commercial: ${product.commercialName}\n` : ''}Type: ${product.productType}
+Statut réglementaire: ${product.regulatoryStatus}
+Cultures ciblées: ${(product.targetCrops || []).join(', ') || 'Non spécifié'}
+Ravageurs/maladies/adventices ciblés: ${(product.targetPests || []).join(', ') || 'Non spécifié'}
+
+Description / mode d'action: ${product.description}
+${product.dosage ? `Dosage recommandé: ${product.dosage}\n` : ''}${product.applicationMethod ? `Méthode d'application: ${product.applicationMethod}\n` : ''}${product.preHarvestInterval ? `Délai avant récolte (DAR): ${product.preHarvestInterval}\n` : ''}${product.safetyPrecautions ? `Précautions de sécurité: ${product.safetyPrecautions}\n` : ''}`;
+  }
+
+  private formatShopProductContent(product: any): string {
+    return `Produit boutique: ${product.name}
+Description: ${product.description || 'Non disponible'}
+Catégorie: ${product.category || 'Général'}
+Prix: ${product.price}
+Caractéristiques: ${(product.features || []).join(', ') || 'Non disponible'}`;
   }
 
   private formatSeedContent(seed: any): string {

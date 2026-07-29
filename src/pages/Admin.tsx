@@ -17,6 +17,7 @@ import {
   Package,
   Truck,
   Shield,
+  ShieldAlert,
   Crown,
   Briefcase,
   Calendar,
@@ -62,6 +63,8 @@ const AdminElearningEnrollments = lazy(() => import('@/pages/AdminElearningEnrol
 const AdminPageHeaderImages = lazy(() => import('@/components/admin/AdminPageHeaderImages').then(m => ({ default: m.AdminPageHeaderImages })));
 const AdminCookieConsents = lazy(() => import('@/components/admin/AdminCookieConsents').then(m => ({ default: m.AdminCookieConsents })));
 const AdminSubscriptions = lazy(() => import('@/components/admin/AdminSubscriptions').then(m => ({ default: m.AdminSubscriptions })));
+const AdminDocuments = lazy(() => import('@/components/admin/AdminDocuments').then(m => ({ default: m.AdminDocuments })));
+const AdminPhytosanitaryProducts = lazy(() => import('@/components/admin/AdminPhytosanitaryProducts').then(m => ({ default: m.AdminPhytosanitaryProducts })));
 
 const TabLoadingFallback = () => (
   <div className="flex items-center justify-center py-16">
@@ -129,7 +132,9 @@ const tabGroups = [
   {
     title: "🤖 Chatbot & Abonnements",
     tabs: [
-      { value: 'subscriptions', label: 'Forfaits Chatbot', icon: Crown }
+      { value: 'subscriptions', label: 'Forfaits Chatbot', icon: Crown },
+      { value: 'documents', label: 'Documents RAG', icon: FileText },
+      { value: 'phytosanitary-products', label: 'Produits phytosanitaires', icon: ShieldAlert }
     ]
   },
   {
@@ -434,6 +439,8 @@ function AdminContent() {
               {(activeTab === 'orders' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('orders')))) && <AdminOrders />}
               {(activeTab === 'deliveries' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('deliveries')))) && <AdminDeliveries />}
               {(activeTab === 'subscriptions' && isAdmin) && <AdminSubscriptions />}
+              {(activeTab === 'documents' && isAdmin) && <AdminDocuments />}
+              {(activeTab === 'phytosanitary-products' && isAdmin) && <AdminPhytosanitaryProducts />}
               {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && (
                 <AdminCourses 
                   onViewInscriptions={(id) => { setSelectedCourseId(id); setActiveTab('elearning-enrollments'); }}

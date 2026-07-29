@@ -50,6 +50,7 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
     isImage?: boolean;
     isGallery?: boolean;
     isJson?: boolean;
+    isLink?: boolean;
   }
 
   const getFields = (): FieldDef[] => {
@@ -59,7 +60,14 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
           { label: 'Titre', key: 'title' },
           { label: 'Auteur', key: 'author' },
           { label: 'Catégorie', key: 'category' },
-          { label: 'Date', key: 'date', transform: (v: unknown) => new Date(v as string).toLocaleDateString() },
+          { label: 'Langue', key: 'language' },
+          { label: 'Statut', key: 'isPublished', transform: (v: unknown) => v ? 'Publié' : 'Brouillon' },
+          { label: 'Mise en avant', key: 'isFeatured' },
+          { label: 'Origine', key: 'sourceType', transform: (v: unknown) => v === 'auto' ? 'Automatique (scraper/DeerFlow)' : 'Manuelle' },
+          { label: 'Source', key: 'sourceName' },
+          { label: 'Lien original', key: 'sourceUrl', isLink: true },
+          { label: 'Récupéré le', key: 'scrapedAt', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : '' },
+          { label: 'Créé le', key: 'createdAt', transform: (v: unknown) => v ? new Date(v as string).toLocaleString() : '' },
           { label: 'Résumé', key: 'excerpt' },
           { label: 'Contenu', key: 'content' },
           { label: 'Image', key: 'imageUrl', isImage: true },
@@ -190,6 +198,19 @@ const AdminDetailsDialog: React.FC<AdminDetailsDialogProps> = ({
                     </div>
                   );
                 }
+              }
+
+              if (field.isLink && value) {
+                return (
+                  <div key={idx} className="space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{field.label}</span>
+                    <div className="text-base">
+                      <a href={String(value)} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all">
+                        {String(value)}
+                      </a>
+                    </div>
+                  </div>
+                );
               }
 
               if (field.isJson && value) {

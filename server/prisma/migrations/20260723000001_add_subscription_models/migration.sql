@@ -1,48 +1,8 @@
--- CreateTable
-CREATE TABLE "Plan" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "displayName" TEXT NOT NULL,
-    "description" TEXT,
-    "price" DECIMAL(12,2) NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'XOF',
-    "dailyProMessageLimit" INTEGER NOT NULL DEFAULT 0,
-    "hasCustomDocuments" BOOLEAN NOT NULL DEFAULT false,
-    "hasPrioritySupport" BOOLEAN NOT NULL DEFAULT false,
-    "hasApiAccess" BOOLEAN NOT NULL DEFAULT false,
-    "maxCustomDocuments" INTEGER NOT NULL DEFAULT 0,
-    "trialDays" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Plan_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Subscription" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "planId" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'active',
-    "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "endDate" TIMESTAMP(3),
-    "currentPeriodStart" TIMESTAMP(3),
-    "currentPeriodEnd" TIMESTAMP(3),
-    "trialStartDate" TIMESTAMP(3),
-    "trialEndDate" TIMESTAMP(3),
-    "isTrial" BOOLEAN NOT NULL DEFAULT false,
-    "autoRenew" BOOLEAN NOT NULL DEFAULT true,
-    "paymentMethodId" TEXT,
-    "stripeCustomerId" TEXT,
-    "stripeSubscriptionId" TEXT,
-    "metadata" JSONB DEFAULT '{}',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
-);
+-- Plan, Subscription and ChatDailyBudget are already created by
+-- 20260723000000_add_subscription_plans and 20260722160000_add_chat_daily_budget
+-- respectively (this file originally redefined them too, which broke
+-- `prisma migrate deploy` on a fresh database with duplicate-relation errors).
+-- This migration only adds the tables genuinely new at this point in history.
 
 -- CreateTable
 CREATE TABLE "Invoice" (
@@ -108,19 +68,6 @@ CREATE TABLE "SubscriptionAnalytics" (
 );
 
 -- CreateTable
-CREATE TABLE "ChatDailyBudget" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL,
-    "freeUsage" INTEGER NOT NULL DEFAULT 0,
-    "proUsage" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "ChatDailyBudget_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Document" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -135,24 +82,6 @@ CREATE TABLE "Document" (
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
 );
-
--- CreateIndex
-CREATE UNIQUE INDEX "Plan_name_key" ON "Plan"("name");
-
--- CreateIndex
-CREATE INDEX "Plan_isActive_sortOrder_idx" ON "Plan"("isActive", "sortOrder");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
-
--- CreateIndex
-CREATE INDEX "Subscription_userId_idx" ON "Subscription"("userId");
-
--- CreateIndex
-CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
-
--- CreateIndex
-CREATE INDEX "Subscription_planId_idx" ON "Subscription"("planId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Invoice_invoiceNumber_key" ON "Invoice"("invoiceNumber");
@@ -189,18 +118,6 @@ CREATE UNIQUE INDEX "SubscriptionAnalytics_date_key" ON "SubscriptionAnalytics"(
 
 -- CreateIndex
 CREATE INDEX "SubscriptionAnalytics_date_idx" ON "SubscriptionAnalytics"("date");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ChatDailyBudget_userId_date_key" ON "ChatDailyBudget"("userId", "date");
-
--- CreateIndex
-CREATE INDEX "ChatDailyBudget_userId_date_idx" ON "ChatDailyBudget"("userId", "date");
-
--- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;

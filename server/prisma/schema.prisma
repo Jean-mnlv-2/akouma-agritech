@@ -243,6 +243,59 @@ model News {
   originalId      String?  @db.VarChar(255) // Unique ID from source to prevent duplicates
 }
 
+// Produits phytosanitaires — base structurée dédiée (formulaire admin
+// professionnel), distincte du modèle `Document` générique. Champs pensés
+// pour un filtrage RAG strict et exact (culture + ravageur/maladie ciblés)
+// plutôt qu'une recommandation par similarité textuelle vague.
+// `commercialName` EST indexé (KilimoKnowledgeAdapter.indexPhytosanitaryProducts)
+// mais le RAG (RagWorkflow) ne le cite que si le produit correspond
+// EXACTEMENT à la culture/au problème de la question — sinon aucun nom
+// commercial ni produit spécifique n'est mentionné, seulement la matière
+// active en général.
+model PhytosanitaryProduct {
+  id                 String   @id @default(uuid())
+  activeIngredient   String // matière active — identifiant principal du produit
+  productType        String // "Herbicide" | "Fongicide" | "Insecticide" | "Acaricide" | "Nématicide" | "Régulateur de croissance" | "Autre"
+  targetCrops        String[] // cultures ciblées, ex: ["Cacao","Maïs"]
+  targetPests        String[] // ravageurs/maladies/adventices ciblés, ex: ["Mirides","Pourriture brune"]
+  description        String // mode d'action, description technique
+  dosage             String?
+  applicationMethod  String?
+  preHarvestInterval String? // délai avant récolte (DAR)
+  safetyPrecautions  String?
+  regulatoryStatus   String   @default("homologué") // "homologué" | "restreint" | "en évaluation" | "retiré"
+  commercialName     String? // usage interne admin uniquement — jamais indexé pour le RAG
+  tier               String   @default("standard") // "standard" | "premium" — gate RAG comme Document.tier
+  isActive           Boolean  @default(true)
+  isIndexed          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// Sources RSS/scraping gérées par l'admin (UI dans AdminNews > Sources &
+// Automatisation) au lieu d'un fichier de config codé en dur — permet
+// d'ajouter/désactiver une source sans déploiement, avec validation stricte
+// côté serveur (URL testée avant sauvegarde, catégorie/langue/type limités
+// à un enum fermé) pour éviter une prolifération de sources mal formées.
+// Santé (lastStatus/lastError/consecutiveFailures) persistée ici plutôt
+// qu'en mémoire : survit aux redémarrages du serveur.
+model NewsSource {
+  id                  Int       @id @default(autoincrement())
+  name                String
+  url                 String    @unique
+  type                String // "rss" | "web"
+  language            String // "fr" | "en"
+  category            String
+  enabled             Boolean   @default(true)
+  lastStatus          String? // "ok" | "not_modified" | "error"
+  lastError           String?
+  lastRunAt           DateTime?
+  lastArticleCount    Int       @default(0)
+  consecutiveFailures Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
 model ShopProduct {
   id              Int      @id @default(autoincrement())
   name            String
@@ -1070,9 +1123,11 @@ model KnowledgeSource {
 model Document {
   id          String   @id @default(uuid())
   title       String
-  content     String   // Text content of the document
+  content     String   // Text content of the document (typed manually or extracted from pdfUrl)
   description String?
   sourceType  String   @default("manual") // manual, guide, pdf, etc.
+  tier        String   @default("standard") // "standard" | "premium" — gates access in RagWorkflow/chat.ts
+  pdfUrl      String?  // Original uploaded PDF, kept for reference/download; text extracted into `content` for RAG (images in the PDF are not searchable, no vision model configured)
   metadata    Json     @default("{}")
   isActive    Boolean  @default(true)
   isIndexed   Boolean  @default(false)

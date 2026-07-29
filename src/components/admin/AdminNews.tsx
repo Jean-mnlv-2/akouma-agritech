@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { AdminNewsDialog } from './AdminNewsDialog';
 import AdminDetailsDialog from './AdminDetailsDialog';
+import { AdminNewsSources } from './AdminNewsSources';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/integrations/api/client';
 
@@ -92,6 +94,13 @@ export function AdminNews() {
   }
 
   return (
+    <Tabs defaultValue="articles" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="articles">Articles</TabsTrigger>
+        <TabsTrigger value="sources">Sources & Automatisation</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="articles">
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -188,5 +197,11 @@ export function AdminNews() {
         type="news"
       />
     </Card>
+      </TabsContent>
+
+      <TabsContent value="sources">
+        <AdminNewsSources />
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { newsScraper } from '../services/newsScraperService';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
 import { logger } from '../utils/logger';
-import { getEnabledSources, NEWS_SOURCES } from '../config/newsSources';
+import { NEWS_SOURCE_CATEGORIES, NEWS_SOURCE_LANGUAGES, NEWS_SOURCE_TYPES } from '../config/newsSources';
+import { handlePrismaWriteError } from '../utils/prismaErrors';
 import { prisma } from '../db';
 export const newsScraperRouter = Router();
 
@@ -14,6 +16,7 @@ newsScraperRouter.use(authRequired, adminOnly);
 newsScraperRouter.get('/status', async (req: Request, res: Response) => {
   try {
     const stats = await newsScraper.getSourceStats();
+    const sources = await prisma.newsSource.findMany({ orderBy: { name: 'asc' } });
     const recentArticles = await prisma.news.findMany({
       where: { sourceType: 'auto' },
       orderBy: { scrapedAt: 'desc' },
@@ -34,7 +37,7 @@ newsScraperRouter.get('/status', async (req: Request, res: Response) => {
 
     res.json({
       status: 'ok',
-      sources: NEWS_SOURCES,
+      sources,
       stats,
       recentArticles,
       unpublishedCount,
@@ -45,7 +48,7 @@ newsScraperRouter.get('/status', async (req: Request, res: Response) => {
   }
 });
 
-// Trigger manual scrape
+// Trigger manual scrape (toutes les sources activées)
 newsScraperRouter.post('/scrape', csrfRequired, async (req: Request, res: Response) => {
   try {
     logger.info('[NewsScraper] Manual scrape triggered by admin');
@@ -64,21 +67,19 @@ newsScraperRouter.post('/scrape', csrfRequired, async (req: Request, res: Respon
 // Scrape specific source
 newsScraperRouter.post('/scrape/:sourceId', csrfRequired, async (req: Request, res: Response) => {
   try {
-    const { sourceId } = req.params;
-    const source = NEWS_SOURCES.find(s => s.id === sourceId);
-    
+    const sourceId = Number(req.params.sourceId);
+    if (isNaN(sourceId)) return res.status(400).json({ error: 'Invalid sourceId' });
+    const source = await prisma.newsSource.findUnique({ where: { id: sourceId } });
+
     if (!source) {
       return res.status(404).json({ error: 'Source not found' });
     }
 
     logger.info(`[NewsScraper] Manual scrape triggered for source: ${source.name}`);
-    
-    let articles;
-    if (source.type === 'rss') {
-      articles = await newsScraper['scrapeRSS'](source);
-    } else {
-      articles = await newsScraper['scrapeWeb'](source);
-    }
+
+    const articles = source.type === 'rss'
+      ? await newsScraper.scrapeRSS(source)
+      : await newsScraper.scrapeWeb(source);
 
     let savedCount = 0;
     for (const article of articles) {
@@ -101,11 +102,96 @@ newsScraperRouter.post('/scrape/:sourceId', csrfRequired, async (req: Request, r
   }
 });
 
+// ================================
+// Gestion des sources (RSS/web) — CRUD admin avec validation stricte pour
+// éviter qu'une source mal formée ou une catégorie arbitraire ne soit
+// ajoutée sans contrôle ("ne pas partir dans tous les sens") : URL bien
+// formée, type/langue/catégorie limités à un enum fermé, URL testée avant
+// sauvegarde (voir POST /sources/test).
+// ================================
+
+const sourceSchema = z.object({
+  name: z.string().trim().min(2).max(200),
+  url: z.string().trim().url().max(500),
+  type: z.enum(NEWS_SOURCE_TYPES),
+  language: z.enum(NEWS_SOURCE_LANGUAGES),
+  category: z.enum(NEWS_SOURCE_CATEGORIES),
+  enabled: z.boolean().optional(),
+});
+
+newsScraperRouter.get('/sources', async (_req: Request, res: Response) => {
+  try {
+    const sources = await prisma.newsSource.findMany({ orderBy: { name: 'asc' } });
+    res.json({ data: sources });
+  } catch (error) {
+    logger.error('[NewsScraper] Error listing sources:', error);
+    res.status(500).json({ error: 'Failed to list sources' });
+  }
+});
+
+// Fetch + parse à blanc, sans sauvegarder — l'admin doit obtenir un test
+// réussi (au moins 1 article détecté) avant que la création/modification ne
+// soit acceptée côté UI. Ne garantit pas la qualité du contenu, seulement
+// que l'URL répond et que le flux/la page est effectivement analysable.
+newsScraperRouter.post('/sources/test', csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const testSchema = z.object({ url: z.string().trim().url(), type: z.enum(NEWS_SOURCE_TYPES) });
+    const parsed = testSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'url et type (rss|web) requis' });
+
+    const result = await newsScraper.testSource(parsed.data.url, parsed.data.type);
+    res.json({ data: result });
+  } catch (error) {
+    logger.error('[NewsScraper] Error testing source:', error);
+    res.status(500).json({ error: 'Failed to test source' });
+  }
+});
+
+newsScraperRouter.post('/sources', csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const parsed = sourceSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid payload' });
+
+    const created = await prisma.newsSource.create({ data: parsed.data });
+    logger.info(`[NewsScraper] Source created by admin: id=${created.id}, name="${created.name}"`);
+    res.status(201).json({ data: created });
+  } catch (error) {
+    handlePrismaWriteError(error, res);
+  }
+});
+
+newsScraperRouter.put('/sources/:id', csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const parsed = sourceSchema.partial().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid payload' });
+
+    const updated = await prisma.newsSource.update({ where: { id }, data: parsed.data });
+    logger.info(`[NewsScraper] Source updated by admin: id=${id}`);
+    res.json({ data: updated });
+  } catch (error) {
+    handlePrismaWriteError(error, res);
+  }
+});
+
+newsScraperRouter.delete('/sources/:id', csrfRequired, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.newsSource.delete({ where: { id } });
+    logger.info(`[NewsScraper] Source deleted by admin: id=${id}`);
+    res.json({ success: true });
+  } catch (error) {
+    handlePrismaWriteError(error, res);
+  }
+});
+
 // Publish multiple auto-news articles
 newsScraperRouter.post('/publish-batch', csrfRequired, async (req: Request, res: Response) => {
   try {
     const { ids } = req.body;
-    
+
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Invalid ids array' });
     }
@@ -135,7 +221,7 @@ newsScraperRouter.post('/publish-batch', csrfRequired, async (req: Request, res:
 newsScraperRouter.post('/delete-batch', csrfRequired, async (req: Request, res: Response) => {
   try {
     const { ids } = req.body;
-    
+
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Invalid ids array' });
     }
@@ -161,30 +247,30 @@ newsScraperRouter.post('/delete-batch', csrfRequired, async (req: Request, res: 
 // Get auto-news articles (with filters)
 newsScraperRouter.get('/articles', async (req: Request, res: Response) => {
   try {
-    const { 
-      page = 1, 
-      limit = 20, 
-      published, 
+    const {
+      page = 1,
+      limit = 20,
+      published,
       sourceName,
-      language 
+      language
     } = req.query;
 
     const where: any = { sourceType: 'auto' };
-    
+
     if (published !== undefined) {
       where.isPublished = published === 'true';
     }
-    
+
     if (sourceName) {
       where.sourceName = sourceName;
     }
-    
+
     if (language) {
       where.language = language;
     }
 
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    
+
     const [articles, total] = await Promise.all([
       prisma.news.findMany({
         where,

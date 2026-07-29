@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { csrfRequired } from '../middleware/csrf';
+import { RagSystem } from '../rag';
 import { prisma } from '../db';
 export const shopProductsRouter = Router();
 
@@ -87,6 +88,7 @@ shopProductsRouter.put('/:id', authRequired, moduleAccess('products'), csrfRequi
 shopProductsRouter.delete('/:id', authRequired, moduleAccess('products'), csrfRequired, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.shopProduct.delete({ where: { id } });
+  RagSystem.getInstance(prisma).indexer.deleteSource(`shopProduct-${id}`).catch(() => void 0);
   res.json({ success: true });
 });
 

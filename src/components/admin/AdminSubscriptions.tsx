@@ -373,7 +373,7 @@ export function AdminSubscriptions() {
   const handleSyncAllKnowledge = async () => {
     try {
       setSaving(true);
-      await api.request("GET", "/api/chat/admin/knowledge/sync");
+      await api.request("POST", "/api/chat/admin/knowledge/sync");
       toast.success("Synchronisation de la base de connaissances démarrée.");
     } catch (error) {
       console.error(error);

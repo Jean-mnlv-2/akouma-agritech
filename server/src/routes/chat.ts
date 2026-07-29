@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import path from 'path';
+import { promises as fs } from 'fs';
 import { authRequired, adminOnly } from '../middleware/authRequired';
 import { validate } from '../middleware/validate';
+import { csrfRequired } from '../middleware/csrf';
 import { createRateLimiter } from '../middleware/rateLimit';
 import { RagSystem, ChatMessage as RagChatMessage } from '../rag';
 import { SubscriptionService } from '../services/subscriptionService';
@@ -70,24 +73,57 @@ class ProQuotaExceededError extends Error {
   }
 }
 
-function buildProUpgradeMessage(limit: number): string {
-  return `Vous avez atteint votre quota quotidien de ${limit} requêtes avancées liées aux documents personnalisés. Les contenus standards KILIMO restent accessibles gratuitement. Pour continuer à exploiter les documents personnalisés de votre module Agriconsulting, merci de passer au Plan PRO ou de contacter l'équipe commerciale KILIMO.`;
+/**
+ * The answer relies on content above the user's plan tier (e.g. a free-tier
+ * user hitting Premium-only content). Unlike ProQuotaExceededError this is
+ * never resolved by waiting for tomorrow's quota — only a plan upgrade
+ * unlocks it, so no budget is consumed when this fires.
+ */
+class TierLockedError extends Error {
+  constructor(public readonly requiredTier: 'standard' | 'premium') {
+    super('tier_locked');
+    this.name = 'TierLockedError';
+  }
 }
 
+function buildProUpgradeMessage(limit: number): string {
+  return `Vous avez atteint votre quota quotidien de ${limit} requêtes avancées liées aux documents personnalisés. Les contenus standards KILIMO restent accessibles gratuitement. Pour continuer à exploiter les documents personnalisés de votre module Agriconsulting, merci de passer au Plan supérieur ou de contacter l'équipe commerciale KILIMO.`;
+}
+
+function buildTierLockedMessage(requiredTier: 'standard' | 'premium'): string {
+  if (requiredTier === 'premium') {
+    return "Cette réponse s'appuie sur du contenu réservé au Plan Premium (diagnostic environnemental, planification technico-économique complète, stratégie de gestion, accès marché local et international). Passez au Plan Premium pour en bénéficier.";
+  }
+  return "Cette réponse s'appuie sur du contenu réservé au Plan Standard (itinéraires techniques des cultures, fiches sanitaires, conseils de lutte). Abonnez-vous au Plan Standard pour un accès complet — un nombre limité de requêtes de ce type reste inclus gratuitement chaque jour.";
+}
+
+type BudgetCheckResult =
+  | { ok: true; remaining?: number }
+  | { ok: false; reason: 'tier_locked'; requiredTier: 'standard' | 'premium' }
+  | { ok: false; reason: 'quota_exceeded'; limit: number };
+
 /**
- * Track free usage separately from advanced Agriconsulting usage.
- * Free sources: seed, course, news.
- * Pro sources: custom documents and any future premium source type.
+ * Track free usage separately from Agriconsulting (standard/premium) usage.
+ * Free sources: seed, course, news, shopProduct, legalPage — never gated,
+ * never counted. Standard/Premium sources are gated by the user's plan tier
+ * FIRST (getUserAccessTier — a hard wall, not a quota) and only THEN
+ * budgeted against their daily allowance (freeUsage/proUsage on
+ * ChatDailyBudget — the bucket stays binary, tier gating happens upstream).
  */
 async function checkAndUpdateBudget(
   userId: string,
-  usesProSources: boolean
-): Promise<{ ok: true; remaining?: number } | { ok: false; remaining: 0 }> {
+  requiredTier: 'free' | 'standard' | 'premium'
+): Promise<BudgetCheckResult> {
+  if (requiredTier === 'free') return { ok: true };
+
+  const TIER_RANK: Record<'free' | 'standard' | 'premium', number> = { free: 0, standard: 1, premium: 2 };
+  const { tier: userTier, dailyLimit: proLimit } = await subscriptionService.getUserAccessTier(userId);
+  if (TIER_RANK[userTier] < TIER_RANK[requiredTier]) {
+    return { ok: false, reason: 'tier_locked', requiredTier };
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  // Get user's current PRO limit from subscription
-  const { limit: proLimit } = await subscriptionService.getUserProLimit(userId);
 
   // Get or create budget entry
   let budget = await prisma.chatDailyBudget.findUnique({
@@ -96,41 +132,23 @@ async function checkAndUpdateBudget(
 
   if (!budget) {
     budget = await prisma.chatDailyBudget.create({
-      data: {
-        userId,
-        date: today,
-        freeUsage: usesProSources ? 0 : 1,
-        proUsage: usesProSources ? 1 : 0,
-      },
+      data: { userId, date: today, freeUsage: 0, proUsage: 1 },
     });
-    
-    const remaining = usesProSources && proLimit !== 0 ? proLimit - 1 : undefined;
-    return { 
-      ok: true, 
-      remaining,
-    };
+    const remaining = proLimit !== 0 ? proLimit - 1 : undefined;
+    return { ok: true, remaining };
   }
 
-  if (usesProSources && proLimit !== 0 && budget.proUsage >= proLimit) {
-    return { ok: false, remaining: 0 };
+  if (proLimit !== 0 && budget.proUsage >= proLimit) {
+    return { ok: false, reason: 'quota_exceeded', limit: proLimit };
   }
 
-  // Increment appropriate usage counter
   budget = await prisma.chatDailyBudget.update({
     where: { id: budget.id },
-    data: usesProSources 
-      ? { proUsage: { increment: 1 } } 
-      : { freeUsage: { increment: 1 } }
+    data: { proUsage: { increment: 1 } },
   });
 
-  const remaining = usesProSources && proLimit !== 0 
-    ? proLimit - budget.proUsage 
-    : undefined;
-
-  return { 
-    ok: true,
-    remaining,
-  };
+  const remaining = proLimit !== 0 ? proLimit - budget.proUsage : undefined;
+  return { ok: true, remaining };
 }
 
 chatRouter.use(authRequired);
@@ -294,11 +312,11 @@ chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messag
       (chunk: string) => {
         send('delta', { content: chunk });
       },
-      async ({ usesProSources }) => {
-        const budgetCheck = await checkAndUpdateBudget(userId, usesProSources);
+      async ({ requiredTier }) => {
+        const budgetCheck = await checkAndUpdateBudget(userId, requiredTier);
         if (!budgetCheck.ok) {
-          const { limit } = await subscriptionService.getUserProLimit(userId);
-          throw new ProQuotaExceededError(limit);
+          if (budgetCheck.reason === 'tier_locked') throw new TierLockedError(budgetCheck.requiredTier);
+          throw new ProQuotaExceededError(budgetCheck.limit);
         }
       }
     );
@@ -309,11 +327,12 @@ chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messag
         data: { threadId, role: 'assistant', content: response.answer },
       });
       await prisma.chatThread.update({ where: { id: threadId }, data: { updatedAt: new Date() } });
-      
+
       // Send done event with sources metadata
-      send('done', { 
+      send('done', {
         id: saved.id,
         usesProSources: response.usesProSources,
+        requiredTier: response.requiredTier,
         sources: response.sources.map(s => ({
           title: s.source.title,
           score: s.score,
@@ -324,6 +343,13 @@ chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messag
       send('error', { code: 'empty_response', message: 'Aucune réponse générée.' });
     }
   } catch (e: any) {
+    if (e instanceof TierLockedError) {
+      send('error', {
+        code: 'tier_locked',
+        message: buildTierLockedMessage(e.requiredTier),
+      });
+      return;
+    }
     if (e instanceof ProQuotaExceededError) {
       send('error', {
         code: 'daily_pro_budget_exceeded',
@@ -342,8 +368,12 @@ chatRouter.post('/threads/:id/messages', chatMessageRateLimiter, validate(messag
 // RAG Admin routes for knowledge base management
 // ================================
 
-// Sync all knowledge base
-chatRouter.get('/admin/knowledge/sync', authRequired, adminOnly, async (req, res) => {
+// Sync all knowledge base — POST (pas GET) + CSRF : une action qui
+// réindexe toute la base de connaissances ne doit jamais être déclenchable
+// par une simple requête GET (triviellement forgeable cross-site via une
+// balise <img>, sans même avoir besoin de JS ni de contourner un token CSRF
+// puisque csrfRequired laisse volontairement passer les GET/HEAD/OPTIONS).
+chatRouter.post('/admin/knowledge/sync', authRequired, adminOnly, csrfRequired, async (_req, res) => {
   try {
     const rag = getRagSystem();
     const { KilimoKnowledgeAdapter } = await import('../rag/adapters/KilimoKnowledgeAdapter');
@@ -396,11 +426,12 @@ const createDocumentSchema = z.object({
   content: z.string().min(1),
   description: z.string().optional(),
   sourceType: z.string().optional().default('manual'),
+  tier: z.enum(['standard', 'premium']).optional().default('standard'),
   metadata: z.record(z.any()).optional().default({}),
   isActive: z.boolean().optional().default(true),
 }).strict();
 
-chatRouter.post('/admin/documents', authRequired, adminOnly, validate(createDocumentSchema), async (req, res) => {
+chatRouter.post('/admin/documents', authRequired, adminOnly, csrfRequired, validate(createDocumentSchema), async (req, res) => {
   try {
     const document = await prisma.document.create({
       data: req.body,
@@ -412,17 +443,98 @@ chatRouter.post('/admin/documents', authRequired, adminOnly, validate(createDocu
   }
 });
 
+// TS compiles a plain `await import(...)` down to `require()` under our
+// CommonJS module target, which throws ERR_REQUIRE_ASYNC_MODULE on
+// pdfjs-dist's ESM build (top-level await). Routing the specifier through
+// `new Function` hides it from TS's static rewrite so it stays a genuine
+// native dynamic import at runtime — the standard workaround for loading an
+// ESM-only package from a CJS/ts-node codebase.
+const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+
+/**
+ * Extracts plain text from a PDF buffer using pdfjs-dist directly (text
+ * content only, canvas/rendering APIs are never touched) rather than the
+ * `pdf-parse` package — its bundled PDF.js is a 2017-era build that fails
+ * ("bad XRef entry") on PDFs produced by modern tools (confirmed against a
+ * pdfkit-generated file), while pdfjs-dist stays current and has no native
+ * dependencies for this text-only use case.
+ */
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  const pdfjsLib = await dynamicImport('pdfjs-dist/legacy/build/pdf.mjs');
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+  const doc = await loadingTask.promise;
+  const pageTexts: string[] = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    pageTexts.push(content.items.map((item: any) => item.str).join(' '));
+  }
+  return pageTexts.join('\n').trim();
+}
+
+// Create document from an already-uploaded PDF (see POST /api/upload):
+// extracts text server-side for RAG indexing, keeps the original PDF (with
+// any images) attached via pdfUrl for reference/download — images are not
+// searchable, no vision model is configured on the Ollama side.
+const createDocumentFromPdfSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  tier: z.enum(['standard', 'premium']).optional().default('standard'),
+  pdfUrl: z.string().min(1),
+}).strict();
+
+chatRouter.post('/admin/documents/from-pdf', authRequired, adminOnly, csrfRequired, validate(createDocumentFromPdfSchema), async (req, res) => {
+  try {
+    const { title, description, tier, pdfUrl } = req.body;
+
+    // pdfUrl is the relative path returned by POST /api/upload, e.g. "/uploads/xxx.pdf".
+    if (!pdfUrl.startsWith('/uploads/') || pdfUrl.includes('..')) {
+      return res.status(400).json({ error: 'pdfUrl invalide' });
+    }
+    const filePath = path.join(process.cwd(), pdfUrl);
+
+    let extractedText: string;
+    try {
+      const buffer = await fs.readFile(filePath);
+      extractedText = await extractPdfText(buffer);
+    } catch (parseError) {
+      console.error('[documents] PDF extraction error:', parseError);
+      return res.status(400).json({ error: "Impossible d'extraire le texte de ce PDF" });
+    }
+
+    if (!extractedText) {
+      return res.status(400).json({ error: 'Aucun texte exploitable trouvé dans ce PDF (scan sans OCR ?)' });
+    }
+
+    const document = await prisma.document.create({
+      data: {
+        title,
+        description: description || null,
+        content: extractedText,
+        sourceType: 'pdf',
+        tier,
+        pdfUrl,
+      },
+    });
+    res.status(201).json({ data: document });
+  } catch (error) {
+    console.error('[documents] Create from PDF error:', error);
+    res.status(500).json({ error: 'Failed to create document from PDF' });
+  }
+});
+
 // Update document
 const updateDocumentSchema = z.object({
   title: z.string().min(1).optional(),
   content: z.string().min(1).optional(),
   description: z.string().optional(),
   sourceType: z.string().optional(),
+  tier: z.enum(['standard', 'premium']).optional(),
   metadata: z.record(z.any()).optional(),
   isActive: z.boolean().optional(),
 }).strict();
 
-chatRouter.put('/admin/documents/:id', authRequired, adminOnly, validate(updateDocumentSchema), async (req, res) => {
+chatRouter.put('/admin/documents/:id', authRequired, adminOnly, csrfRequired, validate(updateDocumentSchema), async (req, res) => {
   try {
     const document = await prisma.document.update({
       where: { id: req.params.id },
@@ -439,7 +551,7 @@ chatRouter.put('/admin/documents/:id', authRequired, adminOnly, validate(updateD
 });
 
 // Delete document
-chatRouter.delete('/admin/documents/:id', authRequired, adminOnly, async (req, res) => {
+chatRouter.delete('/admin/documents/:id', authRequired, adminOnly, csrfRequired, async (req, res) => {
   try {
     // First delete from knowledge base
     const rag = getRagSystem();
@@ -462,7 +574,7 @@ chatRouter.delete('/admin/documents/:id', authRequired, adminOnly, async (req, r
 });
 
 // Index a single document
-chatRouter.post('/admin/documents/:id/index', authRequired, adminOnly, async (req, res) => {
+chatRouter.post('/admin/documents/:id/index', authRequired, adminOnly, csrfRequired, async (req, res) => {
   try {
     const document = await prisma.document.findUnique({
       where: { id: req.params.id },

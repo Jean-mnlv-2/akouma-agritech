@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authRequired, moduleAccess } from '../middleware/authRequired';
+import { RagSystem } from '../rag';
 import { prisma } from '../db';
 export const legalPagesRouter = Router();
 
@@ -59,6 +60,7 @@ legalPagesRouter.put('/:id', authRequired, moduleAccess('legal'), async (req: Re
 legalPagesRouter.delete('/:id', authRequired, moduleAccess('legal'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.legalPage.delete({ where: { id } });
+  RagSystem.getInstance(prisma).indexer.deleteSource(`legalPage-${id}`).catch(() => void 0);
   res.json({ success: true });
 });
 

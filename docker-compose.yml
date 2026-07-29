@@ -1,6 +1,9 @@
 services:
   db:
-    image: postgres:16-alpine
+    # pgvector-enabled Postgres 16 — plain postgres:16-alpine has no vector
+    # extension, so the RAG migration (CREATE EXTENSION vector, HNSW index
+    # on KnowledgeChunk.embedding) would fail on every fresh deploy.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-kilimo}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
