@@ -68,30 +68,46 @@ async function processOne(certificateId: number): Promise<void> {
     if (!cert.user?.email) throw new Error('Email étudiant manquant');
 
     let t0 = Date.now();
+    // Champs exacts documentés (CampaignRequest) : emailSubject / emailFromName
+    // — pas mailSubject/fromName, que Sertifier ignore silencieusement (aucune
+    // erreur renvoyée, mais sujet et nom d'expéditeur repassent aux valeurs
+    // par défaut sans qu'on s'en rende compte).
     const campaign: any = await sertifierFetch('POST', '/campaign', {
       title: `KILIMO - ${cert.course.title} - ${cert.user.fullName || cert.user.email} - ${cert.certificateNumber}`,
       designId: c.sertifierDesignId,
       detailId: c.sertifierDetailId,
       emailTemplateId: c.sertifierEmailTemplateId,
-      mailSubject: `Votre certificat KILIMO : ${cert.course.title}`,
-      fromName: 'KILIMO E-Learning',
+      emailSubject: `Votre certificat KILIMO : ${cert.course.title}`,
+      emailFromName: 'KILIMO E-Learning',
     });
+    // Sertifier enveloppe toujours la réponse dans { data, message, hasError,
+    // ... } — campaign.id seul est toujours undefined, d'où le fallback.
     const campaignId = campaign?.id || campaign?.data?.id;
     log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'campaign.create', message: `campaignId=${campaignId}`, durationMs: Date.now() - t0 });
 
     t0 = Date.now();
+    // `campaignId` appartient à CHAQUE élément de `credentials`, pas au
+    // niveau racine (CredentialInput.campaignId) — le mettre à la racine
+    // fait que Sertifier ne peut pas rattacher le credential au campaign.
+    // `issueDate` et `externalId` sont des champs standards documentés
+    // (CredentialInput) : on les utilise directement plutôt que de les
+    // glisser dans un faux `attributes` libre. `attributes` réel doit être
+    // un tableau de { id, value } référençant des Attributs personnalisés
+    // créés au préalable via POST /attribute PUIS rattachés au Design/
+    // EmailTemplate depuis l'app web Sertifier (impossible par API) — comme
+    // aucun attribut personnalisé n'est configuré ici, on ne l'utilise pas :
+    // l'envoyer sous forme d'objet libre était silencieusement ignoré par
+    // Sertifier, donc le score n'a jamais réellement figuré sur le
+    // certificat généré. Pour l'afficher un jour sur le visuel Sertifier,
+    // il faudra créer l'Attribut "Score" dans leur dashboard, l'attacher au
+    // Design, et référencer son id ici.
     const credentials: any = await sertifierFetch('POST', '/campaign/addCredentials', {
-      campaignId,
       credentials: [{
+        campaignId,
         name: cert.user.fullName || cert.user.email,
         email: cert.user.email,
-        attributes: {
-          courseName: cert.course.title,
-          score: cert.score != null ? `${cert.score}%` : 'N/A',
-          completionDate: cert.completionDate.toISOString().slice(0, 10),
-          certificateNumber: cert.certificateNumber,
-          platform: 'KILIMO E-Learning',
-        },
+        issueDate: cert.completionDate.toISOString().slice(0, 10),
+        externalId: cert.certificateNumber,
       }],
     });
     log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'campaign.addCredentials', durationMs: Date.now() - t0 });
@@ -100,13 +116,21 @@ async function processOne(certificateId: number): Promise<void> {
     await sertifierFetch('POST', '/campaign/send', { campaignId });
     log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'campaign.send', durationMs: Date.now() - t0 });
 
-    let credentialId = credentials?.credentials?.[0]?.id || '';
-    let credentialUrl = '';
+    // Réponse réelle : { data: { [campaignId]: [ { id, verificationLink, ... } ] } }
+    // — pas `credentials.credentials`, qui n'existe jamais (bug précédent :
+    // credentialId restait toujours vide, la vérif d'URL ne se déclenchait
+    // jamais).
+    const addedCredentials = credentials?.data?.[campaignId] || credentials?.[campaignId] || [];
+    let credentialId = addedCredentials?.[0]?.id || '';
+    let credentialUrl = addedCredentials?.[0]?.verificationLink || '';
     if (credentialId) {
       try {
         t0 = Date.now();
         const cd: any = await sertifierFetch('GET', `/credential/${credentialId}`);
-        credentialUrl = cd?.verificationUrl || cd?.url || cd?.data?.verificationUrl || '';
+        // `verificationLink` est le nom de champ documenté (exemple de
+        // réponse /campaign/addCredentials) ; les anciens noms devinés
+        // (verificationUrl/url) ne figurent nulle part dans la doc réelle.
+        credentialUrl = cd?.data?.verificationLink || cd?.verificationLink || credentialUrl;
         log = appendLog(log, { ts: new Date().toISOString(), level: 'info', step: 'credential.fetch', message: credentialUrl, durationMs: Date.now() - t0 });
       } catch (e) {
         log = appendLog(log, { ts: new Date().toISOString(), level: 'warn', step: 'credential.fetch', message: e instanceof Error ? e.message : 'fetch failed' });

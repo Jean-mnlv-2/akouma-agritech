@@ -82,8 +82,10 @@ import { csrfRequired } from './middleware/csrf';
 import { internalAutoNewsRouter } from './routes/internalAutoNews';
 import { internalElearningRouter } from './routes/internalElearning';
 import { internalEventsRouter } from './routes/internalEvents';
+import { internalKnowledgeBaseRouter } from './routes/internalKnowledgeBase';
 import { internalNewsScraperRouter } from './routes/internalNewsScraper';
 import { phytosanitaryProductsRouter } from './routes/phytosanitaryProducts';
+import { trustedSourcesRouter } from './routes/trustedSources';
 import { newsScraperRouter } from './routes/newsScraper';
 import { prisma } from './db';
 
@@ -366,7 +368,9 @@ app.use('/api/internal/auto-news', internalAutoNewsRouter);
 app.use('/api/internal/elearning', internalElearningRouter);
 app.use('/api/internal/events', internalEventsRouter);
 app.use('/api/internal/news-scraper', internalNewsScraperRouter);
+app.use('/api/internal/knowledge-base', internalKnowledgeBaseRouter);
 app.use('/api/admin/phytosanitary-products', phytosanitaryProductsRouter);
+app.use('/api/admin/trusted-sources', trustedSourcesRouter);
 
 // News Scraper Admin API
 app.use('/api/admin/news-scraper', newsScraperRouter);

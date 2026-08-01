@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { prisma } from '../db';
+import { RagSystem } from '../rag';
 export const donationImpactsRouter = Router();
 
 // Public list
@@ -40,6 +41,7 @@ donationImpactsRouter.put('/:id', authRequired, moduleAccess('donations-content'
 donationImpactsRouter.delete('/:id', authRequired, moduleAccess('donations-content'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.donationImpact.delete({ where: { id } });
+  RagSystem.getInstance(prisma).indexer.deleteSource(`donationImpact-${id}`).catch(() => void 0);
   res.json({ success: true });
 });
 

@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../db';
+import { RagSystem } from '../rag';
 export const partnersRouter = Router();
 const uploadDir = path.resolve(process.cwd(), 'uploads', 'partners');
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -46,6 +47,7 @@ partnersRouter.put('/:id', authRequired, moduleAccess('partners'), async (req: R
 partnersRouter.delete('/:id', authRequired, moduleAccess('partners'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.partner.delete({ where: { id } });
+  RagSystem.getInstance(prisma).indexer.deleteSource(`partner-${id}`).catch(() => void 0);
   res.json({ success: true });
 });
 

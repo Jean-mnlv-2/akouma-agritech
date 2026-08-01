@@ -16,6 +16,11 @@ import { api } from '@/integrations/api/client';
 
 type DocumentTier = 'standard' | 'premium';
 
+interface SourceEntry {
+  name: string;
+  url?: string;
+}
+
 interface KnowledgeDocument {
   id: string;
   title: string;
@@ -24,6 +29,8 @@ interface KnowledgeDocument {
   sourceType: string;
   tier: DocumentTier;
   pdfUrl?: string | null;
+  sources?: SourceEntry[] | null;
+  region?: string | null;
   isActive: boolean;
   isIndexed: boolean;
   createdAt: string;
@@ -34,7 +41,24 @@ const TIER_LABELS: Record<DocumentTier, string> = {
   premium: 'Premium',
 };
 
-const EMPTY_FORM = { title: '', content: '', description: '', tier: 'standard' as DocumentTier, isActive: true };
+const EMPTY_FORM = { title: '', content: '', description: '', tier: 'standard' as DocumentTier, region: '', sourcesText: '', isActive: true };
+
+// "Nom | URL" (une par ligne) <-> [{ name, url? }] — évite un éditeur de
+// liste dynamique pour un champ que l'admin remplit rarement à la main
+// (surtout peuplé par DeerFlow via l'API interne).
+function sourcesToText(sources?: SourceEntry[] | null): string {
+  return (sources || []).map((s) => (s.url ? `${s.name} | ${s.url}` : s.name)).join('\n');
+}
+function textToSources(text: string): SourceEntry[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, url] = line.split('|').map((p) => p.trim());
+      return url ? { name, url } : { name };
+    });
+}
 
 export function AdminDocuments() {
   const queryClient = useQueryClient();
@@ -71,6 +95,8 @@ export function AdminDocuments() {
       content: doc.content,
       description: doc.description || '',
       tier: doc.tier,
+      region: doc.region || '',
+      sourcesText: sourcesToText(doc.sources),
       isActive: doc.isActive,
     });
     setMode('text'); // toujours éditer en texte, même pour un document créé depuis un PDF
@@ -94,8 +120,11 @@ export function AdminDocuments() {
           setUploadingPdf(false);
         }
       }
-      if (editing) return api.request('PUT', `/api/chat/admin/documents/${editing.id}`, { body: form });
-      return api.request('POST', '/api/chat/admin/documents', { body: form });
+      const { sourcesText, ...rest } = form;
+      const sources = textToSources(sourcesText);
+      const body = { ...rest, sources: sources.length > 0 ? sources : undefined, region: form.region || undefined };
+      if (editing) return api.request('PUT', `/api/chat/admin/documents/${editing.id}`, { body });
+      return api.request('POST', '/api/chat/admin/documents', { body });
     },
     onSuccess: () => {
       toast({ title: 'Succès', description: `Document ${editing ? 'modifié' : 'créé'}. Pense à le (ré)indexer.` });
@@ -170,6 +199,8 @@ export function AdminDocuments() {
           <TableHeader>
             <TableRow>
               <TableHead>Titre</TableHead>
+              <TableHead>Région</TableHead>
+              <TableHead>Sources</TableHead>
               <TableHead>Palier</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Statut</TableHead>
@@ -196,6 +227,14 @@ export function AdminDocuments() {
                       </a>
                     )}
                   </div>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{doc.region || '—'}</TableCell>
+                <TableCell>
+                  {doc.sources && doc.sources.length > 0 ? (
+                    <Badge variant="outline" title={doc.sources.map((s) => s.name).join(', ')}>{doc.sources.length}</Badge>
+                  ) : (
+                    <Badge variant="destructive" title="Aucune source citée">0</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant={doc.tier === 'premium' ? 'default' : 'outline'}>{TIER_LABELS[doc.tier] || doc.tier}</Badge>
@@ -257,6 +296,26 @@ export function AdminDocuments() {
             <div className="space-y-2">
               <Label htmlFor="doc-description">Description (optionnelle)</Label>
               <Input id="doc-description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="doc-region">Portée géographique</Label>
+              <Input id="doc-region" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="ex: Afrique, Cameroun, Afrique de l'Ouest..." />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="doc-sources">Sources (une par ligne, format "Nom | URL")</Label>
+              <Textarea
+                id="doc-sources"
+                rows={3}
+                value={form.sourcesText}
+                onChange={(e) => setForm({ ...form, sourcesText: e.target.value })}
+                placeholder={'IRAD Cameroun | https://irad-cameroun.cm\nFAO'}
+              />
+              <p className="text-xs text-muted-foreground">
+                Centres de recherche/institutions dont provient ce contenu — essentiel pour vérifier la
+                fiabilité d'un brouillon rédigé par DeerFlow avant de l'activer.
+              </p>
             </div>
 
             <div className="space-y-2">

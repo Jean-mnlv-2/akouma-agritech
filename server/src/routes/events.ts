@@ -3,6 +3,7 @@ import { authRequired, moduleAccess, optionalAuth } from '../middleware/authRequ
 import { csrfRequired } from '../middleware/csrf';
 import { handlePrismaWriteError } from '../utils/prismaErrors';
 import { prisma } from '../db';
+import { RagSystem } from '../rag';
 export const eventsRouter = Router();
 
 // Route unique consommée par la page publique événements et par le
@@ -65,6 +66,7 @@ eventsRouter.delete('/:id', authRequired, moduleAccess('events'), csrfRequired, 
   try {
     const id = Number(req.params.id);
     await prisma.event.delete({ where: { id } });
+    RagSystem.getInstance(prisma).indexer.deleteSource(`event-${id}`).catch(() => void 0);
     res.json({ success: true });
   } catch (e) {
     handlePrismaWriteError(e, res);

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { env } from '../utils/env';
 import { prisma } from '../db';
+import { RagSystem } from '../rag';
 export const liveStreamsRouter = Router();
 
 // Public list (optionally filter upcoming/published)
@@ -126,6 +127,7 @@ liveStreamsRouter.delete('/:id', authRequired, moduleAccess('livestreams'), asyn
   try {
     const id = Number(req.params.id);
     await prisma.liveStream.delete({ where: { id } });
+    RagSystem.getInstance(prisma).indexer.deleteSource(`liveStream-${id}`).catch(() => void 0);
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: 'failed_to_delete', details: e instanceof Error ? e.message : 'Unknown error' });

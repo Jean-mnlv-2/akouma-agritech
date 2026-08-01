@@ -1,5 +1,5 @@
 import nodeCron from 'node-cron';
-import { emailService } from './email';
+import { emailService, isEmailConfigured } from './email';
 import { RagSystem } from '../rag';
 import { SubscriptionService } from '../services/subscriptionService';
 import { OrdersService } from '../services/ordersService';
@@ -146,11 +146,12 @@ async function processUnpaidOrders() {
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(now.getDate() - 7);
 
-  // 1. Envoyer des relances pour les commandes de 3 jours
+  // 1. Envoyer des relances (une seule fois) pour les commandes impayées de 3 à 7 jours
   const ordersToRemind = await prisma.order.findMany({
     where: {
       paymentStatus: 'pending',
       status: 'pending',
+      reminderSentAt: null,
       createdAt: {
         lte: threeDaysAgo,
         gt: sevenDaysAgo,
@@ -164,44 +165,34 @@ async function processUnpaidOrders() {
 
   console.log(`[CRON] ${ordersToRemind.length} commandes en attente de relance trouvées.`);
 
-  for (const order of ordersToRemind) {
-    try {
-      // Vérifier si une relance n'a pas déjà été envoyée pour cette commande
-      const alreadyReminded = await prisma.reminderLog.findFirst({
-        where: {
+  if (!isEmailConfigured()) {
+    console.warn('[CRON] RESEND_API_KEY non configurée : relances commandes impayées ignorées (aucune commande marquée comme relancée).');
+  } else {
+    for (const order of ordersToRemind) {
+      try {
+        const daysOld = Math.floor((now.getTime() - order.createdAt.getTime()) / (24 * 60 * 60 * 1000));
+
+        await emailService.sendUnpaidOrderReminder({
           email: order.user.email,
-          error: `order_reminder_${order.orderNumber}`,
-        }
-      });
+          userName: order.user.fullName || order.user.email,
+          orderNumber: order.orderNumber,
+          total: Number(order.total),
+          daysOld,
+          items: order.items.map(item => ({
+            name: item.name,
+            quantity: item.quantity
+          }))
+        });
 
-      if (alreadyReminded) continue;
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { reminderSentAt: now },
+        });
 
-      await emailService.sendUnpaidOrderReminder({
-        email: order.user.email,
-        userName: order.user.fullName || order.user.email,
-        orderNumber: order.orderNumber,
-        total: Number(order.total),
-        daysOld: 3,
-        items: order.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity
-        }))
-      });
-
-      await prisma.reminderLog.create({
-        data: {
-          userId: order.userId,
-          email: order.user.email,
-          enrollmentId: 0,
-          courseId: 0,
-          status: 'success',
-          error: `order_reminder_${order.orderNumber}`
-        }
-      });
-      
-      console.log(`[CRON] Relance envoyée pour la commande #${order.orderNumber} à ${order.user.email}`);
-    } catch (error) {
-      console.error(`[CRON] Erreur relance commande #${order.orderNumber}:`, error);
+        console.log(`[CRON] Relance envoyée pour la commande #${order.orderNumber} à ${order.user.email}`);
+      } catch (error) {
+        console.error(`[CRON] Erreur relance commande #${order.orderNumber}:`, error);
+      }
     }
   }
 

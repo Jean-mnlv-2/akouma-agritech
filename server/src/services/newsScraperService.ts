@@ -331,7 +331,7 @@ export class NewsScraperService {
     const excerpt = this.createExcerpt(cleanedContent, 200);
 
     return {
-      title: this.decodeEntities(item.title),
+      title: this.stripFeedPrefix(this.decodeEntities(item.title)),
       content: cleanedContent,
       excerpt: excerpt,
       imageUrl: this.extractImage(item),
@@ -394,6 +394,7 @@ export class NewsScraperService {
           }
 
           if (!title || title.length < 10 || !link) return;
+          title = this.stripFeedPrefix(title);
 
           // Try multiple selectors for content
           const contentSelectors = ['.content', '.excerpt', '.post-content', '.entry-content', 'p', '.description'];
@@ -411,7 +412,7 @@ export class NewsScraperService {
           let imageUrl: string | null = null;
           for (const sel of imageSelectors) {
             const src = $el.find(sel).first().attr('src') || $el.find(sel).first().attr('data-src');
-            if (src) {
+            if (src && this.isLikelyContentImage(src)) {
               imageUrl = this.resolveUrl(src, source.url);
               break;
             }
@@ -492,7 +493,7 @@ export class NewsScraperService {
         const og = $('meta[property="og:image"]').attr('content')
           || $('meta[name="twitter:image"]').attr('content')
           || $('meta[property="og:image:url"]').attr('content');
-        if (og) imageUrl = this.resolveUrl(og, article.sourceUrl);
+        if (og && this.isLikelyContentImage(og)) imageUrl = this.resolveUrl(og, article.sourceUrl);
       }
 
       let content = article.content;
@@ -525,18 +526,42 @@ export class NewsScraperService {
   }
 
   private extractImage(item: Parser.Item): string | null {
-    if (item.enclosure?.url) {
-      return item.enclosure.url;
+    if (item.enclosure?.url && (!item.enclosure.type || item.enclosure.type.startsWith('image/'))) {
+      if (this.isLikelyContentImage(item.enclosure.url)) return item.enclosure.url;
     }
 
     if (item.content) {
       const imgMatch = item.content.match(/<img[^>]+src=["']([^"']+)["']/);
-      if (imgMatch) {
+      if (imgMatch && this.isLikelyContentImage(imgMatch[1])) {
         return imgMatch[1];
       }
     }
 
     return null;
+  }
+
+  /**
+   * Filtre bon marché (motifs d'URL connus, sans requête HTTP) pour écarter
+   * les pixels de tracking, espaceurs et icônes/logos génériques repérés par
+   * `<img>`/enclosure — ce ne sont pas des visuels d'article exploitables,
+   * mais rien ne les distinguait avant d'un vrai visuel.
+   */
+  private isLikelyContentImage(url: string): boolean {
+    const lower = url.toLowerCase();
+    return !/(1x1|pixel|spacer|blank|transparent|tracking|beacon)\.(gif|png|jpe?g|webp)/.test(lower)
+      && !/\/(favicon|logo|icon|avatar)[-_.]/.test(lower);
+  }
+
+  /**
+   * AllAfrica (et flux similaires) préfixent systématiquement le titre par
+   * le pays/la région suivi de ":", ex. "Nigeria: Farmers face drought" —
+   * un artefact du flux, pas un choix éditorial. On le retire quand il
+   * matche ce format (préfixe court capitalisé, suivi d'un espace puis
+   * d'une majuscule ou d'un chiffre).
+   */
+  private stripFeedPrefix(title: string): string {
+    const match = title.match(/^([A-ZÀ-Ý][\wÀ-ÿ' -]{1,28}):\s+(?=[A-Z0-9])/);
+    return match ? title.slice(match[0].length) : title;
   }
 
   private cleanHTML(html: string): string {
@@ -693,7 +718,7 @@ export class NewsScraperService {
       // date/lieu de l'événement. La date+lieu exacts sont le signal fiable
       // qu'il s'agit du même événement réel, même si le titre diffère
       // légèrement.
-      const realTitle = this.decodeEntities(eventData.title || article.title);
+      const realTitle = this.stripFeedPrefix(this.decodeEntities(eventData.title || article.title));
       const realSlug = slugify(realTitle);
       const duplicateAfterExtraction = await prisma.event.findFirst({
         where: {
@@ -717,13 +742,15 @@ export class NewsScraperService {
       }
 
       const og = $('meta[property="og:image"]').attr('content');
-      const imageUrl = eventData.imageUrl
-        ? this.resolveUrl(eventData.imageUrl, article.sourceUrl)
-        : (og ? this.resolveUrl(og, article.sourceUrl) : article.imageUrl);
+      const ogImage = og && this.isLikelyContentImage(og) ? og : null;
+      const jsonLdImage = eventData.imageUrl && this.isLikelyContentImage(eventData.imageUrl) ? eventData.imageUrl : null;
+      const imageUrl = jsonLdImage
+        ? this.resolveUrl(jsonLdImage, article.sourceUrl)
+        : (ogImage ? this.resolveUrl(ogImage, article.sourceUrl) : article.imageUrl);
 
       await prisma.event.create({
         data: {
-          title: this.decodeEntities(eventData.title || article.title),
+          title: realTitle,
           description: eventData.description
             ? this.decodeEntities(eventData.description)
             : (article.excerpt || article.content || null),

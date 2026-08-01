@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authRequired, moduleAccess, optionalAuth } from '../middleware/authRequired';
 import { prisma } from '../db';
+import { RagSystem } from '../rag';
 export const careersRouter = Router();
 
 // Route unique consommée par la page publique carrières et par le back-office
@@ -40,5 +41,6 @@ careersRouter.put('/:id', authRequired, moduleAccess('careers'), async (req: Req
 careersRouter.delete('/:id', authRequired, moduleAccess('careers'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   await prisma.career.delete({ where: { id } });
+  RagSystem.getInstance(prisma).indexer.deleteSource(`career-${id}`).catch(() => void 0);
   res.json({ success: true });
 });

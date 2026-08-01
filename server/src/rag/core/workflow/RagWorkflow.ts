@@ -10,6 +10,7 @@ import {
   ChatMessage,
   IEmbeddingService,
   IVectorStore,
+  ILlmChatService,
   RetrieverConfig,
   SearchResult,
   RagConfig,
@@ -27,24 +28,28 @@ interface RagState {
 
 export class RagWorkflow implements IRagOrchestrator {
   private knowledgeRetriever: KnowledgeRetriever;
-  private config: RagConfig;
+  private llmChatService: ILlmChatService;
 
   constructor(
     embeddingService: IEmbeddingService,
     vectorStore: IVectorStore,
-    config: RagConfig
+    config: RagConfig,
+    llmChatService: ILlmChatService
   ) {
     this.knowledgeRetriever = new KnowledgeRetriever(
       embeddingService, vectorStore, config.retriever
     );
-    this.config = config;
+    this.llmChatService = llmChatService;
   }
 
   // Define which source types are FREE (platform showcase content, always
   // accessible). Everything else is an admin-managed "document" (Agriconsulting
   // knowledge base), tiered standard/premium via KnowledgeSource.metadata.tier
   // (set from Document.tier in KilimoKnowledgeAdapter.indexDocuments()).
-  private readonly FREE_SOURCE_TYPES = new Set(['seed', 'course', 'news', 'shopProduct', 'legalPage']);
+  private readonly FREE_SOURCE_TYPES = new Set([
+    'seed', 'course', 'news', 'shopProduct', 'legalPage',
+    'event', 'partner', 'successStory', 'donationImpact', 'career', 'liveStream',
+  ]);
   private readonly TIER_RANK: Record<'free' | 'standard' | 'premium', number> = { free: 0, standard: 1, premium: 2 };
 
   // Seuil de similarité plus strict que le seuil général (RAG_RETRIEVER_SCORE_THRESHOLD,
@@ -167,32 +172,7 @@ export class RagWorkflow implements IRagOrchestrator {
   ): Promise<string> {
     const systemPrompt = this.buildSystemPrompt();
     const messages = this.buildMessages(query, context, conversationHistory, systemPrompt);
-
-    try {
-      const response = await fetch(`${this.config.embedding.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.config.llm.model,
-          stream: false,
-          messages,
-          options: {
-            temperature: this.config.llm.temperature,
-            top_p: this.config.llm.topP,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Ollama request failed: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.message.content;
-    } catch (error) {
-      console.error('Error generating LLM response:', error);
-      return "Désolé, je n'ai pas pu générer de réponse pour le moment.";
-    }
+    return this.llmChatService.generateChat(messages);
   }
 
   private async generateResponseStream(
@@ -203,60 +183,7 @@ export class RagWorkflow implements IRagOrchestrator {
   ): Promise<string> {
     const systemPrompt = this.buildSystemPrompt();
     const messages = this.buildMessages(query, context, conversationHistory, systemPrompt);
-
-    try {
-      const response = await fetch(`${this.config.embedding.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.config.llm.model,
-          stream: true,
-          messages,
-          options: {
-            temperature: this.config.llm.temperature,
-            top_p: this.config.llm.topP,
-          },
-        }),
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error(`Ollama streaming request failed: ${response.statusText}`);
-      }
-
-      let fullResponse = '';
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const json = JSON.parse(line.trim());
-              const delta = json?.message?.content;
-              if (typeof delta === 'string' && delta) {
-                fullResponse += delta;
-                onChunk(delta);
-              }
-            } catch (e) {
-              // ignore invalid JSON lines
-            }
-          }
-        }
-      }
-      return fullResponse;
-    } catch (error) {
-      console.error('Error in LLM stream:', error);
-      onChunk("Désolé, je n'ai pas pu générer de réponse pour le moment.");
-      return "Désolé, je n'ai pas pu générer de réponse pour le moment.";
-    }
+    return this.llmChatService.generateChatStream(messages, onChunk);
   }
 
   private buildSystemPrompt(): string {

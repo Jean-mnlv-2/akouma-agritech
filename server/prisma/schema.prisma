@@ -266,6 +266,12 @@ model PhytosanitaryProduct {
   regulatoryStatus   String   @default("homologué") // "homologué" | "restreint" | "en évaluation" | "retiré"
   commercialName     String? // usage interne admin uniquement — jamais indexé pour le RAG
   tier               String   @default("standard") // "standard" | "premium" — gate RAG comme Document.tier
+  // Citations vérifiables (centre de recherche, institution, étude) — voir
+  // Document.sources pour la justification complète. Particulièrement
+  // important ici : contenu réglementaire/sécurité, jamais activé sans
+  // pouvoir en vérifier l'origine.
+  sources            Json?
+  region             String? // ex: "Afrique", "Cameroun" — voir Document.region
   isActive           Boolean  @default(true)
   isIndexed          Boolean  @default(false)
   createdAt          DateTime @default(now())
@@ -713,6 +719,7 @@ model Order {
   deliveryStatus       String?               @default("pending")
   shippingState        String?
   shippingZipCode      String?
+  reminderSentAt       DateTime?
   cashbackTransactions CashbackTransaction[]
   deliveryPartner      DeliveryPartner?      @relation(fields: [deliveryPartnerId], references: [id])
   promoCode            PromoCode?            @relation(fields: [promoCodeId], references: [id])
@@ -1143,10 +1150,40 @@ model Document {
   tier        String   @default("standard") // "standard" | "premium" — gates access in RagWorkflow/chat.ts
   pdfUrl      String?  // Original uploaded PDF, kept for reference/download; text extracted into `content` for RAG (images in the PDF are not searchable, no vision model configured)
   metadata    Json     @default("{}")
+  // Citations vérifiables (centre de recherche, institution, étude — nom +
+  // URL/référence optionnelle) : { name: string, url?: string }[]. Permet à
+  // un admin de vérifier la crédibilité d'un contenu avant de l'activer,
+  // en particulier pour les brouillons rédigés par DeerFlow. Volontairement
+  // typé Json plutôt qu'une table dédiée : simple liste de citations, jamais
+  // interrogée indépendamment du document parent.
+  sources     Json?
+  // Portée géographique du contenu (ex: "Afrique", "Cameroun", "Afrique de
+  // l'Ouest") — texte libre, pas un enum fermé de pays.
+  region      String?
   isActive    Boolean  @default(true)
   isIndexed   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+/// Registre admin des centres de recherche/institutions de confiance (IITA,
+/// CORAF, IRAD Cameroun, FAO, INRAB...) dont DeerFlow doit prioritairement
+/// s'inspirer pour rédiger les brouillons Document/PhytosanitaryProduct —
+/// consulté en lecture seule via /api/internal/knowledge-base/trusted-sources.
+/// Gère l'attente inverse de Document.sources : là où sources cite la/les
+/// références utilisées PAR un document donné, TrustedSource définit EN
+/// AMONT la liste que DeerFlow est censé consulter.
+model TrustedSource {
+  id          Int      @id @default(autoincrement())
+  name        String   // ex: "IITA", "IRAD Cameroun", "FAO"
+  url         String?
+  description String?
+  region      String?  // ex: "Afrique", "Cameroun", "Afrique de l'Ouest"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
 }
 
 /// Represents a chunk of knowledge with vector embedding

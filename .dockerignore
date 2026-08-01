@@ -15,3 +15,11 @@ dist
 **/build
 **/uploads
 server/uploads
+
+# Outillage externe DeerFlow (clone du framework + config projet) — jamais
+# lu par Dockerfile/Dockerfile.frontend, mais ~140 Mo non exclus faisaient
+# transiter tout ça vers le démon Docker à chaque build (contexte lent,
+# a contribué à des coupures "closed network connection" en plein build).
+deerflow-src
+deerflow
+translations

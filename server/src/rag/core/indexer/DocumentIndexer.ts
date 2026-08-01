@@ -118,7 +118,9 @@ export class DocumentIndexer implements IKnowledgeIndexer {
 
   async deleteSource(sourceId: string): Promise<void> {
     await this.vectorStore.deleteChunks(sourceId);
-    await this.prisma.knowledgeSource.delete({
+    // deleteMany (not delete): "supprimer si présent" doit être idempotent —
+    // tous les appelants traitent déjà "rien à supprimer" comme un cas normal.
+    await this.prisma.knowledgeSource.deleteMany({
       where: { id: sourceId },
     });
   }

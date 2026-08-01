@@ -21,6 +21,11 @@ type Tier = 'standard' | 'premium';
 const PRODUCT_TYPES: ProductType[] = ['Herbicide', 'Fongicide', 'Insecticide', 'Acaricide', 'Nématicide', 'Régulateur de croissance', 'Autre'];
 const REGULATORY_STATUSES: RegulatoryStatus[] = ['homologué', 'restreint', 'en évaluation', 'retiré'];
 
+interface SourceEntry {
+  name: string;
+  url?: string;
+}
+
 interface PhytoProduct {
   id: string;
   activeIngredient: string;
@@ -35,6 +40,8 @@ interface PhytoProduct {
   regulatoryStatus: RegulatoryStatus;
   commercialName?: string | null;
   tier: Tier;
+  sources?: SourceEntry[] | null;
+  region?: string | null;
   isActive: boolean;
   isIndexed: boolean;
   createdAt: string;
@@ -53,8 +60,26 @@ const EMPTY_FORM = {
   regulatoryStatus: 'homologué' as RegulatoryStatus,
   commercialName: '',
   tier: 'standard' as Tier,
+  region: '',
+  sourcesText: '',
   isActive: true,
 };
+
+// "Nom | URL" (une par ligne) <-> [{ name, url? }] — voir AdminDocuments.tsx
+// pour la même convention.
+function sourcesToText(sources?: SourceEntry[] | null): string {
+  return (sources || []).map((s) => (s.url ? `${s.name} | ${s.url}` : s.name)).join('\n');
+}
+function textToSources(text: string): SourceEntry[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, url] = line.split('|').map((p) => p.trim());
+      return url ? { name, url } : { name };
+    });
+}
 
 const REGULATORY_BADGE_VARIANT: Record<RegulatoryStatus, 'default' | 'destructive' | 'secondary' | 'outline'> = {
   'homologué': 'default',
@@ -101,6 +126,8 @@ export function AdminPhytosanitaryProducts() {
       regulatoryStatus: product.regulatoryStatus,
       commercialName: product.commercialName || '',
       tier: product.tier,
+      region: product.region || '',
+      sourcesText: sourcesToText(product.sources),
       isActive: product.isActive,
     });
     setDialogOpen(true);
@@ -119,6 +146,8 @@ export function AdminPhytosanitaryProducts() {
     regulatoryStatus: form.regulatoryStatus,
     commercialName: form.commercialName.trim() || null,
     tier: form.tier,
+    region: form.region.trim() || null,
+    sources: textToSources(form.sourcesText),
     isActive: form.isActive,
   });
 
@@ -203,6 +232,8 @@ export function AdminPhytosanitaryProducts() {
               <TableHead>Matière active</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Cultures ciblées</TableHead>
+              <TableHead>Région</TableHead>
+              <TableHead>Sources</TableHead>
               <TableHead>Statut réglementaire</TableHead>
               <TableHead>Palier</TableHead>
               <TableHead>Indexé</TableHead>
@@ -215,6 +246,14 @@ export function AdminPhytosanitaryProducts() {
                 <TableCell className="font-medium">{product.activeIngredient}</TableCell>
                 <TableCell><Badge variant="outline">{product.productType}</Badge></TableCell>
                 <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{product.targetCrops.join(', ')}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{product.region || '—'}</TableCell>
+                <TableCell>
+                  {product.sources && product.sources.length > 0 ? (
+                    <Badge variant="outline" title={product.sources.map((s) => s.name).join(', ')}>{product.sources.length}</Badge>
+                  ) : (
+                    <Badge variant="destructive" title="Aucune source citée">0</Badge>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant={REGULATORY_BADGE_VARIANT[product.regulatoryStatus]}>{product.regulatoryStatus}</Badge>
                 </TableCell>
@@ -324,6 +363,26 @@ export function AdminPhytosanitaryProducts() {
             <div className="space-y-2">
               <Label htmlFor="phy-safety">Précautions de sécurité</Label>
               <Textarea id="phy-safety" rows={2} value={form.safetyPrecautions} onChange={(e) => setForm({ ...form, safetyPrecautions: e.target.value })} placeholder="EPI requis, délai de réentrée..." />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phy-region">Portée géographique</Label>
+              <Input id="phy-region" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="ex: Afrique, Cameroun, Afrique de l'Ouest..." />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phy-sources">Sources (une par ligne, format "Nom | URL")</Label>
+              <Textarea
+                id="phy-sources"
+                rows={3}
+                value={form.sourcesText}
+                onChange={(e) => setForm({ ...form, sourcesText: e.target.value })}
+                placeholder={'IRAD Cameroun | https://irad-cameroun.cm\nCORAF'}
+              />
+              <p className="text-xs text-muted-foreground">
+                Centres de recherche/institutions dont provient cette caractérisation — essentiel pour du
+                contenu réglementaire/sécurité, en particulier pour un brouillon rédigé par DeerFlow.
+              </p>
             </div>
 
             <div className="space-y-2">

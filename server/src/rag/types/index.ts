@@ -6,9 +6,12 @@
  * LLM configuration
  */
 export interface LlmConfig {
+  provider: 'ollama' | 'gemini';
   model: string;
   temperature: number;
   topP: number;
+  baseUrl?: string; // Ollama uniquement
+  apiKey?: string; // Gemini uniquement
 }
 
 /**
@@ -145,6 +148,23 @@ export type IndexProgressCallback = (progress: {
 // ==========================================
 // Core Service Interfaces
 // ==========================================
+
+/**
+ * Interface for LLM chat completion services (génération de la réponse
+ * finale, distinct de l'embedding). `messages` suit la convention
+ * OpenAI/Ollama (role: system|user|assistant) — chaque implémentation
+ * convertit en interne vers le format propre à son fournisseur (ex: Gemini
+ * utilise systemInstruction + contents avec role user/model).
+ */
+export interface LlmChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface ILlmChatService {
+  generateChat(messages: LlmChatMessage[]): Promise<string>;
+  generateChatStream(messages: LlmChatMessage[], onChunk: (chunk: string) => void): Promise<string>;
+}
 
 /**
  * Interface for embedding services

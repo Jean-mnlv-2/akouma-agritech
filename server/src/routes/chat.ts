@@ -421,6 +421,11 @@ chatRouter.get('/admin/documents/:id', authRequired, adminOnly, async (req, res)
 });
 
 // Create document
+const sourceEntrySchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  url: z.string().trim().url().max(500).optional(),
+}).strict();
+
 const createDocumentSchema = z.object({
   title: z.string().min(1),
   content: z.string().min(1),
@@ -428,6 +433,8 @@ const createDocumentSchema = z.object({
   sourceType: z.string().optional().default('manual'),
   tier: z.enum(['standard', 'premium']).optional().default('standard'),
   metadata: z.record(z.any()).optional().default({}),
+  sources: z.array(sourceEntrySchema).optional(),
+  region: z.string().trim().max(100).optional(),
   isActive: z.boolean().optional().default(true),
 }).strict();
 
@@ -531,6 +538,8 @@ const updateDocumentSchema = z.object({
   sourceType: z.string().optional(),
   tier: z.enum(['standard', 'premium']).optional(),
   metadata: z.record(z.any()).optional(),
+  sources: z.array(sourceEntrySchema).optional(),
+  region: z.string().trim().max(100).optional(),
   isActive: z.boolean().optional(),
 }).strict();
 
@@ -543,6 +552,10 @@ chatRouter.put('/admin/documents/:id', authRequired, adminOnly, csrfRequired, va
         isIndexed: false,
       },
     });
+    // Purge immédiate : si le contenu a changé ou a été désactivé, l'entrée
+    // vectorisée précédente est obsolète/à retirer sans attendre la
+    // synchronisation périodique (6h) ou un ré-index manuel.
+    getRagSystem().indexer.deleteSource(`document-${req.params.id}`).catch(() => void 0);
     res.json({ data: document });
   } catch (error) {
     console.error('[documents] Update error:', error);

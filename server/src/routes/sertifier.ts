@@ -43,46 +43,54 @@ sertifierRouter.get('/test', authRequired, adminOnly, async (_req: Request, res:
 // Issue a credential: create campaign, add credential, and publish
 sertifierRouter.post('/issue-credential', authRequired, adminOnly, validate(issueCredentialSchema), async (req: Request, res: Response) => {
   try {
-    const { recipientName, recipientEmail, courseName, score, completionDate, designId, detailId, emailTemplateId } = req.body;
+    const { recipientName, recipientEmail, courseName, completionDate, designId, detailId, emailTemplateId } = req.body;
 
-    // 1. Create campaign
+    // 1. Create campaign — champs exacts CampaignRequest : emailSubject/
+    // emailFromName (mailSubject/fromName n'existent pas dans l'API et sont
+    // silencieusement ignorés).
     const campaign = await sertifierRequest('POST', '/campaign', {
       title: `KILIMO - ${courseName} - ${recipientName} - ${new Date().toISOString().slice(0, 10)}`,
       designId,
       detailId,
       emailTemplateId,
-      mailSubject: `Votre certificat KILIMO : ${courseName}`,
-      fromName: 'KILIMO E-Learning',
+      emailSubject: `Votre certificat KILIMO : ${courseName}`,
+      emailFromName: 'KILIMO E-Learning',
     });
 
-    const campaignId = campaign.id;
+    // Sertifier enveloppe toujours dans { data, message, hasError, ... }.
+    const campaignId = (campaign as any)?.data?.id || (campaign as any)?.id;
 
-    // 2. Add credential to campaign
-    const credential = await sertifierRequest('POST', '/campaign/addCredentials', {
-      campaignId,
+    // 2. Add credential to campaign — `campaignId` doit être DANS chaque
+    // élément de `credentials` (CredentialInput.campaignId), pas à la
+    // racine. `issueDate` est un champ standard documenté ; `score` n'a pas
+    // d'équivalent standard et nécessiterait un Attribut personnalisé
+    // Sertifier (créé via /attribute puis rattaché au Design depuis leur
+    // app web) — non configuré ici, donc pas envoyé (un objet `attributes`
+    // libre était silencieusement ignoré, le score n'apparaissait jamais
+    // réellement sur le certificat).
+    const credential: any = await sertifierRequest('POST', '/campaign/addCredentials', {
       credentials: [{
+        campaignId,
         name: recipientName,
         email: recipientEmail,
-        attributes: {
-          courseName,
-          score: score ? `${score}%` : 'N/A',
-          completionDate: completionDate || new Date().toISOString().slice(0, 10),
-          platform: 'KILIMO E-Learning',
-        },
+        issueDate: completionDate || new Date().toISOString().slice(0, 10),
       }],
     });
 
     // 3. Send/publish the campaign
     await sertifierRequest('POST', '/campaign/send', { campaignId });
 
-    // 4. Get credential details for verification URL
+    // 4. Get credential details for verification URL — réponse réelle :
+    // { data: { [campaignId]: [ { id, verificationLink, ... } ] } }
     let credentialUrl = '';
     let credentialId = '';
-    if (credential?.credentials?.[0]) {
-      credentialId = credential.credentials[0].id;
+    const addedCredentials = credential?.data?.[campaignId] || credential?.[campaignId] || [];
+    if (addedCredentials?.[0]) {
+      credentialId = addedCredentials[0].id;
+      credentialUrl = addedCredentials[0].verificationLink || '';
       try {
-        const cred = await sertifierRequest('GET', `/credential/${credentialId}`);
-        credentialUrl = cred.verificationUrl || cred.url || '';
+        const cred: any = await sertifierRequest('GET', `/credential/${credentialId}`);
+        credentialUrl = cred?.data?.verificationLink || cred?.verificationLink || credentialUrl;
       } catch {
         // Credential might not be ready yet
       }

@@ -16,8 +16,8 @@ export interface SEOProps {
   /** 140–155 caractères recommandés. */
   description: string;
   /** Chemin relatif (ex: "/shop") OU URL absolue. */
-  path?: string;
-  image?: string;
+  path?: string | null;
+  image?: string | null;
   type?: 'website' | 'article' | 'product' | 'course' | 'book';
   locale?: string;
   /** Données structurées JSON-LD (objet ou tableau d'objets). */
@@ -41,11 +41,17 @@ export function SEO({
   jsonLd,
   noindex = false,
 }: SEOProps) {
-  const url = path.startsWith('http') ? path : `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  // `?? '/'` / `?? DEFAULT_IMAGE`, pas seulement les valeurs par défaut des
+  // paramètres : ces dernières ne s'appliquent qu'à `undefined`, jamais à
+  // `null` — et un `imageUrl`/`path` venant de l'API est souvent `null`
+  // (champ optionnel non renseigné), pas absent.
+  const safePath = path ?? '/';
+  const safeImage = image ?? DEFAULT_IMAGE;
+  const url = safePath.startsWith('http') ? safePath : `${SITE_URL}${safePath.startsWith('/') ? safePath : `/${safePath}`}`;
   const computedTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
   const safeTitle = computedTitle.length > 60 ? `${computedTitle.slice(0, 57)}…` : computedTitle;
   const safeDesc = description.length > 160 ? `${description.slice(0, 157)}…` : description;
-  const absoluteImage = image.startsWith('http') ? image : `${SITE_URL}${image.startsWith('/') ? image : `/${image}`}`;
+  const absoluteImage = safeImage.startsWith('http') ? safeImage : `${SITE_URL}${safeImage.startsWith('/') ? safeImage : `/${safeImage}`}`;
   const schemas = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
   return (

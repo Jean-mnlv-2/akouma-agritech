@@ -18,6 +18,7 @@ import {
   Truck,
   Shield,
   ShieldAlert,
+  Landmark,
   Crown,
   Briefcase,
   Calendar,
@@ -65,6 +66,7 @@ const AdminCookieConsents = lazy(() => import('@/components/admin/AdminCookieCon
 const AdminSubscriptions = lazy(() => import('@/components/admin/AdminSubscriptions').then(m => ({ default: m.AdminSubscriptions })));
 const AdminDocuments = lazy(() => import('@/components/admin/AdminDocuments').then(m => ({ default: m.AdminDocuments })));
 const AdminPhytosanitaryProducts = lazy(() => import('@/components/admin/AdminPhytosanitaryProducts').then(m => ({ default: m.AdminPhytosanitaryProducts })));
+const AdminTrustedSources = lazy(() => import('@/components/admin/AdminTrustedSources').then(m => ({ default: m.AdminTrustedSources })));
 
 const TabLoadingFallback = () => (
   <div className="flex items-center justify-center py-16">
@@ -134,7 +136,8 @@ const tabGroups = [
     tabs: [
       { value: 'subscriptions', label: 'Forfaits Chatbot', icon: Crown },
       { value: 'documents', label: 'Documents RAG', icon: FileText },
-      { value: 'phytosanitary-products', label: 'Produits phytosanitaires', icon: ShieldAlert }
+      { value: 'phytosanitary-products', label: 'Produits phytosanitaires', icon: ShieldAlert },
+      { value: 'trusted-sources', label: 'Sources de confiance', icon: Landmark }
     ]
   },
   {
@@ -441,6 +444,7 @@ function AdminContent() {
               {(activeTab === 'subscriptions' && isAdmin) && <AdminSubscriptions />}
               {(activeTab === 'documents' && isAdmin) && <AdminDocuments />}
               {(activeTab === 'phytosanitary-products' && isAdmin) && <AdminPhytosanitaryProducts />}
+              {(activeTab === 'trusted-sources' && isAdmin) && <AdminTrustedSources />}
               {(activeTab === 'courses' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('courses')))) && (
                 <AdminCourses 
                   onViewInscriptions={(id) => { setSelectedCourseId(id); setActiveTab('elearning-enrollments'); }}

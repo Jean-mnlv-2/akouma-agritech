@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -72,6 +72,9 @@ services:
       DELIVERY_API_PUBLIC_KEY: ${DELIVERY_API_PUBLIC_KEY}
       DELIVERY_API_SECRET_KEY: ${DELIVERY_API_SECRET_KEY}
       DELIVERY_PICK_ADDRESS_ID: ${DELIVERY_PICK_ADDRESS_ID}
+      SERTIFIER_SECRET_KEY: ${SERTIFIER_SECRET_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:-KILIMO <onboarding@resend.dev>}
       SHIPPING_FREE_THRESHOLD: ${SHIPPING_FREE_THRESHOLD:-50000}
       SHIPPING_BASE_FEE: ${SHIPPING_BASE_FEE:-5000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-kilimo}?schema=public

@@ -61,6 +61,11 @@ const productSchema = z.object({
   regulatoryStatus: z.enum(PHYTO_REGULATORY_STATUSES).optional().default('homologué'),
   commercialName: z.string().trim().optional().nullable(),
   tier: z.enum(PHYTO_TIERS).optional().default('standard'),
+  sources: z.array(z.object({
+    name: z.string().trim().min(1).max(200),
+    url: z.string().trim().url().max(500).optional(),
+  }).strict()).optional(),
+  region: z.string().trim().max(100).optional().nullable(),
   isActive: z.boolean().optional().default(true),
 }).strict();
 
@@ -81,6 +86,10 @@ phytosanitaryProductsRouter.put('/:id', csrfRequired, validate(updateProductSche
       where: { id: req.params.id },
       data: { ...req.body, isIndexed: false }, // toute modification invalide l'index précédent
     });
+    // Purge immédiate de l'entrée vectorisée précédente (contenu
+    // réglementaire/sécurité : ne pas attendre la sync périodique ou un
+    // ré-index manuel si le produit vient d'être désactivé/modifié).
+    getRagSystem().indexer.deleteSource(`phytosanitaryProduct-${req.params.id}`).catch(() => void 0);
     res.json({ data: product });
   } catch (error) {
     handlePrismaWriteError(error, res);

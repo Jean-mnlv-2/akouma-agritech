@@ -3,6 +3,8 @@ import { env } from './env';
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
+export const isEmailConfigured = () => !!resend;
+
 export const emailService = {
   async sendResetPasswordEmail(email: string, token: string) {
     const resetUrl = `${env.FRONTEND_ORIGINS[0]}/reset-password?token=${token}`;
