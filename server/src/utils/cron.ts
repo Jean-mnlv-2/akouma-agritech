@@ -14,6 +14,16 @@ const ordersService = new OrdersService(prisma);
  * Vérifie la connexion à Ollama et s'assure que le modèle est disponible
  */
 async function checkOllama() {
+  // Ollama peut rester déployé uniquement pour les embeddings RAG (voir
+  // rag/config) même quand un provider cloud (Gemini/DeepSeek) gère le chat
+  // — dans ce cas, ne pas tenter de télécharger le modèle de chat Ollama sur
+  // une instance dimensionnée pour un modèle d'embeddings bien plus léger.
+  const provider = process.env.AI_PROVIDER;
+  if (provider === 'gemini' || provider === 'deepseek') {
+    console.log(`[Ollama] Provider de chat actif : ${provider} — vérification du modèle de chat Ollama ignorée.`);
+    return;
+  }
+
   const ollamaUrl = process.env.OLLAMA_URL || 'http://ollama:11434';
   const model = process.env.OLLAMA_MODEL || 'llama3.2';
   
