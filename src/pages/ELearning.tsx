@@ -15,6 +15,7 @@ import Footer from "@/components/Footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import ContentSubmission from "@/components/ContentSubmission";
 import ElearningCourseCard from "@/components/elearning/ElearningCourseCard";
+import { EnrollmentDetailsDialog, type EnrollmentDetails } from "@/components/elearning/EnrollmentDetailsDialog";
 import elearningHero from "@/assets/elearning-hero.jpg";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
 import kilimoLogo from "@/assets/kilimo-logo.png";
@@ -25,6 +26,8 @@ import { useI18n } from "@/i18n";
 import { SEO } from "@/components/SEO";
 import { usePublicStats } from "@/hooks/use-public-stats";
 import { useElearningStats } from "@/hooks/use-elearning-stats";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { useEnrollments } from "@/hooks/useEnrollments";
 import type { LucideIcon } from "lucide-react";
 
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -48,18 +51,6 @@ interface UICourse {
   languages?: string[];
 }
 
-interface User {
-  id: string | number;
-  email: string;
-  name?: string;
-}
-
-interface Enrollment {
-  id: number;
-  userId: string | number;
-  courseId: number;
-  enrolledAt: string;
-}
 
 interface PreviewItem {
   id: string | number;
@@ -124,8 +115,22 @@ const ELearning = () => {
   const PAGE_SIZE = 9;
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
   const [liveStreams, setLiveStreams] = useState<LiveStreamItem[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userEnrollments, setUserEnrollments] = useState<Enrollment[]>([]);
+  const { user: currentUser } = useAuthUser();
+  // Un utilisateur ayant déjà renseigné son profil pour une formation
+  // précédente ne doit plus se voir reposer ces questions à chaque nouvelle
+  // inscription — seule "expectations" reste propre à chaque formation.
+  const { enrollments: userEnrollments, knownProfile } = useEnrollments({ enabled: !!currentUser });
+  const [pendingEnrollCourse, setPendingEnrollCourse] = useState<UICourse | null>(null);
+  const [enrollSubmitting, setEnrollSubmitting] = useState(false);
+
+  const knownProfileDetails: EnrollmentDetails | null = knownProfile ? {
+    professionalActivity: knownProfile.professionalActivity || '',
+    experienceLevel: knownProfile.experienceLevel || '',
+    organization: knownProfile.organization || '',
+    sector: knownProfile.sector || '',
+    expectations: '',
+    paymentPhone: currentUser?.phone || '',
+  } : null;
 
   const availableLanguages = Array.from(new Set(courses.flatMap((c) => Array.isArray(c.languages) ? c.languages : []))).sort();
   const availableCategories = Array.from(new Set(courses.map(c => c.category).filter(Boolean))).sort();
@@ -136,23 +141,11 @@ const ELearning = () => {
   ];
 
   useEffect(() => {
-    api.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
-      const user = data?.user || null;
-      setCurrentUser(user);
-      if (user) {
-        api.request('GET', '/api/elearning_enrollments').then((res: { data: Enrollment[] }) => {
-          setUserEnrollments(res.data || []);
-        }).catch((err: Error) => console.error("Error fetching enrollments:", err));
-      }
-    });
-  }, []);
-
-  useEffect(() => {
     const fetchCourses = async () => {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await api.from('courses').select('*').order('created_at', { ascending: false });
+        const { data, error } = await api.from('courses').select('*').order('created_at', { ascending: false }).range(0, 999);
         if (error) throw error;
         setCourses((data || []).map((c: { 
           id?: number | string; 
@@ -204,7 +197,7 @@ const ELearning = () => {
 
     const fetchLiveStreams = async () => {
       try {
-        const { data, error } = await api.from('live_streams').select('*').order('scheduledTime', { ascending: true });
+        const { data, error } = await api.from('live_streams').select('*').order('scheduledTime', { ascending: true }).range(0, 999);
         if (error) throw error;
         setLiveStreams(data || []);
       } catch { /* silent */ }
@@ -295,22 +288,73 @@ const ELearning = () => {
 
 
 
-  const handleCourseEnroll = async (courseId: string, courseTitle: string) => {
+  const handleCourseEnroll = async (
+    courseId: string,
+    courseTitle: string,
+    coursePrice: string,
+    courseThumbnail: string | undefined,
+    details: EnrollmentDetails,
+  ) => {
     if (!currentUser) {
       navigate('/auth');
       return;
     }
 
+    const numericPrice = Number(coursePrice);
+    const enrollmentFields = {
+      professionalActivity: details.professionalActivity || null,
+      organization: details.organization || null,
+      sector: details.sector || null,
+      experienceLevel: details.experienceLevel || null,
+      expectations: details.expectations || null,
+    };
+
     try {
-      setLoading(true);
+      setEnrollSubmitting(true);
+
+      if (!isNaN(numericPrice) && numericPrice > 0) {
+        const orderRes = await api.request('POST', '/api/orders', {
+          body: {
+            items: [
+              {
+                productId: Number(courseId),
+                productType: 'course',
+                name: courseTitle,
+                price: numericPrice,
+                quantity: 1,
+                imageUrl: courseThumbnail,
+              }
+            ],
+            // Requis par Money Fusion (Mobile Money) pour router le paiement —
+            // les achats de cours n'ont pas d'autre formulaire d'adresse/téléphone.
+            shippingPhone: details.paymentPhone || currentUser?.phone || null,
+            ...enrollmentFields,
+          }
+        });
+        const order = orderRes.data;
+
+        const paymentRes = await api.request('POST', '/api/payments/initiate', {
+          body: { orderId: order.id }
+        });
+        const paymentUrl = paymentRes.data?.paymentUrl;
+
+        if (paymentUrl) {
+          window.location.href = paymentUrl;
+          return;
+        }
+        throw new Error("Impossible de récupérer l'URL de paiement");
+      }
+
       await api.request('POST', '/api/elearning_enrollments', {
         body: {
-          courseId: Number(courseId)
+          courseId: Number(courseId),
+          ...enrollmentFields,
         }
       });
-      toast({ 
-        title: t("elearning.enroll.success") || "Inscription réussie !", 
-        description: (t("elearning.enroll.success_desc") || "Vous êtes maintenant inscrit au cours : ") + courseTitle 
+      setPendingEnrollCourse(null);
+      toast({
+        title: t("elearning.enroll.success") || "Inscription réussie !",
+        description: (t("elearning.enroll.success_desc") || "Vous êtes maintenant inscrit au cours : ") + courseTitle
       });
     } catch (err: unknown) {
       console.error(err);
@@ -319,13 +363,13 @@ const ELearning = () => {
         const axiosErr = err as { response: { data?: { error?: string } } };
         errorMessage = axiosErr.response.data?.error || errorMessage;
       }
-      toast({ 
-        title: t("common.error") || "Erreur", 
-        description: errorMessage, 
-        variant: "destructive" 
+      toast({
+        title: t("common.error") || "Erreur",
+        description: errorMessage,
+        variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setEnrollSubmitting(false);
     }
   };
 
@@ -718,9 +762,19 @@ const ELearning = () => {
                     key={course.id}
                     course={course}
                     currentUser={currentUser}
-                    isEnrolled={userEnrollments.some((e: Enrollment) => e.courseId === Number(course.id))}
+                    isEnrolled={userEnrollments.some((e) => e.courseId === Number(course.id))}
                     previewItems={previewItems}
-                    onEnroll={() => handleCourseEnroll(course.id, course.title)}
+                    onEnroll={() => {
+                      const isPaid = !isNaN(Number(course.price)) && Number(course.price) > 0;
+                      // Un cours payant redemande TOUJOURS le dialogue (au minimum pour
+                      // confirmer le numéro Mobile Money de ce paiement précis) — seul un
+                      // cours gratuit peut sauter directement sur un profil déjà connu.
+                      if (knownProfileDetails && !isPaid) {
+                        handleCourseEnroll(course.id, course.title, course.price, course.thumbnail, knownProfileDetails);
+                      } else {
+                        setPendingEnrollCourse(course);
+                      }
+                    }}
                     t={t}
                     index={index}
                   />
@@ -836,6 +890,25 @@ const ELearning = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {pendingEnrollCourse && (
+        <EnrollmentDetailsDialog
+          open={!!pendingEnrollCourse}
+          onOpenChange={(open) => { if (!open) setPendingEnrollCourse(null); }}
+          courseTitle={pendingEnrollCourse.title}
+          currentUserLabel={currentUser?.name || currentUser?.email || ''}
+          isPaidCourse={Number(pendingEnrollCourse.price) > 0}
+          knownPhone={currentUser?.phone}
+          submitting={enrollSubmitting}
+          onSubmit={(details) => handleCourseEnroll(
+            pendingEnrollCourse.id,
+            pendingEnrollCourse.title,
+            pendingEnrollCourse.price,
+            pendingEnrollCourse.thumbnail,
+            details,
+          )}
+        />
+      )}
 
       <Footer />
     </div>

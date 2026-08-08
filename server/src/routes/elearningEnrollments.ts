@@ -30,17 +30,32 @@ const stateSchema = z.object({
   currentModuleId: z.union([z.number().int().positive(), z.null()]).optional(),
   videoPositionSec: z.number().int().min(0).max(60 * 60 * 24).optional(),
   pdfPage: z.number().int().min(1).max(10_000).optional(),
+  // Quand fourni, la position vidéo/PDF est sauvegardée sur le ModuleProgress
+  // de CE module plutôt que sur l'inscription — un cours à plusieurs
+  // vidéos/PDF ne doit pas partager une seule position de reprise pour tous
+  // ses modules.
+  moduleId: z.number().int().positive().optional(),
 }).strict();
 
 elearningEnrollmentsRouter.get('/', authRequired, async (req: Request, res: Response) => {
   const u = (req as any).user;
   const isAdmin = u?.role === 'admin' || u?.role === 'supervisor';
+  // ?courseId= optionnel — évite aux pages qui ne s'intéressent qu'à UN cours
+  // (CourseDetail, CourseLearn) de récupérer et filtrer côté client la liste
+  // complète des inscriptions de l'utilisateur.
+  const courseIdParam = req.query.courseId ? Number(req.query.courseId) : undefined;
+  const where: any = isAdmin ? {} : { userId: u.id };
+  if (courseIdParam !== undefined && !isNaN(courseIdParam)) where.courseId = courseIdParam;
   const items = await prisma.eLearningEnrollment.findMany({
-    where: isAdmin ? undefined : { userId: u.id },
+    where,
     orderBy: { enrolledAt: 'desc' },
     include: {
-      course: { include: { modules: { select: { id: true } } } },
-      moduleProgress: { where: { completed: true }, select: { moduleId: true, completedAt: true } },
+      // title/order permettent au dashboard de suggérer le vrai prochain
+      // module (au lieu d'un titre fabriqué) sans requête supplémentaire.
+      course: { include: { modules: { select: { id: true, title: true, order: true }, orderBy: { order: 'asc' } } } },
+      // quizScore permet un vrai score moyen aux quiz (au lieu de la
+      // progression % réutilisée sous un libellé trompeur).
+      moduleProgress: { where: { completed: true }, select: { moduleId: true, completedAt: true, quizScore: true } },
       ...(isAdmin ? { user: true } : {}),
     },
   });
@@ -144,13 +159,32 @@ elearningEnrollmentsRouter.put('/:id/state', authRequired, validate(stateSchema)
     const existing = await prisma.eLearningEnrollment.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (existing.userId !== u.id) return res.status(403).json({ error: 'forbidden' });
-    const { currentModuleId, videoPositionSec, pdfPage } = req.body;
+    const { currentModuleId, videoPositionSec, pdfPage, moduleId } = req.body;
+
+    if (moduleId !== undefined && (videoPositionSec !== undefined || pdfPage !== undefined)) {
+      await prisma.moduleProgress.upsert({
+        where: { enrollmentId_moduleId: { enrollmentId: id, moduleId: Number(moduleId) } },
+        create: {
+          enrollmentId: id,
+          moduleId: Number(moduleId),
+          userId: u.id,
+          ...(videoPositionSec !== undefined && { videoPositionSec: Math.max(0, Math.floor(Number(videoPositionSec) || 0)) }),
+          ...(pdfPage !== undefined && { pdfPage: Math.max(1, Math.floor(Number(pdfPage) || 1)) }),
+        },
+        update: {
+          ...(videoPositionSec !== undefined && { videoPositionSec: Math.max(0, Math.floor(Number(videoPositionSec) || 0)) }),
+          ...(pdfPage !== undefined && { pdfPage: Math.max(1, Math.floor(Number(pdfPage) || 1)) }),
+        },
+      });
+    }
+
     const updated = await prisma.eLearningEnrollment.update({
       where: { id },
       data: {
         ...(currentModuleId !== undefined && { currentModuleId: currentModuleId === null ? null : Number(currentModuleId) }),
-        ...(videoPositionSec !== undefined && { videoPositionSec: Math.max(0, Math.floor(Number(videoPositionSec) || 0)) }),
-        ...(pdfPage !== undefined && { pdfPage: Math.max(1, Math.floor(Number(pdfPage) || 1)) }),
+        // Compat: sans moduleId, on écrit encore sur l'inscription (ancien comportement).
+        ...(moduleId === undefined && videoPositionSec !== undefined && { videoPositionSec: Math.max(0, Math.floor(Number(videoPositionSec) || 0)) }),
+        ...(moduleId === undefined && pdfPage !== undefined && { pdfPage: Math.max(1, Math.floor(Number(pdfPage) || 1)) }),
         lastAccessedAt: new Date(),
       },
       select: { id: true, currentModuleId: true, videoPositionSec: true, pdfPage: true, lastAccessedAt: true },

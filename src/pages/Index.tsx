@@ -90,7 +90,7 @@ const Index = () => {
         >
           <Services />
         </section>
-        
+
         {/* News Section */}
         <section 
           id="news"

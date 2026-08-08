@@ -57,6 +57,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
     sertifier_design_id: '',
     sertifier_detail_id: '',
     sertifier_email_template_id: '',
+    cohort_start_date: '',
+    cohort_interval_days: '',
   });
 
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -118,6 +120,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         sertifier_design_id: course.sertifierDesignId || '',
         sertifier_detail_id: course.sertifierDetailId || '',
         sertifier_email_template_id: course.sertifierEmailTemplateId || '',
+        cohort_start_date: course.cohortStartDate ? course.cohortStartDate.slice(0, 10) : '',
+        cohort_interval_days: course.cohortIntervalDays != null ? String(course.cohortIntervalDays) : '',
       });
       setPreviewImageUrl(course.thumbnailUrl || null);
       setPreviewVideoUrl(course.videoUrl || null);
@@ -148,6 +152,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
         sertifier_design_id: '',
         sertifier_detail_id: '',
         sertifier_email_template_id: '',
+        cohort_start_date: '',
+        cohort_interval_days: '',
       });
       setPreviewImageUrl(null);
       setPreviewVideoUrl(null);
@@ -236,6 +242,8 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
       sertifierDesignId: formData.sertifier_design_id.trim() || null,
       sertifierDetailId: formData.sertifier_detail_id.trim() || null,
       sertifierEmailTemplateId: formData.sertifier_email_template_id.trim() || null,
+      cohortStartDate: formData.cohort_start_date || null,
+      cohortIntervalDays: formData.cohort_interval_days ? Number(formData.cohort_interval_days) : null,
     };
     onSave(payload);
   };
@@ -604,6 +612,36 @@ export function AdminCourseDialog({ open, onOpenChange, course, onSave }: AdminC
           <div className="space-y-2">
             <Label htmlFor="languages_csv">Langues (séparées par des virgules)</Label>
             <Input id="languages_csv" value={formData.languages_csv} onChange={(e) => setFormData({ ...formData, languages_csv: e.target.value })} placeholder="Français, Hausa, Swahili..." />
+          </div>
+
+          <div className="space-y-3 border-t pt-4">
+            <Label className="text-base font-semibold">Planification de cohorte (optionnel)</Label>
+            <p className="text-xs text-muted-foreground">
+              Renseignez une date de début et un intervalle pour que chaque module s'ouvre automatiquement pour TOUS les apprenants, sans avoir à saisir une date module par module.
+              Laissez vide pour un cours classique en auto-rythmé (chacun avance dès qu'il valide son propre module).
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cohort_start_date">Date de début de cohorte</Label>
+                <Input
+                  id="cohort_start_date"
+                  type="date"
+                  value={formData.cohort_start_date}
+                  onChange={(e) => setFormData({ ...formData, cohort_start_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cohort_interval_days">Intervalle entre modules (jours)</Label>
+                <Input
+                  id="cohort_interval_days"
+                  type="number"
+                  min={1}
+                  value={formData.cohort_interval_days}
+                  onChange={(e) => setFormData({ ...formData, cohort_interval_days: e.target.value })}
+                  placeholder="Ex : 7 (une semaine)"
+                />
+              </div>
+            </div>
           </div>
           <div className="space-y-3 border-t pt-4">
             <div className="flex items-center gap-2">

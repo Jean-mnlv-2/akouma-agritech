@@ -310,7 +310,10 @@ export default function Pricing() {
           </section>
         )}
 
-        <section className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {/* 3 forfaits actifs (Entreprise temporairement désactivé) — grille à
+            3 colonnes pour que les cartes se centrent, au lieu de rester
+            calées à gauche dans une 4ᵉ colonne vide. */}
+        <section className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-3">
           {sortedPlans.map((plan) => {
             const isCurrent = currentPlanId === plan.id;
             const isProcessing = processingPlanId === plan.id;

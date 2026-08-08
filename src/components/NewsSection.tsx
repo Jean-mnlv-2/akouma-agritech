@@ -155,7 +155,7 @@ const NewsSection = () => {
           <div className="mb-12">
             <div className="relative bg-card rounded-2xl overflow-hidden shadow-natural group hover:shadow-xl transition-all duration-300">
               <div className="grid md:grid-cols-2 gap-0">
-                <div className="relative h-64 md:h-auto bg-muted/30 flex items-center justify-center">
+                <div className="relative h-64 md:h-96 bg-muted/30 flex items-center justify-center">
                   <img
                     src={news[0].image}
                     alt={news[0].title}

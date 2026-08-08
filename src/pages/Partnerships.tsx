@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { SEO } from "@/components/SEO";
@@ -36,6 +37,8 @@ interface PartnerRow {
   id: number;
   name: string;
   logo?: string;
+  logoUrl?: string;
+  imageUrl?: string;
   type?: string;
   description?: string;
   year?: string;
@@ -476,16 +479,25 @@ const Partnerships = () => {
             {partners.map((partner, index) => (
               <Card key={`partner-${index}-${partner.name}`} className="text-center hover:shadow-md transition-shadow duration-300 group">
                 <CardHeader>
-                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{partner.logo || '🤝'}</div>
+                  <div className="w-16 h-16 mx-auto mb-3 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform duration-300">
+                    {partner.logoUrl || partner.imageUrl ? (
+                      <img src={partner.logoUrl || partner.imageUrl} alt={partner.name} className="w-full h-full object-cover" />
+                    ) : partner.logo ? (
+                      <span>{partner.logo}</span>
+                    ) : (
+                      <Handshake className="w-8 h-8 text-primary" />
+                    )}
+                  </div>
                   <CardTitle className="text-lg">{partner.name}</CardTitle>
                   <Badge variant="outline" className="w-fit mx-auto">
                     {partner.type}
                   </Badge>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {partner.description}
-                  </p>
+                  <p
+                    className="text-sm text-muted-foreground mb-3"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(partner.description || "") }}
+                  />
                   <p className="text-xs text-primary font-medium mb-3">
                     {partner.year ? `Partenaire depuis ${partner.year}` : ''}
                   </p>

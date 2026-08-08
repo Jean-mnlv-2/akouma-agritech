@@ -41,6 +41,8 @@ export interface Course {
   sertifierDesignId?: string;
   sertifierDetailId?: string;
   sertifierEmailTemplateId?: string;
+  cohortStartDate?: string | null;
+  cohortIntervalDays?: number | null;
 }
 
 export interface AdminCoursesProps {

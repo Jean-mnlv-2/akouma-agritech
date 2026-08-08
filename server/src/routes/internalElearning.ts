@@ -56,6 +56,7 @@ internalElearningRouter.post('/courses', async (req: Request, res: Response) => 
         category, instructorName, instructorBio,
         isPublished: false, // toujours brouillon, quoi que le payload envoie
         isCopyProtected: false,
+        createdVia: 'deerflow',
       } as any,
     });
     logger.info(`[internal-elearning] Created draft course: id=${created.id}, title="${title}"`);
@@ -121,6 +122,7 @@ internalElearningRouter.post('/courses/:courseId/modules', async (req: Request, 
         order: order ?? 0,
         quizQuestions: quizQuestions || null,
         isActive: false, // brouillon : invisible des apprenants tant qu'un admin ne l'active pas
+        createdVia: 'deerflow',
       },
     });
     logger.info(`[internal-elearning] Created draft module: id=${created.id}, courseId=${courseId}`);
@@ -220,6 +222,156 @@ internalElearningRouter.get('/enrollments/at-risk', async (req: Request, res: Re
     res.json({ data: enrollments });
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch at-risk enrollments' });
+  }
+});
+
+// ================================
+// Demandes de rattrapage — DeerFlow ne peut que PROPOSER une résolution
+// (suggestedResolution/suggestedByAi) ; il n'a aucun moyen d'accorder ou de
+// refuser une demande lui-même. Seul un admin, via PUT /api/rattrapage_requests/:id
+// (route JWT, hors de ce routeur interne), peut changer le statut — la
+// décision finale (équité/intégrité du certificat) reste toujours humaine.
+// ================================
+
+internalElearningRouter.get('/rattrapage-requests/pending', async (_req: Request, res: Response) => {
+  try {
+    const requests = await prisma.rattrapageRequest.findMany({
+      where: { status: 'pending' },
+      include: {
+        user: { select: { id: true, fullName: true, email: true } },
+        module: { select: { id: true, title: true, type: true, content: true } },
+        enrollment: { include: { course: { select: { id: true, title: true } } } },
+      },
+      orderBy: { requestedAt: 'asc' },
+      take: 100,
+    });
+    res.json({ data: requests });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch pending rattrapage requests' });
+  }
+});
+
+internalElearningRouter.put('/rattrapage-requests/:id/suggest', async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const { suggestedResolution } = req.body || {};
+    if (!suggestedResolution?.trim()) return res.status(400).json({ error: 'suggestedResolution required' });
+
+    const existing = await prisma.rattrapageRequest.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ error: 'Only pending requests can receive a suggestion' });
+    }
+
+    const updated = await prisma.rattrapageRequest.update({
+      where: { id },
+      data: { suggestedResolution: suggestedResolution.trim(), suggestedByAi: true },
+      // status volontairement inchangé : ceci reste une suggestion, jamais
+      // une décision — voir AdminRattrapageRequests.tsx pour la revue humaine.
+    });
+    logger.info(`[internal-elearning] Suggested rattrapage resolution: id=${id}`);
+    res.json({ data: updated });
+  } catch (e) {
+    logger.error('[internal-elearning] Error suggesting rattrapage resolution:', e);
+    res.status(400).json({ error: e instanceof Error ? e.message : 'Failed to suggest resolution' });
+  }
+});
+
+// ================================
+// Contexte pour les suggestions génériques (présences, quiz, cohorte,
+// traduction) + soumission — voir AiSuggestion / server/src/routes/aiSuggestions.ts
+// pour la revue/application humaine. DeerFlow ne peut QUE créer une
+// suggestion "pending" ici ; il n'a aucun moyen de l'appliquer lui-même.
+// ================================
+
+internalElearningRouter.get('/attendance/at-risk', async (_req: Request, res: Response) => {
+  try {
+    const groups = await prisma.courseSchedule.groupBy({
+      by: ['enrollmentId'],
+      where: { status: 'absent' },
+      _count: { _all: true },
+    });
+    // Exactement 2 absences : à un cran de la pénalité (seuil = 3), pas
+    // encore pénalisé — c'est la fenêtre utile pour une relance préventive.
+    const atRiskEnrollmentIds = groups.filter((g) => g._count._all === 2).map((g) => g.enrollmentId);
+    if (atRiskEnrollmentIds.length === 0) return res.json({ data: [] });
+
+    const alreadySuggested = await prisma.aiSuggestion.findMany({
+      where: { type: 'attendance_outreach', targetType: 'enrollment', targetId: { in: atRiskEnrollmentIds }, status: 'pending' },
+      select: { targetId: true },
+    });
+    const excluded = new Set(alreadySuggested.map((s) => s.targetId));
+
+    const enrollments = await prisma.eLearningEnrollment.findMany({
+      where: { id: { in: atRiskEnrollmentIds.filter((id) => !excluded.has(id)) } },
+      include: {
+        user: { select: { id: true, fullName: true, email: true } },
+        course: { select: { id: true, title: true } },
+      },
+    });
+    res.json({ data: enrollments });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch at-risk attendance enrollments' });
+  }
+});
+
+internalElearningRouter.get('/modules/quiz-modules', async (_req: Request, res: Response) => {
+  try {
+    const modules = await prisma.courseModule.findMany({
+      where: { isActive: true, type: { in: ['quiz', 'synthesis_exam'] } },
+      include: { course: { select: { id: true, title: true } } },
+      orderBy: { updatedAt: 'desc' },
+      take: 100,
+    });
+    res.json({ data: modules });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch quiz modules' });
+  }
+});
+
+internalElearningRouter.get('/courses/needs-schedule', async (_req: Request, res: Response) => {
+  try {
+    const courses = await prisma.course.findMany({
+      where: { isPublished: true, cohortStartDate: null },
+      include: { modules: { where: { isActive: true }, select: { id: true, duration: true } } },
+      take: 100,
+    });
+    res.json({ data: courses });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch courses needing a schedule' });
+  }
+});
+
+internalElearningRouter.get('/courses/translation-candidates', async (_req: Request, res: Response) => {
+  try {
+    const courses = await prisma.course.findMany({
+      where: { isPublished: true, languages: { equals: ['Français'] } },
+      select: { id: true, title: true, description: true, content: true, languages: true },
+      take: 50,
+    });
+    res.json({ data: courses });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch translation candidates' });
+  }
+});
+
+internalElearningRouter.post('/suggestions', async (req: Request, res: Response) => {
+  try {
+    const { type, targetType, targetId, title, payload } = req.body || {};
+    const allowedTypes = ['attendance_outreach', 'quiz_review', 'cohort_schedule', 'translation'];
+    if (!allowedTypes.includes(type)) return res.status(400).json({ error: `type must be one of ${allowedTypes.join(', ')}` });
+    if (!targetType || targetId == null || !title?.trim() || payload == null) {
+      return res.status(400).json({ error: 'targetType, targetId, title and payload are required' });
+    }
+    const created = await prisma.aiSuggestion.create({
+      data: { type, targetType, targetId: Number(targetId), title: title.trim(), payload },
+    });
+    logger.info(`[internal-elearning] Created AI suggestion: type=${type}, targetType=${targetType}, targetId=${targetId}`);
+    res.status(201).json({ data: created });
+  } catch (e) {
+    logger.error('[internal-elearning] Error creating AI suggestion:', e);
+    res.status(400).json({ error: e instanceof Error ? e.message : 'Failed to create suggestion' });
   }
 });
 

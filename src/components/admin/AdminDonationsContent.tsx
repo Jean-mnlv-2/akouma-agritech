@@ -21,6 +21,9 @@ type DonationImpact = {
   icon?: string;
   progress?: number;
   target?: string;
+  targetAmount?: number | string | null;
+  raisedAmount?: number | null;
+  donorsCount?: number | null;
   order?: number;
   isActive?: boolean;
 };
@@ -87,6 +90,7 @@ export function AdminDonationsContent() {
       icon: impactForm.icon || undefined,
       progress: Number(impactForm.progress ?? 0),
       target: impactForm.target || undefined,
+      targetAmount: impactForm.targetAmount === '' || impactForm.targetAmount == null ? null : Number(impactForm.targetAmount),
       order: Number(impactForm.order ?? 0),
       isActive: Boolean(impactForm.isActive),
     };
@@ -203,14 +207,32 @@ export function AdminDonationsContent() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
             <div>
-              <Label>Progression (%)</Label>
-              <Input type="number" value={impactForm.progress ?? 0} onChange={(e) => setImpactForm({ ...impactForm, progress: Number(e.target.value) })} />
+              <Label>Montant cible (€)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={impactForm.targetAmount ?? ''}
+                onChange={(e) => setImpactForm({ ...impactForm, targetAmount: e.target.value })}
+                placeholder="8000"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Si renseigné, le montant collecté et la progression sont calculés automatiquement depuis les dons confirmés liés à ce projet.
+              </p>
             </div>
             <div>
-              <Label>Cible</Label>
+              <Label>Cible (texte libre)</Label>
               <Input value={impactForm.target || ''} onChange={(e) => setImpactForm({ ...impactForm, target: e.target.value })} placeholder="1000 agriculteurs formés" />
+              <p className="text-xs text-muted-foreground mt-1">
+                Utilisé seulement si aucun montant cible n'est renseigné ci-dessus.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+            <div>
+              <Label>Progression manuelle (%)</Label>
+              <Input type="number" value={impactForm.progress ?? 0} onChange={(e) => setImpactForm({ ...impactForm, progress: Number(e.target.value) })} disabled={impactForm.targetAmount != null && impactForm.targetAmount !== ''} />
             </div>
             <div>
               <Label>Ordre</Label>
@@ -236,7 +258,11 @@ export function AdminDonationsContent() {
               >
                 <div>
                   <div className="font-medium">{i.icon || '🎯'} {i.title}</div>
-                  <div className="text-xs text-muted-foreground">{i.target} • {i.progress}%</div>
+                  <div className="text-xs text-muted-foreground">
+                    {i.targetAmount != null
+                      ? `${i.raisedAmount ?? 0}€ collectés sur ${i.targetAmount}€ (${i.donorsCount ?? 0} don${(i.donorsCount ?? 0) > 1 ? 's' : ''}) • ${i.progress}%`
+                      : `${i.target} • ${i.progress}%`}
+                  </div>
                   {i.description && <div className="text-sm mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(i.description)}} />}
                 </div>
                 <div className="flex gap-2">

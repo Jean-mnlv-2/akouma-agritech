@@ -176,13 +176,13 @@ authRouter.get('/session', async (req: Request, res: Response) => {
   if (!token) return res.json({ user: null });
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-    const user = await prisma.user.findUnique({ 
+    const user = await prisma.user.findUnique({
       where: { id: decoded.sub },
-      select: { id: true, email: true, fullName: true, role: true, isActive: true }
+      select: { id: true, email: true, fullName: true, phone: true, role: true, isActive: true }
     });
     if (!user || !user.isActive) return res.json({ user: null });
     const csrfToken = issueCsrfToken(res);
-    res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isActive: user.isActive }, csrfToken });
+    res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, role: user.role, isActive: user.isActive }, csrfToken });
   } catch (error) {
     if (env.isDevelopment()) {
       logger.warn('[AUTH] Session error', error);

@@ -39,6 +39,13 @@ export type CreateOrderPayload = {
   deliveryPartnerId?: number | null;
   shippingFee?: number | null;
   cashbackAmount?: number | null;
+  // Spécifiques à un item productType="course" — jamais les infos de compte
+  // (déjà connues via l'auth), reportés sur l'enrollment créée post-paiement.
+  professionalActivity?: string | null;
+  organization?: string | null;
+  sector?: string | null;
+  experienceLevel?: string | null;
+  expectations?: string | null;
 };
 
 export class OrdersService {
@@ -389,6 +396,11 @@ export class OrdersService {
           promoCodeId: promoRecord?.id,
           deliveryMethod: payload.deliveryMethod,
           deliveryPartnerId: deliveryPartnerNumericId,
+          professionalActivity: payload.professionalActivity || null,
+          organization: payload.organization || null,
+          sector: payload.sector || null,
+          experienceLevel: payload.experienceLevel || null,
+          expectations: payload.expectations || null,
           items: {
             create: trustedItems.map((item) => ({
               productId: item.productId,
@@ -528,6 +540,11 @@ export class OrdersService {
             data: {
               userId: order.userId,
               courseId: Number(item.productId),
+              professionalActivity: order.professionalActivity,
+              organization: order.organization,
+              sector: order.sector,
+              experienceLevel: order.experienceLevel,
+              expectations: order.expectations,
             }
           });
           logger.info(`[OrdersService] Created E-learning enrollment for user ${order.userId} in course ${item.productId}`);

@@ -30,7 +30,7 @@ const LiveCourseChat = ({ courseId, currentUserId }: LiveCourseChatProps) => {
 
   const fetchMessages = useCallback(async () => {
     try {
-      const res = await api.request("GET", `/api/course_comments/course/${courseId}?moduleId=0`);
+      const res = await api.request("GET", `/api/course_comments/course/${courseId}?generalOnly=true`);
       const data: ChatMessage[] = (res.data || []).map((c: any) => ({
         id: c.id,
         content: c.content,

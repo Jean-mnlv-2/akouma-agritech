@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -11,10 +9,9 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { SEO } from "@/components/SEO";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  BookOpen, Clock, Play, CheckCircle, 
-  Trophy, Calendar, Target, Settings, Bell, Zap, CalendarDays
+import {
+  BookOpen, Clock, Play, CheckCircle,
+  Trophy, Calendar, Target, Bell, Zap
 } from "lucide-react";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import courseThumbnail from "@/assets/course-thumbnail.jpg";
@@ -25,6 +22,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { getLevelColor } from "@/lib/elearningFormat";
+import { EmptyState } from "@/components/elearning/EmptyState";
+import { ErrorState } from "@/components/elearning/ErrorState";
+import { CourseProgressBar } from "@/components/elearning/CourseProgressBar";
 
 interface EnrolledCourse {
   id: string;
@@ -34,92 +36,52 @@ interface EnrolledCourse {
   level: string;
   totalModules: number;
   completedModules: number;
+  durationMinutes: number;
   lastAccessed: string;
-  studyPace?: string;
-  targetEndDate?: string;
-  remindersEnabled?: boolean;
+  studyPace: string;
+  targetEndDate: string;
+  remindersEnabled: boolean;
+  modules: { id: number; title: string; order: number }[];
+  completedModuleIds: number[];
 }
-
 
 const LearningDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   useI18n();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const { user, loading: authLoading } = useAuthUser();
   const queryClient = useQueryClient();
 
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await api.auth.getUser();
-        if (!data?.user) {
-          navigate("/auth");
-          return;
-        }
-        setUser(data.user);
-      } catch {
-        navigate("/auth");
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkAuth();
-  }, [navigate]);
-
-  const { data: enrollments = [] } = useQuery<any[]>({
+  const { data: enrollments = [], isError: enrollmentsError, refetch: refetchEnrollments } = useQuery<any[]>({
     queryKey: ["learning", "enrollments"],
     enabled: !!user,
     queryFn: async () => {
-      try {
-        const res = await api.request("GET", "/api/elearning_enrollments");
-        const items = Array.isArray(res) ? res : res.data;
-        return items || [];
-      } catch {
-        return [];
-      }
+      const res = await api.request("GET", "/api/elearning_enrollments");
+      const items = Array.isArray(res) ? res : res.data;
+      return items || [];
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
   });
 
-  const { data: certificates = [] } = useQuery<any[]>({
+  const { data: certificates = [], isError: certificatesError, refetch: refetchCertificates } = useQuery<any[]>({
     queryKey: ["learning", "certificates"],
     enabled: !!user,
     queryFn: async () => {
-      try {
-        const res = await api.request("GET", "/api/certificates/my");
-        return Array.isArray(res?.data) ? res.data : [];
-      } catch {
-        return [];
-      }
+      const res = await api.request("GET", "/api/certificates/my");
+      return Array.isArray(res?.data) ? res.data : [];
     },
     staleTime: 30000,
     refetchInterval: 30000,
   });
 
   const updateEnrollmentMutation = useMutation({
-    mutationFn: async (payload: { id?: number; userId?: string; courseId: number; data: any }) => {
-      if (payload.id) {
-        return api.request("PUT", `/api/elearning_enrollments/${payload.id}`, { body: payload.data });
-      }
-      if (payload.userId) {
-        return api.request("POST", `/api/elearning_enrollments`, { body: { userId: payload.userId, courseId: payload.courseId } });
-      }
-      return null;
+    mutationFn: async (payload: { id: number; data: any }) => {
+      return api.request("PUT", `/api/elearning_enrollments/${payload.id}`, { body: payload.data });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["learning", "enrollments"] });
     },
   });
-
-  const findEnrollment = (courseId: number) => {
-    const uId = user?.id;
-    if (!uId) return undefined;
-    return (enrollments || []).find((e: any) => String(e.userId) === String(uId) && String(e.courseId) === String(courseId));
-  };
 
   // Derive enrolledCourses from real enrollments (with course data preloaded by API)
   const enrolledCourses: EnrolledCourse[] = (enrollments || [])
@@ -132,57 +94,57 @@ const LearningDashboard = () => {
       level: e.course?.level || '—',
       totalModules: Array.isArray(e.course?.modules) ? e.course.modules.length : 0,
       completedModules: Array.isArray(e.moduleProgress) ? e.moduleProgress.length : 0,
-      lastAccessed: (Array.isArray(e.moduleProgress) && e.moduleProgress.length
-        ? e.moduleProgress.reduce((max: string, p: any) => (p.completedAt && p.completedAt > max ? p.completedAt : max), e.enrolledAt || '')
-        : e.enrolledAt) || new Date().toISOString(),
-      studyPace: e.studyPace,
-      targetEndDate: e.targetEndDate,
-      remindersEnabled: e.remindersEnabled,
+      durationMinutes: Number(e.course?.duration || 0),
+      lastAccessed: e.lastAccessedAt || e.enrolledAt || new Date().toISOString(),
+      studyPace: e.studyPace || "standard",
+      targetEndDate: e.targetEndDate || "",
+      remindersEnabled: e.remindersEnabled ?? false,
+      modules: Array.isArray(e.course?.modules) ? e.course.modules : [],
+      completedModuleIds: Array.isArray(e.moduleProgress) ? e.moduleProgress.map((p: any) => p.moduleId) : [],
     }));
 
+  const enrollmentIdByCourseId = new Map<number, number>(
+    (enrollments || []).map((e: any) => [Number(e.courseId), e.id])
+  );
+
+  // Score moyen réel aux quiz (ModuleProgress.quizScore) — jamais la
+  // progression % réutilisée sous un libellé trompeur.
+  const quizScores: number[] = (enrollments || [])
+    .flatMap((e: any) => (Array.isArray(e.moduleProgress) ? e.moduleProgress : []))
+    .map((p: any) => p.quizScore)
+    .filter((s: any): s is number => typeof s === 'number');
+  const averageQuizScore = quizScores.length ? Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length) : null;
+
   const stats = {
-    totalHours: enrolledCourses.reduce((sum, c) => sum + Math.round((c.progress / 100) * 10), 0),
+    // Durée réelle du cours (Course.duration, minutes) au prorata de la
+    // progression — jamais une durée fabriquée de 10h par cours.
+    totalHours: Math.round(enrolledCourses.reduce((sum, c) => sum + (c.progress / 100) * (c.durationMinutes / 60), 0)),
     completedModules: enrolledCourses.reduce((sum, c) => sum + c.completedModules, 0),
-    averageScore: enrolledCourses.length
-      ? Math.round(enrolledCourses.reduce((sum, c) => sum + c.progress, 0) / enrolledCourses.length)
-      : 0,
     activeCourses: enrolledCourses.filter(c => c.progress < 100).length,
   };
 
+  const activeCourses = enrolledCourses.filter(c => c.progress < 100);
+
   const persistPlan = (courseIdStr: string, changes: Partial<{ studyPace: string; targetEndDate: string; remindersEnabled: boolean }>) => {
     const courseId = Number(courseIdStr);
-    const existing = findEnrollment(courseId);
-    const uId = user?.id;
-    if (existing) {
-      updateEnrollmentMutation.mutate({ id: existing.id, courseId, data: changes });
-    } else if (uId && !Number.isNaN(courseId)) {
-      updateEnrollmentMutation.mutate({ userId: uId, courseId, data: {} });
-    }
-    try {
-      const key = `learning_plan_${courseId}`;
-      const current = JSON.parse(localStorage.getItem(key) || "{}");
-      localStorage.setItem(key, JSON.stringify({ ...current, ...changes }));
-    } catch {}
-  };
-
-  const getLevelColor = (level: string) => {
-    switch (level.toLowerCase()) {
-      case "débutant": case "beginner": return "bg-green-100 text-green-800 border-green-300";
-      case "intermédiaire": case "intermediate": return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "avancé": case "advanced": return "bg-red-100 text-red-800 border-red-300";
-      default: return "bg-muted text-muted-foreground";
+    const enrollmentId = enrollmentIdByCourseId.get(courseId);
+    if (enrollmentId) {
+      updateEnrollmentMutation.mutate({ id: enrollmentId, data: changes });
     }
   };
 
+  // Vrai prochain module (premier module non complété, dans l'ordre) du
+  // cours actif le plus récemment consulté — jamais un titre fabriqué.
   const nextSuggestion = (() => {
-    const active = enrolledCourses.find(c => c.progress < 100);
+    const active = [...activeCourses].sort((a, b) => new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime())[0];
     if (!active) return { title: "Aucun module en attente", when: "—" };
-    const pace = active.studyPace || "standard";
-    const when = pace === "intensive" ? "Aujourd'hui à 18:00" : "Demain à 18:00";
-    return { title: "Systèmes d'irrigation intelligente", when };
+    const completedSet = new Set(active.completedModuleIds);
+    const next = [...active.modules].sort((a, b) => a.order - b.order).find(m => !completedSet.has(m.id));
+    const when = active.studyPace === "intensive" ? "Aujourd'hui à 18:00" : "Demain à 18:00";
+    return { title: next?.title || active.title, when };
   })();
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="large" text="Chargement..." />
@@ -200,7 +162,7 @@ const LearningDashboard = () => {
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
-              Bienvenue, {user?.fullName || user?.email || "Apprenant"} 👋
+              Bienvenue, {(user as any)?.fullName || user?.name || user?.email || "Apprenant"} 👋
             </h1>
             <p className="text-muted-foreground text-lg">Continuez votre parcours d'apprentissage</p>
           </div>
@@ -208,16 +170,16 @@ const LearningDashboard = () => {
             <Button variant="default" size="sm" className="flex items-center gap-2" onClick={() => navigate('/my-courses')}>
               <BookOpen className="w-4 h-4" /> Mes cours
             </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" /> Calendrier
-            </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" /> Paramètres
-            </Button>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        {enrollmentsError && (
+          <div className="mb-8">
+            <ErrorState description="Impossible de charger vos formations." onRetry={() => refetchEnrollments()} />
+          </div>
+        )}
+
+        <Tabs defaultValue="overview" className="space-y-8">
           <TabsList className="grid w-full grid-cols-3 max-w-md">
             <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
             <TabsTrigger value="planning">Planification</TabsTrigger>
@@ -230,7 +192,7 @@ const LearningDashboard = () => {
               {[
                 { icon: Clock, label: "Heures d'apprentissage", value: `${stats.totalHours}h`, color: "from-blue-500 to-cyan-500" },
                 { icon: CheckCircle, label: "Modules complétés", value: String(stats.completedModules), color: "from-green-500 to-emerald-500" },
-                { icon: Target, label: "Score moyen", value: `${stats.averageScore}%`, color: "from-yellow-500 to-orange-500" },
+                { icon: Target, label: "Score moyen aux quiz", value: averageQuizScore != null ? `${averageQuizScore}%` : "—", color: "from-yellow-500 to-orange-500" },
                 { icon: BookOpen, label: "Cours actifs", value: String(stats.activeCourses), color: "from-purple-500 to-pink-500" },
               ].map((s, i) => (
                 <Card key={i} className="hover:shadow-md transition-shadow">
@@ -251,32 +213,40 @@ const LearningDashboard = () => {
                 <Play className="w-6 h-6 text-primary" />
                 Mes cours en cours
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {enrolledCourses.filter(c => c.progress < 100).map((course) => (
-                  <Card key={course.id} className="group hover:shadow-lg transition-all overflow-hidden">
-                    <div className="relative h-40 overflow-hidden">
-                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <Badge className={`absolute top-3 left-3 ${getLevelColor(course.level)} text-xs border`}>{course.level}</Badge>
-                      <div className="absolute bottom-3 left-3 right-3">
-                        <span className="text-white font-semibold text-sm">{course.progress}% complété</span>
+              {activeCourses.length === 0 ? (
+                <EmptyState
+                  icon={BookOpen}
+                  title="Aucun cours en cours"
+                  description="Inscrivez-vous à une formation pour commencer votre parcours d'apprentissage."
+                  action={{ label: "Découvrir les cours", onClick: () => navigate('/elearning') }}
+                />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {activeCourses.map((course) => (
+                    <Card key={course.id} className="group hover:shadow-lg transition-all overflow-hidden">
+                      <div className="relative h-40 overflow-hidden">
+                        <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <Badge className={`absolute top-3 left-3 ${getLevelColor(course.level)} text-xs border`}>{course.level}</Badge>
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <span className="text-white font-semibold text-sm">{course.progress}% complété</span>
+                        </div>
                       </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold text-foreground mb-2 line-clamp-2">{course.title}</h3>
-                      <Progress value={course.progress} className="h-2 mb-3" />
-                      <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
-                        <span>{course.completedModules}/{course.totalModules} modules</span>
-                        <span>Dernier accès : {new Date(course.lastAccessed).toLocaleDateString("fr-FR")}</span>
-                      </div>
-                      <Button className="w-full" size="sm" onClick={() => navigate(`/elearning/${course.id}/learn`)}>
-                        <Play className="w-4 h-4 mr-2" />
-                        Continuer
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-foreground mb-2 line-clamp-2">{course.title}</h3>
+                        <CourseProgressBar progress={course.progress} completedModules={course.completedModules} totalModules={course.totalModules} className="mb-3" showPercent={false} />
+                        <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
+                          <span>Dernier accès : {new Date(course.lastAccessed).toLocaleDateString("fr-FR")}</span>
+                        </div>
+                        <Button className="w-full" size="sm" onClick={() => navigate(`/elearning/${course.id}/learn`)}>
+                          <Play className="w-4 h-4 mr-2" />
+                          Continuer
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </section>
           </TabsContent>
 
@@ -285,90 +255,90 @@ const LearningDashboard = () => {
               <Calendar className="w-6 h-6 text-blue-500" />
               Planification personnalisée
             </h2>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-2">
-                <CardContent className="p-6 space-y-6">
-                  {enrolledCourses.filter(c => c.progress < 100).map((course) => (
-                    <div key={course.id} className="p-4 border rounded-xl space-y-4 bg-muted/30">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-lg">{course.title}</h3>
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {course.studyPace === 'intensive' ? 'Intensif' : 'Standard'}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Rythme d'apprentissage</Label>
-                          <Select 
-                            defaultValue={course.studyPace || "standard"} 
-                            onValueChange={(val) => persistPlan(course.id.toString(), { studyPace: val })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choisir un rythme" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="intensive">Intensif (1 module / jour)</SelectItem>
-                              <SelectItem value="standard">Standard (2 modules / semaine)</SelectItem>
-                              <SelectItem value="personalized">Personnalisé</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Date de fin souhaitée</Label>
-                          <Input 
-                            type="date" 
-                            defaultValue={course.targetEndDate || ""} 
-                            onChange={(e) => persistPlan(course.id.toString(), { targetEndDate: e.target.value })} 
-                          />
-                        </div>
-                      </div>
 
-                      <div className="flex items-center justify-between pt-2">
-                        <div className="flex items-center space-x-2">
-                          <Switch 
-                            id={`reminders-${course.id}`} 
-                            checked={course.remindersEnabled ?? false}
-                            onCheckedChange={(checked) => persistPlan(course.id.toString(), { remindersEnabled: checked })}
-                          />
-                          <Label htmlFor={`reminders-${course.id}`} className="flex items-center gap-2 cursor-pointer">
-                            <Bell className="w-4 h-4 text-primary" /> Rappels par email
-                          </Label>
+            {activeCourses.length === 0 ? (
+              <EmptyState
+                icon={Calendar}
+                title="Rien à planifier pour l'instant"
+                description="Inscrivez-vous à une formation pour définir votre rythme d'apprentissage et vos rappels."
+                action={{ label: "Découvrir les cours", onClick: () => navigate('/elearning') }}
+              />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2">
+                  <CardContent className="p-6 space-y-6">
+                    {activeCourses.map((course) => (
+                      <div key={course.id} className="p-4 border rounded-xl space-y-4 bg-muted/30">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-lg">{course.title}</h3>
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {course.studyPace === 'intensive' ? 'Intensif' : 'Standard'}
+                          </Badge>
                         </div>
-                        <Button 
-                          variant="nature" 
-                          size="sm" 
-                          onClick={() => {
-                            toast({ title: "Plan mis à jour", description: "Vos préférences ont été enregistrées avec succès." });
-                          }}
-                        >
-                          Mettre à jour le plan
-                        </Button>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Rythme d'apprentissage</Label>
+                            <Select
+                              value={course.studyPace}
+                              onValueChange={(val) => persistPlan(course.id.toString(), { studyPace: val })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choisir un rythme" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="intensive">Intensif (1 module / jour)</SelectItem>
+                                <SelectItem value="standard">Standard (2 modules / semaine)</SelectItem>
+                                <SelectItem value="personalized">Personnalisé</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Date de fin souhaitée</Label>
+                            <Input
+                              type="date"
+                              value={course.targetEndDate ? course.targetEndDate.slice(0, 10) : ""}
+                              onChange={(e) => persistPlan(course.id.toString(), { targetEndDate: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id={`reminders-${course.id}`}
+                              checked={course.remindersEnabled}
+                              onCheckedChange={(checked) => persistPlan(course.id.toString(), { remindersEnabled: checked })}
+                            />
+                            <Label htmlFor={`reminders-${course.id}`} className="flex items-center gap-2 cursor-pointer">
+                              <Bell className="w-4 h-4 text-primary" /> Rappels par email
+                            </Label>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {updateEnrollmentMutation.isPending ? "Enregistrement…" : "Enregistré automatiquement"}
+                          </span>
+                        </div>
                       </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-yellow-500" /> Rappel quotidien
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                      <p className="text-sm font-medium text-primary mb-1">Prochain module recommandé</p>
+                      <p className="text-base font-bold">{nextSuggestion.title}</p>
+                      <p className="text-xs text-muted-foreground mt-2">Prévu pour : {nextSuggestion.when}</p>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-yellow-500" /> Rappel quotidien
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                    <p className="text-sm font-medium text-primary mb-1">Prochain module recommandé</p>
-                    <p className="text-base font-bold">{nextSuggestion.title}</p>
-                    <p className="text-xs text-muted-foreground mt-2">Prévu pour : {nextSuggestion.when}</p>
-                  </div>
-                  <Button className="w-full" variant="outline">
-                    Voir mon calendrier complet
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Course Schedule Managers */}
             {enrollments.filter((e: any) => !e.completedAt).map((enrollment: any) => (
@@ -376,7 +346,6 @@ const LearningDashboard = () => {
                 key={enrollment.id}
                 enrollmentId={enrollment.id}
                 courseId={enrollment.courseId}
-                userId={user?.id}
               />
             ))}
           </TabsContent>
@@ -386,9 +355,9 @@ const LearningDashboard = () => {
             <StudentBadges
               completedCourses={enrolledCourses.filter(c => c.progress >= 100).length}
               totalModulesCompleted={stats.completedModules}
-              averageScore={stats.averageScore}
+              averageScore={averageQuizScore ?? 0}
               totalHours={stats.totalHours}
-              streak={3}
+              streak={0}
             />
 
             {/* Certificates */}
@@ -397,7 +366,9 @@ const LearningDashboard = () => {
                 <Trophy className="w-6 h-6 text-yellow-500" />
                 Mes certificats
               </h2>
-              {certificates.length === 0 ? (
+              {certificatesError ? (
+                <ErrorState description="Impossible de charger vos certificats." onRetry={() => refetchCertificates()} />
+              ) : certificates.length === 0 ? (
                 <Card>
                   <CardContent className="p-8 text-center text-muted-foreground">
                     <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />

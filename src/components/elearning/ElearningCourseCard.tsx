@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Clock, Users, Award, Star, Eye, GraduationCap, PlayCircle, UserPlus, Download, CheckCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import DOMPurify from 'dompurify';
+import { getLevelColor } from "@/lib/elearningFormat";
 
 interface User {
   id: string | number;
@@ -52,15 +53,6 @@ interface CourseCardProps {
   t: (key: string) => string;
   index: number;
 }
-
-const getLevelColor = (level: string) => {
-  switch (level.toLowerCase()) {
-    case 'débutant': case 'beginner': return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700';
-    case 'intermédiaire': case 'intermediate': return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-700';
-    case 'avancé': case 'advanced': return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700';
-    default: return 'bg-muted text-muted-foreground border-border';
-  }
-};
 
 const ElearningCourseCard = ({ course, currentUser, isEnrolled, previewItems, onEnroll, t, index }: CourseCardProps) => {
   const navigate = useNavigate();

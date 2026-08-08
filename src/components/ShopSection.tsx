@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Star, Package, ArrowRight, Zap } from 'lucide-react';
+import { ShoppingCart, Star, Package, ArrowRight, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useContentSync } from '@/hooks/use-content-sync';
 import { useI18n } from '@/i18n';
@@ -26,8 +26,19 @@ interface Product {
 const ShopSection = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [_currentIndex, _setCurrentIndex] = useState(0);
+  const [_currentIndex, setCurrentIndex] = useState(0);
   const { t } = useI18n();
+
+  // Carrousel à défilement horizontal — même comportement que NewsSection et
+  // SeedsSection (flèches + scroll-snap) plutôt qu'une grille statique, pour
+  // que les 3 sections d'accueil se comportent de façon cohérente.
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev + 1) % Math.max(1, products.length - 1));
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev - 1 + Math.max(1, products.length - 1)) % Math.max(1, products.length - 1));
+  };
 
   // Utiliser le hook de synchronisation pour les produits
   useContentSync({
@@ -155,7 +166,7 @@ const ShopSection = () => {
           <div className="mb-12">
             <div className="relative bg-card rounded-2xl overflow-hidden shadow-natural group hover:shadow-xl transition-all duration-300">
               <div className="grid md:grid-cols-2 gap-0">
-                <div className="relative h-64 md:h-auto bg-muted/30 flex items-center justify-center">
+                <div className="relative h-64 md:h-96 bg-muted/30 flex items-center justify-center">
                   <img
                     src={products[0].image}
                     alt={products[0].name}
@@ -217,16 +228,18 @@ const ShopSection = () => {
           </div>
         )}
 
-        {/* Horizontal Scroll Products */}
+        {/* Horizontal Scroll Products — même carrousel que NewsSection/SeedsSection */}
         {products.length > 1 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-            {products.slice(1).map((product, index) => {
-              const delay = index * 50;
-              return (
-                <Card 
-                  key={product.id} 
-                  className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden"
-                  style={{ transitionDelay: `${delay}ms` }}
+          <div className="relative">
+            <div className="flex overflow-x-auto scrollbar-hide gap-6 pb-4" style={{ scrollSnapType: 'x mandatory' }}>
+            {products.slice(1).map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-80"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                <Card
+                  className="group hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden h-full"
                 >
                   <div className="relative overflow-hidden bg-muted/30 aspect-square flex items-center justify-center">
                     <img 
@@ -295,8 +308,31 @@ const ShopSection = () => {
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })}
+              </div>
+            ))}
+            </div>
+            {products.length > 3 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-background/80 backdrop-blur-sm"
+                  onClick={prevSlide}
+                  aria-label="Produit précédent"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-background/80 backdrop-blur-sm"
+                  onClick={nextSlide}
+                  aria-label="Produit suivant"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </>
+            )}
           </div>
         )}
 

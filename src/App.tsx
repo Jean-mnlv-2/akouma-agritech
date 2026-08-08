@@ -48,6 +48,7 @@ const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const About = lazy(() => import("./pages/About"));
 const News = lazy(() => import("./pages/News"));
 const NewsDetail = lazy(() => import("./pages/NewsDetail"));
+const Events = lazy(() => import("./pages/Events"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Demo = lazy(() => import("./pages/Demo"));
 const Privacy = lazy(() => import("./pages/Privacy"));
@@ -117,6 +118,7 @@ const App = () => (
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/news" element={<News />} />
                 <Route path="/news/:slug" element={<NewsDetail />} />
+                <Route path="/events" element={<Events />} />
                 <Route path="/events/:slug" element={<EventDetail />} />
                 <Route path="/demo" element={<Demo />} />
                 <Route path="/privacy" element={<Privacy />} />

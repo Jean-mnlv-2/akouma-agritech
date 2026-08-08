@@ -165,7 +165,7 @@ const CourseComments = ({ courseId, moduleId, currentUserId }: CourseCommentsPro
                         </Button>
                       )}
                       {currentUserId === comment.user.id && (
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive opacity-0 group-hover:opacity-100" onClick={() => deleteMutation.mutate(comment.id)}>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100" onClick={() => deleteMutation.mutate(comment.id)}>
                           <Trash2 className="w-3 h-3 mr-1" /> Supprimer
                         </Button>
                       )}
@@ -205,7 +205,7 @@ const CourseComments = ({ courseId, moduleId, currentUserId }: CourseCommentsPro
                           </div>
                           <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{reply.content}</p>
                           {currentUserId === reply.user.id && (
-                            <Button variant="ghost" size="sm" className="h-6 text-[10px] text-destructive opacity-0 group-hover:opacity-100 mt-1" onClick={() => deleteMutation.mutate(reply.id)}>
+                            <Button variant="ghost" size="sm" className="h-6 text-[10px] text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 mt-1" onClick={() => deleteMutation.mutate(reply.id)}>
                               <Trash2 className="w-3 h-3 mr-1" /> Supprimer
                             </Button>
                           )}

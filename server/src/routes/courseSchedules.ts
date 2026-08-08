@@ -19,9 +19,18 @@ courseSchedulesRouter.get('/my', authRequired, async (req: Request, res: Respons
   try {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
-    
+
+    // ?courseId= / ?enrollmentId= optionnels — évite aux pages qui ne
+    // s'intéressent qu'à UN cours (CourseScheduleManager) de récupérer et
+    // filtrer côté client la liste complète des créneaux de l'utilisateur.
+    const courseIdParam = req.query.courseId ? Number(req.query.courseId) : undefined;
+    const enrollmentIdParam = req.query.enrollmentId ? Number(req.query.enrollmentId) : undefined;
+    const where: any = { userId: user.id };
+    if (courseIdParam !== undefined && !isNaN(courseIdParam)) where.courseId = courseIdParam;
+    if (enrollmentIdParam !== undefined && !isNaN(enrollmentIdParam)) where.enrollmentId = enrollmentIdParam;
+
     const schedules = await prisma.courseSchedule.findMany({
-      where: { userId: user.id },
+      where,
       include: { course: { select: { id: true, title: true, slug: true } } },
       orderBy: { scheduledDate: 'asc' },
     });

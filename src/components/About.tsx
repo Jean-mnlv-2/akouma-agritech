@@ -1,31 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Target, Users, Lightbulb, Globe } from "lucide-react";
+import { Target, Lightbulb } from "lucide-react";
 import { useI18n } from "@/i18n";
-
-const values = [
-  {
-    icon: Target,
-    title: "about.values.mission.title",
-    description: "about.values.mission.desc"
-  },
-  {
-    icon: Lightbulb,
-    title: "about.values.innovation.title",
-    description: "about.values.innovation.desc"
-  },
-  {
-    icon: Globe,
-    title: "about.values.sustainability.title",
-    description: "about.values.sustainability.desc"
-  },
-  {
-    icon: Users,
-    title: "about.values.collaboration.title",
-    description: "about.values.collaboration.desc"
-  }
-];
 
 const stats = [
   { number: "2020", label: "about.stats.founded" },
@@ -89,96 +65,52 @@ const About = () => {
           </div>
         </div>
 
-        {/* Objectives */}
+        {/* Objectives & Solutions — côte à côte, séparées par une ligne verticale */}
         <div className="mb-16 md:mb-20 px-4">
-          <h3 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-12 md:mb-16 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            {t("about.objectives.title")}
-          </h3>
-          
-          <div className="flex md:grid overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 gap-6 md:gap-8 snap-x snap-mandatory hide-scrollbar">
-            {["about.objectives.o1","about.objectives.o2","about.objectives.o3","about.objectives.o4","about.objectives.o5"].map((objective, index) => {
-              const delay = index * 100;
-              return (
-                <div 
-                  key={`objective-${index}-${objective}`} 
-                  className="min-w-[280px] sm:min-w-[320px] md:min-w-0 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-6 md:p-8 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden snap-center"
-                  style={{ transitionDelay: `${delay}ms` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <div className="relative z-10">
-                    <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
-                      <Target className="w-6 h-6 md:w-7 md:h-7 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-0 md:divide-x md:divide-border">
+            {/* Objectifs */}
+            <div className="md:pr-10">
+              <h3 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-10 md:mb-12 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                {t("about.objectives.title")}
+              </h3>
+              <div className="space-y-4">
+                {["about.objectives.o1","about.objectives.o2","about.objectives.o3","about.objectives.o4","about.objectives.o5"].map((objective, index) => (
+                  <div
+                    key={`objective-${index}-${objective}`}
+                    className="flex items-start gap-4 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-4 md:p-5 hover:shadow-lg transition-all duration-500 group"
+                  >
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-md">
+                      <Target className="w-5 h-5 md:w-6 md:h-6 text-white" />
                     </div>
-                    <p className="text-foreground font-semibold text-base md:text-lg leading-relaxed group-hover:text-primary transition-colors">
+                    <p className="text-foreground font-semibold text-sm md:text-base leading-relaxed group-hover:text-primary transition-colors">
                       {t(objective)}
                     </p>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                ))}
+              </div>
+            </div>
 
-        {/* Solutions */}
-        <div className="mb-16 md:mb-20 px-4">
-          <h3 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-12 md:mb-16 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            {t("about.solutions.title")}
-          </h3>
-          
-          <div className="flex md:grid overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 gap-6 md:gap-8 snap-x snap-mandatory hide-scrollbar">
-            {["about.solutions.s1","about.solutions.s2","about.solutions.s3","about.solutions.s4","about.solutions.s5"].map((solution, index) => {
-              const delay = index * 100;
-              return (
-                <div 
-                  key={`solution-${index}-${solution}`} 
-                  className="min-w-[280px] sm:min-w-[320px] md:min-w-0 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-6 md:p-8 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden snap-center"
-                  style={{ transitionDelay: `${delay}ms` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <div className="relative z-10">
-                    <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-accent to-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
-                      <Lightbulb className="w-6 h-6 md:w-7 md:h-7 text-white" />
+            {/* Solutions */}
+            <div className="md:pl-10">
+              <h3 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-10 md:mb-12 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                {t("about.solutions.title")}
+              </h3>
+              <div className="space-y-4">
+                {["about.solutions.s1","about.solutions.s2","about.solutions.s3","about.solutions.s4","about.solutions.s5"].map((solution, index) => (
+                  <div
+                    key={`solution-${index}-${solution}`}
+                    className="flex items-start gap-4 bg-card/90 backdrop-blur-sm border-2 border-border rounded-xl p-4 md:p-5 hover:shadow-lg transition-all duration-500 group"
+                  >
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-accent to-primary rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-md">
+                      <Lightbulb className="w-5 h-5 md:w-6 md:h-6 text-white" />
                     </div>
-                    <p className="text-foreground font-semibold text-base md:text-lg leading-relaxed group-hover:text-accent transition-colors">
+                    <p className="text-foreground font-semibold text-sm md:text-base leading-relaxed group-hover:text-accent transition-colors">
                       {t(solution)}
                     </p>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Values */}
-        <div className="mb-16 md:mb-20 px-4">
-          <h3 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-12 md:mb-16 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            {t("about.values.title")}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {values.map((value, index) => {
-              const delay = index * 100;
-              return (
-                <Card 
-                  key={`value-${index}-${value.title}`} 
-                  className="text-center group hover:shadow-xl transition-all duration-500 hover:-translate-y-3 bg-card/90 backdrop-blur-sm border-2 border-border overflow-hidden relative"
-                  style={{ transitionDelay: `${delay}ms` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardContent className="p-6 md:p-8 relative z-10">
-                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
-                      <value.icon className="w-8 h-8 md:w-10 md:h-10 text-white" />
-                    </div>
-                    <h4 className="text-xl md:text-2xl font-bold text-foreground mb-3 md:mb-4 group-hover:text-primary transition-colors">
-                      {t(value.title)}
-                    </h4>
-                    <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
-                      {t(value.description)}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 

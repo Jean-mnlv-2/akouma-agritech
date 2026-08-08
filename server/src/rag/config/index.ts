@@ -39,11 +39,34 @@ export const DEFAULT_RAG_CONFIG: RagConfig = {
     // nomic-embed-text ; à ajuster empiriquement selon le corpus réel.
     scoreThreshold: parseFloat(process.env.RAG_RETRIEVER_SCORE_THRESHOLD || '0.5'),
   },
-  llm: {
-    model: process.env.OLLAMA_MODEL || 'llama3.2',
-    temperature: parseFloat(process.env.OLLAMA_TEMPERATURE || '0.3'),
-    topP: parseFloat(process.env.OLLAMA_TOP_P || '0.9'),
-  },
+  llm: (() => {
+    const raw = process.env.AI_PROVIDER;
+    const provider = raw === 'gemini' ? 'gemini' : raw === 'deepseek' ? 'deepseek' : 'ollama';
+    // Le nom de modèle ET la clé API viennent des variables dédiées au
+    // provider actif — un modèle Ollama (ex: "qwen2.5:3b") envoyé tel quel à
+    // l'API Gemini/DeepSeek échouerait (aucun modèle de ce nom côté
+    // fournisseur cloud), et inversement.
+    const model = provider === 'gemini'
+      ? (process.env.GEMINI_MODEL || 'gemini-2.0-flash')
+      : provider === 'deepseek'
+      ? (process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash')
+      : (process.env.OLLAMA_MODEL || 'llama3.2');
+    const apiKey = provider === 'gemini'
+      ? process.env.GEMINI_API_KEY
+      : provider === 'deepseek'
+      ? process.env.DEEPSEEK_API_KEY
+      : undefined;
+    return {
+      provider,
+      model,
+      temperature: parseFloat(process.env.OLLAMA_TEMPERATURE || '0.3'),
+      topP: parseFloat(process.env.OLLAMA_TOP_P || '0.9'),
+      baseUrl: process.env.OLLAMA_URL || 'http://ollama:11434',
+      // Gemini/DeepSeek uniquement — leurs services lèvent une erreur
+      // explicite si absent quand ils sont le provider actif.
+      apiKey,
+    };
+  })(),
 };
 
 /**

@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import DOMPurify from "dompurify";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { SEO } from "@/components/SEO";
@@ -19,19 +21,21 @@ import { useCountries } from "@/hooks/use-countries";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
 import { api } from "@/integrations/api/client";
 import { usePublicStats } from "@/hooks/use-public-stats";
-import { 
-  Heart, 
+import {
+  Heart,
   Gift,
   CheckCircle,
   CreditCard,
   Lock,
   Building,
+  Trophy,
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
 
 const Donations = () => {
   const { toast } = useToast();
   const { data: publicStats } = usePublicStats();
+  const [searchParams] = useSearchParams();
   const [isDonationOpen, setIsDonationOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string>("");
@@ -47,7 +51,8 @@ const Donations = () => {
     paymentMethod: "card",
     anonymous: false,
     message: "",
-    newsletter: false
+    newsletter: false,
+    donationImpactId: ""
   });
   // contactForm state removed - using ContactForm component instead
 
@@ -133,6 +138,22 @@ const Donations = () => {
     fetchSections();
   }, []);
 
+  // Arrivée depuis "Soutenir ce projet" (cartes de la page d'accueil) :
+  // /donations?project=<slug> — on cible la cause correspondante, on la met
+  // en évidence et on pré-sélectionne le projet dans le formulaire de don.
+  const projectSlug = searchParams.get('project');
+  const linkedProject = useMemo(
+    () => (projectSlug ? impacts.find((i) => i.slug === projectSlug) : undefined),
+    [projectSlug, impacts]
+  );
+
+  useEffect(() => {
+    if (!linkedProject) return;
+    const el = document.getElementById(`impact-${linkedProject.slug}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setDonationForm((prev) => ({ ...prev, donationImpactId: String(linkedProject.id) }));
+  }, [linkedProject]);
+
   // Chiffres réels uniquement — seuls les dons dont le statut a été changé
   // manuellement par un admin après réception effective du paiement sont
   // comptés (voir GET /api/stats/public côté serveur). Un don "pending"
@@ -166,6 +187,7 @@ const Donations = () => {
           amount: amountNumber,
           country: countryName,
           message: donationForm.message || null,
+          donationImpactId: donationForm.donationImpactId ? Number(donationForm.donationImpactId) : undefined,
           recaptchaToken,
         },
       });
@@ -180,7 +202,8 @@ const Donations = () => {
         paymentMethod: "card",
         anonymous: false,
         message: "",
-        newsletter: false
+        newsletter: false,
+        donationImpactId: ""
       });
       setSelectedTier("");
       setIsDonationOpen(false);
@@ -211,13 +234,16 @@ const Donations = () => {
     }
   };
 
-  const openDonationModal = (tierId?: string) => {
+  const openDonationModal = (tierId?: string, donationImpactId?: number) => {
     if (tierId) {
       setSelectedTier(tierId);
       const tier = donationTiers.find(t => t.id === tierId);
       if (tier) {
         setDonationForm(prev => ({ ...prev, amount: tier.amount }));
       }
+    }
+    if (donationImpactId != null) {
+      setDonationForm(prev => ({ ...prev, donationImpactId: String(donationImpactId) }));
     }
     setIsDonationOpen(true);
   };
@@ -388,30 +414,53 @@ const Donations = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {impacts.map((area, index) => (
-              <Card key={`impact-${index}-${area.title}`} className="p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="w-6 h-6 text-primary text-lg">{area.icon || '🎯'}</span>
+            {impacts.map((area, index) => {
+              const isFunded = area.targetAmount != null;
+              const isLinked = linkedProject?.id === area.id;
+              return (
+                <Card
+                  key={`impact-${index}-${area.title}`}
+                  id={`impact-${area.slug}`}
+                  className={`p-6 transition-all ${isLinked ? 'ring-2 ring-primary shadow-lg' : ''}`}
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="w-6 h-6 text-primary text-lg">{area.icon || '🎯'}</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold mb-2">{area.title}</h3>
+                      <p
+                        className="text-muted-foreground mb-4"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(area.description || "") }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold mb-2">{area.title}</h3>
-                    <p className="text-muted-foreground mb-4">{area.description}</p>
+
+                  <div className="space-y-3">
+                    {isFunded ? (
+                      <div className="flex justify-between text-sm">
+                        <span>{formatEuros(area.raisedAmount ?? 0)} collectés</span>
+                        <span className="text-primary font-medium">Objectif : {formatEuros(Number(area.targetAmount))}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-sm">
+                        <span>{area.target || ''}</span>
+                      </div>
+                    )}
+                    <Progress value={area.progress ?? 0} className="h-2" />
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm text-muted-foreground">
+                        {area.progress ?? 0}% atteint
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => openDonationModal(undefined, area.id)}>
+                        <Heart className="w-3.5 h-3.5" />
+                        Faire un don
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span>{area.target || ''}</span>
-                    <span className="text-primary font-medium">{area.target || ''}</span>
-                  </div>
-                  <Progress value={area.progress ?? 0} className="h-2" />
-                  <div className="text-right text-sm text-muted-foreground">
-                    {area.progress ?? 0}% atteint
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -432,8 +481,12 @@ const Donations = () => {
             {stories.map((story, index) => (
               <Card key={`story-${index}-${story.title}`} className="text-center hover:shadow-lg transition-shadow duration-300 group">
                 <CardHeader>
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <span className="text-2xl">{story.imageUrl ? '🖼️' : '🏆'}</span>
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    {story.imageUrl ? (
+                      <img src={story.imageUrl} alt={story.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Trophy className="w-8 h-8 text-green-600" />
+                    )}
                   </div>
                   <CardTitle className="text-lg">{story.title}</CardTitle>
                   <Badge variant="outline" className="w-fit mx-auto">
@@ -441,9 +494,10 @@ const Donations = () => {
                   </Badge>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground mb-4">
-                    {story.description}
-                  </p>
+                  <p
+                    className="text-muted-foreground mb-4"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(story.description || "") }}
+                  />
                   <div className="text-sm font-medium text-primary">
                     Impact : {story.impact}
                   </div>
@@ -508,6 +562,26 @@ const Donations = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Projet soutenu */}
+            <div>
+              <Label htmlFor="donationImpact" className="text-base font-medium">Projet soutenu (optionnel)</Label>
+              <Select
+                value={donationForm.donationImpactId}
+                onValueChange={(value) => handleInputChange("donationImpactId", value)}
+              >
+                <SelectTrigger id="donationImpact" className="mt-2">
+                  <SelectValue placeholder="Don général — sans projet spécifique" />
+                </SelectTrigger>
+                <SelectContent>
+                  {impacts.map((impact) => (
+                    <SelectItem key={impact.id} value={String(impact.id)}>
+                      {impact.icon || '🎯'} {impact.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Informations personnelles */}

@@ -219,6 +219,33 @@ certificatesRouter.get('/my', authRequired, async (req: Request, res: Response) 
   res.json({ data: certs });
 });
 
+// Admin: list all certificates with filters
+// Registered before the generic '/:id' route below — otherwise Express
+// matches '/admin' as `:id === "admin"`, Number("admin") is NaN, and the
+// resulting Prisma call throws an unhandled rejection that never reaches a
+// response (Express 4 doesn't forward async errors automatically), so the
+// request hangs forever instead of erroring.
+certificatesRouter.get('/admin', authRequired, adminOnly, async (req: Request, res: Response) => {
+  const { status, courseId, userId, from, to } = req.query;
+  const dateRange: any = {};
+  if (from) dateRange.gte = new Date(String(from));
+  if (to) dateRange.lte = new Date(String(to));
+  const certs = await prisma.certificate.findMany({
+    where: {
+      ...(status ? { status: String(status) } : {}),
+      ...(courseId ? { courseId: Number(courseId) } : {}),
+      ...(userId ? { userId: String(userId) } : {}),
+      ...(from || to ? { createdAt: dateRange } : {}),
+    },
+    include: {
+      user: { select: { id: true, fullName: true, email: true } },
+      course: { select: { id: true, title: true, slug: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json({ data: certs });
+});
+
 // Student: fetch a single certificate (must own it)
 certificatesRouter.get('/:id', authRequired, async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
@@ -336,28 +363,6 @@ certificatesRouter.post('/request', authRequired, validate(requestCertSchema), a
   } catch (e) {
     res.status(400).json({ error: e instanceof Error ? e.message : 'Failed' });
   }
-});
-
-// Admin: list all certificates with filters
-certificatesRouter.get('/admin', authRequired, adminOnly, async (req: Request, res: Response) => {
-  const { status, courseId, userId, from, to } = req.query;
-  const dateRange: any = {};
-  if (from) dateRange.gte = new Date(String(from));
-  if (to) dateRange.lte = new Date(String(to));
-  const certs = await prisma.certificate.findMany({
-    where: {
-      ...(status ? { status: String(status) } : {}),
-      ...(courseId ? { courseId: Number(courseId) } : {}),
-      ...(userId ? { userId: String(userId) } : {}),
-      ...(from || to ? { createdAt: dateRange } : {}),
-    },
-    include: {
-      user: { select: { id: true, fullName: true, email: true } },
-      course: { select: { id: true, title: true, slug: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-  res.json({ data: certs });
 });
 
 // Admin: retry / re-queue a certificate

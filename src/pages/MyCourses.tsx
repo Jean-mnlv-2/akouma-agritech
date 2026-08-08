@@ -20,6 +20,8 @@ import {
   AlertTriangle, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Trophy, Search, Filter
 } from "lucide-react";
 import { isWithinInterval, startOfMonth, startOfYear, subMonths } from "date-fns";
+import { deriveCourseStatus, ABSENCE_PENALTY } from "@/lib/elearningFormat";
+import { ErrorState } from "@/components/elearning/ErrorState";
 
 
 interface Enrollment {
@@ -77,7 +79,7 @@ const MyCourses = () => {
   // For certificate status tracking
   const prevCertsStatusRef = useRef<Record<number, string>>({});
 
-  const { data: enrollments = [], isLoading: loadingEnrollments } = useQuery<Enrollment[]>({
+  const { data: enrollments = [], isLoading: loadingEnrollments, isError: enrollmentsError, refetch: refetchEnrollments } = useQuery<Enrollment[]>({
     queryKey: ['my-courses', 'enrollments', user?.id],
     enabled: !!user,
     queryFn: async () => {
@@ -87,25 +89,21 @@ const MyCourses = () => {
     },
   });
 
-  const { data: schedules = [], isLoading: loadingSchedules } = useQuery<Schedule[]>({
+  const { data: schedules = [], isLoading: loadingSchedules, isError: schedulesError, refetch: refetchSchedules } = useQuery<Schedule[]>({
     queryKey: ['my-courses', 'schedules', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      try {
-        const res = await api.request('GET', '/api/course_schedules/my');
-        return res?.data || [];
-      } catch { return []; }
+      const res = await api.request('GET', '/api/course_schedules/my');
+      return res?.data || [];
     },
   });
 
-  const { data: certificates = [], isLoading: loadingCertificates, refetch: refetchCerts } = useQuery<Certificate[]>({
+  const { data: certificates = [], isLoading: loadingCertificates, isError: certificatesError, refetch: refetchCerts } = useQuery<Certificate[]>({
     queryKey: ['my-courses', 'certificates', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      try {
-        const res = await api.request('GET', '/api/certificates/my');
-        return res?.data || [];
-      } catch { return []; }
+      const res = await api.request('GET', '/api/certificates/my');
+      return res?.data || [];
     },
     refetchInterval: (q) => {
       const list = (q.state.data as Certificate[] | undefined) || [];
@@ -180,8 +178,21 @@ const MyCourses = () => {
     if (requestingCourseId !== null) return;
     setRequestingCourseId(enrollment.courseId);
     try {
+      // Score réel moyen des quiz du cours (jamais une valeur fabriquée) —
+      // omis si le cours n'a aucun module quiz noté.
+      let score: number | undefined;
+      try {
+        const progRes = await api.request('GET', `/api/course_modules/progress/${enrollment.id}`);
+        const quizScores: number[] = (progRes?.data || [])
+          .map((p: { quizScore?: number | null }) => p.quizScore)
+          .filter((s: number | null | undefined): s is number => typeof s === 'number');
+        if (quizScores.length > 0) {
+          score = Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length);
+        }
+      } catch { /* pas de score disponible, on soumet sans */ }
+
       await api.request('POST', '/api/certificates/request', {
-        body: { courseId: enrollment.courseId, score: 100 },
+        body: { courseId: enrollment.courseId, ...(score !== undefined ? { score } : {}) },
       });
       toast({ title: 'Émission lancée', description: 'Votre certificat a été ajouté à la file. Vous serez notifié par email.' });
       refetchCerts();
@@ -234,8 +245,8 @@ const MyCourses = () => {
     });
   };
 
-  const active = applyFilters(enrollments.filter(e => (e.progress ?? 0) < 100 && !e.completedAt));
-  const completed = applyFilters(enrollments.filter(e => (e.progress ?? 0) >= 100 || !!e.completedAt));
+  const active = applyFilters(enrollments.filter(e => deriveCourseStatus(e) === 'active'));
+  const completed = applyFilters(enrollments.filter(e => deriveCourseStatus(e) === 'completed'));
   const filteredSchedules = applyFilters(schedules);
   const filteredCertificates = applyFilters(certificates);
 
@@ -318,8 +329,8 @@ const MyCourses = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
           {[
-            { icon: BookOpen, label: 'Cours actifs', value: enrollments.filter(e => (e.progress ?? 0) < 100 && !e.completedAt).length, color: 'from-blue-500 to-cyan-500' },
-            { icon: CheckCircle, label: 'Cours complétés', value: enrollments.filter(e => (e.progress ?? 0) >= 100 || !!e.completedAt).length, color: 'from-green-500 to-emerald-500' },
+            { icon: BookOpen, label: 'Cours actifs', value: enrollments.filter(e => deriveCourseStatus(e) === 'active').length, color: 'from-blue-500 to-cyan-500' },
+            { icon: CheckCircle, label: 'Cours complétés', value: enrollments.filter(e => deriveCourseStatus(e) === 'completed').length, color: 'from-green-500 to-emerald-500' },
             { icon: Calendar, label: 'Présences', value: `${totalAttended}/${totalAttended + totalAbsent + totalScheduled}`, color: 'from-purple-500 to-pink-500' },
             { icon: Award, label: 'Certificats émis', value: certificates.filter(c => c.status === 'sent').length, color: 'from-yellow-500 to-orange-500' },
           ].map((s, i) => (
@@ -394,6 +405,8 @@ const MyCourses = () => {
           <TabsContent value="active" className="mt-6">
             {loadingEnrollments ? (
               renderSkeletonGrid(3)
+            ) : enrollmentsError ? (
+              <ErrorState description="Impossible de charger vos cours en cours." onRetry={() => refetchEnrollments()} />
             ) : active.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">
                 <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -441,6 +454,8 @@ const MyCourses = () => {
           <TabsContent value="completed" className="mt-6">
             {loadingEnrollments ? (
               renderSkeletonGrid(2)
+            ) : enrollmentsError ? (
+              <ErrorState description="Impossible de charger vos cours complétés." onRetry={() => refetchEnrollments()} />
             ) : completed.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">
                 <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -516,15 +531,17 @@ const MyCourses = () => {
                   <Skeleton key={i} className="h-16 w-full rounded-lg" />
                 ))}
               </div>
+            ) : schedulesError ? (
+              <ErrorState description="Impossible de charger vos présences." onRetry={() => refetchSchedules()} />
             ) : (
               <>
-                {totalAbsent >= 3 && (
+                {totalAbsent >= ABSENCE_PENALTY.THRESHOLD && (
                   <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
                     <CardContent className="p-4 flex items-start gap-3">
                       <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm">
                         <p className="font-semibold text-amber-900 dark:text-amber-200">Attention : {totalAbsent} absences enregistrées</p>
-                        <p className="text-amber-800 dark:text-amber-300 mt-1">Une pénalité de 10% par absence supplémentaire est appliquée à votre progression.</p>
+                        <p className="text-amber-800 dark:text-amber-300 mt-1">Une pénalité de {ABSENCE_PENALTY.PERCENT_PER_ABSENCE}% par absence supplémentaire est appliquée à votre progression.</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -582,6 +599,8 @@ const MyCourses = () => {
                   <Skeleton key={i} className="h-32 w-full rounded-lg" />
                 ))}
               </div>
+            ) : certificatesError ? (
+              <ErrorState description="Impossible de charger vos certificats." onRetry={() => refetchCerts()} />
             ) : filteredCertificates.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">
                 <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -590,7 +609,12 @@ const MyCourses = () => {
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {paginatedCertificates.map(c => (
+                  {paginatedCertificates.map(c => {
+                    const apiBase = (import.meta as any).env?.VITE_API_BASE_URL
+                      || (window.location.hostname === 'kilimo.onrender.com' ? 'https://kilimo-backend.onrender.com' : window.location.origin);
+                    const pdfUrl = `${apiBase}/api/certificates/${c.id}/pdf`;
+                    const verifyUrl = `${window.location.origin}/certificates/verify/${encodeURIComponent(c.certificateNumber)}`;
+                    return (
                     <Card key={c.id}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -607,16 +631,29 @@ const MyCourses = () => {
                         {c.lastError && c.status === 'failed' && (
                           <p className="text-xs text-destructive mb-2">{c.lastError}</p>
                         )}
-                        {c.credentialUrl && (
-                          <Button asChild size="sm" variant="outline" className="w-full">
-                            <a href={c.credentialUrl} target="_blank" rel="noreferrer">
-                              <ExternalLink className="w-4 h-4 mr-2" /> Voir mon certificat Sertifier
-                            </a>
-                          </Button>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {c.status === 'sent' && (
+                            <Button asChild size="sm" className="flex-1">
+                              <a href={pdfUrl} target="_blank" rel="noreferrer">📄 Télécharger le PDF</a>
+                            </Button>
+                          )}
+                          {c.credentialUrl && (
+                            <Button asChild size="sm" variant="outline" className="flex-1">
+                              <a href={c.credentialUrl} target="_blank" rel="noreferrer">
+                                <ExternalLink className="w-4 h-4 mr-2" /> Sertifier
+                              </a>
+                            </Button>
+                          )}
+                          {c.status === 'sent' && (
+                            <Button asChild size="sm" variant="outline" className="flex-1">
+                              <a href={verifyUrl} target="_blank" rel="noreferrer">🔗 Vérifier</a>
+                            </Button>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
                 {renderPagination(filteredCertificates.length, certificatesPage, setCertificatesPage)}
               </>

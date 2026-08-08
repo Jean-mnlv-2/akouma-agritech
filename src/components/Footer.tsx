@@ -14,7 +14,7 @@ const Footer = () => {
     <footer className="bg-background border-t border-border/50">
       <div className="container mx-auto px-4 md:px-6">
         {/* Main Footer - Compact on mobile */}
-        <div className="py-8 md:py-16 grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-12">
+        <div className="py-8 md:py-16 grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12">
           {/* Company Info - Full width on mobile */}
           <div className="col-span-2 md:col-span-1 lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4 md:mb-6">
@@ -60,27 +60,6 @@ const Footer = () => {
                 </a>
               )}
             </div>
-          </div>
-
-          {/* Solutions */}
-          <div>
-            <h3 className="text-base md:text-xl font-semibold text-foreground mb-3 md:mb-6">{t("footer.solutions")}</h3>
-            <ul className="space-y-2 md:space-y-3">
-              {[
-                t("solutions.iot"),
-                t("solutions.analytics"),
-                t("solutions.weather"),
-                t("solutions.app"),
-                t("solutions.ai"),
-                t("solutions.sustainable")
-              ].map((item) => (
-                <li key={item}>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm md:text-base">
-                    {item}
-                  </a>
-                </li>
-              ))}
-            </ul>
           </div>
 
           {/* Company */}
@@ -149,7 +128,7 @@ const Footer = () => {
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
             <p className="text-muted-foreground text-sm md:text-base">
-              © {currentYear} {contact?.companyName || "KILIMO"}. {t("footer.rights")}
+              © {currentYear} KILIMO. {t("footer.rights")}
             </p>
             <div className="flex space-x-4 md:space-x-6 text-sm md:text-base">
               <a href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">

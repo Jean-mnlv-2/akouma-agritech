@@ -118,5 +118,9 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	// @tailwindcss/typography était en dépendance mais jamais enregistré ici :
+	// toutes les classes `prose` (pages légales, contenus riches admin) ne
+	// stylaient donc rien — titres/paragraphes/listes tous à la même taille,
+	// sans espacement, d'où le rendu "brut" des pages légales.
+	plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config;

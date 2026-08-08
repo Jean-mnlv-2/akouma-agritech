@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useState, useEffect } from 'react';
 import { api } from '@/integrations/api/client';
 import { Plus, Trash2, PlayCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,6 +36,7 @@ interface PreviewItem {
   previewType?: PreviewType;
   type?: string;
   order?: number;
+  isActive?: boolean;
 }
 
 interface AdminCoursePreviewsProps {
@@ -82,7 +85,9 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
   const { data: items = [] } = useQuery<PreviewItem[]>({
     queryKey: ['admin', 'course-preview-items', courseId],
     queryFn: async () => {
-      const res = await api.request('GET', `/api/course_preview_items${courseId ? `?courseId=${courseId}` : ''}`);
+      // /admin (pas la route publique '/') pour voir aussi les éléments
+      // désactivés — sinon impossible de les retrouver pour les réactiver.
+      const res = await api.request('GET', `/api/course_preview_items/admin${courseId ? `?courseId=${courseId}` : ''}`);
       const items = Array.isArray(res) ? res : res.data;
       return items || [];
     },
@@ -138,6 +143,18 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
     onSuccess: () => {
       toast({ title: 'Supprimé', description: 'Élément supprimé' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-items', courseId] });
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) =>
+      api.request('PUT', `/api/course_preview_items/${id}`, { body: { isActive } }),
+    onSuccess: (_data, variables) => {
+      toast({ title: variables.isActive ? 'Activé' : 'Désactivé', description: variables.isActive ? "Visible dans l'aperçu du cours" : "Masqué de l'aperçu du cours" });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'course-preview-items', courseId] });
+    },
+    onError: () => {
+      toast({ title: 'Erreur', description: 'Changement de statut échoué', variant: 'destructive' });
     },
   });
 
@@ -307,6 +324,7 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
                 <TableHead>Titre</TableHead>
                 <TableHead>Durée</TableHead>
                 <TableHead>URL</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -324,6 +342,17 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
                   <TableCell className="font-medium">{it.title}</TableCell>
                   <TableCell>{it.duration || '—'}</TableCell>
                   <TableCell className="max-w-xs truncate text-xs text-muted-foreground">{it.contentUrl || it.url}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={it.isActive !== false}
+                        onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: it.id, isActive: checked })}
+                      />
+                      <Badge variant="outline" className={it.isActive !== false ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-muted text-muted-foreground'}>
+                        {it.isActive !== false ? 'Actif' : 'Inactif'}
+                      </Badge>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -340,7 +369,7 @@ export function AdminCoursePreviews({ initialCourseId }: AdminCoursePreviewsProp
                 </TableRow>
               ))}
               {items.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Aucun élément</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Aucun élément</TableCell></TableRow>
               )}
             </TableBody>
                 </Table>

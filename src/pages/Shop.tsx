@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,13 +103,15 @@ export default function Shop() {
     fetchProducts();
   }, [toast, t, apiBaseUrl]);
 
-  const categories = [
-    { id: 'all', name: t('shop.cat.all') },
-    { id: 'semences', name: t('shop.cat.seeds') },
-    { id: 'engrais', name: t('shop.cat.fertilizers') },
-    { id: 'outils', name: t('shop.cat.tools') },
-    { id: 'technologies', name: t('shop.cat.tech') }
-  ];
+  // Dérivées des produits réels plutôt qu'une liste figée : les catégories
+  // sont un champ libre côté admin (ShopProduct.category), donc une liste
+  // codée en dur ("Semences", "Engrais"...) finit toujours par diverger des
+  // vraies valeurs en base — chaque bouton de filtre ne matchait plus aucun
+  // produit et semblait cassé.
+  const categories = useMemo(() => {
+    const unique = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
+    return [{ id: 'all', name: t('shop.cat.all') }, ...unique.map((c) => ({ id: c, name: c }))];
+  }, [products, t]);
 
   const sortOptions = [
     { id: 'name', name: t('shop.sort.name') },
@@ -123,7 +125,7 @@ export default function Shop() {
     .filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            product.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category.toLowerCase() === selectedCategory;
+      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {

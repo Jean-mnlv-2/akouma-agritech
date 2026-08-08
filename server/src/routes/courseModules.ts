@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authRequired, moduleAccess } from '../middleware/authRequired';
 import { emailService } from '../utils/email';
+import { computeEffectiveOpenDate } from '../utils/cohortSchedule';
 import { prisma } from '../db';
 export const courseModulesRouter = Router();
 
@@ -44,11 +45,35 @@ courseModulesRouter.get('/course/:courseId', authRequired, async (req: Request, 
       if (!enrollment) return res.status(403).json({ error: 'not_enrolled' });
     }
 
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { cohortStartDate: true, cohortIntervalDays: true },
+    });
+
     const modules = await prisma.courseModule.findMany({
       where: { courseId, isActive: true },
       orderBy: { order: 'asc' },
     });
-    const sanitized = isPrivileged ? modules : modules.map((m) => stripQuizAnswers(m as unknown as Record<string, unknown>));
+
+    // Verrouillage par cohorte (calculé, jamais stocké) : un module dont la
+    // date d'ouverture effective (explicite, ou auto-calculée via
+    // cohortStartDate/cohortIntervalDays — voir computeEffectiveOpenDate)
+    // n'est pas encore arrivée est fermé pour TOUT LE MONDE. La fenêtre
+    // d'évaluation d'un module est considérée fermée dès que le module
+    // SUIVANT ouvre (évite un champ closeDate séparé) — le dernier module
+    // d'un cours en mode cohorte doit donc être un "synthesis_exam" pour
+    // que sa fenêtre puisse un jour se fermer.
+    const now = new Date();
+    const withCohortFields = modules.map((m, idx) => {
+      const effectiveOpenDate = course ? computeEffectiveOpenDate(course, m) : m.openDate;
+      const cohortLocked = !!(effectiveOpenDate && effectiveOpenDate > now);
+      const next = modules[idx + 1];
+      const nextEffectiveOpenDate = next && course ? computeEffectiveOpenDate(course, next) : next?.openDate ?? null;
+      const assessmentWindowClosed = !!(nextEffectiveOpenDate && nextEffectiveOpenDate <= now);
+      return { ...m, openDate: effectiveOpenDate, cohortLocked, assessmentWindowClosed };
+    });
+
+    const sanitized = isPrivileged ? withCohortFields : withCohortFields.map((m) => stripQuizAnswers(m as unknown as Record<string, unknown>));
     res.json({ data: sanitized });
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch modules' });
@@ -58,7 +83,7 @@ courseModulesRouter.get('/course/:courseId', authRequired, async (req: Request, 
 // Admin: create module
 courseModulesRouter.post('/', authRequired, moduleAccess('course-modules'), async (req: Request, res: Response) => {
   try {
-    const { courseId, title, type, duration, content, videoUrl, pdfUrl, order, quizQuestions } = req.body;
+    const { courseId, title, type, duration, content, videoUrl, pdfUrl, order, quizQuestions, openDate } = req.body;
     if (!courseId || !title) return res.status(400).json({ error: 'courseId and title required' });
 
     // Validation de la durée totale
@@ -88,6 +113,7 @@ courseModulesRouter.post('/', authRequired, moduleAccess('course-modules'), asyn
         pdfUrl: pdfUrl || null,
         order: order ?? 0,
         quizQuestions: quizQuestions || null,
+        openDate: openDate ? new Date(openDate) : null,
       },
     });
     res.status(201).json({ data: created });
@@ -100,7 +126,7 @@ courseModulesRouter.post('/', authRequired, moduleAccess('course-modules'), asyn
 courseModulesRouter.put('/:id', authRequired, moduleAccess('course-modules'), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { title, type, duration, content, videoUrl, pdfUrl, order, isActive, quizQuestions } = req.body;
+    const { title, type, duration, content, videoUrl, pdfUrl, order, isActive, quizQuestions, openDate } = req.body;
 
     // Validation de la durée totale si la durée est modifiée
     if (duration !== undefined) {
@@ -143,6 +169,7 @@ courseModulesRouter.put('/:id', authRequired, moduleAccess('course-modules'), as
         ...(order !== undefined && { order }),
         ...(isActive !== undefined && { isActive: Boolean(isActive) }),
         ...(quizQuestions !== undefined && { quizQuestions }),
+        ...(openDate !== undefined && { openDate: openDate ? new Date(openDate) : null }),
       },
     });
     res.json({ data: updated });
@@ -227,30 +254,65 @@ courseModulesRouter.get('/progress/:enrollmentId', authRequired, async (req: Req
 // User: mark module complete
 courseModulesRouter.post('/progress', authRequired, async (req: Request, res: Response) => {
   try {
-    const { enrollmentId, moduleId, quizScore } = req.body;
+    const { enrollmentId, moduleId, quizScore, completed } = req.body;
+    // Par défaut true (modules texte/vidéo/pdf, "marquer comme terminé").
+    // Explicitement false pour enregistrer une tentative de quiz ÉCHOUÉE —
+    // nécessaire pour l'examen de synthèse, qui n'a pas de "fenêtre" qui se
+    // ferme (dernier module) : un échec doit rester tracé pour permettre une
+    // demande de rattrapage, plutôt que de rester rejouable indéfiniment.
+    const isCompleted = completed === undefined ? true : Boolean(completed);
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
     // Strict ownership check on the enrollment
     const enrollment = await prisma.eLearningEnrollment.findUnique({ where: { id: Number(enrollmentId) } });
     if (!enrollment) return res.status(404).json({ error: 'Enrollment not found' });
     if (enrollment.userId !== user.id) return res.status(403).json({ error: 'forbidden' });
-    
+
+    // Admissibilité à l'examen de synthèse : seul un apprenant ayant validé
+    // TOUS les autres modules actifs du cours peut voir sa complétion de
+    // l'examen de synthèse enregistrée. Contrairement au verrouillage par
+    // date (frontend uniquement), ce contrôle est appliqué côté serveur car
+    // c'est le seul point qui touche à l'intégrité du certificat.
+    const targetModule = await prisma.courseModule.findUnique({ where: { id: Number(moduleId) } });
+    if (targetModule?.type === 'synthesis_exam') {
+      const [totalOtherModules, completedOtherModules] = await Promise.all([
+        prisma.courseModule.count({ where: { courseId: targetModule.courseId, isActive: true, id: { not: targetModule.id } } }),
+        prisma.moduleProgress.count({ where: { enrollmentId: Number(enrollmentId), completed: true, module: { id: { not: targetModule.id } } } }),
+      ]);
+      if (completedOtherModules < totalOtherModules) {
+        return res.status(403).json({ error: 'synthesis_not_admissible' });
+      }
+    }
+
     const progress = await prisma.moduleProgress.upsert({
       where: { enrollmentId_moduleId: { enrollmentId: Number(enrollmentId), moduleId: Number(moduleId) } },
       create: {
         enrollmentId: Number(enrollmentId),
         moduleId: Number(moduleId),
         userId: user.id,
-        completed: true,
+        completed: isCompleted,
         quizScore: quizScore ?? null,
-        completedAt: new Date(),
+        completedAt: isCompleted ? new Date() : null,
       },
       update: {
-        completed: true,
+        completed: isCompleted,
         quizScore: quizScore ?? undefined,
-        completedAt: new Date(),
+        completedAt: isCompleted ? new Date() : null,
       },
     });
+
+    // Si cette validation résout une demande de rattrapage en cours (quiz
+    // d'origine ou évaluation alternative assignée par l'admin — le
+    // ModuleProgress est toujours enregistré sur le module d'origine, voir
+    // rattrapageRequests.ts), on la marque terminée. Seulement en cas de
+    // réussite : un nouvel échec pendant le rattrapage garde la demande
+    // "granted" pour permettre un nouvel essai.
+    if (isCompleted) {
+      prisma.rattrapageRequest.updateMany({
+        where: { enrollmentId: Number(enrollmentId), moduleId: Number(moduleId), status: 'granted' },
+        data: { status: 'completed' },
+      }).catch(() => {});
+    }
 
     // Update enrollment progress percentage
     if (enrollment) {
@@ -266,22 +328,26 @@ courseModulesRouter.post('/progress', authRequired, async (req: Request, res: Re
         },
       });
 
-      // Notifications email (best-effort, async)
-      try {
-        const [userRow, courseRow, moduleRow] = await Promise.all([
-          prisma.user.findUnique({ where: { id: user.id }, select: { email: true, fullName: true } }),
-          prisma.course.findUnique({ where: { id: enrollment.courseId }, select: { title: true } }),
-          prisma.courseModule.findUnique({ where: { id: Number(moduleId) }, select: { title: true } }),
-        ]);
-        if (userRow?.email && courseRow) {
-          const userName = userRow.fullName || userRow.email.split('@')[0];
-          if (pct >= 100 && !wasCompleted) {
-            emailService.sendLearningEvent({ email: userRow.email, userName, courseTitle: courseRow.title, type: 'course-completed' }).catch(() => {});
-          } else {
-            emailService.sendLearningEvent({ email: userRow.email, userName, courseTitle: courseRow.title, moduleTitle: moduleRow?.title, progress: pct, type: 'module-completed' }).catch(() => {});
+      // Notifications email (best-effort, async) — seulement pour une vraie
+      // réussite, jamais pour une tentative de quiz échouée enregistrée avec
+      // completed:false.
+      if (isCompleted) {
+        try {
+          const [userRow, courseRow, moduleRow] = await Promise.all([
+            prisma.user.findUnique({ where: { id: user.id }, select: { email: true, fullName: true } }),
+            prisma.course.findUnique({ where: { id: enrollment.courseId }, select: { title: true } }),
+            prisma.courseModule.findUnique({ where: { id: Number(moduleId) }, select: { title: true } }),
+          ]);
+          if (userRow?.email && courseRow) {
+            const userName = userRow.fullName || userRow.email.split('@')[0];
+            if (pct >= 100 && !wasCompleted) {
+              emailService.sendLearningEvent({ email: userRow.email, userName, courseTitle: courseRow.title, type: 'course-completed' }).catch(() => {});
+            } else {
+              emailService.sendLearningEvent({ email: userRow.email, userName, courseTitle: courseRow.title, moduleTitle: moduleRow?.title, progress: pct, type: 'module-completed' }).catch(() => {});
+            }
           }
-        }
-      } catch { /* ignore email errors */ }
+        } catch { /* ignore email errors */ }
+      }
     }
 
     res.json({ data: progress });

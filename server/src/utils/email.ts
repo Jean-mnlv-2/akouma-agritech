@@ -128,6 +128,99 @@ export const emailService = {
     }
   },
 
+  /**
+   * Message libre envoyé à un apprenant, approuvé par un admin (ex : relance
+   * de présence suggérée par DeerFlow puis validée via AiSuggestion.apply).
+   * Ne jamais appeler directement depuis une route accessible à DeerFlow —
+   * seul un admin humain déclenche l'envoi réel.
+   */
+  async sendCustomLearnerMessage(data: { email: string; userName: string; subject: string; message: string }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configurée — message ignoré pour', data.email);
+      return;
+    }
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject: data.subject,
+        html: `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+            <p>Bonjour ${data.userName},</p>
+            <p style="white-space:pre-wrap">${data.message}</p>
+            <hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0"/>
+            <p style="font-size:12px;color:#9ca3af;text-align:center">L'équipe KILIMO Agritech</p>
+          </div>`,
+      });
+    } catch (error) {
+      console.error('[EMAIL] Erreur envoi message personnalisé:', error);
+    }
+  },
+
+  /**
+   * Rapport hebdomadaire e-learning à l'admin — consolide en un seul email
+   * ce qui aurait sinon été 3 alertes séparées (liens morts, brouillons
+   * oubliés, activité DeerFlow) : moins de bruit dans la boîte mail, toute
+   * l'information nécessaire pour décider quoi regarder sans ouvrir chaque
+   * écran d'admin.
+   */
+  async sendWeeklyElearningDigest(data: {
+    email: string;
+    activity: { coursesCreated: number; modulesCreated: number; commentsHidden: number; suggestionsCreated: number; suggestionsPending: number };
+    brokenLinks: string[];
+    linksChecked: number;
+    forgottenCourses: { title: string; daysAgo: number; createdVia: string }[];
+    forgottenModules: { title: string; daysAgo: number; createdVia: string }[];
+  }) {
+    if (!resend) {
+      console.warn('[EMAIL] Resend non configurée — rapport hebdomadaire e-learning ignoré');
+      return;
+    }
+    const base = env.FRONTEND_ORIGINS[0];
+    const { activity, brokenLinks, linksChecked, forgottenCourses, forgottenModules } = data;
+
+    const listOrNone = (items: string[]) => items.length
+      ? `<ul style="margin:8px 0;padding-left:20px">${items.slice(0, 15).map((i) => `<li>${i}</li>`).join('')}</ul>${items.length > 15 ? `<p style="font-size:12px;color:#6b7280">…et ${items.length - 15} de plus.</p>` : ''}`
+      : `<p style="color:#6b7280;font-size:14px">Aucun.</p>`;
+
+    try {
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: data.email,
+        subject: `Rapport hebdomadaire E-Learning KILIMO`,
+        html: `
+          <div style="font-family:sans-serif;max-width:640px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+            <h2 style="color:#1E5B37;margin-top:0">📊 Rapport hebdomadaire — Module E-Learning</h2>
+
+            <h3 style="margin-bottom:8px">Activité DeerFlow (7 derniers jours)</h3>
+            <ul style="margin:8px 0;padding-left:20px">
+              <li>${activity.coursesCreated} cours créé(s) en brouillon</li>
+              <li>${activity.modulesCreated} module(s) créé(s) en brouillon</li>
+              <li>${activity.commentsHidden} commentaire(s) masqué(s)</li>
+              <li>${activity.suggestionsCreated} suggestion(s) rédigée(s), dont ${activity.suggestionsPending} en attente de revue</li>
+            </ul>
+            ${activity.suggestionsPending > 0 ? `<p><a href="${base}/admin" style="color:#1E5B37">→ Revoir les suggestions en attente</a></p>` : ''}
+
+            <h3 style="margin-bottom:8px">Liens vidéo/PDF (${linksChecked} vérifiés)</h3>
+            ${brokenLinks.length > 0 ? `<p style="color:#b91c1c;font-weight:600">${brokenLinks.length} lien(s) cassé(s) :</p>` : ''}
+            ${listOrNone(brokenLinks)}
+
+            <h3 style="margin-bottom:8px">Brouillons oubliés (plus de 14 jours sans publication)</h3>
+            <p style="font-size:13px;color:#6b7280;margin:4px 0">Cours :</p>
+            ${listOrNone(forgottenCourses.map((c) => `${c.title} (${c.daysAgo}j, ${c.createdVia === 'deerflow' ? 'DeerFlow' : 'admin'})`))}
+            <p style="font-size:13px;color:#6b7280;margin:4px 0">Modules :</p>
+            ${listOrNone(forgottenModules.map((m) => `${m.title} (${m.daysAgo}j, ${m.createdVia === 'deerflow' ? 'DeerFlow' : 'admin'})`))}
+
+            <hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0"/>
+            <p style="font-size:12px;color:#9ca3af;text-align:center">Rapport automatique — <a href="${base}/admin">tableau de bord admin</a></p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error('[EMAIL] Erreur envoi rapport hebdomadaire e-learning:', error);
+    }
+  },
+
   async sendAbsenceNotification(data: {
     email: string;
     userName: string;
@@ -315,7 +408,7 @@ export const emailService = {
     email: string;
     userName: string;
     courseTitle: string;
-    type: 'module-completed' | 'course-completed' | 'certificate-ready';
+    type: 'module-completed' | 'course-completed' | 'certificate-ready' | 'rattrapage_reminder';
     moduleTitle?: string;
     progress?: number;
     certificateUrl?: string;
@@ -342,6 +435,13 @@ export const emailService = {
         <p>Vous avez terminé avec succès la formation <strong>${data.courseTitle}</strong>.</p>
         <p>Votre certificat est en cours de génération et vous sera envoyé sous peu.</p>
         <p><a href="${base}/dashboard/learning" style="display:inline-block;padding:12px 24px;background:#E57D27;color:#fff;border-radius:8px;text-decoration:none">Voir mes succès</a></p>`;
+    } else if (data.type === 'rattrapage_reminder') {
+      subject = `Rattrapage disponible : ${data.moduleTitle || ''} - KILIMO`;
+      body = `
+        <h2 style="color:#1E5B37">Bonjour ${data.userName},</h2>
+        <p>Vous n'avez pas encore validé le module <strong>${data.moduleTitle}</strong> de la formation <strong>${data.courseTitle}</strong>, et la fenêtre d'évaluation est maintenant fermée.</p>
+        <p>Vous pouvez demander un rattrapage directement depuis votre espace apprenant, avant l'examen de synthèse.</p>
+        <p><a href="${base}/dashboard/learning" style="display:inline-block;padding:12px 24px;background:#1E5B37;color:#fff;border-radius:8px;text-decoration:none">Demander un rattrapage</a></p>`;
     } else {
       subject = `Votre certificat KILIMO est prêt : ${data.courseTitle}`;
       body = `

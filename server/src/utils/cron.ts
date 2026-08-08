@@ -4,6 +4,8 @@ import { RagSystem } from '../rag';
 import { SubscriptionService } from '../services/subscriptionService';
 import { OrdersService } from '../services/ordersService';
 import { initSourceScheduler } from './sourceScheduler';
+import { initRattrapageReminders } from './rattrapageReminders';
+import { initWeeklyElearningDigest } from './weeklyElearningDigest';
 import { prisma } from '../db';
 const subscriptionService = new SubscriptionService();
 const ordersService = new OrdersService(prisma);
@@ -128,6 +130,12 @@ export const initCronJobs = () => {
   // sources sans horaire configuré restent manuelles/pilotées par DeerFlow,
   // comme avant.
   initSourceScheduler();
+
+  // Rappels de rattrapage pour les modules de cohorte non validés
+  initRattrapageReminders();
+
+  // Rapport hebdomadaire e-learning (liens morts, brouillons oubliés, activité DeerFlow)
+  initWeeklyElearningDigest();
 
   // Vérification d'Ollama au démarrage
   checkOllama();

@@ -33,6 +33,14 @@ const createOrderSchema = z.object({
   deliveryPartnerId: z.union([z.number().int().positive(), z.string().regex(/^\d+$/), z.null()]).optional(),
   shippingFee: z.union([z.number(), z.string(), z.null()]).optional(),
   cashbackAmount: z.number().min(0).optional(),
+  // Renseignés uniquement pour un achat de cours (productType="course") —
+  // jamais les infos de compte, déjà connues via l'auth. Reportées sur
+  // l'ELearningEnrollment créée après paiement (OrdersService.processPostPayment).
+  professionalActivity: z.string().max(255).nullable().optional(),
+  organization: z.string().max(255).nullable().optional(),
+  sector: z.string().max(255).nullable().optional(),
+  experienceLevel: z.string().max(50).nullable().optional(),
+  expectations: z.string().max(5000).nullable().optional(),
 }).strict();
 
 const updateOrderSchema = z.object({
@@ -168,6 +176,11 @@ ordersRouter.post('/', authRequired, csrfRequired, validate(createOrderSchema), 
       deliveryPartnerId,
       shippingFee,
       cashbackAmount,
+      professionalActivity,
+      organization,
+      sector,
+      experienceLevel,
+      expectations,
     } = req.body;
 
     if (!userId) {
@@ -224,6 +237,11 @@ ordersRouter.post('/', authRequired, csrfRequired, validate(createOrderSchema), 
         deliveryPartnerId: deliveryPartnerId != null ? Number(deliveryPartnerId) : null,
         shippingFee: shippingFee != null ? Number(shippingFee) : null,
         cashbackAmount: cashbackAmount != null ? Number(cashbackAmount) : null,
+        professionalActivity: professionalActivity || null,
+        organization: organization || null,
+        sector: sector || null,
+        experienceLevel: experienceLevel || null,
+        expectations: expectations || null,
       });
       await audit({ ...actorFromRequest(req), action: 'order.create', entityType: 'order', entityId: (result as any)?.id, metadata: { itemCount: normalizedItems.length, deliveryMethod: selectedDeliveryMethod, promoCode: promoCode || undefined } });
       res.status(201).json({ data: result });

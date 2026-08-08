@@ -131,15 +131,30 @@ export default function News() {
     fetchEvents();
   }, [apiBaseUrl]);
 
-  const categories = [
+  // Dérivées des actualités réelles plutôt qu'une liste figée : plusieurs
+  // catégories codées en dur ("Agriculture", "Technologie"...) n'existaient
+  // dans aucun article, et "Régional" (la plus grande catégorie réelle)
+  // n'avait aucun bouton — filtres silencieusement cassés ou incomplets.
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([
     { id: 'all', name: t('news.cat.all') },
-    { id: 'agriculture', name: 'Agriculture' },
-    { id: 'technologie', name: 'Technologie' },
-    { id: 'innovation', name: 'Innovation' },
-    { id: 'environnement', name: 'Environnement' },
-    { id: 'economie', name: 'Économie' },
-    { id: 'formation', name: 'Formation' }
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const url = new URL(`/api/news?is_published=true&pageSize=1000`, apiBaseUrl);
+        const res = await fetch(url.toString(), { credentials: 'include' });
+        if (!res.ok) return;
+        const body = await res.json();
+        const items: { category?: string }[] = body.data || [];
+        const unique = Array.from(new Set(items.map((i) => i.category).filter(Boolean))).sort() as string[];
+        setCategories([{ id: 'all', name: t('news.cat.all') }, ...unique.map((c) => ({ id: c, name: c }))]);
+      } catch (e) {
+        console.error('Error fetching news categories:', e);
+      }
+    };
+    fetchCategories();
+  }, [apiBaseUrl, t]);
 
   useEffect(() => {
     setPage(1);

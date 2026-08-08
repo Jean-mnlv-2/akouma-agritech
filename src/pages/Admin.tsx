@@ -25,7 +25,10 @@ import {
   Radio,
   Receipt,
   Eye,
-  History
+  History,
+  RotateCcw,
+  Sparkles,
+  Lightbulb
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
@@ -39,6 +42,8 @@ import { AdminNotifications } from '@/components/admin/AdminNotifications';
 const AdminCourses = lazy(() => import('@/components/admin/AdminCourses').then(m => ({ default: m.AdminCourses })));
 const AdminCoursePreviews = lazy(() => import('@/components/admin/AdminCoursePreviews').then(m => ({ default: m.AdminCoursePreviews })));
 const AdminReminderLogs = lazy(() => import('@/components/admin/AdminReminderLogs').then(m => ({ default: m.AdminReminderLogs })));
+const AdminRattrapageRequests = lazy(() => import('@/components/admin/AdminRattrapageRequests').then(m => ({ default: m.AdminRattrapageRequests })));
+const AdminAiSuggestions = lazy(() => import('@/components/admin/AdminAiSuggestions').then(m => ({ default: m.AdminAiSuggestions })));
 const AdminNews = lazy(() => import('@/components/admin/AdminNews').then(m => ({ default: m.AdminNews })));
 const AdminSeeds = lazy(() => import('@/components/admin/AdminSeeds').then(m => ({ default: m.AdminSeeds })));
 const AdminProducts = lazy(() => import('@/components/admin/AdminProducts').then(m => ({ default: m.AdminProducts })));
@@ -47,6 +52,7 @@ const AdminSubmissions = lazy(() => import('@/components/admin/AdminSubmissions'
 const AdminCareers = lazy(() => import('@/components/admin/AdminCareers').then(m => ({ default: m.AdminCareers })));
 const AdminEvents = lazy(() => import('@/components/admin/AdminEvents').then(m => ({ default: m.AdminEvents })));
 const AdminPartners = lazy(() => import('@/components/admin/AdminPartners').then(m => ({ default: m.AdminPartners })));
+const AdminInnovativeSolutions = lazy(() => import('@/components/admin/AdminInnovativeSolutions').then(m => ({ default: m.AdminInnovativeSolutions })));
 const AdminLiveStreams = lazy(() => import('@/pages/AdminLiveStreams'));
 const AdminDonationsContent = lazy(() => import('@/components/admin/AdminDonationsContent').then(m => ({ default: m.AdminDonationsContent })));
 const AdminContactSettings = lazy(() => import('@/components/admin/AdminContactSettings').then(m => ({ default: m.AdminContactSettings })));
@@ -150,6 +156,8 @@ const tabGroups = [
       { value: 'attendance', label: 'Présences', icon: Calendar },
       { value: 'sertifier', label: 'Sertifier', icon: Shield },
       { value: 'certificates', label: 'Certificats', icon: Crown },
+      { value: 'rattrapage-requests', label: 'Rattrapages', icon: RotateCcw },
+      { value: 'ai-suggestions', label: 'Suggestions DeerFlow', icon: Sparkles },
       { value: 'reminder-logs', label: 'Journal Rappels', icon: History }
     ]
   },
@@ -159,6 +167,7 @@ const tabGroups = [
       { value: 'news', label: 'Actualités', icon: Newspaper },
       { value: 'legal', label: 'Pages Légales', icon: FileText },
       { value: 'partners', label: 'Partenaires', icon: Users },
+      { value: 'innovative-solutions', label: 'Solutions Innovantes', icon: Lightbulb },
       { value: 'careers', label: 'Emplois', icon: Briefcase },
       { value: 'events', label: 'Événements', icon: Calendar },
       { value: 'livestreams', label: 'Live Streams', icon: Radio },
@@ -470,12 +479,15 @@ function AdminContent() {
               {(activeTab === 'attendance' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('attendance')))) && <AdminAttendance />}
       {(activeTab === 'sertifier' && isAdmin) && <AdminSertifierSettings />}
               {(activeTab === 'certificates' && isAdmin) && <AdminCertificates />}
+              {(activeTab === 'rattrapage-requests' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('rattrapage-requests')))) && <AdminRattrapageRequests />}
+              {(activeTab === 'ai-suggestions' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('ai-suggestions')))) && <AdminAiSuggestions />}
               {(activeTab === 'reminder-logs' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('reminder-logs')))) && <AdminReminderLogs />}
               {(activeTab === 'news' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('news')))) && <AdminNews />}
               {(activeTab === 'seeds' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('seeds')))) && <AdminSeeds />}
               {(activeTab === 'products' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('products')))) && <AdminProducts />}
               {(activeTab === 'legal' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('legal')))) && <AdminLegalPages />}
               {(activeTab === 'partners' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('partners')))) && <AdminPartners />}
+              {(activeTab === 'innovative-solutions' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('innovative-solutions')))) && <AdminInnovativeSolutions />}
               {(activeTab === 'donations-content' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('donations-content')))) && <AdminDonationsContent />}
               {(activeTab === 'careers' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('careers')))) && <AdminCareers />}
               {(activeTab === 'events' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('events')))) && <AdminEvents />}

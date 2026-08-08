@@ -50,7 +50,7 @@ paymentsRouter.post('/initiate', paymentsInitiateLimiter, authRequired, csrfRequ
 
     const order = await prisma.order.findUnique({
       where: { id: Number(orderId) },
-      include: { items: true, user: { select: { id: true, fullName: true, email: true } } },
+      include: { items: true, user: { select: { id: true, fullName: true, email: true, phone: true } } },
     });
 
     if (!order) {
@@ -76,6 +76,18 @@ paymentsRouter.post('/initiate', paymentsInitiateLimiter, authRequired, csrfRequ
       montant: Number(item.price) * item.quantity,
     }));
 
+    // Money Fusion (mobile money) exige un numéro pour router le paiement —
+    // les achats sans livraison (cours, abonnements) n'ont pas de
+    // shippingPhone : on retombe sur le téléphone du profil utilisateur.
+    // Sans l'un ni l'autre, la demande échoue silencieusement côté Money
+    // Fusion (statut:false, message générique) plutôt que de bloquer ici
+    // avec un message clair — on préfère donc échouer tôt et explicitement.
+    const payerPhone = (order.shippingPhone || order.user?.phone || '').replace(/\s+/g, '');
+    if (!payerPhone) {
+      logger.warn(`[payments] No phone number available for order #${order.orderNumber} — cannot initiate Money Fusion payment`);
+      return res.status(400).json({ error: 'Un numéro de téléphone Mobile Money est requis pour ce paiement. Ajoutez-le à votre profil et réessayez.' });
+    }
+
     const payload = {
       totalPrice: Number(order.total),
       devise: 'XOF',
@@ -87,7 +99,7 @@ paymentsRouter.post('/initiate', paymentsInitiateLimiter, authRequired, csrfRequ
           orderNumber: order.orderNumber,
         },
       ],
-      numeroSend: order.shippingPhone?.replace(/\s+/g, '') || '',
+      numeroSend: payerPhone,
       nomclient: order.user?.fullName || 'Client',
       return_url: `${env.FRONTEND_URL}/orders/${order.id}?payment=success`,
       cancel_url: `${env.FRONTEND_URL}/orders/${order.id}?payment=cancelled`,

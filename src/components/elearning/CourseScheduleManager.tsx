@@ -8,11 +8,11 @@ import { Calendar, Clock, Lock, AlertTriangle, CheckCircle } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
+import { ABSENCE_PENALTY } from "@/lib/elearningFormat";
 
 interface CourseScheduleProps {
   enrollmentId: number;
   courseId: number;
-  userId: string;
 }
 
 const timeSlots = [
@@ -33,8 +33,8 @@ const CourseScheduleManager = ({ enrollmentId, courseId }: CourseScheduleProps) 
   const { data: schedules = [], isLoading } = useQuery<any[]>({
     queryKey: ["schedules", enrollmentId],
     queryFn: async () => {
-      const res = await api.request("GET", "/api/course_schedules/my");
-      return (res.data || []).filter((s: any) => s.enrollmentId === enrollmentId);
+      const res = await api.request("GET", `/api/course_schedules/my?enrollmentId=${enrollmentId}`);
+      return res.data || [];
     },
     staleTime: 30000,
   });
@@ -57,7 +57,7 @@ const CourseScheduleManager = ({ enrollmentId, courseId }: CourseScheduleProps) 
   });
 
   const totalAbsences = schedules.filter(s => s.status === "absent").length;
-  const hasPenalty = totalAbsences >= 3;
+  const hasPenalty = totalAbsences >= ABSENCE_PENALTY.THRESHOLD;
 
   const getStatusBadge = (status: string) => {
     switch (status) {

@@ -66,27 +66,30 @@ coursesRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 coursesRouter.post('/', authRequired, moduleAccess('courses'), async (req: Request, res: Response) => {
-  const { 
-    title, slug, description, content, price, duration, level, 
-    thumbnailUrl, videoUrl, isPublished, isCopyProtected, 
+  const {
+    title, slug, description, content, price, duration, level,
+    thumbnailUrl, videoUrl, isPublished, isCopyProtected,
     category, instructorName, instructorBio,
-    sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId
+    sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId,
+    cohortStartDate, cohortIntervalDays
   } = req.body || {};
   if (!title || !slug || price == null) return res.status(400).json({ error: 'missing fields' });
   const sertifierError = validateSertifierIds(req.body || {});
   if (sertifierError) return res.status(400).json({ error: sertifierError });
   const created = await prisma.course.create({
-    data: { 
-      title, slug, description, content, 
-      price: Number(price), 
-      duration: duration ? Number(duration) : null, 
-      level, thumbnailUrl, videoUrl, 
-      isPublished: Boolean(isPublished), 
+    data: {
+      title, slug, description, content,
+      price: Number(price),
+      duration: duration ? Number(duration) : null,
+      level, thumbnailUrl, videoUrl,
+      isPublished: Boolean(isPublished),
       isCopyProtected: Boolean(isCopyProtected),
       category, instructorName, instructorBio,
       sertifierDesignId: sertifierDesignId || null,
       sertifierDetailId: sertifierDetailId || null,
       sertifierEmailTemplateId: sertifierEmailTemplateId || null,
+      cohortStartDate: cohortStartDate ? new Date(cohortStartDate) : null,
+      cohortIntervalDays: cohortIntervalDays != null ? Number(cohortIntervalDays) : null,
     } as any,
   });
   res.status(201).json({ data: created });
@@ -94,11 +97,12 @@ coursesRouter.post('/', authRequired, moduleAccess('courses'), async (req: Reque
 
 coursesRouter.put('/:id', authRequired, moduleAccess('courses'), async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { 
-    title, slug, description, content, price, duration, level, 
+  const {
+    title, slug, description, content, price, duration, level,
     thumbnailUrl, videoUrl, isPublished, isCopyProtected,
     category, instructorName, instructorBio,
-    sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId
+    sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId,
+    cohortStartDate, cohortIntervalDays
   } = req.body || {};
   if (sertifierDesignId !== undefined || sertifierDetailId !== undefined || sertifierEmailTemplateId !== undefined) {
     const sertifierError = validateSertifierIds({ sertifierDesignId, sertifierDetailId, sertifierEmailTemplateId });
@@ -137,6 +141,8 @@ coursesRouter.put('/:id', authRequired, moduleAccess('courses'), async (req: Req
       sertifierDesignId: sertifierDesignId === undefined ? undefined : (sertifierDesignId || null),
       sertifierDetailId: sertifierDetailId === undefined ? undefined : (sertifierDetailId || null),
       sertifierEmailTemplateId: sertifierEmailTemplateId === undefined ? undefined : (sertifierEmailTemplateId || null),
+      cohortStartDate: cohortStartDate === undefined ? undefined : (cohortStartDate ? new Date(cohortStartDate) : null),
+      cohortIntervalDays: cohortIntervalDays === undefined ? undefined : (cohortIntervalDays != null ? Number(cohortIntervalDays) : null),
     } as any,
   });
   res.json({ data: updated });

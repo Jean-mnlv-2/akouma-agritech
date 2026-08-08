@@ -36,6 +36,11 @@ import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 import SEO, { schema } from "@/components/SEO";
+import { EnrollmentDetailsDialog, type EnrollmentDetails } from "@/components/elearning/EnrollmentDetailsDialog";
+import { ModuleStatusBadge } from "@/components/elearning/ModuleStatusBadge";
+import { getLevelColor, formatCoursePrice } from "@/lib/elearningFormat";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { useEnrollments } from "@/hooks/useEnrollments";
 
 interface Course {
   id: string;
@@ -72,55 +77,30 @@ interface BackendModule {
   quizQuestions?: unknown;
 }
 
-interface User {
-  id: string | number;
-  email: string;
-  name?: string;
-}
-
-interface Enrollment {
-  id: number;
-  userId: string | number;
-  courseId: number;
-  enrolledAt: string;
-}
-
 const CourseDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { t } = useI18n();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  const [enrolled, setEnrolled] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [showEnrollDialog, setShowEnrollDialog] = useState(false);
+  const { user: currentUser } = useAuthUser();
+  // Un utilisateur ayant déjà renseigné son profil sur une autre formation ne
+  // doit plus se voir reposer ces questions — seule "expectations" reste
+  // propre à chaque formation.
+  const { enrollments: userEnrollments, knownProfile: rawKnownProfile, refetch: refetchEnrollments } = useEnrollments({ enabled: !!currentUser });
   const { toast } = useToast();
 
-  const checkEnrollment = useCallback(async () => {
-    if (!currentUser || !course) return;
-    try {
-      const res = await api.request('GET', '/api/elearning_enrollments');
-      const enrollments = res.data || [];
-      const isEnrolled = enrollments.some((e: Enrollment) => 
-        e.courseId === Number(course.id) && 
-        String(e.userId) === String(currentUser.id)
-      );
-      setEnrolled(isEnrolled);
-    } catch (err) {
-      console.error("Erreur lors de la vérification de l'inscription:", err);
-    }
-  }, [currentUser, course]);
-
-  useEffect(() => {
-    api.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
-      const user = data?.user || null;
-      setCurrentUser(user);
-    });
-  }, []);
-
-  useEffect(() => {
-    checkEnrollment();
-  }, [checkEnrollment]);
+  const enrolled = !!course && userEnrollments.some((e) => e.courseId === Number(course.id));
+  const knownProfile: EnrollmentDetails | null = rawKnownProfile ? {
+    professionalActivity: rawKnownProfile.professionalActivity || '',
+    experienceLevel: rawKnownProfile.experienceLevel || '',
+    organization: rawKnownProfile.organization || '',
+    sector: rawKnownProfile.sector || '',
+    expectations: '',
+    paymentPhone: currentUser?.phone || '',
+  } : null;
 
   const { isDialogOpen, closeDialog } = useCopyProtection(
     !!course?.isCopyProtected,
@@ -136,7 +116,16 @@ const CourseDetail = () => {
     if (!slug) return;
     try {
       setLoading(true);
-      const { data } = await api.request('GET', `/api/courses/slug/${slug}`);
+      // Filet de sécurité : cette route est censée recevoir un slug, mais
+      // certains anciens liens/historiques de navigateur pointent encore
+      // vers l'ID numérique du cours. Plutôt qu'un 404 sec, on résout par ID
+      // puis on recanonise l'URL vers le vrai slug.
+      const isNumericId = /^\d+$/.test(slug);
+      const { data } = await api.request('GET', isNumericId ? `/api/courses/${slug}` : `/api/courses/slug/${slug}`);
+      if (isNumericId && data?.slug) {
+        navigate(`/elearning/${data.slug}`, { replace: true });
+        return;
+      }
       const normalized: Course = {
         id: data.id,
         title: data.title,
@@ -180,11 +169,11 @@ const CourseDetail = () => {
           description: "Votre paiement a été accepté et vous êtes inscrit au cours.",
         });
         // Check enrollment again (in case the webhook just processed it)
-        await checkEnrollment();
+        await refetchEnrollments();
       }
     };
     checkPayment();
-  }, [fetchCourse, checkEnrollment, toast]);
+  }, [fetchCourse, refetchEnrollments, toast]);
 
   // Modules réels depuis le backend
   const { data: modules = [], isLoading: modulesLoading } = useQuery<BackendModule[]>({
@@ -202,7 +191,7 @@ const CourseDetail = () => {
     queryKey: ['similar-courses', course?.category, course?.id],
     enabled: !!course?.id && !!course?.category,
     queryFn: async () => {
-      const { data } = await api.from('courses').select('*');
+      const { data } = await api.from('courses').select('*').order('created_at', { ascending: false }).range(0, 999);
       return (data || [])
         .filter((c: { id?: number; category?: string }) => c.category === course!.category && Number(c.id) !== Number(course!.id))
         .slice(0, 3);
@@ -210,7 +199,7 @@ const CourseDetail = () => {
     staleTime: 60_000,
   });
 
-  const handleEnrollment = async () => {
+  const openEnrollDialog = () => {
     if (!currentUser) {
       toast({
         title: "Connexion requise",
@@ -220,6 +209,27 @@ const CourseDetail = () => {
       navigate('/auth');
       return;
     }
+    const isPaid = !!course && course.price > 0;
+    // Un cours payant redemande TOUJOURS le dialogue (au minimum pour
+    // confirmer le numéro Mobile Money de ce paiement précis) — seul un
+    // cours gratuit peut sauter directement sur un profil déjà connu.
+    if (knownProfile && !isPaid) {
+      handleEnrollment(knownProfile);
+      return;
+    }
+    setShowEnrollDialog(true);
+  };
+
+  const handleEnrollment = async (details: EnrollmentDetails) => {
+    if (!currentUser || !course) return;
+
+    const enrollmentFields = {
+      professionalActivity: details.professionalActivity || null,
+      organization: details.organization || null,
+      sector: details.sector || null,
+      experienceLevel: details.experienceLevel || null,
+      expectations: details.expectations || null,
+    };
 
     try {
       setEnrolling(true);
@@ -235,16 +245,20 @@ const CourseDetail = () => {
                 quantity: 1,
                 imageUrl: course.thumbnail
               }
-            ]
+            ],
+            // Requis par Money Fusion (Mobile Money) pour router le paiement —
+            // les achats de cours n'ont pas d'autre formulaire d'adresse/téléphone.
+            shippingPhone: details.paymentPhone || currentUser?.phone || null,
+            ...enrollmentFields,
           }
         });
         const order = orderRes.data;
-        
+
         const paymentRes = await api.request('POST', '/api/payments/initiate', {
           body: { orderId: order.id }
         });
         const paymentUrl = paymentRes.data?.paymentUrl;
-        
+
         if (paymentUrl) {
           window.location.href = paymentUrl;
           return;
@@ -256,12 +270,14 @@ const CourseDetail = () => {
         await api.request('POST', '/api/elearning_enrollments', {
           body: {
             courseId: Number(course?.id),
+            ...enrollmentFields,
           }
         });
-        setEnrolled(true);
-        toast({ 
-          title: "Inscription réussie !", 
-          description: "Vous êtes maintenant inscrit à ce cours. Vous pouvez commencer à apprendre." 
+        await refetchEnrollments();
+        setShowEnrollDialog(false);
+        toast({
+          title: "Inscription réussie !",
+          description: "Vous êtes maintenant inscrit à ce cours. Vous pouvez commencer à apprendre."
         });
       }
     } catch (err: unknown) {
@@ -281,16 +297,7 @@ const CourseDetail = () => {
     }
   };
 
-  const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(price);
-
-  const getLevelColor = (level: string) => {
-    switch (level.toLowerCase()) {
-      case 'débutant': return 'bg-green-100 text-green-800';
-      case 'intermédiaire': return 'bg-yellow-100 text-yellow-800';
-      case 'avancé': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const formatPrice = formatCoursePrice;
 
   if (loading) {
     return (
@@ -460,7 +467,7 @@ const CourseDetail = () => {
                                 </span>
                               )}
                               {!enrolled && course.price > 0 && (
-                                <Lock className="w-4 h-4 text-muted-foreground shrink-0" aria-label="Verrouillé" />
+                                <ModuleStatusBadge status="locked" className="shrink-0" />
                               )}
                             </div>
                           </AccordionTrigger>
@@ -634,7 +641,7 @@ const CourseDetail = () => {
                         <Button
                           className="w-full h-12 rounded-xl text-base font-semibold"
                           variant="outline"
-                          onClick={() => navigate(`/elearning/${slug}/learn`)}
+                          onClick={() => navigate(`/elearning/${course.id}/learn`)}
                         >
                           <Play className="w-4 h-4 mr-2" />
                           Continuer la formation
@@ -642,7 +649,7 @@ const CourseDetail = () => {
                       </>
                     ) : (
                       <Button
-                        onClick={handleEnrollment}
+                        onClick={openEnrollDialog}
                         disabled={enrolling}
                         className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all bg-primary hover:bg-primary/90 text-white border-none"
                       >
@@ -768,6 +775,20 @@ const CourseDetail = () => {
           </div>
         )}
       </div>
+
+      {course && (
+        <EnrollmentDetailsDialog
+          open={showEnrollDialog}
+          onOpenChange={setShowEnrollDialog}
+          courseTitle={course.title}
+          currentUserLabel={currentUser?.name || currentUser?.email || ''}
+          isPaidCourse={course.price > 0}
+          knownPhone={currentUser?.phone}
+          submitting={enrolling}
+          onSubmit={handleEnrollment}
+        />
+      )}
+
       <Footer />
     </div>
   );

@@ -220,57 +220,55 @@ const About = () => {
         </div>
       </section>
 
-      {/* Objectives Section */}
+      {/* Objectives & Solutions Section — deux colonnes côte à côte, séparées
+          par une ligne verticale, chacune avec sa propre liste empilée. */}
       <section className="py-16">
         <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Nos Objectifs</h2>
-              <p className="text-xl text-muted-foreground">
-                Des ambitions claires pour l'agriculture de demain
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              {objectives.map((objective, index) => (
-                <div key={`objective-${index}-${objective.slice(0, 30)}`} className="flex items-start space-x-4 p-4 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-primary-foreground text-sm font-bold">{index + 1}</span>
-                  </div>
-                  <p className="text-lg leading-relaxed">{objective}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-0 md:divide-x md:divide-border">
+            {/* Objectifs */}
+            <div className="md:pr-12">
+              <div className="text-center mb-10">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Nos Objectifs</h2>
+                <p className="text-lg text-muted-foreground">
+                  Des ambitions claires pour l'agriculture de demain
+                </p>
+              </div>
 
-      {/* Solutions Section */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Nos Solutions</h2>
-            <p className="text-xl text-muted-foreground">
-              Des outils concrets pour transformer votre agriculture
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {solutions.map((solution, index) => (
-              <Card key={`solution-${index}-${solution.title}`} className="hover:shadow-elegant transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
-                    <solution.icon className="w-6 h-6 text-white" />
+              <div className="space-y-4">
+                {objectives.map((objective, index) => (
+                  <div key={`objective-${index}-${objective.slice(0, 30)}`} className="flex items-start gap-4 p-4 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors">
+                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <span className="text-primary-foreground text-sm font-bold">{index + 1}</span>
+                    </div>
+                    <p className="text-base leading-relaxed">{objective}</p>
                   </div>
-                  <CardTitle className="text-xl">{solution.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base leading-relaxed">
-                    {solution.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Solutions */}
+            <div className="md:pl-12">
+              <div className="text-center mb-10">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Nos Solutions</h2>
+                <p className="text-lg text-muted-foreground">
+                  Des outils concrets pour transformer votre agriculture
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {solutions.map((solution, index) => (
+                  <div key={`solution-${index}-${solution.title}`} className="flex items-start gap-4 p-4 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors">
+                    <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                      <solution.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold leading-tight">{solution.title}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{solution.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

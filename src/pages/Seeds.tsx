@@ -111,15 +111,13 @@ const Seeds = () => {
     }
   }, [apiBaseUrl]);
 
-  const categories = useMemo(() => [
-    { id: "all", name: t("seeds.cat.all") },
-    { id: "cereales", name: t("seeds.cat.cereales") },
-    { id: "legumineuses", name: t("seeds.cat.legumineuses") },
-    { id: "legumes", name: t("seeds.cat.legumes") },
-    { id: "fruits", name: t("seeds.cat.fruits") },
-    { id: "fourrage", name: t("seeds.cat.fourrage") },
-    { id: "aromates", name: t("seeds.cat.aromates") }
-  ], [t]);
+  // Dérivées des semences réelles plutôt qu'une liste figée : les catégories
+  // en base ("Maraîchage", "Céréales"...) ne correspondaient à aucun des ids
+  // codés en dur ci-avant (mêmes symptômes que Shop/News) — filtre cassé.
+  const categories = useMemo(() => {
+    const unique = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
+    return [{ id: "all", name: t("seeds.cat.all") }, ...unique.map((c) => ({ id: c, name: c }))];
+  }, [products, t]);
 
   useEffect(() => {
     fetchSeeds();

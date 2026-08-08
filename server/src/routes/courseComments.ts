@@ -7,10 +7,18 @@ export const courseCommentsRouter = Router();
 courseCommentsRouter.get('/course/:courseId', async (req: Request, res: Response) => {
   try {
     const courseId = Number(req.params.courseId);
-    const moduleId = req.query.moduleId ? Number(req.query.moduleId) : undefined;
-    
+    // `generalOnly=true` isole le chat général (moduleId=null) des discussions
+    // par module — un `moduleId=0` ne peut pas servir de sentinelle car 0 est
+    // faux en JS, ce qui désactivait silencieusement ce filtre auparavant.
+    const generalOnly = req.query.generalOnly === 'true';
+    const moduleId = req.query.moduleId !== undefined ? Number(req.query.moduleId) : undefined;
+
     const where: any = { courseId, isApproved: true, parentId: null };
-    if (moduleId) where.moduleId = moduleId;
+    if (generalOnly) {
+      where.moduleId = null;
+    } else if (moduleId !== undefined && !isNaN(moduleId)) {
+      where.moduleId = moduleId;
+    }
     
     const comments = await prisma.courseComment.findMany({
       where,

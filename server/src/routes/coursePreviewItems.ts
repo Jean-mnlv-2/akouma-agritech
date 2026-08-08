@@ -7,10 +7,29 @@ coursePreviewItemsRouter.get('/', async (req: Request, res: Response) => {
   try {
     const courseIdParam = req.query.courseId ? Number(req.query.courseId) : undefined;
     const where = { isActive: true, ...(courseIdParam ? { courseId: courseIdParam } : {}) } as any;
-    const items = await prisma.coursePreviewItem.findMany({ 
-      where, 
+    const items = await prisma.coursePreviewItem.findMany({
+      where,
       orderBy: { order: 'asc' },
       include: { previewType: true }
+    });
+    res.json({ data: items });
+  } catch (e) {
+    res.status(500).json({ error: 'failed_to_list' });
+  }
+});
+
+// Admin: list every item regardless of isActive — the public route above
+// filters isActive:true unconditionally, so without this route a
+// deactivated item becomes invisible in the admin screen with no way to
+// find it again to reactivate it.
+coursePreviewItemsRouter.get('/admin', authRequired, moduleAccess('course-previews'), async (req: Request, res: Response) => {
+  try {
+    const courseIdParam = req.query.courseId ? Number(req.query.courseId) : undefined;
+    const where = courseIdParam ? { courseId: courseIdParam } : {};
+    const items = await prisma.coursePreviewItem.findMany({
+      where,
+      orderBy: { order: 'asc' },
+      include: { previewType: true },
     });
     res.json({ data: items });
   } catch (e) {

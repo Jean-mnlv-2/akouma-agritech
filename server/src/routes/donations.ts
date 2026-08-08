@@ -11,9 +11,20 @@ donationsRouter.get('/', authRequired, adminOnly, async (_req: Request, res: Res
 
 donationsRouter.post('/', verifyRecaptcha('donations'), async (req: Request, res: Response) => {
   // public submission
-  const { donorName, email, amount, country, message } = req.body || {};
+  const { donorName, email, amount, country, message, donationImpactId } = req.body || {};
   if (!donorName || !email || amount == null || !country) return res.status(400).json({ error: 'missing fields' });
-  const created = await prisma.donation.create({ data: { donorName, email, amount, country, message, status: 'pending' } });
+
+  // Le lien vers un projet est optionnel (don général si absent), mais s'il
+  // est fourni il doit pointer vers une cause active — sinon un id arbitraire
+  // pourrait être injecté depuis le formulaire public.
+  let linkedImpactId: number | undefined;
+  if (donationImpactId != null) {
+    const impact = await prisma.donationImpact.findFirst({ where: { id: Number(donationImpactId), isActive: true }, select: { id: true } });
+    if (!impact) return res.status(400).json({ error: 'invalid donationImpactId' });
+    linkedImpactId = impact.id;
+  }
+
+  const created = await prisma.donation.create({ data: { donorName, email, amount, country, message, status: 'pending', donationImpactId: linkedImpactId } });
   res.status(201).json({ data: created });
 });
 

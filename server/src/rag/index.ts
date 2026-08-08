@@ -18,6 +18,7 @@ import { DocumentIndexer } from './core/indexer/DocumentIndexer';
 import { RagWorkflow } from './core/workflow/RagWorkflow';
 import { OllamaChatService } from './core/llm/OllamaChatService';
 import { GeminiChatService } from './core/llm/GeminiChatService';
+import { DeepSeekChatService } from './core/llm/DeepSeekChatService';
 
 export * from './types';
 export * from './config';
@@ -27,6 +28,7 @@ export { PgVectorStore } from './core/vector-store/PgVectorStore';
 export { OllamaEmbeddingService } from './core/embedding/OllamaEmbedding';
 export { OllamaChatService } from './core/llm/OllamaChatService';
 export { GeminiChatService } from './core/llm/GeminiChatService';
+export { DeepSeekChatService } from './core/llm/DeepSeekChatService';
 export { TextSplitter } from './core/indexer/TextSplitter';
 
 export class RagSystem {
@@ -70,6 +72,8 @@ export class RagSystem {
     // (config.llm.provider), indépendant de l'embedding ci-dessus.
     this.llmChatService = this.config.llm.provider === 'gemini'
       ? new GeminiChatService(this.config.llm)
+      : this.config.llm.provider === 'deepseek'
+      ? new DeepSeekChatService(this.config.llm)
       : new OllamaChatService(this.config.llm);
 
     // Initialize RAG orchestrator

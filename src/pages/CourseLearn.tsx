@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { SEO } from "@/components/SEO";
@@ -12,12 +11,17 @@ import CertificateGenerator from "@/components/elearning/CertificateGenerator";
 import CourseComments from "@/components/elearning/CourseComments";
 import LiveCourseChat from "@/components/elearning/LiveCourseChat";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { EmptyState } from "@/components/elearning/EmptyState";
+import { ErrorState } from "@/components/elearning/ErrorState";
+import { CourseProgressBar } from "@/components/elearning/CourseProgressBar";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { useEnrollments } from "@/hooks/useEnrollments";
 import {
   BookOpen, Video, FileText, CheckCircle, Lock, Play,
-  ChevronRight, Award, Clock, ArrowLeft, MessageCircle, Loader2
+  ChevronRight, Award, Clock, ArrowLeft, MessageCircle, Loader2, Trophy, CalendarClock
 } from "lucide-react";
 
 interface Module {
@@ -32,123 +36,206 @@ interface Module {
   quizQuestions: any;
   completed: boolean;
   locked: boolean;
+  videoPositionSec: number;
+  pdfPage: number;
+  openDate: string | null;
+  cohortLocked: boolean;
+  assessmentWindowClosed: boolean;
+  attempted: boolean;
+}
+
+interface RattrapageRequestData {
+  id: number;
+  status: 'pending' | 'granted' | 'rejected' | 'completed';
+  resolutionNote: string | null;
+  alternateModuleId: number | null;
+  alternateModule?: { id: number; title: string; quizQuestions: any } | null;
+}
+
+interface CourseData {
+  id: number;
+  slug: string;
+  title: string;
 }
 
 const CourseLearn = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuthUser();
+
+  const [course, setCourse] = useState<CourseData | null>(null);
+  const [courseLoading, setCourseLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [modules, setModules] = useState<Module[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(true);
   const [activeModule, setActiveModule] = useState<number | null>(null);
+  const [savingModuleId, setSavingModuleId] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [certificateRecord, setCertificateRecord] = useState<any>(null);
   const [certificateFailed, setCertificateFailed] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [course, setCourse] = useState<any>(null);
-  const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
-  const [, setProgressMap] = useState<Record<number, boolean>>({});
   const [showComments, setShowComments] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [resumeVideoSec, setResumeVideoSec] = useState(0);
-  const [pdfPage, setPdfPage] = useState(1);
+  const [rattrapageByModule, setRattrapageByModule] = useState<Record<number, RattrapageRequestData>>({});
+  const [requestingRattrapage, setRequestingRattrapage] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastSavedRef = useRef<number>(0);
 
-  // Fetch user, course, modules, enrollment, progress
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Get user
-      const { data: userData } = await api.auth.getUser();
-      const currentUser = userData?.user;
-      setUser(currentUser);
+  const isPrivileged = user?.role === 'admin' || user?.role === 'supervisor';
 
-      // Get course by slug or ID
-      let courseData;
+  // Fetch the course directly by id (no more slug-then-id fallback round trip
+  // — every caller now navigates here with the numeric courseId).
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCourse = async () => {
+      setCourseLoading(true);
+      setLoadError(null);
       try {
-        const res = await api.request("GET", `/api/courses/slug/${id}`);
-        courseData = res.data;
-      } catch {
         const res = await api.request("GET", `/api/courses/${id}`);
-        courseData = res.data;
+        if (!cancelled) setCourse(res.data);
+      } catch (e) {
+        console.error("Error loading course:", e);
+        if (!cancelled) setLoadError("Impossible de charger cette formation. Vérifiez votre connexion et réessayez.");
+      } finally {
+        if (!cancelled) setCourseLoading(false);
       }
-      setCourse(courseData);
+    };
+    if (id) fetchCourse();
+    return () => { cancelled = true; };
+  }, [id]);
 
-      if (!courseData) { setLoading(false); return; }
+  const { enrollments, findEnrollment } = useEnrollments({ courseId: course?.id, enabled: !!course?.id });
+  const enrollment = course ? findEnrollment(course.id) : undefined;
+  const enrollmentId = enrollment?.id ?? null;
 
-      // Get enrollment first : ce cours n'est accessible qu'aux inscrits (ou
-      // admin/superviseur) — vérifié aussi côté serveur, mais rediriger tôt
-      // évite un écran de contenu vide/cassé pour un visiteur non inscrit.
-      const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'supervisor';
-      let enrId: number | null = null;
-      let myEnrFull: any = null;
-      if (currentUser) {
-        try {
-          const enrRes = await api.request("GET", "/api/elearning_enrollments");
-          const enrollments = enrRes.data || [];
-          myEnrFull = enrollments.find((e: any) =>
-            String(e.userId) === String(currentUser.id) && String(e.courseId) === String(courseData.id)
-          );
-          if (myEnrFull) enrId = myEnrFull.id;
-        } catch { /* not enrolled */ }
-      }
-
-      if (!isPrivileged && !enrId) {
-        toast({ title: "Accès refusé", description: "Vous devez être inscrit à ce cours pour accéder à son contenu.", variant: "destructive" });
-        navigate(`/elearning/${courseData.slug || courseData.id}`);
-        setLoading(false);
-        return;
-      }
-
-      // Get modules (le backend revérifie aussi l'inscription — défense en profondeur)
-      const modulesRes = await api.request("GET", `/api/course_modules/course/${courseData.id}`);
-      const rawModules: any[] = modulesRes.data || [];
-
-      const pMap: Record<number, boolean> = {};
-      if (enrId) {
-        try {
-          const progRes = await api.request("GET", `/api/course_modules/progress/${enrId}`);
-          (progRes.data || []).forEach((p: any) => {
-            if (p.completed) pMap[p.moduleId] = true;
-          });
-        } catch { /* no progress yet */ }
-      }
-      setEnrollmentId(enrId);
-      setProgressMap(pMap);
-
-      if (myEnrFull) {
-        setResumeVideoSec(Number(myEnrFull.videoPositionSec || 0));
-        setPdfPage(Math.max(1, Number(myEnrFull.pdfPage || 1)));
-      }
-
-      // Build module list with completion and lock state
-      const builtModules: Module[] = rawModules.map((m, idx) => {
-        const completed = !!pMap[m.id];
-        // Lock if previous module not completed (sequential access)
-        const locked = idx === 0 ? false : !pMap[rawModules[idx - 1]?.id];
-        return { ...m, completed, locked };
-      });
-
-      setModules(builtModules);
-      if (builtModules.length > 0) {
-        // Resume: prefer last saved module if accessible, otherwise first incomplete
-        const savedId = Number(myEnrFull?.currentModuleId || 0);
-        const savedModule = savedId ? builtModules.find(m => m.id === savedId && !m.locked) : undefined;
-        const firstIncomplete = builtModules.find(m => !m.completed && !m.locked);
-        setActiveModule(savedModule?.id ?? firstIncomplete?.id ?? builtModules[0].id);
-      }
-    } catch (e) {
-      console.error("Error loading course data:", e);
+  // Ce cours n'est accessible qu'aux inscrits (ou admin/superviseur) —
+  // vérifié aussi côté serveur, mais rediriger tôt évite un écran de contenu
+  // vide/cassé pour un visiteur non inscrit.
+  useEffect(() => {
+    if (!course || !user) return;
+    if (!isPrivileged && !enrollment) {
+      toast({ title: "Accès refusé", description: "Vous devez être inscrit à ce cours pour accéder à son contenu.", variant: "destructive" });
+      navigate(`/elearning/${course.slug}`);
     }
-    setLoading(false);
-  }, [id, navigate, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course, user, enrollment, isPrivileged]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Fetch modules + progress once the course (and, if applicable, the
+  // enrollment) are known.
+  useEffect(() => {
+    if (!course) return;
+    if (!isPrivileged && !enrollment) return; // redirect effect above handles this case
 
-  // Autosave navigation state (debounced, throttled to 10s)
-  const saveState = useCallback((payload: { currentModuleId?: number | null; videoPositionSec?: number; pdfPage?: number }) => {
+    let cancelled = false;
+    const fetchModulesAndProgress = async () => {
+      setModulesLoading(true);
+      try {
+        const modulesRes = await api.request("GET", `/api/course_modules/course/${course.id}`);
+        const rawModules: any[] = modulesRes.data || [];
+
+        const progressByModule: Record<number, { completed: boolean; videoPositionSec: number; pdfPage: number }> = {};
+        if (enrollmentId) {
+          try {
+            const progRes = await api.request("GET", `/api/course_modules/progress/${enrollmentId}`);
+            (progRes.data || []).forEach((p: any) => {
+              progressByModule[p.moduleId] = {
+                completed: !!p.completed,
+                videoPositionSec: Number(p.videoPositionSec || 0),
+                pdfPage: Math.max(1, Number(p.pdfPage || 1)),
+              };
+            });
+          } catch { /* no progress yet */ }
+        }
+
+        // En préview admin/superviseur sans inscription personnelle, tous les
+        // modules restent déverrouillés (rien à débloquer séquentiellement).
+        // Verrouillage hybride : un module avec openDate est fermé pour TOUT
+        // LE MONDE jusqu'à cette date (cohortLocked, calculé serveur) ; sinon
+        // l'ancien verrouillage séquentiel par apprenant s'applique. Le
+        // module "synthesis_exam" a en plus sa propre règle d'admissibilité
+        // (tous les autres modules validés), indépendante de la date.
+        const builtModules: Module[] = rawModules.map((m, idx) => {
+          const p = progressByModule[m.id];
+          const completed = !!p?.completed;
+          let locked: boolean;
+          if (isPrivileged) {
+            locked = false;
+          } else if (m.type === 'synthesis_exam') {
+            const othersCompleted = rawModules
+              .filter((om) => om.id !== m.id)
+              .every((om) => progressByModule[om.id]?.completed);
+            locked = !!m.cohortLocked || !othersCompleted;
+          } else {
+            const sequentialLocked = idx === 0 ? false : !progressByModule[rawModules[idx - 1]?.id]?.completed;
+            locked = !!m.cohortLocked || sequentialLocked;
+          }
+          return {
+            ...m,
+            completed,
+            locked,
+            videoPositionSec: p?.videoPositionSec ?? 0,
+            pdfPage: p?.pdfPage ?? 1,
+            attempted: !!p,
+          };
+        });
+
+        if (cancelled) return;
+        setModules(builtModules);
+        if (builtModules.length > 0) {
+          const savedId = Number(enrollment?.currentModuleId || 0);
+          const savedModule = savedId ? builtModules.find(m => m.id === savedId && !m.locked) : undefined;
+          const firstIncomplete = builtModules.find(m => !m.completed && !m.locked);
+          setActiveModule(savedModule?.id ?? firstIncomplete?.id ?? builtModules[0].id);
+        }
+      } catch (e) {
+        console.error("Error loading modules:", e);
+        if (!cancelled) setLoadError("Impossible de charger le programme de cette formation. Vérifiez votre connexion et réessayez.");
+      } finally {
+        if (!cancelled) setModulesLoading(false);
+      }
+    };
+    fetchModulesAndProgress();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course, enrollmentId, isPrivileged]);
+
+  const loading = courseLoading || (!!course && (!isPrivileged && !enrollment ? false : modulesLoading));
+
+  const fetchRattrapageRequests = useCallback(async () => {
+    if (!enrollmentId) return;
+    try {
+      const res = await api.request("GET", `/api/rattrapage_requests/mine/${enrollmentId}`);
+      const map: Record<number, RattrapageRequestData> = {};
+      (res.data || []).forEach((r: any) => { map[r.moduleId] = r; });
+      setRattrapageByModule(map);
+    } catch {
+      // pas bloquant : l'apprenant verra juste "demander un rattrapage" sans état préexistant
+    }
+  }, [enrollmentId]);
+
+  useEffect(() => { fetchRattrapageRequests(); }, [fetchRattrapageRequests]);
+
+  const requestRattrapage = async (moduleId: number) => {
+    if (!enrollmentId || requestingRattrapage) return;
+    setRequestingRattrapage(true);
+    try {
+      await api.request("POST", "/api/rattrapage_requests", { body: { enrollmentId, moduleId } });
+      await fetchRattrapageRequests();
+      toast({ title: "Demande envoyée", description: "Votre demande de rattrapage a été transmise à l'administrateur." });
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message || "Impossible d'envoyer la demande de rattrapage.", variant: "destructive" });
+    } finally {
+      setRequestingRattrapage(false);
+    }
+  };
+
+  // Autosave navigation state (debounced, throttled to 8s). Passing
+  // `moduleId` makes video/pdf position land on that module's ModuleProgress
+  // row instead of a single course-wide field — required for courses with
+  // more than one video/PDF module.
+  const saveState = useCallback((payload: { currentModuleId?: number | null; videoPositionSec?: number; pdfPage?: number; moduleId?: number }) => {
     if (!enrollmentId) return;
     const now = Date.now();
     if (now - lastSavedRef.current < 8000) return;
@@ -165,21 +252,41 @@ const CourseLearn = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModule, enrollmentId]);
 
+  const currentModule = modules.find(m => m.id === activeModule);
+  const currentRattrapage = currentModule ? rattrapageByModule[currentModule.id] : undefined;
+  // Le rattrapage s'applique aux quiz de module ET à l'examen de synthèse.
+  // Pour un quiz de module, le déclencheur est la fermeture de la fenêtre
+  // d'évaluation (cohorte) sans validation. L'examen de synthèse, dernier
+  // module, n'a pas de "fenêtre suivante" qui se ferme — son déclencheur est
+  // directement une tentative échouée (sinon il resterait rejouable
+  // indéfiniment, ce qui viderait le rattrapage de son sens pour un examen
+  // final). Dans les deux cas, un rattrapage "granted" redonne accès au quiz.
+  const rattrapageGateActive = !!(
+    currentModule &&
+    !currentModule.completed &&
+    currentRattrapage?.status !== 'granted' &&
+    (
+      (currentModule.type === 'quiz' && currentModule.assessmentWindowClosed) ||
+      (currentModule.type === 'synthesis_exam' && currentModule.attempted)
+    )
+  );
+  const activeQuizQuestions = currentModule && currentRattrapage?.status === 'granted' && currentRattrapage.alternateModule
+    ? currentRattrapage.alternateModule.quizQuestions
+    : currentModule?.quizQuestions;
+
   // Restore video position when video module activates
   useEffect(() => {
     if (currentModule?.type !== 'video') return;
     const el = videoRef.current;
-    if (!el || !resumeVideoSec) return;
-    const onLoaded = () => { try { el.currentTime = resumeVideoSec; } catch {} };
+    const resumeSec = currentModule.videoPositionSec;
+    if (!el || !resumeSec) return;
+    const onLoaded = () => { try { el.currentTime = resumeSec; } catch { /* ignore */ } };
     el.addEventListener('loadedmetadata', onLoaded, { once: true });
     return () => el.removeEventListener('loadedmetadata', onLoaded);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeModule]);
+  }, [activeModule, currentModule?.type, currentModule?.videoPositionSec]);
 
   // Poll le vrai statut d'émission du certificat plutôt que d'afficher un
-  // numéro généré côté client sans rapport avec l'enregistrement réel :
-  // l'ancien écran ne correspondait à aucune ligne en base, la vérification
-  // publique (/certificates/verify/:number) l'aurait déclaré introuvable.
+  // numéro généré côté client sans rapport avec l'enregistrement réel.
   useEffect(() => {
     if (!showCertificate || !course?.id) return;
     if (certificateRecord?.status === 'sent') return;
@@ -223,35 +330,38 @@ const CourseLearn = () => {
     }
   };
 
-  const currentModule = modules.find(m => m.id === activeModule);
   const completedCount = modules.filter(m => m.completed).length;
   const totalProgress = modules.length > 0 ? Math.round((completedCount / modules.length) * 100) : 0;
 
   const handleModuleComplete = async (moduleId: number, score?: number) => {
-    // Persist to backend
     if (enrollmentId) {
+      setSavingModuleId(moduleId);
       try {
         await api.request("POST", "/api/course_modules/progress", {
           body: { enrollmentId, moduleId, quizScore: score },
         });
       } catch (e) {
         console.error("Failed to save progress:", e);
+        toast({ title: "Erreur", description: "Impossible d'enregistrer votre progression. Réessayez.", variant: "destructive" });
+        setSavingModuleId(null);
+        return;
       }
+      setSavingModuleId(null);
     }
 
-    // Update local state
-    setProgressMap(prev => ({ ...prev, [moduleId]: true }));
     setModules(prev => {
       const updated = prev.map(m => m.id === moduleId ? { ...m, completed: true } : m);
-      // Unlock next
       const idx = updated.findIndex(m => m.id === moduleId);
-      if (idx < updated.length - 1) {
+      if (idx >= 0 && idx < updated.length - 1) {
         updated[idx + 1] = { ...updated[idx + 1], locked: false };
       }
-      // Si tous les modules sont complétés, demander l'émission du certificat
+      // Décidé ici (sur le tableau frais `updated`, jamais sur l'état
+      // périmé) — que ce soit un quiz ou un module classique qui termine le
+      // cours, l'écran de certificat s'affiche dans les deux cas.
       const allDone = updated.every(m => m.completed);
       if (allDone && course?.id) {
         api.request("POST", "/api/certificates/request", { body: { courseId: course.id, score: score ?? undefined } }).catch(() => {});
+        setTimeout(() => setShowCertificate(true), 1200);
       }
       return updated;
     });
@@ -259,14 +369,29 @@ const CourseLearn = () => {
     toast({ title: "Module terminé !", description: "Votre progression a été enregistrée." });
   };
 
+  // Enregistre une tentative ÉCHOUÉE de l'examen de synthèse (completed:
+  // false) — nécessaire car ce module n'a pas de "fenêtre suivante" qui se
+  // ferme comme les autres ; sans cette trace, il resterait librement
+  // rejouable et la demande de rattrapage n'aurait jamais de sens pour lui.
+  const recordFailedSynthesisAttempt = async (moduleId: number, score: number) => {
+    if (!enrollmentId) return;
+    try {
+      await api.request("POST", "/api/course_modules/progress", {
+        body: { enrollmentId, moduleId, quizScore: score, completed: false },
+      });
+    } catch (e) {
+      console.error("Failed to record synthesis exam attempt:", e);
+    }
+    setModules(prev => prev.map(m => m.id === moduleId ? { ...m, attempted: true } : m));
+  };
+
   const handleQuizComplete = (score: number, passed: boolean) => {
     setQuizScore(score);
-    if (passed && currentModule) {
+    if (!currentModule) return;
+    if (passed) {
       handleModuleComplete(currentModule.id, score);
-      const allDone = modules.every(m => m.completed || m.id === currentModule.id);
-      if (allDone && currentModule.id === modules[modules.length - 1]?.id) {
-        setTimeout(() => setShowCertificate(true), 1500);
-      }
+    } else if (currentModule.type === 'synthesis_exam') {
+      recordFailedSynthesisAttempt(currentModule.id, score);
     }
   };
 
@@ -276,13 +401,21 @@ const CourseLearn = () => {
       case "text": return FileText;
       case "pdf": return FileText;
       case "quiz": return Award;
+      case "synthesis_exam": return Trophy;
       default: return BookOpen;
     }
   };
 
   const renderQuizQuestions = (questions: any) => {
     if (!questions) return null;
-    const parsed = typeof questions === 'string' ? JSON.parse(questions) : questions;
+    let parsed = questions;
+    if (typeof questions === 'string') {
+      try {
+        parsed = JSON.parse(questions);
+      } catch {
+        return null;
+      }
+    }
     if (!Array.isArray(parsed) || parsed.length === 0) return null;
     return parsed;
   };
@@ -299,17 +432,46 @@ const CourseLearn = () => {
     );
   }
 
-  if (!course || modules.length === 0) {
+  if (loadError) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-6 py-12 text-center">
-          <BookOpen className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-40" />
-          <h1 className="text-2xl font-bold mb-2">Aucun module disponible</h1>
-          <p className="text-muted-foreground mb-6">Ce cours n'a pas encore de modules. Revenez plus tard.</p>
-          <Button variant="outline" onClick={() => navigate("/elearning")}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Retour aux cours
-          </Button>
+        <div className="container mx-auto px-6 py-12 max-w-xl">
+          <ErrorState description={loadError} onRetry={() => window.location.reload()} />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-6 py-12">
+          <EmptyState
+            icon={BookOpen}
+            title="Formation introuvable"
+            description="Cette formation n'existe pas ou a été retirée du catalogue."
+            action={{ label: "Retour aux cours", onClick: () => navigate("/elearning") }}
+          />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (modules.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-6 py-12">
+          <EmptyState
+            icon={BookOpen}
+            title="Aucun module disponible"
+            description="Ce cours n'a pas encore de modules. Revenez plus tard."
+            action={{ label: "Retour aux cours", onClick: () => navigate("/elearning") }}
+          />
         </div>
         <Footer />
       </div>
@@ -321,7 +483,7 @@ const CourseLearn = () => {
       <SEO
         title={`${course.title} - KILIMO E-Learning`}
         description="Suivez votre formation"
-        path={window.location.origin + `/elearning/${id}/learn`}
+        path={window.location.origin + `/elearning/${course.id}/learn`}
         image={kilimoLogo}
       />
       <Header />
@@ -329,13 +491,10 @@ const CourseLearn = () => {
       <main className="container mx-auto px-4 sm:px-6 py-6">
         {/* Back + Progress */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <Button variant="ghost" onClick={() => navigate(`/elearning/${course.slug || id}`)} className="text-muted-foreground">
+          <Button variant="ghost" onClick={() => navigate(`/elearning/${course.slug}`)} className="text-muted-foreground">
             <ArrowLeft className="w-4 h-4 mr-2" /> Retour au cours
           </Button>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <Progress value={totalProgress} className="h-3 w-48" />
-            <span className="text-sm font-semibold text-primary">{totalProgress}%</span>
-          </div>
+          <CourseProgressBar progress={totalProgress} completedModules={completedCount} totalModules={modules.length} className="w-full sm:w-64" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -383,6 +542,15 @@ const CourseLearn = () => {
                               </span>
                             )}
                           </div>
+                          {mod.locked && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              {mod.type === 'synthesis_exam'
+                                ? 'Terminez tous les quiz de modules pour y accéder'
+                                : mod.cohortLocked && mod.openDate
+                                  ? `Ouvre le ${new Date(mod.openDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+                                  : 'Terminez le module précédent'}
+                            </p>
+                          )}
                         </div>
                         {isActive && <ChevronRight className="w-4 h-4 text-primary flex-shrink-0 mt-2" />}
                       </button>
@@ -420,7 +588,7 @@ const CourseLearn = () => {
             {showCertificate ? (
               certificateRecord?.status === 'sent' ? (
                 <CertificateGenerator data={{
-                  studentName: user?.fullName || "Apprenant KILIMO",
+                  studentName: (user as any)?.fullName || user?.name || "Apprenant KILIMO",
                   courseName: course.title,
                   completionDate: certificateRecord.completionDate || new Date().toISOString(),
                   score: certificateRecord.score ?? quizScore ?? 100,
@@ -449,11 +617,45 @@ const CourseLearn = () => {
                   </CardContent>
                 </Card>
               )
-            ) : currentModule?.type === "quiz" && renderQuizQuestions(currentModule.quizQuestions) ? (
+            ) : rattrapageGateActive && currentModule ? (
+              <Card>
+                <CardContent className="p-8 text-center space-y-4">
+                  <CalendarClock className="w-12 h-12 text-amber-500 mx-auto" />
+                  <h2 className="text-xl font-bold">
+                    {currentModule.type === 'synthesis_exam' ? "Examen de synthèse non validé" : "Module non validé"}
+                  </h2>
+                  {currentRattrapage?.status === 'pending' ? (
+                    <p className="text-muted-foreground">
+                      Votre demande de rattrapage a été envoyée et est en attente de réponse de l'administrateur.
+                    </p>
+                  ) : currentRattrapage?.status === 'rejected' ? (
+                    <>
+                      <p className="text-muted-foreground">
+                        Votre demande de rattrapage a été refusée{currentRattrapage.resolutionNote ? ` : ${currentRattrapage.resolutionNote}` : '.'}
+                      </p>
+                      <Button onClick={() => requestRattrapage(currentModule.id)} disabled={requestingRattrapage}>
+                        {requestingRattrapage ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi…</> : "Redemander un rattrapage"}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-muted-foreground">
+                        {currentModule.type === 'synthesis_exam'
+                          ? "Vous n'avez pas validé l'examen de synthèse. Vous pouvez demander un rattrapage."
+                          : "La fenêtre d'évaluation de ce module est fermée et vous ne l'avez pas validé. Vous pouvez demander un rattrapage."}
+                      </p>
+                      <Button onClick={() => requestRattrapage(currentModule.id)} disabled={requestingRattrapage}>
+                        {requestingRattrapage ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi…</> : "Demander un rattrapage"}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (currentModule?.type === "quiz" || currentModule?.type === "synthesis_exam") && renderQuizQuestions(activeQuizQuestions) ? (
               <QuizComponent
                 moduleId={currentModule.id}
-                title={currentModule.title}
-                questions={renderQuizQuestions(currentModule.quizQuestions)!}
+                title={currentRattrapage?.status === 'granted' && currentRattrapage.alternateModule ? `Rattrapage : ${currentModule.title}` : currentModule.title}
+                questions={renderQuizQuestions(activeQuizQuestions)!}
                 passingScore={70}
                 onComplete={handleQuizComplete}
                 onRetry={() => setQuizScore(null)}
@@ -471,9 +673,9 @@ const CourseLearn = () => {
                         playsInline
                         onTimeUpdate={(e) => {
                           const t = Math.floor((e.target as HTMLVideoElement).currentTime || 0);
-                          if (t > 0 && t % 10 === 0) saveState({ videoPositionSec: t });
+                          if (t > 0 && t % 10 === 0) saveState({ videoPositionSec: t, moduleId: currentModule.id });
                         }}
-                        onPause={(e) => saveState({ videoPositionSec: Math.floor((e.target as HTMLVideoElement).currentTime || 0) })}
+                        onPause={(e) => saveState({ videoPositionSec: Math.floor((e.target as HTMLVideoElement).currentTime || 0), moduleId: currentModule.id })}
                       />
                     ) : (
                     <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
@@ -501,13 +703,17 @@ const CourseLearn = () => {
                     <h2 className="text-xl font-bold mb-2">{currentModule.title}</h2>
                     <p className="text-muted-foreground mb-4">
                       Regardez la vidéo complète pour débloquer le module suivant.
-                      {resumeVideoSec > 0 && (
-                        <span className="block text-xs text-primary mt-1">⏱ Reprise sauvegardée à {Math.floor(resumeVideoSec/60)}:{String(resumeVideoSec%60).padStart(2,'0')}</span>
+                      {currentModule.videoPositionSec > 0 && (
+                        <span className="block text-xs text-primary mt-1">⏱ Reprise sauvegardée à {Math.floor(currentModule.videoPositionSec / 60)}:{String(currentModule.videoPositionSec % 60).padStart(2, '0')}</span>
                       )}
                     </p>
                     {!currentModule.completed && (
-                      <Button onClick={() => handleModuleComplete(currentModule.id)}>
-                        <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
+                      <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
+                        {savingModuleId === currentModule.id ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
+                        ) : (
+                          <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -531,8 +737,12 @@ const CourseLearn = () => {
                   </div>
                   {!currentModule.completed && (
                     <div className="mt-8">
-                      <Button onClick={() => handleModuleComplete(currentModule.id)}>
-                        <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
+                      <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
+                        {savingModuleId === currentModule.id ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
+                        ) : (
+                          <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
+                        )}
                       </Button>
                     </div>
                   )}
@@ -544,21 +754,43 @@ const CourseLearn = () => {
                   <FileText className="w-20 h-20 text-red-500 mx-auto mb-4" />
                   <h2 className="text-2xl font-bold mb-2">{currentModule.title}</h2>
                   <p className="text-muted-foreground mb-2">Téléchargez et consultez le document PDF ci-dessous.</p>
-                  {pdfPage > 1 && (
-                    <p className="text-xs text-primary mb-4">📑 Reprise sauvegardée : page {pdfPage}</p>
+                  {currentModule.pdfPage > 1 && (
+                    <p className="text-xs text-primary mb-4">📑 Reprise sauvegardée : page {currentModule.pdfPage}</p>
                   )}
                   {currentModule.pdfUrl && (
                     <iframe
-                      src={`${currentModule.pdfUrl}#page=${pdfPage}`}
+                      src={`${currentModule.pdfUrl}#page=${currentModule.pdfPage}`}
                       className="w-full h-[60vh] border rounded-lg mb-4"
                       title={currentModule.title}
-                      onLoad={() => saveState({ pdfPage })}
+                      onLoad={() => saveState({ pdfPage: currentModule.pdfPage, moduleId: currentModule.id })}
                     />
                   )}
                   <div className="flex items-center justify-center gap-2 mb-4">
-                    <Button variant="outline" size="sm" onClick={() => { const next = Math.max(1, pdfPage - 1); setPdfPage(next); lastSavedRef.current = 0; saveState({ pdfPage: next }); }}>Page précédente</Button>
-                    <span className="text-sm text-muted-foreground">Page {pdfPage}</span>
-                    <Button variant="outline" size="sm" onClick={() => { const next = pdfPage + 1; setPdfPage(next); lastSavedRef.current = 0; saveState({ pdfPage: next }); }}>Page suivante</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const next = Math.max(1, currentModule.pdfPage - 1);
+                        setModules(prev => prev.map(m => m.id === currentModule.id ? { ...m, pdfPage: next } : m));
+                        lastSavedRef.current = 0;
+                        saveState({ pdfPage: next, moduleId: currentModule.id });
+                      }}
+                    >
+                      Page précédente
+                    </Button>
+                    <span className="text-sm text-muted-foreground">Page {currentModule.pdfPage}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const next = currentModule.pdfPage + 1;
+                        setModules(prev => prev.map(m => m.id === currentModule.id ? { ...m, pdfPage: next } : m));
+                        lastSavedRef.current = 0;
+                        saveState({ pdfPage: next, moduleId: currentModule.id });
+                      }}
+                    >
+                      Page suivante
+                    </Button>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     {currentModule.pdfUrl && (
@@ -569,8 +801,12 @@ const CourseLearn = () => {
                       </Button>
                     )}
                     {!currentModule.completed && (
-                      <Button onClick={() => handleModuleComplete(currentModule.id)}>
-                        <CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé
+                      <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
+                        {savingModuleId === currentModule.id ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
+                        ) : (
+                          <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -583,7 +819,7 @@ const CourseLearn = () => {
               <CourseComments
                 courseId={course.id}
                 moduleId={currentModule.id}
-                currentUserId={user?.id}
+                currentUserId={user?.id ? String(user.id) : undefined}
               />
             )}
 
@@ -591,7 +827,7 @@ const CourseLearn = () => {
             {showChat && (
               <LiveCourseChat
                 courseId={course.id}
-                currentUserId={user?.id}
+                currentUserId={user?.id ? String(user.id) : undefined}
               />
             )}
           </div>

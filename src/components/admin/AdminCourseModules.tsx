@@ -14,7 +14,7 @@ import { api } from '@/integrations/api/client';
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus, Edit, Trash2, Loader2, BookOpen, Video, FileText,
-  Award, ChevronUp, ChevronDown, ArrowLeft
+  Award, ChevronUp, ChevronDown, ArrowLeft, Trophy
 } from 'lucide-react';
 
 interface CourseModule {
@@ -29,6 +29,8 @@ interface CourseModule {
   order: number;
   isActive: boolean;
   quizQuestions: QuizQuestion[] | string | null;
+  openDate: string | null;
+  linkBroken: boolean;
 }
 
 interface Course {
@@ -141,6 +143,7 @@ export function AdminCourseModules({ initialCourseId }: AdminCourseModulesProps)
     switch (type) {
       case 'video': return Video;
       case 'quiz': return Award;
+      case 'synthesis_exam': return Trophy;
       case 'pdf': return FileText;
       default: return BookOpen;
     }
@@ -254,9 +257,14 @@ export function AdminCourseModules({ initialCourseId }: AdminCourseModulesProps)
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{mod.duration || '—'}</TableCell>
                     <TableCell>
-                      <Badge variant={mod.isActive ? 'default' : 'secondary'}>
-                        {mod.isActive ? 'Actif' : 'Inactif'}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant={mod.isActive ? 'default' : 'secondary'}>
+                          {mod.isActive ? 'Actif' : 'Inactif'}
+                        </Badge>
+                        {mod.linkBroken && (
+                          <Badge variant="destructive" title="Lien vidéo/PDF injoignable (vérifié par le rapport hebdomadaire)">Lien cassé</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -317,6 +325,7 @@ function ModuleDialog({
   const [order, setOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [openDate, setOpenDate] = useState('');
   const { toast } = useToast();
 
   const parseDuration = (dur: string | null): number => {
@@ -338,10 +347,11 @@ function ModuleDialog({
       setIsActive(module.isActive);
       const parsed = module.quizQuestions ? (typeof module.quizQuestions === 'string' ? JSON.parse(module.quizQuestions) : module.quizQuestions) : [];
       setQuizQuestions(Array.isArray(parsed) ? parsed : []);
+      setOpenDate(module.openDate ? module.openDate.slice(0, 10) : '');
     } else {
       setTitle(''); setType('text'); setDuration(''); setContent('');
       setVideoUrl(''); setPdfUrl(''); setOrder(nextOrder);
-      setIsActive(true); setQuizQuestions([]);
+      setIsActive(true); setQuizQuestions([]); setOpenDate('');
     }
   };
 
@@ -376,7 +386,8 @@ function ModuleDialog({
       videoUrl: type === 'video' ? videoUrl : null,
       pdfUrl: type === 'pdf' ? pdfUrl : null,
       order, isActive,
-      quizQuestions: type === 'quiz' ? quizQuestions : null,
+      quizQuestions: (type === 'quiz' || type === 'synthesis_exam') ? quizQuestions : null,
+      openDate: openDate || null,
     };
     onSave(data, module?.id);
   };
@@ -422,6 +433,7 @@ function ModuleDialog({
                   <SelectItem value="video">🎥 Vidéo</SelectItem>
                   <SelectItem value="pdf">📑 PDF</SelectItem>
                   <SelectItem value="quiz">📝 Quiz</SelectItem>
+                  <SelectItem value="synthesis_exam">🏁 Examen de synthèse</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -436,6 +448,14 @@ function ModuleDialog({
               <Label>Ordre</Label>
               <Input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Date d'ouverture (optionnel)</Label>
+            <Input type="date" value={openDate} onChange={(e) => setOpenDate(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              Laisser vide pour un déverrouillage séquentiel classique (dès que le module précédent est validé), ou pour laisser la planification automatique de cohorte du cours (si configurée) calculer cette date seule. Renseignez ce champ uniquement pour une exception ponctuelle sur CE module précis — il prend alors toujours le dessus.
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -464,10 +484,12 @@ function ModuleDialog({
             </div>
           )}
 
-          {type === 'quiz' && (
+          {(type === 'quiz' || type === 'synthesis_exam') && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Questions du Quiz</Label>
+                <Label className="text-base font-semibold">
+                  Questions {type === 'synthesis_exam' ? "de l'examen de synthèse" : 'du Quiz'}
+                </Label>
                 <Button type="button" variant="outline" size="sm" onClick={addQuizQuestion}>
                   <Plus className="w-3 h-3 mr-1" /> Ajouter
                 </Button>

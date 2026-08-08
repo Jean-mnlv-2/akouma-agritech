@@ -6,12 +6,12 @@
  * LLM configuration
  */
 export interface LlmConfig {
-  provider: 'ollama' | 'gemini';
+  provider: 'ollama' | 'gemini' | 'deepseek';
   model: string;
   temperature: number;
   topP: number;
   baseUrl?: string; // Ollama uniquement
-  apiKey?: string; // Gemini uniquement
+  apiKey?: string; // Gemini / DeepSeek
 }
 
 /**

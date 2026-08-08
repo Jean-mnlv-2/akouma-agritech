@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Sprout, BookOpen, ShoppingBag, Leaf } from "lucide-react";
+import { ArrowRight, Play, BookOpen, ShoppingBag, Leaf } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-agritech.jpg";
 import heroImageAvif from "@/assets/hero-agritech.jpg?format=avif&quality=70";
@@ -12,7 +12,6 @@ import { usePublicStats } from "@/hooks/use-public-stats";
 const Hero = () => {
   const { t } = useI18n();
   const [isLoaded, setIsLoaded] = useState(false);
-  const currentYear = new Date().getFullYear();
   const { data: stats } = usePublicStats();
 
   useEffect(() => {
@@ -20,7 +19,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
       {/* Background carousel (admin-managed) */}
       <PageHeaderCarousel
         pageKey="home"
@@ -38,14 +37,6 @@ const Hero = () => {
       
       <div className="relative z-10 container mx-auto px-4 sm:px-6 text-center">
         <div className="max-w-5xl mx-auto">
-          {/* Badge */}
-          <div className={`inline-flex items-center gap-2 bg-white/10 backdrop-blur-md text-white px-5 py-2.5 rounded-full text-sm font-medium mb-8 border border-white/20 transition-all duration-700 ${
-            isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
-          }`}>
-            <Sprout className="w-4 h-4 text-green-400 animate-pulse" />
-            <span>Innovation Agritech {currentYear}</span>
-          </div>
-          
           {/* Main title */}
           <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-4 text-white leading-tight tracking-tight transition-all duration-1000 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
