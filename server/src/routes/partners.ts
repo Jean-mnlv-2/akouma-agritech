@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { prisma } from '../db';
 import { RagSystem } from '../rag';
+import { env } from '../utils/env';
 export const partnersRouter = Router();
 const uploadDir = path.resolve(process.cwd(), 'uploads', 'partners');
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -55,7 +56,7 @@ partnersRouter.delete('/:id', authRequired, moduleAccess('partners'), async (req
 partnersRouter.post('/upload', authRequired, moduleAccess('partners'), upload.single('file'), async (req: Request, res: Response) => {
   const file = (req as any).file as any;
   if (!file) return res.status(400).json({ error: 'file missing' });
-  const publicUrl = `/uploads/partners/${file.filename}`;
+  const publicUrl = `${env.API_PUBLIC_URL}/uploads/partners/${file.filename}`;
   res.json({ url: publicUrl });
 });
 

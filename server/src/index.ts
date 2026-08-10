@@ -261,8 +261,13 @@ app.post('/api/upload', uploadLimiter, authRequired, adminOnly, csrfRequired, up
   try {
     await validateUploadedFile(file.path, file.originalname, file.mimetype);
     const relative = `/uploads/${file.filename}`;
-    // For backward compatibility, keep publicUrl as relative path instead of absolute
-    const publicUrl = relative;
+    // URL absolue : quand frontend et backend vivent sur des domaines
+    // différents (Railway, Render...), un chemin relatif comme "/uploads/x"
+    // stocké en base se résout contre l'origine de la page qui l'affiche
+    // (le frontend), pas contre le backend qui sert réellement le fichier
+    // — 502 systématique. Le nginx proxy /uploads/ ne fonctionne qu'en
+    // docker-compose local (hostname "backend" introuvable ailleurs).
+    const publicUrl = `${env.API_PUBLIC_URL}${relative}`;
     res.json({ url: publicUrl, path: relative });
   } catch (e) {
     // Supprimer le fichier rejeté
@@ -310,7 +315,8 @@ app.post('/api/upload/public', publicUploadLimiter, publicUpload.single('file'),
   try {
     await validateUploadedFile(file.path, file.originalname, file.mimetype);
     const relative = `/uploads/${file.filename}`;
-    res.json({ url: relative, path: relative });
+    const publicUrl = `${env.API_PUBLIC_URL}${relative}`;
+    res.json({ url: publicUrl, path: relative });
   } catch (e) {
     await fs.promises.unlink(file.path).catch(() => void 0);
     const msg = e instanceof Error ? e.message : 'Fichier invalide';
