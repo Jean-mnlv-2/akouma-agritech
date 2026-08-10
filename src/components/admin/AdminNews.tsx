@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminNewsDialog } from './AdminNewsDialog';
 import AdminDetailsDialog from './AdminDetailsDialog';
 import { AdminNewsSources } from './AdminNewsSources';
@@ -26,6 +26,8 @@ interface NewsArticle {
   category?: string | null;
 }
 
+const ADMIN_PAGE_SIZE = 20;
+
 export function AdminNews() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -33,18 +35,25 @@ export function AdminNews() {
   const [editingNews, setEditingNews] = useState<NewsArticle | null>(null);
   const [viewingNews, setViewingNews] = useState<NewsArticle | null>(null);
   const [_searchQuery, _setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
   const { toast } = useToast();
 
-  const { data: news = [], isLoading } = useQuery<NewsArticle[]>({
-    queryKey: ['admin', 'news'],
+  const { data, isLoading } = useQuery<{ items: NewsArticle[]; totalPages: number; total: number }>({
+    queryKey: ['admin', 'news', page],
     queryFn: async () => {
-      const res = await api.request('GET', '/api/news');
+      const res = await api.request('GET', '/api/news', { params: { page, pageSize: ADMIN_PAGE_SIZE } });
       const items = Array.isArray(res) ? res : res.data;
-      return items || [];
+      return {
+        items: items || [],
+        totalPages: res?.meta?.totalPages ?? 1,
+        total: res?.meta?.total ?? (items || []).length,
+      };
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
   });
+  const news = data?.items || [];
+  const totalPages = data?.totalPages ?? 1;
 
   const handleCreate = () => { setEditingNews(null); setDialogOpen(true); };
   const handleEdit = (newsItem: NewsArticle) => { setEditingNews(newsItem); setDialogOpen(true); };
@@ -183,6 +192,31 @@ export function AdminNews() {
         {news.length === 0 && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">Aucun article trouvé</p>
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 pt-6">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              aria-label="Page précédente"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {page} / {totalPages} ({data?.total} articles)
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              aria-label="Page suivante"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
         )}
       </CardContent>
