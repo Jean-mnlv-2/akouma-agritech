@@ -37,16 +37,12 @@ export default function AdminTasks() {
         if (!session) throw new Error("Session invalide");
 
         // Fetch users from REST API
-        const usersRes = await fetch('/api/users', { credentials: 'include' });
-        if (!usersRes.ok) throw new Error('Failed to fetch users');
-        const { data: usersData } = await usersRes.json();
+        const { data: usersData } = await api.request('GET', '/api/users');
         const merged: Array<UserRow> = (usersData || []).map((u: any) => ({ id: u.id, email: u.email, role: u.role }));
         setUsers(merged);
 
         // Fetch tasks from REST API
-        const tasksRes = await fetch('/api/tasks', { credentials: 'include' });
-        if (!tasksRes.ok) throw new Error('Failed to fetch tasks');
-        const { data: tasksData } = await tasksRes.json();
+        const { data: tasksData } = await api.request('GET', '/api/tasks');
         const list = (tasksData as Array<TaskRow>) || [];
         list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         setTasks(list);
@@ -66,22 +62,16 @@ export default function AdminTasks() {
         toast({ title: "Titre requis", variant: "destructive" });
         return;
       }
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ title, description: description || null, assigned_to: assignee || null }),
+      await api.request('POST', '/api/tasks', {
+        body: { title, description: description || null, assigned_to: assignee || null },
       });
-      if (!res.ok) throw new Error(await res.text());
       toast({ title: "Tâche créée" });
       setTitle("");
       setDescription("");
       setAssignee(undefined);
-      
+
       // Reload tasks
-      const tasksRes = await fetch('/api/tasks', { credentials: 'include' });
-      if (!tasksRes.ok) throw new Error('Failed to fetch tasks');
-      const { data: tasksData } = await tasksRes.json();
+      const { data: tasksData } = await api.request('GET', '/api/tasks');
       const list = (tasksData as Array<TaskRow>) || [];
       list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setTasks(list);

@@ -9,8 +9,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-// api client not used directly - fetch used instead
-import { 
+import { api } from '@/integrations/api/client';
+import {
   Loader2, 
   Plus, 
   Edit, 
@@ -51,9 +51,7 @@ export default function AdminElearningStats() {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/elearning_stats', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      const { data } = await res.json();
+      const { data } = await api.request('GET', '/api/elearning_stats');
       const list = (data as any[]) || [];
       list.sort((a, b) => {
         const aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -75,24 +73,11 @@ export default function AdminElearningStats() {
     setIsSubmitting(true);
     try {
       const payload = { label: data.label.trim(), value: data.value.trim(), icon: data.icon?.trim() || null };
-      let res: Response;
       if (editingStat) {
-        res = await fetch(`/api/elearning_stats/${editingStat.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await api.request('PUT', `/api/elearning_stats/${editingStat.id}`, { body: payload });
         toast({ title: 'Statistique mise à jour' });
       } else {
-        res = await fetch('/api/elearning_stats', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await api.request('POST', '/api/elearning_stats', { body: payload });
         toast({ title: 'Statistique créée' });
       }
       form.reset();
@@ -110,11 +95,7 @@ export default function AdminElearningStats() {
   const deleteStat = async (id: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette statistique ?')) return;
     try {
-      const res = await fetch(`/api/elearning_stats/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(await res.text());
+      await api.request('DELETE', `/api/elearning_stats/${id}`);
       toast({ title: 'Statistique supprimée' });
       fetchStats();
     } catch (error) {

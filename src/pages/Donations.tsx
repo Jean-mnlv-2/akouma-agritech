@@ -121,13 +121,9 @@ const Donations = () => {
   useEffect(() => {
     const fetchSections = async () => {
       try {
-        const [impRes, stoRes] = await Promise.all([
-          fetch('/api/donation_impacts'),
-          fetch('/api/success_stories'),
-        ]);
         const [impBody, stoBody] = await Promise.all([
-          impRes.ok ? impRes.json() : Promise.resolve({ data: [] }),
-          stoRes.ok ? stoRes.json() : Promise.resolve({ data: [] }),
+          api.request('GET', '/api/donation_impacts').catch(() => ({ data: [] })),
+          api.request('GET', '/api/success_stories').catch(() => ({ data: [] })),
         ]);
         setImpacts(((Array.isArray(impBody) ? impBody : impBody?.data) || []).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)));
         setStories(((Array.isArray(stoBody) ? stoBody : stoBody?.data) || []).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)));

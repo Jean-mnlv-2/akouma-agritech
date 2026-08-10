@@ -10,6 +10,7 @@ import { Upload, Video, Headphones, Send, CheckCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useCountries } from "@/hooks/use-countries";
+import { api } from "@/integrations/api/client";
 
 interface ContentSubmissionForm {
   name: string;
@@ -79,13 +80,7 @@ const ContentSubmission = () => {
         file_url: data.fileUrl?.trim() || null,
       };
 
-      const res = await fetch('/api/content_submissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(basePayload),
-      });
-      if (!res.ok) throw new Error(await res.text());
+      await api.request('POST', '/api/content_submissions', { body: basePayload });
       toast({
         title: "Contenu soumis avec succès !",
         description: "Votre proposition sera examinée par notre équipe sous 48h.",

@@ -77,9 +77,7 @@ const Partnerships = () => {
   useEffect(() => {
     const fetchPartners = async () => {
       try {
-        const res = await fetch('/api/partners');
-        if (!res.ok) throw new Error('Failed to fetch partners');
-        const body = await res.json();
+        const body = await api.request('GET', '/api/partners');
         const list = ((Array.isArray(body) ? body : body?.data) || []) as PartnerRow[];
         setPartners(
           list

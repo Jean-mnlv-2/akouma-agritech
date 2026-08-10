@@ -23,9 +23,7 @@ export default function Supervisor() {
         const userId = session?.user?.id;
         if (!userId) throw new Error("Session invalide");
 
-        const res = await fetch('/api/tasks', { credentials: 'include' });
-        if (!res.ok) throw new Error('Failed to fetch tasks');
-        const { data } = await res.json();
+        const { data } = await api.request('GET', '/api/tasks');
 
         const list = (data as Array<TaskRow>) || [];
         list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

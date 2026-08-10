@@ -13,6 +13,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { api } from "@/integrations/api/client";
 
 const Demo = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
@@ -78,11 +79,8 @@ const Demo = () => {
     setIsSubmitting(true);
     try {
       const recaptchaToken = await executeRecaptcha('demo');
-      const res = await fetch('/api/demo_requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      await api.request('POST', '/api/demo_requests', {
+        body: {
           name: formData.name,
           email: formData.email,
           phone: formData.phone || null,
@@ -90,9 +88,8 @@ const Demo = () => {
           country: formData.country || 'Non spécifié',
           message: `${selectedDemo ? `Type de démo: ${selectedDemo}. ` : ''}${formData.message}`,
           recaptchaToken
-        }),
+        },
       });
-      if (!res.ok) throw new Error(await res.text());
       toast({ title: "Demande envoyée !", description: "Nous vous contacterons sous 24h pour planifier votre démonstration." });
       setFormData({ name: "", email: "", phone: "", company: "", country: "", message: "" });
     } catch (err) {

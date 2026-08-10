@@ -11,6 +11,7 @@ import {
 import ekoloHero from "@/assets/ekolo-hero.webp";
 import ekoloLogo from "@/assets/ekolo-logo.png";
 import { useI18n } from "@/i18n";
+import { api } from "@/integrations/api/client";
 
 const EKOLO_URL = "https://ekolo.akouma.net/";
 const CARDS_PER_PAGE = 3;
@@ -45,9 +46,8 @@ const Services = () => {
   const [page, setPage] = useState(0);
 
   useEffect(() => {
-    fetch('/api/innovative_solutions')
-      .then((res) => (res.ok ? res.json() : { data: [] }))
-      .then((body) => setSolutions((Array.isArray(body) ? body : body?.data) || []))
+    api.request('GET', '/api/innovative_solutions')
+      .then((body: any) => setSolutions((Array.isArray(body) ? body : body?.data) || []))
       .catch(() => setSolutions([]));
   }, []);
 
