@@ -25,7 +25,19 @@ export async function sertifierFetch(method: string, path: string, body?: unknow
     const text = await res.text().catch(() => '');
     throw new Error(`Sertifier ${method} ${path}: ${res.status} - ${text}`);
   }
-  return res.json();
+  const json = await res.json();
+  // Sertifier enveloppe toutes ses réponses dans { message, hasError,
+  // validationErrors, data, content } — une erreur métier/validation revient
+  // en HTTP 200 avec hasError:true, jamais en 4xx/5xx. Sans cette vérif,
+  // "!res.ok" ne se déclenche jamais et l'appelant croit systématiquement
+  // au succès (ex. une campagne jamais réellement envoyée).
+  if (json && typeof json === 'object' && json.hasError) {
+    const details = Array.isArray(json.validationErrors) && json.validationErrors.length > 0
+      ? json.validationErrors.join('; ')
+      : json.message || 'Unknown error';
+    throw new Error(`Sertifier ${method} ${path}: ${details}`);
+  }
+  return json;
 }
 
 // Validates that an ID looks like a Sertifier identifier (Mongo ObjectId-like or alphanumeric token >= 8 chars)

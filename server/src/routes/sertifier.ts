@@ -77,23 +77,23 @@ sertifierRouter.post('/issue-credential', authRequired, adminOnly, validate(issu
       }],
     });
 
-    // 3. Send/publish the campaign
-    await sertifierRequest('POST', '/campaign/send', { campaignId });
+    // 3. Send/publish the campaign — POST /campaign/send attend { id },
+    // pas { campaignId } (voir IdRequest dans le spec Sertifier ; { campaignId }
+    // n'est pas reconnu, ce qui laissait la campagne jamais réellement publiée
+    // tout en affichant un succès côté admin).
+    await sertifierRequest('POST', '/campaign/send', { id: campaignId });
 
     // 4. Get credential details for verification URL — réponse réelle :
-    // { data: { [campaignId]: [ { id, verificationLink, ... } ] } }
+    // { data: { [campaignId]: [ { id, verificationLink, ... } ] } }.
+    // GET /credential/:id ne renvoie pas verificationLink (absent du schéma
+    // Sertifier), donc pas de re-fetch : la valeur vient uniquement de la
+    // réponse addCredentials ci-dessus.
     let credentialUrl = '';
     let credentialId = '';
     const addedCredentials = credential?.data?.[campaignId] || credential?.[campaignId] || [];
     if (addedCredentials?.[0]) {
       credentialId = addedCredentials[0].id;
       credentialUrl = addedCredentials[0].verificationLink || '';
-      try {
-        const cred: any = await sertifierRequest('GET', `/credential/${credentialId}`);
-        credentialUrl = cred?.data?.verificationLink || cred?.verificationLink || credentialUrl;
-      } catch {
-        // Credential might not be ready yet
-      }
     }
 
     res.json({
