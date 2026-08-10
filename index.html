@@ -28,7 +28,7 @@
       cohérents entre toutes les pages.
     -->
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Organization","name":"KILIMO Agritech","url":"%VITE_SITE_URL%","logo":"/kilimo-logo.png"}
+      {"@context":"https://schema.org","@type":"Organization","name":"KILIMO Agritech","url":"%VITE_SITE_URL%","logo":"/icon-512.png"}
     </script>
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"WebSite","name":"KILIMO Agritech","url":"%VITE_SITE_URL%","potentialAction":{"@type":"SearchAction","target":"%VITE_SITE_URL%/shop?search={search_term_string}","query-input":"required name=search_term_string"}}
@@ -37,6 +37,7 @@
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#22c55e" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="KILIMO" />
     
@@ -48,11 +49,11 @@
       anti-XSS alors que du contenu éditorial est injecté via
       dangerouslySetInnerHTML côté React (actualités, cours, pages légales).
     -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob: http://localhost:4000; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: ws: wss: http://localhost:4000 http://127.0.0.1:4000; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob: http://localhost:4000; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: ws: wss: http://localhost:4000 http://127.0.0.1:4000; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
 
-    <link rel="icon" type="image/png" href="/kilimo-logo.png" />
-    <link rel="shortcut icon" type="image/png" href="/kilimo-logo.png" />
-    <link rel="apple-touch-icon" href="/kilimo-logo.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link rel="shortcut icon" type="image/png" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
   </head>
 
