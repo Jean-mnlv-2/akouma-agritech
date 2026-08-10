@@ -78,8 +78,8 @@ const Hero = () => {
             </Link>
           </div>
           
-          {/* Quick navigation cards */}
-          <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto transition-all duration-1000 delay-500 ${
+          {/* Quick navigation cards — masquées sur mobile (redondantes avec la nav + sections dédiées plus bas), visibles à partir de sm */}
+          <div className={`hidden sm:grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto transition-all duration-1000 delay-500 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             {[
