@@ -36,11 +36,31 @@ function getCookieValue(name: string): string | null {
   return null;
 }
 
+// Le cookie csrf_token est posé par le backend. Quand frontend et backend
+// vivent sur des domaines différents (Railway, Render...), document.cookie
+// ne peut tout simplement pas voir un cookie appartenant à un autre
+// domaine — même s'il est bien envoyé automatiquement par le navigateur
+// dans les requêtes (SameSite=None). Le backend renvoie donc le même
+// jeton dans le corps JSON de /auth/session, /sign-in, /sign-up et
+// /refresh ; on le mémorise ici et on le préfère au cookie (qui reste un
+// fallback valide en same-origin, ex. docker-compose local).
+let cachedCsrfToken: string | null = null;
+
+function captureCsrfToken(parsed: unknown): void {
+  if (parsed && typeof parsed === 'object' && typeof (parsed as any).csrfToken === 'string') {
+    cachedCsrfToken = (parsed as any).csrfToken;
+  }
+}
+
 async function refreshAccessToken(): Promise<boolean> {
   try {
     const baseUrl = (!API_BASE_URL || API_BASE_URL.startsWith('/')) ? window.location.origin : API_BASE_URL;
     const url = new URL('/auth/refresh', baseUrl);
     const res = await fetch(url.toString(), { method: 'POST', credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      captureCsrfToken(data);
+    }
     return res.ok;
   } catch {
     return false;
@@ -71,9 +91,12 @@ async function http(method: string, path: string, options?: { params?: Record<st
       console.log(`[API] ${method} ${url.toString()}`);
     }
 
-    // CSRF (double-submit) for cookie-based auth on unsafe methods
+    // CSRF (double-submit) for cookie-based auth on unsafe methods.
+    // Prefer the token captured from a JSON response body (works cross-origin)
+    // over reading the cookie directly (only works same-origin — see
+    // cachedCsrfToken above).
     if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-      const csrf = getCookieValue('csrf_token');
+      const csrf = cachedCsrfToken || getCookieValue('csrf_token');
       if (csrf) {
         headers['x-csrf-token'] = csrf;
       }
@@ -122,7 +145,9 @@ async function http(method: string, path: string, options?: { params?: Record<st
       throw new Error(`Contenu invalide: ${jsonText.substring(0, 100)}`);
     }
     
-    return JSON.parse(jsonText);
+    const parsed = JSON.parse(jsonText);
+    captureCsrfToken(parsed);
+    return parsed;
   } catch (error) {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       const key = `api_error_${method}_${path}`;
