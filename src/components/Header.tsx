@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Menu, ShoppingCart, LogIn, User as UserIcon, LogOut, LayoutDashboard, History, PiggyBank, GraduationCap, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCartContext } from "@/context/CartContext";
+import { useMobileMenu } from "@/context/MobileMenuContext";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 import { ThemeToggle } from "@/components/theme-toggle";
 import CartDrawer from "./CartDrawer";
 import { api } from "@/integrations/api/client";
@@ -22,7 +24,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isOpen: isMobileMenuOpen, setIsOpen: setIsMobileMenuOpen } = useMobileMenu();
+  const isStandalone = useStandalonePwa();
   const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
   const { getCartItemsCount } = useCartContext();
@@ -293,7 +296,9 @@ const Header = () => {
               
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="lg:hidden" aria-label="Ouvrir le menu">
+                  {/* En standalone, l'onglet "Menu" de la nav basse ouvre déjà ce
+                      même Sheet — pas besoin d'un second déclencheur ici. */}
+                  <Button variant="outline" size="icon" className={isStandalone ? "hidden" : "lg:hidden"} aria-label="Ouvrir le menu">
                     <Menu className="w-4 h-4" />
                   </Button>
                 </SheetTrigger>
@@ -401,39 +406,43 @@ const Header = () => {
           </div>
         </div>
         
-        {/* Mobile Navigation - Horizontal Scrollable */}
-        <div className={`lg:hidden border-t border-border/50 transition-all duration-300 ${
-          isMobileNavVisible ? 'max-h-14 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-        }`}>
-          <div className="container mx-auto px-4">
-            <nav className="flex items-center space-x-5 py-3 overflow-x-auto scrollbar-hide hide-scrollbar">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`text-sm font-medium whitespace-nowrap transition-colors hover:text-primary ${
-                    location.pathname === item.href ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  className={`text-sm font-medium whitespace-nowrap transition-colors hover:text-primary ${location.pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}
-                >
-                  Admin
-                </Link>
-              )}
-            </nav>
+        {/* Mobile Navigation - Horizontal Scrollable — masquée en PWA
+            standalone : la nav basse (Actus/E-Learning/Accueil/Boutique/Menu)
+            couvre déjà ce rôle, l'afficher en plus serait redondant. */}
+        {!isStandalone && (
+          <div className={`lg:hidden border-t border-border/50 transition-all duration-300 ${
+            isMobileNavVisible ? 'max-h-14 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+          }`}>
+            <div className="container mx-auto px-4">
+              <nav className="flex items-center space-x-5 py-3 overflow-x-auto scrollbar-hide hide-scrollbar">
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`text-sm font-medium whitespace-nowrap transition-colors hover:text-primary ${
+                      location.pathname === item.href ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className={`text-sm font-medium whitespace-nowrap transition-colors hover:text-primary ${location.pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}
+                  >
+                    Admin
+                  </Link>
+                )}
+              </nav>
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Spacer to prevent content from hiding behind fixed header */}
       <div className="h-16 lg:h-16" />
-      <div className="lg:hidden h-[2.75rem]" />
+      {!isStandalone && <div className="lg:hidden h-[2.75rem]" />}
 
       {/* Cart Drawer */}
       <CartDrawer open={isCartOpen} onOpenChange={setIsCartOpen} />

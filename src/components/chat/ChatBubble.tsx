@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { cn } from "@/lib/utils";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 
 const HIDDEN_PREFIXES = ["/assistant", "/admin", "/supervisor", "/checkout"];
 
@@ -10,6 +11,7 @@ export default function ChatBubble() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [authed, setAuthed] = useState(false);
+  const isStandalone = useStandalonePwa();
 
   useEffect(() => {
     let cancelled = false;
@@ -42,9 +44,13 @@ export default function ChatBubble() {
       type="button"
       onClick={handleClick}
       className={cn(
-        "fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full",
+        "fixed right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full",
         "bg-primary text-primary-foreground shadow-lg ring-2 ring-primary/20 transition",
-        "hover:scale-105 hover:shadow-xl focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+        "hover:scale-105 hover:shadow-xl focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/40",
+        // En PWA standalone, la nav basse (h-16 + safe-area) occupe le bas de
+        // l'écran — sans ce décalage la bulle se pose dessus et intercepte
+        // les taps destinés à l'onglet "Menu".
+        isStandalone ? "bottom-[calc(4.5rem+env(safe-area-inset-bottom))]" : "bottom-5"
       )}
       aria-label="Ouvrir KILIMO Assistant"
     >

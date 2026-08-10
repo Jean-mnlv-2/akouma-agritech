@@ -4,11 +4,19 @@ import { NewsletterForm } from "@/components/NewsletterForm";
 import { Facebook, Twitter, Linkedin, Instagram, Mail, Phone, MapPin } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useContactSettings } from "@/hooks/use-contact-settings";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { t } = useI18n();
   const { data: contact } = useContactSettings();
+  const isStandalone = useStandalonePwa();
+
+  // En PWA installée, le footer "site web" (liens légaux, réseaux sociaux,
+  // newsletter...) est redondant avec la nav basse app-like — ce contenu
+  // reste joignable via l'onglet "Menu" (Header). Comportement navigateur
+  // mobile/desktop inchangé.
+  if (isStandalone) return null;
 
   return (
     <footer className="bg-background border-t border-border/50">

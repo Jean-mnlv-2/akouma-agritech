@@ -132,6 +132,14 @@ All colors MUST be HSL.
   }
 }
 
+/* Réserve la place de MobileBottomNav (barre fixe, PWA installée
+   uniquement — voir use-standalone-pwa.ts) pour que le Footer/contenu ne
+   soit pas masqué en bas de page. Classe posée dynamiquement sur <body>,
+   jamais présente en navigateur mobile classique. */
+body.has-standalone-bottom-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+}
+
 @layer base {
   * {
     @apply border-border;

@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
+import { MobileMenuProvider } from "@/context/MobileMenuContext";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Suspense, useEffect, lazy } from "react";
 import { useLocation } from "react-router-dom";
@@ -44,6 +46,7 @@ const CourseDetail = lazy(() => import("./pages/CourseDetail"));
 const Seeds = lazy(() => import("./pages/Seeds"));
 const SeedDetail = lazy(() => import("./pages/SeedDetail"));
 const Shop = lazy(() => import("./pages/Shop"));
+const Boutique = lazy(() => import("./pages/Boutique"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const About = lazy(() => import("./pages/About"));
 const News = lazy(() => import("./pages/News"));
@@ -101,9 +104,13 @@ const App = () => (
               v7_relativeSplatPath: true,
             }}
           >
+            <MobileMenuProvider>
             <ScrollToTop />
             <CookieConsent />
             <ChatBubble />
+            {/* Nav mobile fixe (Actus/E-Learning/Accueil/Boutique/Menu) — masquée
+                à partir de md, où le Header desktop fait déjà le travail. */}
+            <MobileBottomNav />
             <Suspense fallback={<LoadingSpinner size="large" text="Chargement..." />}>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -113,6 +120,7 @@ const App = () => (
             <Route path="/seeds/:slug" element={<SeedDetail />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/:slug" element={<ProductDetail />} />
+                <Route path="/boutique" element={<Boutique />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/pricing" element={<Pricing />} />
@@ -156,6 +164,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </MobileMenuProvider>
           </BrowserRouter>
         </TooltipProvider>
       </CartProvider>
