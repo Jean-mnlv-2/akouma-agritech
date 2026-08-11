@@ -49,7 +49,7 @@
       anti-XSS alors que du contenu éditorial est injecté via
       dangerouslySetInnerHTML côté React (actualités, cours, pages légales).
     -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob: http://localhost:4000; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: ws: wss: http://localhost:4000 http://127.0.0.1:4000; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob: http://localhost:4000; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: ws: wss: http://localhost:4000 http://127.0.0.1:4000; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://www.google.com https://www.googletagmanager.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
 
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="shortcut icon" type="image/png" href="/icon-192.png" />
@@ -58,6 +58,19 @@
   </head>
 
   <body translate="no">
+    <!--
+      Fallback Google Tag Manager (utilisateurs JS désactivé). Statique et
+      non lié au consentement : sans JS, le reste du site (SPA React) ne
+      fonctionne de toute façon pas et le bandeau de consentement ne peut
+      pas s'afficher. Le conteneur GTM lui-même (script <head>, chargé via
+      src/lib/consentGating.ts) N'EST chargé qu'après consentement
+      analytics — voir CONSENT_EVENT / hasConsent('analytics').
+      %VITE_GTM_CONTAINER_ID% substitué au build par Vite (comme
+      %VITE_SITE_URL% ci-dessus) : laisser la variable vide en .env rend ce
+      bloc inerte (id vide, aucune donnée envoyée).
+    -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=%VITE_GTM_CONTAINER_ID%"
+      height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="root">
       <!-- Splash screen brandé KILIMO - affiché avant le chargement de React -->
       <div id="splash-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #0f2b1a 0%, #1a3d2b 40%, #0d1f14 100%); font-family: system-ui, -apple-system, sans-serif;">

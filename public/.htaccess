@@ -33,7 +33,11 @@ Options -Indexes
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     
     # CSP : Ajout de connect-src pour vos APIs et mise à jour des sources
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.akouma.cm;"
+    # https://www.googletagmanager.com : conteneur GTM (script-src, chargé via
+    # src/lib/consentGating.ts) + fallback <noscript> (frame-src). connect-src
+    # élargi en https: pour laisser passer les appels de mesure GA4 / Conversion
+    # Linker déclenchés par les tags GTM, en plus de l'API applicative.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: https://api.akouma.cm; frame-src 'self' https://www.googletagmanager.com;"
     
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 </IfModule>
