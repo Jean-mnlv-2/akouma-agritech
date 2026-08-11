@@ -21,21 +21,23 @@ export interface BoutiqueItemData {
   badge?: string;
 }
 
-interface BoutiqueItemCardProps {
-  item: BoutiqueItemData;
+interface BoutiqueItemCardProps<T extends BoutiqueItemData> {
+  item: T;
   typeLabel: string;
   outOfStockLabel: string;
   perLabel: string;
   addToCartLabel: string;
-  onAddToCart: (item: BoutiqueItemData) => void;
+  onAddToCart: (item: T) => void;
 }
 
 /**
  * Carte produit compacte partagée entre le catalogue Boutique desktop/mobile
  * web (Boutique.tsx) et la vue app standalone (BoutiqueAppView) — un seul
- * design de carte à faire évoluer.
+ * design de carte à faire évoluer. Générique sur `T` pour accepter le type
+ * `BoutiqueItem` (superset avec `description`) défini côté page sans
+ * dupliquer l'interface ni casser la variance des callbacks.
  */
-export function BoutiqueItemCard({ item, typeLabel, outOfStockLabel, perLabel, addToCartLabel, onAddToCart }: BoutiqueItemCardProps) {
+export function BoutiqueItemCard<T extends BoutiqueItemData>({ item, typeLabel, outOfStockLabel, perLabel, addToCartLabel, onAddToCart }: BoutiqueItemCardProps<T>) {
   const detailHref = item.type === "seed" ? `/seeds/${item.slug}` : `/shop/${item.slug}`;
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("fr-CF", { style: "currency", currency: "XAF", minimumFractionDigits: 0 }).format(price);

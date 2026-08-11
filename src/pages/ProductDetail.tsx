@@ -15,8 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import { useNavigate } from "react-router-dom";
 import { SEO } from "@/components/SEO";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import ProductDetailAppView from "@/components/pwa/shop/ProductDetailAppView";
 
-interface Product {
+export interface Product {
   id: string;
   name: string;
   description: string;
@@ -48,6 +50,7 @@ const ProductDetail = () => {
   const { addToCart } = useCartContext();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isStandalone = useStandalonePwa();
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
 
   const { isDialogOpen, closeDialog } = useCopyProtection(
@@ -215,60 +218,95 @@ const ProductDetail = () => {
     );
   }
 
+  const seo = (
+    <SEO
+      title={product.name}
+      description={product.description.replace(/<[^>]*>/g, '')}
+      image={product.image}
+      type="product"
+      jsonLd={[
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": product.name,
+          "description": product.description.replace(/<[^>]*>/g, ''),
+          "image": product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`,
+          "brand": { "@type": "Organization", "name": "KILIMO" },
+          "offers": {
+            "@type": "Offer",
+            "url": window.location.href,
+            "priceCurrency": "XOF",
+            "price": product.price,
+            "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+          },
+          "aggregateRating": product.rating > 0 ? {
+            "@type": "AggregateRating",
+            "ratingValue": product.rating,
+            "reviewCount": product.reviews
+          } : undefined
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
+            { "@type": "ListItem", position: 2, name: "Boutique", item: window.location.origin + "/shop" },
+            { "@type": "ListItem", position: 3, name: product.name, item: window.location.href },
+          ],
+        },
+      ]}
+    />
+  );
+
+  const copyProtectionDialog = (
+    <CopyProtectionDialog
+      isOpen={isDialogOpen}
+      onClose={closeDialog}
+      item={{
+        title: product.name,
+        imageUrl: product.image,
+        excerpt: product.description,
+        url: window.location.href,
+      }}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        {copyProtectionDialog}
+        <ProductDetailAppView
+          product={product}
+          quantity={quantity}
+          setQuantity={setQuantity}
+          isFavorite={isFavorite}
+          onToggleFavorite={() => {
+            if (!isLoggedIn) {
+              toast({ title: "Authentification requise", description: "Veuillez vous connecter pour ajouter ce produit à vos favoris." });
+              navigate('/auth');
+              return;
+            }
+            setIsFavorite(!isFavorite);
+            toast({
+              title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
+              description: isFavorite ? "Le produit a été retiré de votre liste." : "Le produit a été ajouté à votre liste de favoris.",
+            });
+          }}
+          onShare={handleShare}
+          onAddToCart={handleAddToCart}
+          formatPrice={formatPrice}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {product && (
-        <SEO
-          title={product.name}
-          description={product.description.replace(/<[^>]*>/g, '')}
-          image={product.image}
-          type="product"
-          jsonLd={[
-            {
-              "@context": "https://schema.org",
-              "@type": "Product",
-              "name": product.name,
-              "description": product.description.replace(/<[^>]*>/g, ''),
-              "image": product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`,
-              "brand": { "@type": "Organization", "name": "KILIMO" },
-              "offers": {
-                "@type": "Offer",
-                "url": window.location.href,
-                "priceCurrency": "XOF",
-                "price": product.price,
-                "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-              },
-              "aggregateRating": product.rating > 0 ? {
-                "@type": "AggregateRating",
-                "ratingValue": product.rating,
-                "reviewCount": product.reviews
-              } : undefined
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "BreadcrumbList",
-              itemListElement: [
-                { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
-                { "@type": "ListItem", position: 2, name: "Boutique", item: window.location.origin + "/shop" },
-                { "@type": "ListItem", position: 3, name: product.name, item: window.location.href },
-              ],
-            },
-          ]}
-        />
-      )}
+      {seo}
       <Header />
-      {product && (
-        <CopyProtectionDialog
-          isOpen={isDialogOpen}
-          onClose={closeDialog}
-          item={{
-            title: product.name,
-            imageUrl: product.image,
-            excerpt: product.description,
-            url: window.location.href,
-          }}
-        />
-      )}
+      {copyProtectionDialog}
 
       <div className="container mx-auto px-6 py-12">
         {/* Breadcrumb */}

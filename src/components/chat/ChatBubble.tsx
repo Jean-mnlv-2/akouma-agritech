@@ -31,11 +31,16 @@ export default function ChatBubble() {
 
   if (HIDDEN_PREFIXES.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
 
-  // La fiche cours PWA (/elearning/:slug) affiche sa propre barre d'action
-  // collante (prix + inscription) juste au-dessus de la nav basse — la bulle
-  // s'y superposerait (même zone verticale) et masquerait ce CTA principal.
-  const isStandaloneCourseDetail = isStandalone && /^\/elearning\/[^/]+$/.test(pathname);
-  if (isStandaloneCourseDetail) return null;
+  // Ces fiches détail PWA (cours, semence, produit) affichent chacune leur
+  // propre barre d'action collante (prix + CTA) juste au-dessus de la nav
+  // basse — la bulle s'y superposerait (même zone verticale) et masquerait
+  // ce CTA principal.
+  const hasStickyDetailActionBar = isStandalone && (
+    /^\/elearning\/[^/]+$/.test(pathname) ||
+    /^\/seeds\/[^/]+$/.test(pathname) ||
+    /^\/shop\/[^/]+$/.test(pathname)
+  );
+  if (hasStickyDetailActionBar) return null;
 
   const handleClick = () => {
     if (!authed) {
