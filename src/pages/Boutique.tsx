@@ -1,34 +1,20 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Leaf, ShoppingBag, ShoppingCart, Star, Package, Loader2 } from "lucide-react";
+import { Search, Leaf, ShoppingBag, Package, Loader2 } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { useI18n } from "@/i18n";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { BoutiqueItemCard, type BoutiqueItemData } from "@/components/pwa/shop/BoutiqueItemCard";
+import BoutiqueAppView from "@/components/pwa/shop/BoutiqueAppView";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 
-type ItemType = "seed" | "product";
-
-interface BoutiqueItem {
-  id: string;
-  type: ItemType;
-  slug: string;
-  name: string;
+export interface BoutiqueItem extends BoutiqueItemData {
   description: string;
-  category: string;
-  price: number;
-  unit?: string;
-  image: string;
-  rating: number;
-  reviews: number;
-  inStock: boolean;
-  badge?: string;
 }
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin;
@@ -43,6 +29,7 @@ async function fetchJson(path: string) {
 
 const Boutique = () => {
   const { t } = useI18n();
+  const isStandalone = useStandalonePwa();
   const { addToCart } = useCartContext();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -128,9 +115,6 @@ const Boutique = () => {
     });
   }, [typeFiltered, searchQuery, selectedCategory]);
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("fr-CF", { style: "currency", currency: "XAF", minimumFractionDigits: 0 }).format(price);
-
   const handleAddToCart = async (item: BoutiqueItem) => {
     if (!item.inStock) return;
     await addToCart({
@@ -144,24 +128,47 @@ const Boutique = () => {
     toast({ title: t("boutique.added"), description: item.name });
   };
 
-  const detailHref = (item: BoutiqueItem) => (item.type === "seed" ? `/seeds/${item.slug}` : `/shop/${item.slug}`);
+  const seo = (
+    <SEO
+      title={t("boutique.meta.title")}
+      description={t("boutique.meta.desc")}
+      path={window.location.origin + "/boutique"}
+      image={kilimoLogo}
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: t("boutique.meta.title"),
+        description: t("boutique.meta.desc"),
+        url: window.location.origin + "/boutique",
+        numberOfItems: filtered.length,
+      }}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <BoutiqueAppView
+          items={filtered}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          typeParam={typeParam}
+          setType={setType}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          loading={loading}
+          onAddToCart={handleAddToCart}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title={t("boutique.meta.title")}
-        description={t("boutique.meta.desc")}
-        path={window.location.origin + "/boutique"}
-        image={kilimoLogo}
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "CollectionPage",
-          name: t("boutique.meta.title"),
-          description: t("boutique.meta.desc"),
-          url: window.location.origin + "/boutique",
-          numberOfItems: filtered.length,
-        }}
-      />
+      {seo}
       <Header />
 
       {/* Hero compact — pensé mobile d'abord */}
@@ -176,8 +183,10 @@ const Boutique = () => {
         </div>
       </section>
 
-      {/* Barre de recherche + filtres — sticky sous le header, tactile */}
-      <section className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border/60 py-3 px-4">
+      {/* Barre de recherche + filtres — sticky sous le header (top-16 : le
+          Header global est fixed en h-16, sinon cette barre disparaîtrait
+          derrière lui au scroll), tactile */}
+      <section className="sticky top-16 z-20 bg-background/95 backdrop-blur-md border-b border-border/60 py-3 px-4">
         <div className="container mx-auto space-y-3">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -247,75 +256,15 @@ const Boutique = () => {
           ) : filtered.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-5">
               {filtered.map((item) => (
-                <Card
+                <BoutiqueItemCard
                   key={item.id}
-                  className="group overflow-hidden border border-border/60 hover:border-primary/40 hover:shadow-lg transition-all duration-300 bg-card"
-                >
-                  <Link to={detailHref(item)} className="block relative aspect-square bg-muted/30 overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      loading="lazy"
-                      className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <Badge
-                      variant="secondary"
-                      className="absolute top-2 left-2 text-[10px] px-1.5 py-0 bg-background/90 backdrop-blur-sm border-border/50"
-                    >
-                      {item.type === "seed" ? (
-                        <Leaf className="w-2.5 h-2.5 mr-1" />
-                      ) : (
-                        <ShoppingBag className="w-2.5 h-2.5 mr-1" />
-                      )}
-                      {item.type === "seed" ? t("boutique.type_seeds") : t("boutique.type_products")}
-                    </Badge>
-                    {item.badge && (
-                      <Badge className="absolute top-2 right-2 text-[10px] px-1.5 py-0 bg-primary text-primary-foreground">
-                        {item.badge}
-                      </Badge>
-                    )}
-                    {!item.inStock && (
-                      <div className="absolute inset-0 bg-background/70 backdrop-blur-[1px] flex items-center justify-center">
-                        <Badge variant="destructive" className="text-[10px]">{t("boutique.out_of_stock")}</Badge>
-                      </div>
-                    )}
-                  </Link>
-
-                  <div className="p-2.5 sm:p-3.5">
-                    <Link to={detailHref(item)}>
-                      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 min-h-[2.2em] group-hover:text-primary transition-colors">
-                        {item.name}
-                      </h3>
-                    </Link>
-                    {item.reviews > 0 && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-[11px] text-muted-foreground">
-                          {item.rating.toFixed(1)} ({item.reviews})
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-end justify-between mt-2 gap-1.5">
-                      <div className="min-w-0">
-                        <p className="text-sm sm:text-base font-bold text-primary truncate">
-                          {formatPrice(item.price)}
-                        </p>
-                        {item.unit && (
-                          <p className="text-[10px] text-muted-foreground">{t("boutique.per")} {item.unit}</p>
-                        )}
-                      </div>
-                      <Button
-                        size="icon"
-                        className="h-8 w-8 shrink-0 rounded-full"
-                        disabled={!item.inStock}
-                        onClick={() => handleAddToCart(item)}
-                        aria-label={t("boutique.add_to_cart")}
-                      >
-                        <ShoppingCart className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                  item={item}
+                  typeLabel={item.type === "seed" ? t("boutique.type_seeds") : t("boutique.type_products")}
+                  outOfStockLabel={t("boutique.out_of_stock")}
+                  perLabel={t("boutique.per")}
+                  addToCartLabel={t("boutique.add_to_cart")}
+                  onAddToCart={handleAddToCart}
+                />
               ))}
             </div>
           ) : (

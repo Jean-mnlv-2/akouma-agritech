@@ -41,8 +41,10 @@ import { ModuleStatusBadge } from "@/components/elearning/ModuleStatusBadge";
 import { getLevelColor, formatCoursePrice } from "@/lib/elearningFormat";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import CourseDetailAppView from "@/components/pwa/elearning/CourseDetailAppView";
 
-interface Course {
+export interface Course {
   id: string;
   title: string;
   description: string;
@@ -64,7 +66,7 @@ interface Course {
   isCertifying: boolean;
 }
 
-interface BackendModule {
+export interface BackendModule {
   id: number;
   courseId: number;
   title: string;
@@ -81,6 +83,7 @@ const CourseDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const isStandalone = useStandalonePwa();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
@@ -324,30 +327,68 @@ const CourseDetail = () => {
     );
   }
 
+  const seo = (
+    <SEO
+      title={course.title}
+      description={course.description}
+      path={`/elearning/${slug}`}
+      image={course.thumbnail}
+      type="article"
+      jsonLd={[
+        schema.course({
+          name: course.title,
+          description: course.description,
+          image: course.thumbnail,
+          slug: slug || "",
+        }),
+        schema.breadcrumbs([
+          { name: "Accueil", path: "/" },
+          { name: "E-Learning", path: "/elearning" },
+          { name: course.title, path: `/elearning/${slug}` },
+        ]),
+      ]}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <CopyProtectionDialog
+          isOpen={isDialogOpen}
+          onClose={closeDialog}
+          item={{ title: course.title, imageUrl: course.thumbnail, excerpt: course.description, url: window.location.href }}
+        />
+        <CourseDetailAppView
+          course={course}
+          modules={modules}
+          modulesLoading={modulesLoading}
+          enrolled={enrolled}
+          enrolling={enrolling}
+          currentUser={currentUser}
+          formatPrice={formatPrice}
+          onEnroll={openEnrollDialog}
+          onContinue={() => navigate(`/elearning/${course.id}/learn`)}
+          similarCourses={similarCourses}
+        />
+        <EnrollmentDetailsDialog
+          open={showEnrollDialog}
+          onOpenChange={setShowEnrollDialog}
+          courseTitle={course.title}
+          currentUserLabel={currentUser?.name || currentUser?.email || ''}
+          isPaidCourse={course.price > 0}
+          knownPhone={currentUser?.phone}
+          submitting={enrolling}
+          onSubmit={handleEnrollment}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {course && (
-        <SEO
-          title={course.title}
-          description={course.description}
-          path={`/elearning/${slug}`}
-          image={course.thumbnail}
-          type="article"
-          jsonLd={[
-            schema.course({
-              name: course.title,
-              description: course.description,
-              image: course.thumbnail,
-              slug: slug || "",
-            }),
-            schema.breadcrumbs([
-              { name: "Accueil", path: "/" },
-              { name: "E-Learning", path: "/elearning" },
-              { name: course.title, path: `/elearning/${slug}` },
-            ]),
-          ]}
-        />
-      )}
+      {seo}
       <Header />
 
       {course && (

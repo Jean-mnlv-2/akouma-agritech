@@ -37,8 +37,10 @@ import DOMPurify from 'dompurify';
 import { useCopyProtection } from "@/hooks/use-copy-protection";
 import CopyProtectionDialog from "@/components/CopyProtectionDialog";
 import { useCartContext } from "@/context/CartContext";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import SeedDetailAppView from "@/components/pwa/shop/SeedDetailAppView";
 
-interface ReviewData {
+export interface ReviewData {
   id: number;
   rating: number;
   comment?: string;
@@ -46,7 +48,7 @@ interface ReviewData {
   user: { fullName?: string; avatarUrl?: string };
 }
 
-interface SeedProduct {
+export interface SeedProduct {
   id: string;
   name: string;
   description: string;
@@ -85,6 +87,7 @@ export default function SeedDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isStandalone = useStandalonePwa();
   const { addToCart } = useCartContext();
   const [product, setProduct] = useState<SeedProduct | null>(null);
   const [loading, setLoading] = useState(true);
@@ -303,48 +306,99 @@ export default function SeedDetail() {
 
   if (!product) return null;
 
+  const seo = (
+    <SEO
+      title={product.name}
+      description={product.description.replace(/<[^>]*>/g, '')}
+      image={product.images[0]}
+      type="product"
+      jsonLd={[
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": product.name,
+          "description": product.description.replace(/<[^>]*>/g, ''),
+          "image": product.images[0].startsWith('http') ? product.images[0] : `${window.location.origin}${product.images[0]}`,
+          "brand": { "@type": "Organization", "name": "KILIMO" },
+          "category": "Semences agricoles",
+          "offers": {
+            "@type": "Offer",
+            "url": window.location.href,
+            "priceCurrency": "XOF",
+            "price": product.price,
+            "availability": product.availability === "En stock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+          },
+          "aggregateRating": product.rating > 0 ? {
+            "@type": "AggregateRating",
+            "ratingValue": product.rating,
+            "reviewCount": product.reviews
+          } : undefined
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
+            { "@type": "ListItem", position: 2, name: "Semences", item: window.location.origin + "/seeds" },
+            { "@type": "ListItem", position: 3, name: product.name, item: window.location.href },
+          ],
+        },
+      ]}
+    />
+  );
+
+  const copyProtectionDialog = (
+    <CopyProtectionDialog
+      isOpen={isDialogOpen}
+      onClose={closeDialog}
+      item={{
+        title: product.name,
+        imageUrl: product.images[0],
+        excerpt: product.description,
+        url: window.location.href,
+      }}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        {copyProtectionDialog}
+        <SeedDetailAppView
+          product={product}
+          isLoggedIn={isLoggedIn}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          onShare={handleShare}
+          onWhatsApp={handleWhatsApp}
+          onCall={handleCall}
+          onAddToCart={() => {
+            addToCart({
+              id: product.id,
+              productType: 'seed',
+              name: product.name,
+              price: product.price,
+              image: product.images[0] || kilimoLogo,
+              inStock: product.availability !== 'Rupture',
+            });
+            toast({ title: "Semence ajoutée au panier", description: `${product.name} ajouté avec succès` });
+          }}
+          reviewForm={reviewForm}
+          setReviewForm={setReviewForm}
+          onSubmitReview={handleSubmitReview}
+          onRequireAuth={() => navigate('/auth')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title={product.name}
-        description={product.description.replace(/<[^>]*>/g, '')}
-        image={product.images[0]}
-        type="product"
-        jsonLd={[
-          {
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": product.name,
-            "description": product.description.replace(/<[^>]*>/g, ''),
-            "image": product.images[0].startsWith('http') ? product.images[0] : `${window.location.origin}${product.images[0]}`,
-            "brand": { "@type": "Organization", "name": "KILIMO" },
-            "category": "Semences agricoles",
-            "offers": {
-              "@type": "Offer",
-              "url": window.location.href,
-              "priceCurrency": "XOF",
-              "price": product.price,
-              "availability": product.availability === "En stock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-            },
-            "aggregateRating": product.rating > 0 ? {
-              "@type": "AggregateRating",
-              "ratingValue": product.rating,
-              "reviewCount": product.reviews
-            } : undefined
-          },
-          {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
-              { "@type": "ListItem", position: 2, name: "Semences", item: window.location.origin + "/seeds" },
-              { "@type": "ListItem", position: 3, name: product.name, item: window.location.href },
-            ],
-          },
-        ]}
-      />
+      {seo}
       <Header />
-      
+
       {product && (
         <CopyProtectionDialog
           isOpen={isDialogOpen}

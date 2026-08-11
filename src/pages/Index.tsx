@@ -12,11 +12,14 @@ import ShopSection from "@/components/ShopSection";
 import StatsSection from "@/components/StatsSection";
 import { useI18n } from "@/i18n";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import HomeAppView from "@/components/pwa/home/HomeAppView";
 import { Helmet } from "react-helmet-async";
 import heroImageAvif from "@/assets/hero-agritech.jpg?format=avif&quality=70";
 
 const Index = () => {
   const { t } = useI18n();
+  const isStandalone = useStandalonePwa();
   const statsRef = useScrollReveal({ threshold: 0.2 });
   const servicesRef = useScrollReveal({ threshold: 0.15 });
   const newsRef = useScrollReveal({ threshold: 0.1 });
@@ -25,6 +28,42 @@ const Index = () => {
   const adRef = useScrollReveal({ threshold: 0.2 });
   const aboutRef = useScrollReveal({ threshold: 0.15 });
   const contactRef = useScrollReveal({ threshold: 0.15 });
+
+  const seo = (
+    <SEO
+      title="KILIMO Agritech - Agriculture Intelligente & Formations"
+      description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées et accompagnement expert pour les agriculteurs africains."
+      path={window.location.origin + '/'}
+      image="/kilimo-logo.png"
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "KILIMO Agritech",
+        "url": window.location.origin,
+        "logo": `${window.location.origin}/kilimo-logo.png`,
+        "sameAs": [
+          "https://twitter.com/kilimoagritech",
+          "https://facebook.com/kilimoagritech",
+          "https://linkedin.com/company/kilimoagritech"
+        ],
+        "description": "KILIMO Agritech est une plateforme dédiée à l'avancement de l'agriculture par la technologie, l'éducation et les semences de qualité pour les agriculteurs africains.",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "CM"
+        }
+      }}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen">
+        {seo}
+        <Header />
+        <HomeAppView />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -39,29 +78,7 @@ const Index = () => {
           fetchpriority="high"
         />
       </Helmet>
-      <SEO
-        title="KILIMO Agritech - Agriculture Intelligente & Formations"
-        description="Révolutionnez votre agriculture avec KILIMO! Formation en ligne, semences certifiées et accompagnement expert pour les agriculteurs africains."
-        path={window.location.origin + '/'}
-        image="/kilimo-logo.png"
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": "KILIMO Agritech",
-          "url": window.location.origin,
-          "logo": `${window.location.origin}/kilimo-logo.png`,
-          "sameAs": [
-            "https://twitter.com/kilimoagritech",
-            "https://facebook.com/kilimoagritech",
-            "https://linkedin.com/company/kilimoagritech"
-          ],
-          "description": "KILIMO Agritech est une plateforme dédiée à l'avancement de l'agriculture par la technologie, l'éducation et les semences de qualité pour les agriculteurs africains.",
-          "address": {
-            "@type": "PostalAddress",
-            "addressCountry": "CM"
-          }
-        }}
-      />
+      {seo}
       <Header />
       <main>
         {/* Hero Section - Full viewport */}

@@ -22,9 +22,11 @@ import {
 import { isWithinInterval, startOfMonth, startOfYear, subMonths } from "date-fns";
 import { deriveCourseStatus, ABSENCE_PENALTY } from "@/lib/elearningFormat";
 import { ErrorState } from "@/components/elearning/ErrorState";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import MyCoursesAppView from "@/components/pwa/elearning/MyCoursesAppView";
 
 
-interface Enrollment {
+export interface Enrollment {
   id: number;
   userId: string;
   courseId: number;
@@ -34,7 +36,7 @@ interface Enrollment {
   course?: { id: number; title: string; slug?: string; thumbnailUrl?: string; level?: string; duration?: number };
 }
 
-interface Schedule {
+export interface Schedule {
   id: number;
   courseId: number;
   scheduledDate: string;
@@ -43,7 +45,7 @@ interface Schedule {
   course?: { id: number; title: string; slug?: string };
 }
 
-interface Certificate {
+export interface Certificate {
   id: number;
   courseId: number;
   certificateNumber: string;
@@ -60,6 +62,7 @@ const ITEMS_PER_PAGE = 6;
 const MyCourses = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isStandalone = useStandalonePwa();
   const [user, setUser] = useState<{ id: string; fullName?: string; email?: string } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [requestingCourseId, setRequestingCourseId] = useState<number | null>(null);
@@ -265,6 +268,29 @@ const MyCourses = () => {
   const totalAttended = schedules.filter(s => s.status === 'attended').length;
   const totalAbsent = schedules.filter(s => s.status === 'absent').length;
   const totalScheduled = schedules.filter(s => s.status === 'scheduled').length;
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SEO
+          title="Mes cours - KILIMO"
+          description="Vos cours, progressions, présences et certificats"
+          path={window.location.origin + '/my-courses'}
+        />
+        <Header />
+        <MyCoursesAppView
+          active={active}
+          completed={completed}
+          certificates={certificates}
+          schedules={schedules}
+          loadingEnrollments={loadingEnrollments}
+          certByCourse={certByCourse}
+          requestCertificate={requestCertificate}
+          requestingCourseId={requestingCourseId}
+        />
+      </div>
+    );
+  }
 
   const renderSkeletonGrid = (count = 3) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

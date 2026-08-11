@@ -19,12 +19,14 @@ import { api } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import CourseLearnAppShell from "@/components/pwa/elearning/CourseLearnAppShell";
 import {
   BookOpen, Video, FileText, CheckCircle, Lock, Play,
   ChevronRight, Award, Clock, ArrowLeft, MessageCircle, Loader2, Trophy, CalendarClock
 } from "lucide-react";
 
-interface Module {
+export interface Module {
   id: number;
   title: string;
   type: string;
@@ -63,6 +65,7 @@ const CourseLearn = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuthUser();
+  const isStandalone = useStandalonePwa();
 
   const [course, setCourse] = useState<CourseData | null>(null);
   const [courseLoading, setCourseLoading] = useState(true);
@@ -478,14 +481,283 @@ const CourseLearn = () => {
     );
   }
 
+  const seo = (
+    <SEO
+      title={`${course.title} - KILIMO E-Learning`}
+      description="Suivez votre formation"
+      path={window.location.origin + `/elearning/${course.id}/learn`}
+      image={kilimoLogo}
+    />
+  );
+
+  const mainContent = (
+    <>
+      {showCertificate ? (
+        certificateRecord?.status === 'sent' ? (
+          <CertificateGenerator data={{
+            studentName: (user as any)?.fullName || user?.name || "Apprenant KILIMO",
+            courseName: course.title,
+            completionDate: certificateRecord.completionDate || new Date().toISOString(),
+            score: certificateRecord.score ?? quizScore ?? 100,
+            certificateNumber: certificateRecord.certificateNumber,
+          }} />
+        ) : certificateFailed || certificateRecord?.status === 'failed' ? (
+          <Card>
+            <CardContent className="p-8 text-center space-y-4">
+              <p className="text-destructive font-medium">
+                L'émission de votre certificat a rencontré un problème.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Votre progression est bien enregistrée. Réessayez ou contactez le support si le problème persiste.
+              </p>
+              <Button onClick={retryCertificateRequest}>Réessayer</Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              <p className="font-medium">Émission de votre certificat en cours…</p>
+              <p className="text-sm text-muted-foreground">
+                Cela peut prendre quelques instants. Cette page se mettra à jour automatiquement.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      ) : rattrapageGateActive && currentModule ? (
+        <Card>
+          <CardContent className="p-8 text-center space-y-4">
+            <CalendarClock className="w-12 h-12 text-amber-500 mx-auto" />
+            <h2 className="text-xl font-bold">
+              {currentModule.type === 'synthesis_exam' ? "Examen de synthèse non validé" : "Module non validé"}
+            </h2>
+            {currentRattrapage?.status === 'pending' ? (
+              <p className="text-muted-foreground">
+                Votre demande de rattrapage a été envoyée et est en attente de réponse de l'administrateur.
+              </p>
+            ) : currentRattrapage?.status === 'rejected' ? (
+              <>
+                <p className="text-muted-foreground">
+                  Votre demande de rattrapage a été refusée{currentRattrapage.resolutionNote ? ` : ${currentRattrapage.resolutionNote}` : '.'}
+                </p>
+                <Button onClick={() => requestRattrapage(currentModule.id)} disabled={requestingRattrapage}>
+                  {requestingRattrapage ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi…</> : "Redemander un rattrapage"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">
+                  {currentModule.type === 'synthesis_exam'
+                    ? "Vous n'avez pas validé l'examen de synthèse. Vous pouvez demander un rattrapage."
+                    : "La fenêtre d'évaluation de ce module est fermée et vous ne l'avez pas validé. Vous pouvez demander un rattrapage."}
+                </p>
+                <Button onClick={() => requestRattrapage(currentModule.id)} disabled={requestingRattrapage}>
+                  {requestingRattrapage ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi…</> : "Demander un rattrapage"}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : (currentModule?.type === "quiz" || currentModule?.type === "synthesis_exam") && renderQuizQuestions(activeQuizQuestions) ? (
+        <QuizComponent
+          moduleId={currentModule.id}
+          title={currentRattrapage?.status === 'granted' && currentRattrapage.alternateModule ? `Rattrapage : ${currentModule.title}` : currentModule.title}
+          questions={renderQuizQuestions(activeQuizQuestions)!}
+          passingScore={70}
+          onComplete={handleQuizComplete}
+          onRetry={() => setQuizScore(null)}
+        />
+      ) : currentModule?.type === "video" ? (
+        <Card>
+          <CardContent className="p-0">
+            {currentModule.videoUrl ? (
+              /\.(mp4|webm|mov|m4v)(\?|$)/i.test(currentModule.videoUrl) ? (
+                <video
+                  ref={videoRef}
+                  src={currentModule.videoUrl}
+                  className="w-full aspect-video bg-black rounded-t-lg"
+                  controls
+                  playsInline
+                  onTimeUpdate={(e) => {
+                    const t = Math.floor((e.target as HTMLVideoElement).currentTime || 0);
+                    if (t > 0 && t % 10 === 0) saveState({ videoPositionSec: t, moduleId: currentModule.id });
+                  }}
+                  onPause={(e) => saveState({ videoPositionSec: Math.floor((e.target as HTMLVideoElement).currentTime || 0), moduleId: currentModule.id })}
+                />
+              ) : (
+              <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
+                <iframe
+                  src={currentModule.videoUrl}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={currentModule.title}
+                />
+              </div>
+              )
+            ) : (
+              <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-t-lg flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Play className="w-16 h-16 mx-auto mb-4 opacity-80" />
+                  <p className="text-lg font-semibold">{currentModule.title}</p>
+                  {currentModule.duration && (
+                    <p className="text-sm text-white/60 mt-2">Durée : {currentModule.duration}</p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="p-6">
+              <h2 className="text-xl font-bold mb-2">{currentModule.title}</h2>
+              <p className="text-muted-foreground mb-4">
+                Regardez la vidéo complète pour débloquer le module suivant.
+                {currentModule.videoPositionSec > 0 && (
+                  <span className="block text-xs text-primary mt-1">⏱ Reprise sauvegardée à {Math.floor(currentModule.videoPositionSec / 60)}:{String(currentModule.videoPositionSec % 60).padStart(2, '0')}</span>
+                )}
+              </p>
+              {!currentModule.completed && (
+                <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
+                  {savingModuleId === currentModule.id ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
+                  ) : (
+                    <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
+                  )}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : currentModule?.type === "text" ? (
+        <Card>
+          <CardContent className="p-6 sm:p-8">
+            <h2 className="text-2xl font-bold mb-6">{currentModule.title}</h2>
+            <div className="prose prose-lg dark:prose-invert max-w-none">
+              {currentModule.content?.split('\n').map((line, i) => {
+                if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-bold mt-6 mb-3 text-primary">{line.replace('## ', '')}</h2>;
+                if (line.startsWith('- **')) {
+                  const parts = line.replace('- **', '').split('**');
+                  return <li key={i} className="ml-4 mb-2"><strong>{parts[0]}</strong>{parts[1]}</li>;
+                }
+                if (line.match(/^\d+\./)) return <li key={i} className="ml-4 mb-2">{line.replace(/^\d+\.\s*/, '')}</li>;
+                if (line.trim() === '') return <br key={i} />;
+                return <p key={i} className="mb-3 text-foreground leading-relaxed">{line}</p>;
+              })}
+            </div>
+            {!currentModule.completed && (
+              <div className="mt-8">
+                <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
+                  {savingModuleId === currentModule.id ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
+                  ) : (
+                    <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : currentModule?.type === "pdf" ? (
+        <Card>
+          <CardContent className="p-6 sm:p-8 text-center">
+            <FileText className="w-20 h-20 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">{currentModule.title}</h2>
+            <p className="text-muted-foreground mb-2">Téléchargez et consultez le document PDF ci-dessous.</p>
+            {currentModule.pdfPage > 1 && (
+              <p className="text-xs text-primary mb-4">📑 Reprise sauvegardée : page {currentModule.pdfPage}</p>
+            )}
+            {currentModule.pdfUrl && (
+              <iframe
+                src={`${currentModule.pdfUrl}#page=${currentModule.pdfPage}`}
+                className="w-full h-[60vh] border rounded-lg mb-4"
+                title={currentModule.title}
+                onLoad={() => saveState({ pdfPage: currentModule.pdfPage, moduleId: currentModule.id })}
+              />
+            )}
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const next = Math.max(1, currentModule.pdfPage - 1);
+                  setModules(prev => prev.map(m => m.id === currentModule.id ? { ...m, pdfPage: next } : m));
+                  lastSavedRef.current = 0;
+                  saveState({ pdfPage: next, moduleId: currentModule.id });
+                }}
+              >
+                Page précédente
+              </Button>
+              <span className="text-sm text-muted-foreground">Page {currentModule.pdfPage}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const next = currentModule.pdfPage + 1;
+                  setModules(prev => prev.map(m => m.id === currentModule.id ? { ...m, pdfPage: next } : m));
+                  lastSavedRef.current = 0;
+                  saveState({ pdfPage: next, moduleId: currentModule.id });
+                }}
+              >
+                Page suivante
+              </Button>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {currentModule.pdfUrl && (
+                <Button variant="outline" asChild>
+                  <a href={currentModule.pdfUrl} target="_blank" rel="noreferrer">
+                    <FileText className="w-4 h-4 mr-2" /> Consulter le PDF
+                  </a>
+                </Button>
+              )}
+              {!currentModule.completed && (
+                <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
+                  {savingModuleId === currentModule.id ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
+                  ) : (
+                    <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
+                  )}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+    </>
+  );
+
+  const commentsSlot = currentModule && (
+    <CourseComments courseId={course.id} moduleId={currentModule.id} currentUserId={user?.id ? String(user.id) : undefined} />
+  );
+  const chatSlot = <LiveCourseChat courseId={course.id} currentUserId={user?.id ? String(user.id) : undefined} />;
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <CourseLearnAppShell
+          courseTitle={course.title}
+          modules={modules}
+          activeModuleId={activeModule}
+          onSelectModule={setActiveModule}
+          progress={totalProgress}
+          completedCount={completedCount}
+          getModuleIcon={getModuleIcon}
+          onBack={() => navigate(`/elearning/${course.slug}`)}
+          showComments={showComments}
+          onToggleComments={() => setShowComments((v) => !v)}
+          commentsSlot={commentsSlot}
+          showChat={showChat}
+          onToggleChat={() => setShowChat((v) => !v)}
+          chatSlot={chatSlot}
+        >
+          {mainContent}
+        </CourseLearnAppShell>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title={`${course.title} - KILIMO E-Learning`}
-        description="Suivez votre formation"
-        path={window.location.origin + `/elearning/${course.id}/learn`}
-        image={kilimoLogo}
-      />
+      {seo}
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 py-6">
@@ -585,251 +857,10 @@ const CourseLearn = () => {
 
           {/* Main content */}
           <div className="lg:col-span-3 order-1 lg:order-2 space-y-6">
-            {showCertificate ? (
-              certificateRecord?.status === 'sent' ? (
-                <CertificateGenerator data={{
-                  studentName: (user as any)?.fullName || user?.name || "Apprenant KILIMO",
-                  courseName: course.title,
-                  completionDate: certificateRecord.completionDate || new Date().toISOString(),
-                  score: certificateRecord.score ?? quizScore ?? 100,
-                  certificateNumber: certificateRecord.certificateNumber,
-                }} />
-              ) : certificateFailed || certificateRecord?.status === 'failed' ? (
-                <Card>
-                  <CardContent className="p-8 text-center space-y-4">
-                    <p className="text-destructive font-medium">
-                      L'émission de votre certificat a rencontré un problème.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Votre progression est bien enregistrée. Réessayez ou contactez le support si le problème persiste.
-                    </p>
-                    <Button onClick={retryCertificateRequest}>Réessayer</Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="p-8 text-center space-y-4">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-                    <p className="font-medium">Émission de votre certificat en cours…</p>
-                    <p className="text-sm text-muted-foreground">
-                      Cela peut prendre quelques instants. Cette page se mettra à jour automatiquement.
-                    </p>
-                  </CardContent>
-                </Card>
-              )
-            ) : rattrapageGateActive && currentModule ? (
-              <Card>
-                <CardContent className="p-8 text-center space-y-4">
-                  <CalendarClock className="w-12 h-12 text-amber-500 mx-auto" />
-                  <h2 className="text-xl font-bold">
-                    {currentModule.type === 'synthesis_exam' ? "Examen de synthèse non validé" : "Module non validé"}
-                  </h2>
-                  {currentRattrapage?.status === 'pending' ? (
-                    <p className="text-muted-foreground">
-                      Votre demande de rattrapage a été envoyée et est en attente de réponse de l'administrateur.
-                    </p>
-                  ) : currentRattrapage?.status === 'rejected' ? (
-                    <>
-                      <p className="text-muted-foreground">
-                        Votre demande de rattrapage a été refusée{currentRattrapage.resolutionNote ? ` : ${currentRattrapage.resolutionNote}` : '.'}
-                      </p>
-                      <Button onClick={() => requestRattrapage(currentModule.id)} disabled={requestingRattrapage}>
-                        {requestingRattrapage ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi…</> : "Redemander un rattrapage"}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-muted-foreground">
-                        {currentModule.type === 'synthesis_exam'
-                          ? "Vous n'avez pas validé l'examen de synthèse. Vous pouvez demander un rattrapage."
-                          : "La fenêtre d'évaluation de ce module est fermée et vous ne l'avez pas validé. Vous pouvez demander un rattrapage."}
-                      </p>
-                      <Button onClick={() => requestRattrapage(currentModule.id)} disabled={requestingRattrapage}>
-                        {requestingRattrapage ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi…</> : "Demander un rattrapage"}
-                      </Button>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (currentModule?.type === "quiz" || currentModule?.type === "synthesis_exam") && renderQuizQuestions(activeQuizQuestions) ? (
-              <QuizComponent
-                moduleId={currentModule.id}
-                title={currentRattrapage?.status === 'granted' && currentRattrapage.alternateModule ? `Rattrapage : ${currentModule.title}` : currentModule.title}
-                questions={renderQuizQuestions(activeQuizQuestions)!}
-                passingScore={70}
-                onComplete={handleQuizComplete}
-                onRetry={() => setQuizScore(null)}
-              />
-            ) : currentModule?.type === "video" ? (
-              <Card>
-                <CardContent className="p-0">
-                  {currentModule.videoUrl ? (
-                    /\.(mp4|webm|mov|m4v)(\?|$)/i.test(currentModule.videoUrl) ? (
-                      <video
-                        ref={videoRef}
-                        src={currentModule.videoUrl}
-                        className="w-full aspect-video bg-black rounded-t-lg"
-                        controls
-                        playsInline
-                        onTimeUpdate={(e) => {
-                          const t = Math.floor((e.target as HTMLVideoElement).currentTime || 0);
-                          if (t > 0 && t % 10 === 0) saveState({ videoPositionSec: t, moduleId: currentModule.id });
-                        }}
-                        onPause={(e) => saveState({ videoPositionSec: Math.floor((e.target as HTMLVideoElement).currentTime || 0), moduleId: currentModule.id })}
-                      />
-                    ) : (
-                    <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
-                      <iframe
-                        src={currentModule.videoUrl}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        title={currentModule.title}
-                      />
-                    </div>
-                    )
-                  ) : (
-                    <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-t-lg flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <Play className="w-16 h-16 mx-auto mb-4 opacity-80" />
-                        <p className="text-lg font-semibold">{currentModule.title}</p>
-                        {currentModule.duration && (
-                          <p className="text-sm text-white/60 mt-2">Durée : {currentModule.duration}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  <div className="p-6">
-                    <h2 className="text-xl font-bold mb-2">{currentModule.title}</h2>
-                    <p className="text-muted-foreground mb-4">
-                      Regardez la vidéo complète pour débloquer le module suivant.
-                      {currentModule.videoPositionSec > 0 && (
-                        <span className="block text-xs text-primary mt-1">⏱ Reprise sauvegardée à {Math.floor(currentModule.videoPositionSec / 60)}:{String(currentModule.videoPositionSec % 60).padStart(2, '0')}</span>
-                      )}
-                    </p>
-                    {!currentModule.completed && (
-                      <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
-                        {savingModuleId === currentModule.id ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
-                        ) : (
-                          <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : currentModule?.type === "text" ? (
-              <Card>
-                <CardContent className="p-6 sm:p-8">
-                  <h2 className="text-2xl font-bold mb-6">{currentModule.title}</h2>
-                  <div className="prose prose-lg dark:prose-invert max-w-none">
-                    {currentModule.content?.split('\n').map((line, i) => {
-                      if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-bold mt-6 mb-3 text-primary">{line.replace('## ', '')}</h2>;
-                      if (line.startsWith('- **')) {
-                        const parts = line.replace('- **', '').split('**');
-                        return <li key={i} className="ml-4 mb-2"><strong>{parts[0]}</strong>{parts[1]}</li>;
-                      }
-                      if (line.match(/^\d+\./)) return <li key={i} className="ml-4 mb-2">{line.replace(/^\d+\.\s*/, '')}</li>;
-                      if (line.trim() === '') return <br key={i} />;
-                      return <p key={i} className="mb-3 text-foreground leading-relaxed">{line}</p>;
-                    })}
-                  </div>
-                  {!currentModule.completed && (
-                    <div className="mt-8">
-                      <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
-                        {savingModuleId === currentModule.id ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
-                        ) : (
-                          <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : currentModule?.type === "pdf" ? (
-              <Card>
-                <CardContent className="p-6 sm:p-8 text-center">
-                  <FileText className="w-20 h-20 text-red-500 mx-auto mb-4" />
-                  <h2 className="text-2xl font-bold mb-2">{currentModule.title}</h2>
-                  <p className="text-muted-foreground mb-2">Téléchargez et consultez le document PDF ci-dessous.</p>
-                  {currentModule.pdfPage > 1 && (
-                    <p className="text-xs text-primary mb-4">📑 Reprise sauvegardée : page {currentModule.pdfPage}</p>
-                  )}
-                  {currentModule.pdfUrl && (
-                    <iframe
-                      src={`${currentModule.pdfUrl}#page=${currentModule.pdfPage}`}
-                      className="w-full h-[60vh] border rounded-lg mb-4"
-                      title={currentModule.title}
-                      onLoad={() => saveState({ pdfPage: currentModule.pdfPage, moduleId: currentModule.id })}
-                    />
-                  )}
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const next = Math.max(1, currentModule.pdfPage - 1);
-                        setModules(prev => prev.map(m => m.id === currentModule.id ? { ...m, pdfPage: next } : m));
-                        lastSavedRef.current = 0;
-                        saveState({ pdfPage: next, moduleId: currentModule.id });
-                      }}
-                    >
-                      Page précédente
-                    </Button>
-                    <span className="text-sm text-muted-foreground">Page {currentModule.pdfPage}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const next = currentModule.pdfPage + 1;
-                        setModules(prev => prev.map(m => m.id === currentModule.id ? { ...m, pdfPage: next } : m));
-                        lastSavedRef.current = 0;
-                        saveState({ pdfPage: next, moduleId: currentModule.id });
-                      }}
-                    >
-                      Page suivante
-                    </Button>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    {currentModule.pdfUrl && (
-                      <Button variant="outline" asChild>
-                        <a href={currentModule.pdfUrl} target="_blank" rel="noreferrer">
-                          <FileText className="w-4 h-4 mr-2" /> Consulter le PDF
-                        </a>
-                      </Button>
-                    )}
-                    {!currentModule.completed && (
-                      <Button onClick={() => handleModuleComplete(currentModule.id)} disabled={savingModuleId === currentModule.id}>
-                        {savingModuleId === currentModule.id ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement…</>
-                        ) : (
-                          <><CheckCircle className="w-4 h-4 mr-2" /> Marquer comme terminé</>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
+            {mainContent}
 
-            {/* Comments section per module */}
-            {showComments && currentModule && (
-              <CourseComments
-                courseId={course.id}
-                moduleId={currentModule.id}
-                currentUserId={user?.id ? String(user.id) : undefined}
-              />
-            )}
-
-            {/* Live chat */}
-            {showChat && (
-              <LiveCourseChat
-                courseId={course.id}
-                currentUserId={user?.id ? String(user.id) : undefined}
-              />
-            )}
+            {showComments && currentModule && commentsSlot}
+            {showChat && chatSlot}
           </div>
         </div>
       </main>

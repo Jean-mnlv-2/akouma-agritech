@@ -28,12 +28,14 @@ import { usePublicStats } from "@/hooks/use-public-stats";
 import { useElearningStats } from "@/hooks/use-elearning-stats";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import ElearningAppView from "@/components/pwa/elearning/ElearningAppView";
 import type { LucideIcon } from "lucide-react";
 
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 
-interface UICourse {
+export interface UICourse {
   id: string;
   slug: string;
   title: string;
@@ -68,7 +70,7 @@ interface PreviewItem {
   type?: string;
 }
 
-interface LiveStreamItem {
+export interface LiveStreamItem {
   id: string | number;
   title: string;
   description?: string;
@@ -84,7 +86,7 @@ interface LiveStreamItem {
   streamUrl?: string;
 }
 
-interface PreviewDisplayItem {
+export interface PreviewDisplayItem {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
@@ -97,6 +99,7 @@ const ELearning = () => {
 
   const { toast } = useToast();
   const { t } = useI18n();
+  const isStandalone = useStandalonePwa();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: publicStats } = usePublicStats();
@@ -394,14 +397,66 @@ const ELearning = () => {
         { icon: Clock, value: "24/7", label: t("elearning.stat.access"), color: "from-purple-500 to-pink-500" },
       ];
 
+  const seo = (
+    <SEO
+      title={t("elearning.meta.title")}
+      description={t("elearning.meta.desc")}
+      path={window.location.origin + '/elearning'}
+      image={kilimoLogo}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <ElearningAppView
+          courses={sortedCourses}
+          loading={loading}
+          error={error}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          availableLanguages={availableLanguages}
+          languageFilter={languageFilter}
+          setLanguageFilter={setLanguageFilter}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          showOnlyPreview={showOnlyPreview}
+          setShowOnlyPreview={setShowOnlyPreview}
+          liveStreams={liveStreams}
+          freePreviewContent={freePreviewContent}
+          currentUser={currentUser}
+          userEnrollments={userEnrollments}
+        />
+        {pendingEnrollCourse && (
+          <EnrollmentDetailsDialog
+            open={!!pendingEnrollCourse}
+            onOpenChange={(open) => { if (!open) setPendingEnrollCourse(null); }}
+            courseTitle={pendingEnrollCourse.title}
+            currentUserLabel={currentUser?.name || currentUser?.email || ''}
+            isPaidCourse={Number(pendingEnrollCourse.price) > 0}
+            knownPhone={currentUser?.phone}
+            submitting={enrollSubmitting}
+            onSubmit={(details) => handleCourseEnroll(
+              pendingEnrollCourse.id,
+              pendingEnrollCourse.title,
+              pendingEnrollCourse.price,
+              pendingEnrollCourse.thumbnail,
+              details,
+            )}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title={t("elearning.meta.title")}
-        description={t("elearning.meta.desc")}
-        path={window.location.origin + '/elearning'}
-        image={kilimoLogo}
-      />
+      {seo}
       <Header />
 
       {/* Hero Section */}
