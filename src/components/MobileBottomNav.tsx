@@ -2,13 +2,11 @@ import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Newspaper, GraduationCap, Home, ShoppingBag, Menu } from "lucide-react";
 import { useI18n } from "@/i18n";
-import { useMobileMenu } from "@/context/MobileMenuContext";
 import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 
 const MobileBottomNav = () => {
   const location = useLocation();
   const { t } = useI18n();
-  const { setIsOpen } = useMobileMenu();
   const isStandalone = useStandalonePwa();
 
   // Le padding réservant la place de la barre (voir index.css,
@@ -79,14 +77,15 @@ const MobileBottomNav = () => {
           </Link>
         ))}
 
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="flex flex-col items-center justify-center gap-1 h-full text-[11px] font-medium text-muted-foreground transition-colors"
+        <Link
+          to="/menu"
+          className={`flex flex-col items-center justify-center gap-1 h-full text-[11px] font-medium transition-colors ${
+            isActive(["/menu"]) ? "text-primary" : "text-muted-foreground"
+          }`}
         >
-          <Menu className="w-5 h-5" strokeWidth={2} />
+          <Menu className="w-5 h-5" strokeWidth={isActive(["/menu"]) ? 2.5 : 2} />
           {t("header.menu")}
-        </button>
+        </Link>
       </div>
     </nav>
   );

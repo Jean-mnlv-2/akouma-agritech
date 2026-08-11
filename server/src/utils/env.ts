@@ -123,6 +123,11 @@ export const env = {
   SENTRY_DSN: process.env.SENTRY_DSN || '',
   DEERFLOW_URL: process.env.DEERFLOW_URL || 'http://localhost:8000',
   AUTO_NEWS_CRON_SCHEDULE: process.env.AUTO_NEWS_CRON_SCHEDULE || '0 7 * * *',
+  // Optionnel : sans les deux clés, /api/push répond 503 (voir pushService.ts)
+  // au lieu d'échouer silencieusement à chaque envoi.
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || '',
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || '',
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT || 'mailto:contact@kilimo.org',
   isProduction: () => isProduction,
   isDevelopment: () => isDevelopment,
   validateSecrets: () => {

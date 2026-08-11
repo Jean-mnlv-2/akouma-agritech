@@ -47,6 +47,7 @@ const Seeds = lazy(() => import("./pages/Seeds"));
 const SeedDetail = lazy(() => import("./pages/SeedDetail"));
 const Shop = lazy(() => import("./pages/Shop"));
 const Boutique = lazy(() => import("./pages/Boutique"));
+const Menu = lazy(() => import("./pages/Menu"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const About = lazy(() => import("./pages/About"));
 const News = lazy(() => import("./pages/News"));
@@ -121,6 +122,7 @@ const App = () => (
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/:slug" element={<ProductDetail />} />
                 <Route path="/boutique" element={<Boutique />} />
+                <Route path="/menu" element={<Menu />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/pricing" element={<Pricing />} />

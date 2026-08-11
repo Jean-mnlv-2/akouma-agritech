@@ -27,6 +27,7 @@ model User {
   enrollments             ELearningEnrollment[]
   moduleProgress          ModuleProgress[]
   orders                  Order[]
+  pushSubscriptions       PushSubscription[]
   reminderLogs            ReminderLog[]
   rattrapageRequests      RattrapageRequest[]
   reviews                 Review[]
@@ -1318,6 +1319,23 @@ model TrustedSource {
   updatedAt   DateTime @updatedAt
 
   @@index([isActive])
+}
+
+// Abonnement Web Push (PWA installée) — endpoint unique par navigateur/
+// appareil. userId nullable : un visiteur peut s'abonner sans compte, on
+// relie l'abonnement à son compte s'il se connecte plus tard.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 /// Represents a chunk of knowledge with vector embedding

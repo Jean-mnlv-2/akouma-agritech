@@ -28,7 +28,8 @@ import {
   History,
   RotateCcw,
   Sparkles,
-  Lightbulb
+  Lightbulb,
+  Bell
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { AdminPasswordDialog } from '@/components/admin/AdminPasswordDialog';
@@ -53,6 +54,7 @@ const AdminCareers = lazy(() => import('@/components/admin/AdminCareers').then(m
 const AdminEvents = lazy(() => import('@/components/admin/AdminEvents').then(m => ({ default: m.AdminEvents })));
 const AdminPartners = lazy(() => import('@/components/admin/AdminPartners').then(m => ({ default: m.AdminPartners })));
 const AdminInnovativeSolutions = lazy(() => import('@/components/admin/AdminInnovativeSolutions').then(m => ({ default: m.AdminInnovativeSolutions })));
+const AdminPushNotifications = lazy(() => import('@/components/admin/AdminPushNotifications').then(m => ({ default: m.AdminPushNotifications })));
 const AdminLiveStreams = lazy(() => import('@/pages/AdminLiveStreams'));
 const AdminDonationsContent = lazy(() => import('@/components/admin/AdminDonationsContent').then(m => ({ default: m.AdminDonationsContent })));
 const AdminContactSettings = lazy(() => import('@/components/admin/AdminContactSettings').then(m => ({ default: m.AdminContactSettings })));
@@ -155,6 +157,7 @@ const tabGroups = [
       { value: 'course-modules', label: 'Modules', icon: BookOpen },
       { value: 'attendance', label: 'Présences', icon: Calendar },
       { value: 'sertifier', label: 'Sertifier', icon: Shield },
+      { value: 'push-notifications', label: 'Notifications Push', icon: Bell },
       { value: 'certificates', label: 'Certificats', icon: Crown },
       { value: 'rattrapage-requests', label: 'Rattrapages', icon: RotateCcw },
       { value: 'ai-suggestions', label: 'Suggestions DeerFlow', icon: Sparkles },
@@ -478,6 +481,7 @@ function AdminContent() {
               )}
               {(activeTab === 'attendance' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('attendance')))) && <AdminAttendance />}
       {(activeTab === 'sertifier' && isAdmin) && <AdminSertifierSettings />}
+      {(activeTab === 'push-notifications' && isAdmin) && <AdminPushNotifications />}
               {(activeTab === 'certificates' && isAdmin) && <AdminCertificates />}
               {(activeTab === 'rattrapage-requests' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('rattrapage-requests')))) && <AdminRattrapageRequests />}
               {(activeTab === 'ai-suggestions' && (isAdmin || (isSupervisor && user?.allowedModules?.includes('ai-suggestions')))) && <AdminAiSuggestions />}
