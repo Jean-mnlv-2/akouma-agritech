@@ -21,6 +21,7 @@ import { useCountries } from "@/hooks/use-countries";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
 import { api } from "@/integrations/api/client";
 import { usePublicStats } from "@/hooks/use-public-stats";
+import { trackDonation } from "@/lib/analyticsEvents";
 import {
   Heart,
   Gift,
@@ -188,6 +189,7 @@ const Donations = () => {
         },
       });
       toast({ title: "Don enregistré", description: "Merci pour votre générosité. Un reçu vous sera envoyé." });
+      trackDonation(amountNumber);
       setDonationForm({
         name: "",
         email: "",

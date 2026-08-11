@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Header from "@/components/Header";
+import { trackAssistantConversationStarted, trackAssistantMessageSent } from "@/lib/analyticsEvents";
 import Footer from "@/components/Footer";
 import { cn } from "@/lib/utils";
 
@@ -211,6 +212,7 @@ export default function Assistant() {
     try {
       const res = await api.request("POST", "/api/chat/threads", { body: {} });
       await refreshThreads();
+      trackAssistantConversationStarted();
       navigate(`/assistant/${res.data.id}`);
       setMessages([]);
     } catch {
@@ -236,6 +238,7 @@ export default function Assistant() {
     const content = input.trim();
     if (!content || streaming || !threadId) return;
 
+    trackAssistantMessageSent();
     setInput("");
     setConnectionError(null);
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content };

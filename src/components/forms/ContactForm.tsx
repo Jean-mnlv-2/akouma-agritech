@@ -9,6 +9,7 @@ import { Send, Loader2 } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useCountries } from "@/hooks/use-countries";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { trackLead } from "@/lib/analyticsEvents";
 
 interface ContactFormProps {
   source?: 'general' | 'partnerships' | 'donations' | 'support' | 'careers';
@@ -19,8 +20,8 @@ interface ContactFormProps {
   prefillSubject?: string;
 }
 
-const ContactForm = ({ 
-  source: _source = 'general', 
+const ContactForm = ({
+  source = 'general',
   title = "Contactez-nous",
   description = "Nous sommes là pour répondre à toutes vos questions.",
   className = "",
@@ -115,6 +116,7 @@ const ContactForm = ({
         title: "Message envoyé !",
         description: "Nous vous répondrons dans les 24h.",
       });
+      trackLead(`contact_${source}`);
 
       // Reset form
       setFormData({

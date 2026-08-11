@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useCountries } from "@/hooks/use-countries";
 import { api } from "@/integrations/api/client";
+import { trackLead } from "@/lib/analyticsEvents";
 
 interface ContentSubmissionForm {
   name: string;
@@ -85,6 +86,7 @@ const ContentSubmission = () => {
         title: "Contenu soumis avec succès !",
         description: "Votre proposition sera examinée par notre équipe sous 48h.",
       });
+      trackLead('content_submission');
       form.reset();
       setIsDialogOpen(false);
     } catch (error) {

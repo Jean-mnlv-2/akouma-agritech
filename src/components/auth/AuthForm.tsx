@@ -12,6 +12,7 @@ import { Loader2, Eye, EyeOff, User, Lock, Shield, Mail } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useNavigate } from "react-router-dom";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { trackLogin, trackSignUp } from "@/lib/analyticsEvents";
 
 const authSchema = z.object({
   email: z.string().email("Veuillez entrer une adresse email valide"),
@@ -83,6 +84,7 @@ export const AuthForm = () => {
         sessionStorage.setItem('kilimo_auth_user', JSON.stringify(user));
 
         window.dispatchEvent(new Event('auth-change'));
+        trackLogin('email');
 
         if (role === 'admin') {
           toast({ title: "Connexion réussie", description: "Bienvenue dans votre dashboard administrateur" });
@@ -132,6 +134,7 @@ export const AuthForm = () => {
       });
 
       toast({ title: "Inscription réussie", description: "Bienvenue dans votre espace client !" });
+      trackSignUp('email');
       signupForm.reset();
       navigate('/');
     } catch (error: unknown) {

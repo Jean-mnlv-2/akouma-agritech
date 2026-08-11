@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, User, ArrowRight, Star } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { trackSelectContent } from '@/lib/analyticsEvents';
 
 export interface NewsCardItem {
   id: string;
@@ -103,6 +104,7 @@ export function NewsCard({
             <Link
               to={`/news/${item.slug}`}
               aria-label={`${readMoreLabel} : ${item.title}`}
+              onClick={() => trackSelectContent('news', item.slug)}
               className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             >
               {readMoreLabel}

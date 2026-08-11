@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { api } from "@/integrations/api/client";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
+import { trackPurchase } from "@/lib/analyticsEvents";
 import {
   ArrowLeft,
   Package,
@@ -115,6 +116,16 @@ const OrderDetail = () => {
   useEffect(() => {
     fetchOrder();
   }, [fetchOrder]);
+
+  // GA4 "purchase" — fired only once the backend confirms payment (never at
+  // checkout submission, since MoneyFusion payment happens off-site).
+  // trackPurchase dedupes per order.id via localStorage so re-fetches (the
+  // 10s auto-refresh poll) and future revisits never double-count it.
+  useEffect(() => {
+    if (order?.paymentStatus === "paid") {
+      trackPurchase(order);
+    }
+  }, [order]);
 
   // Auto-refresh every 10s when payment is pending or failed
   useEffect(() => {

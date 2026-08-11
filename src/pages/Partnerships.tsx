@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import ContactForm from "@/components/forms/ContactForm";
+import { trackLead } from "@/lib/analyticsEvents";
 import { useCountries } from "@/hooks/use-countries";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
 import { api } from "@/integrations/api/client";
@@ -171,6 +172,7 @@ const Partnerships = () => {
         },
       });
       toast({ title: "Demande envoyée", description: "Nous vous recontactons rapidement." });
+      trackLead('partnership');
       setPartnershipForm({
         name: "",
         email: "",

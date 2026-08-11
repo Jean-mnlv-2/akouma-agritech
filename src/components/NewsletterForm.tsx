@@ -11,6 +11,7 @@ import { Mail, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useCountries } from "@/hooks/use-countries";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { trackSignUp } from "@/lib/analyticsEvents";
 
 const newsletterSchema = z.object({
   email: z.string().email("Veuillez entrer une adresse email valide"),
@@ -88,6 +89,7 @@ export const NewsletterForm = ({
           title: t("newsletter.success.title"),
           description: t("newsletter.success.desc"),
         });
+        trackSignUp('newsletter');
         form.reset();
       }
     } catch (error: unknown) {

@@ -13,6 +13,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { trackLead } from "@/lib/analyticsEvents";
 import { api } from "@/integrations/api/client";
 
 const Demo = () => {
@@ -91,6 +92,7 @@ const Demo = () => {
         },
       });
       toast({ title: "Demande envoyée !", description: "Nous vous contacterons sous 24h pour planifier votre démonstration." });
+      trackLead('demo_request');
       setFormData({ name: "", email: "", phone: "", company: "", country: "", message: "" });
     } catch (err) {
       console.error(err);

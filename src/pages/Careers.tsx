@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { MapPin, Clock, Users, Briefcase, Send, Loader2, Upload, FileText } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
+import { trackLead } from "@/lib/analyticsEvents";
 import { useToast } from "@/hooks/use-toast";
 
 interface Career {
@@ -129,6 +130,7 @@ const Careers = () => {
         },
       });
       toast({ title: "Candidature envoyée !", description: "Nous examinerons votre candidature rapidement." });
+      trackLead('job_application');
       setIsApplyOpen(false);
     } catch (err) {
       console.error(err);

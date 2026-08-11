@@ -12,6 +12,7 @@ import ekoloHero from "@/assets/ekolo-hero.webp";
 import ekoloLogo from "@/assets/ekolo-logo.png";
 import { useI18n } from "@/i18n";
 import { api } from "@/integrations/api/client";
+import { trackOutboundClick } from "@/lib/analyticsEvents";
 
 const EKOLO_URL = "https://ekolo.akouma.net/";
 const CARDS_PER_PAGE = 3;
@@ -160,7 +161,7 @@ const Services = () => {
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <Button variant="nature" size="lg" className="group" asChild>
-                <a href={EKOLO_URL} target="_blank" rel="noopener noreferrer">
+                <a href={EKOLO_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundClick('ekolo', EKOLO_URL)}>
                   {t("home.innovation.ekolo.cta")}
                   <ArrowUpRight className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </a>
@@ -169,6 +170,7 @@ const Services = () => {
                 href={EKOLO_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackOutboundClick('ekolo', EKOLO_URL)}
                 className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />

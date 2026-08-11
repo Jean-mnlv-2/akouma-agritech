@@ -7,9 +7,30 @@ import { CartProvider } from "@/context/CartContext";
 import { MobileMenuProvider } from "@/context/MobileMenuContext";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Suspense, useEffect, lazy } from "react";
+import { Suspense, useEffect, useRef, lazy } from "react";
 import { useLocation } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { trackPageview } from "@/lib/analyticsEvents";
+
+// Pushes a virtual pageview to GTM's dataLayer on every SPA route change.
+// The very first render is skipped: it's already covered by GTM's own
+// "gtm.js" bootstrap event fired when the container loads (see
+// consentGating.ts), so tracking it again here would double-count the
+// landing page.
+const AnalyticsPageview = () => {
+  const { pathname, search } = useLocation();
+  const isFirst = useRef(true);
+
+  useEffect(() => {
+    if (isFirst.current) {
+      isFirst.current = false;
+      return;
+    }
+    trackPageview(pathname + search);
+  }, [pathname, search]);
+
+  return null;
+};
 
 const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
@@ -107,6 +128,7 @@ const App = () => (
           >
             <MobileMenuProvider>
             <ScrollToTop />
+            <AnalyticsPageview />
             <CookieConsent />
             <ChatBubble />
             {/* Nav mobile fixe (Actus/E-Learning/Accueil/Boutique/Menu) — masquée
