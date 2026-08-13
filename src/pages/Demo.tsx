@@ -175,9 +175,9 @@ const Demo = () => {
                   <Input type="email" placeholder="votre@email.com" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
                 </div>
                 <div>
-                  <Label>Pays *</Label>
+                  <Label htmlFor="country">Pays *</Label>
                   <Select value={formData.country} onValueChange={(value) => handleInputChange("country", value)}>
-                    <SelectTrigger>
+                    <SelectTrigger id="country">
                       <SelectValue placeholder="Sélectionnez votre pays" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">

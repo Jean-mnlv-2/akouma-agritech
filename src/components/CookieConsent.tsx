@@ -130,7 +130,7 @@ const CookieConsent = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <Button onClick={handleAcceptAll} disabled={saving} className="w-full">Tout accepter</Button>
                 <Button onClick={handleRejectAll} disabled={saving} variant="outline" className="w-full">Tout refuser</Button>
-                <Button onClick={() => setPrefsOpen(true)} disabled={saving} variant="secondary" className="w-full">Personnaliser</Button>
+                <Button onClick={() => setPrefsOpen(true)} disabled={saving} variant="secondary" className="w-full text-foreground">Personnaliser</Button>
               </div>
               <div className="text-center">
                 <Link to="/cookies" className="text-xs text-primary hover:underline underline-offset-4">

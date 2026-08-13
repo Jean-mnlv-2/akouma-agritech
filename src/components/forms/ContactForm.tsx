@@ -191,7 +191,7 @@ const ContactForm = ({
             onValueChange={(value) => handleInputChange("country_id", value)}
             disabled={isLoading}
           >
-            <SelectTrigger>
+            <SelectTrigger id="country">
               <SelectValue placeholder="Sélectionnez votre pays" />
             </SelectTrigger>
             <SelectContent className="max-h-60">

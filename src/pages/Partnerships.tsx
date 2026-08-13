@@ -273,7 +273,7 @@ const Partnerships = () => {
             <div>
               <Label htmlFor="country">Pays</Label>
               <Select value={partnershipForm.country_id} onValueChange={(value) => handlePartnershipInputChange("country_id", value)}>
-                <SelectTrigger>
+                <SelectTrigger id="country">
                   <SelectValue placeholder="Sélectionnez votre pays" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
