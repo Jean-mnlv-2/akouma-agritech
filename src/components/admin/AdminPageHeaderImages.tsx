@@ -13,7 +13,12 @@ import { api } from '@/integrations/api/client';
 import { FileUpload } from './FileUpload';
 import PageHeaderCarousel from '@/components/PageHeaderCarousel';
 
-/** Pages connues — l'admin peut aussi taper une autre clé */
+// Pages connues — DOIT rester synchronisé avec les pages qui rendent
+// réellement un <PageHeaderCarousel pageKey="..."> (voir src/pages/*.tsx et
+// src/components/Hero.tsx). Une clé listée ici sans page correspondante est
+// un piège : l'admin configure une image qui ne s'affichera jamais nulle
+// part. L'admin peut toujours taper une clé personnalisée dans le champ
+// texte si une nouvelle page l'expose plus tard.
 export const KNOWN_PAGE_KEYS = [
   { key: 'home', label: 'Accueil' },
   { key: 'elearning', label: 'E-Learning' },
@@ -21,11 +26,7 @@ export const KNOWN_PAGE_KEYS = [
   { key: 'seeds', label: 'Semences' },
   { key: 'news', label: 'Actualités' },
   { key: 'about', label: 'À propos' },
-  { key: 'contact', label: 'Contact' },
-  { key: 'careers', label: 'Carrières' },
-  { key: 'donations', label: 'Dons' },
-  { key: 'partners', label: 'Partenaires' },
-  { key: 'agri-consulting', label: 'AgriConsulting' },
+  { key: 'events', label: 'Événements' },
 ] as const;
 
 interface PageHeaderImage {

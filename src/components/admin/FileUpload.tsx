@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,16 @@ export const FileUpload = ({
 }: FileUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(value || null);
+  const [previewBroken, setPreviewBroken] = useState(false);
   const { toast } = useToast();
+
+  // `value` peut changer sous nos pieds sans que ce composant soit
+  // remonté (ex: l'admin passe d'une image d'en-tête à une autre dans le
+  // même formulaire) — sans ça, l'aperçu resterait figé sur l'ancien item.
+  useEffect(() => {
+    setPreview(value || null);
+    setPreviewBroken(false);
+  }, [value]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -66,6 +75,7 @@ export const FileUpload = ({
       const imageUrl = result.url;
 
       setPreview(imageUrl);
+      setPreviewBroken(false);
       onChange(imageUrl);
 
       toast({
@@ -75,9 +85,21 @@ export const FileUpload = ({
 
     } catch (error) {
       console.error('Upload error:', error);
+      const raw = error instanceof Error ? error.message : "Impossible d'uploader le fichier";
+      // Le backend renvoie {"error":"..."} en texte brut dans le message ; on
+      // essaie de l'extraire pour afficher la vraie cause (ex: "Extension de
+      // fichier non autorisée", "csrf invalid") plutôt qu'un message générique
+      // qui masque le diagnostic.
+      let description = raw;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.error) description = String(parsed.error);
+      } catch {
+        // raw n'est pas du JSON (ex: erreur réseau) — on le garde tel quel.
+      }
       toast({
-        title: "Erreur",
-        description: "Impossible d'uploader le fichier",
+        title: "Erreur d'upload",
+        description,
         variant: "destructive"
       });
     } finally {
@@ -98,15 +120,24 @@ export const FileUpload = ({
         <div className="relative">
           <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
             <div className="flex items-center space-x-4">
-              <div className="flex-shrink-0">
-                <ImageIcon className="w-10 h-10 text-muted-foreground" />
+              <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                {accept.includes('image/*') && !previewBroken ? (
+                  <img
+                    src={preview}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={() => setPreviewBroken(true)}
+                  />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground truncate">
                   {preview.split('/').pop()}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Fichier uploadé avec succès
+                  {previewBroken ? "Image inaccessible (URL cassée)" : "Fichier uploadé avec succès"}
                 </p>
               </div>
               <Button

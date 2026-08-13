@@ -42,11 +42,19 @@ export default function PageHeaderCarousel({
 }: Props) {
   const { data: images = [] } = usePageHeaderImages(itemsOverride ? '' : pageKey);
   const source = itemsOverride ?? images;
-  const slides: PageHeaderImage[] = source.length > 0
-    ? source
-    : [{ id: 0, pageKey, imageUrl: fallbackImage, altText: fallbackAlt, order: 0, isActive: true } as PageHeaderImage];
 
   const [index, setIndex] = useState(0);
+  // Une image admin dont l'URL est cassée (ex: mauvaise config API_PUBLIC_URL
+  // lors d'un upload) ne doit pas casser silencieusement le header — on
+  // l'exclut du carrousel dès qu'elle échoue à charger et on retombe sur
+  // fallbackImage si plus aucune ne reste valide.
+  const [brokenIds, setBrokenIds] = useState<Set<number>>(new Set());
+  const markBroken = (id: number) => setBrokenIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+
+  const usableSource = source.filter((s) => !brokenIds.has(s.id));
+  const slides: PageHeaderImage[] = usableSource.length > 0
+    ? usableSource
+    : [{ id: 0, pageKey, imageUrl: fallbackImage, altText: fallbackAlt, order: 0, isActive: true } as PageHeaderImage];
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -66,7 +74,7 @@ export default function PageHeaderCarousel({
     <div className={cn('absolute inset-0 overflow-hidden', className)} aria-hidden={children ? undefined : true}>
       {slides.map((s, i) => {
         const isFirst = i === 0;
-        const useAdaptive = isFirst && source.length === 0 && (fallbackImageAvif || fallbackImageWebp);
+        const useAdaptive = isFirst && usableSource.length === 0 && (fallbackImageAvif || fallbackImageWebp);
         const imgEl = (
           <img
             src={s.imageUrl}
@@ -74,6 +82,7 @@ export default function PageHeaderCarousel({
             loading={isFirst ? 'eager' : 'lazy'}
             fetchPriority={isFirst ? 'high' : 'auto'}
             decoding="async"
+            onError={() => { if (s.id) markBroken(s.id); }}
             className={cn(
               'absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out scale-105',
               i === index ? 'opacity-100' : 'opacity-0'
