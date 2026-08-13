@@ -35,6 +35,7 @@ import {
 import heroAgritech from "@/assets/hero-agritech.jpg";
 import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
 
 interface PartnerRow {
   id: number;
@@ -370,6 +371,7 @@ const Partnerships = () => {
       <div className="min-h-screen bg-background">
         {seo}
         <Header />
+        <AppHeroBanner image={heroAgritech} title="Partenariats" subtitle="Ensemble pour l'agriculture de demain" />
         <AppPageHeader title="Partenariats" backTo="/menu" subtitle="Ensemble pour l'agriculture de demain" />
         <div className="px-4 pt-4 pb-8 space-y-8">
           <p className="text-sm text-muted-foreground leading-relaxed">

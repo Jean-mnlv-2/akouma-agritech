@@ -3,9 +3,11 @@ import { Search, Leaf, ShoppingBag, Package, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
 import { BoutiqueItemCard } from "@/components/pwa/shop/BoutiqueItemCard";
 import { useI18n } from "@/i18n";
 import type { BoutiqueItem } from "@/pages/Boutique";
+import shopHero from "@/assets/shop-hero.jpg?format=webp&quality=75";
 
 type BoutiqueType = "all" | "semences" | "equipements";
 
@@ -31,6 +33,7 @@ export function BoutiqueAppView({
 
   return (
     <div className="pb-8">
+      <AppHeroBanner image={shopHero} title={t("boutique.title")} subtitle="Semences & équipements certifiés" />
       <AppPageHeader
         title={t("boutique.title")}
         subtitle={`${items.length} ${items.length > 1 ? t("boutique.results_plural") : t("boutique.results_single")}`}

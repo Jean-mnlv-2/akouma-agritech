@@ -28,6 +28,8 @@ import {
 import { useContactSettings } from "@/hooks/use-contact-settings";
 import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
+import heroAgritech from "@/assets/hero-agritech.jpg?format=webp&quality=75";
 
 const services = [
   {
@@ -140,6 +142,7 @@ const AgriConsulting = () => {
       <div className="min-h-screen bg-background">
         {seo}
         <Header />
+        <AppHeroBanner image={heroAgritech} title="Agri-Consulting" subtitle="Conseil agricole expert" />
         <AppPageHeader title="Agri-Consulting" backTo="/menu" subtitle="Conseil agricole expert" />
         <div className="px-4 pt-4 pb-8 space-y-8">
           <p className="text-sm text-muted-foreground leading-relaxed">

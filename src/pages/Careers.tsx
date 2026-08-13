@@ -17,6 +17,8 @@ import { trackLead } from "@/lib/analyticsEvents";
 import { useToast } from "@/hooks/use-toast";
 import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
+import heroAgritech from "@/assets/hero-agritech.jpg?format=webp&quality=75";
 
 interface Career {
   id: number;
@@ -230,6 +232,7 @@ const Careers = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
+        <AppHeroBanner image={heroAgritech} title="Carrières" subtitle="Rejoignez l'aventure KILIMO" />
         <AppPageHeader title="Carrières" backTo="/menu" subtitle="Rejoignez KILIMO" />
         <div className="px-4 pt-4 pb-8 space-y-6">
           <p className="text-sm text-muted-foreground leading-relaxed">

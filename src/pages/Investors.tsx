@@ -7,6 +7,8 @@ import { TrendingUp, Sprout, Globe2, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
+import heroAgritech from "@/assets/hero-agritech.jpg?format=webp&quality=75";
 
 const REASONS = [
   { icon: TrendingUp, title: 'Marché en croissance', desc: "L'agritech africaine pèse plusieurs milliards USD avec une demande en forte hausse." },
@@ -30,6 +32,7 @@ const Investors = () => {
       <div className="min-h-screen bg-background">
         {seo}
         <Header />
+        <AppHeroBanner image={heroAgritech} title="Investisseurs" subtitle="Investir dans l'agritech africaine" />
         <AppPageHeader title="Investisseurs" backTo="/menu" subtitle="Investir dans l'agritech africaine" />
         <div className="px-4 pt-4 pb-8 space-y-6">
           <p className="text-sm text-muted-foreground leading-relaxed">

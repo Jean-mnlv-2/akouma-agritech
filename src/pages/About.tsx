@@ -22,6 +22,7 @@ import { usePublicStats } from "@/hooks/use-public-stats";
 import { SEO } from "@/components/SEO";
 import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
 
 const About = () => {
   const isStandalone = useStandalonePwa();
@@ -114,6 +115,7 @@ const About = () => {
       <div className="min-h-screen bg-background">
         {seo}
         <Header />
+        <AppHeroBanner image={heroAgritech} title="À propos" subtitle="Mettre la technologie au service de la terre" />
         <AppPageHeader title="À propos" backTo="/menu" subtitle="Mettre la technologie au service de la terre" />
         <div className="px-4 pt-4 pb-8 space-y-8">
           <p className="text-sm text-muted-foreground leading-relaxed">

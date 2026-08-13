@@ -10,11 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
 import { AppCourseCard } from "@/components/pwa/elearning/AppCourseCard";
 import { EmptyState } from "@/components/elearning/EmptyState";
 import type { UICourse, LiveStreamItem, PreviewDisplayItem } from "@/pages/ELearning";
 import type { Enrollment } from "@/hooks/useEnrollments";
 import type { AuthUser } from "@/hooks/useAuthUser";
+import elearningHero from "@/assets/elearning-hero.jpg?format=webp&quality=75";
 
 interface ElearningAppViewProps {
   courses: UICourse[];
@@ -67,6 +69,7 @@ export function ElearningAppView({
 
   return (
     <div className="pb-8">
+      <AppHeroBanner image={elearningHero} title="E-Learning" subtitle="Des formations agricoles certifiantes" />
       <AppPageHeader
         title="E-Learning"
         subtitle={`${courses.length} formation${courses.length > 1 ? "s" : ""} disponible${courses.length > 1 ? "s" : ""}`}

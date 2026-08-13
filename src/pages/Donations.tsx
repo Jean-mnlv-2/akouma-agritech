@@ -34,6 +34,7 @@ import {
 import heroAgritech from "@/assets/hero-agritech.jpg";
 import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
 
 const Donations = () => {
   const isStandalone = useStandalonePwa();
@@ -472,6 +473,7 @@ const Donations = () => {
       <div className="min-h-screen bg-background">
         {seo}
         <Header />
+        <AppHeroBanner image={heroAgritech} title="Faire un don" subtitle="Ensemble, cultivons l'avenir" />
         <AppPageHeader title="Faire un don" backTo="/menu" subtitle="Ensemble, cultivons l'avenir" />
         <div className="px-4 pt-4 pb-8 space-y-8">
           <p className="text-sm text-muted-foreground leading-relaxed">

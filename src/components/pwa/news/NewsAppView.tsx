@@ -1,12 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { AppPageHeader } from "@/components/pwa/AppPageHeader";
+import { AppHeroBanner } from "@/components/pwa/AppHeroBanner";
 import { EmptyState } from "@/components/elearning/EmptyState";
 import { NewsListItem } from "@/components/pwa/news/NewsListItem";
 import { UpcomingEventsStrip } from "@/components/news/UpcomingEventsStrip";
 import { NewsCardSkeleton } from "@/components/news/CardSkeletons";
 import type { NewsCardItem } from "@/components/news/NewsCard";
 import type { EventCardItem } from "@/components/news/EventCard";
+import heroImage from "@/assets/hero-agritech.jpg?format=webp&quality=75";
 
 interface NewsAppViewProps {
   news: NewsCardItem[];
@@ -31,6 +33,7 @@ export function NewsAppView({
 }: NewsAppViewProps) {
   return (
     <div className="pb-8">
+      <AppHeroBanner image={heroImage} title="Actualités" subtitle="L'actualité agricole en continu" />
       <AppPageHeader title="Actualités" subtitle={`${news.length} article${news.length > 1 ? "s" : ""}`}>
         <div className="flex gap-2 overflow-x-auto px-4 pb-3 hide-scrollbar">
           {categories.map((cat) => {
