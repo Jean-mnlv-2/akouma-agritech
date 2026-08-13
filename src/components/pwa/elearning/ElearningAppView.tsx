@@ -69,7 +69,7 @@ export function ElearningAppView({
 
   return (
     <div className="pb-8">
-      <AppHeroBanner image={elearningHero} title="E-Learning" subtitle="Des formations agricoles certifiantes" />
+      <AppHeroBanner pageKey="elearning" image={elearningHero} title="E-Learning" subtitle="Des formations agricoles certifiantes" />
       <AppPageHeader
         title="E-Learning"
         subtitle={`${courses.length} formation${courses.length > 1 ? "s" : ""} disponible${courses.length > 1 ? "s" : ""}`}

@@ -11,6 +11,7 @@ import { usePublicStats } from "@/hooks/use-public-stats";
 import ekoloLogo from "@/assets/ekolo-logo.png";
 import kilimoLogo from "@/assets/kilimo-logo.png";
 import heroImage from "@/assets/hero-agritech.jpg?format=webp&quality=75";
+import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 
 const ICONS: Record<string, typeof Lightbulb> = {
   Droplets, BoxSelect, ScanSearch, Leaf, Cpu, Smartphone, Zap, CloudRain, BarChart3, Sprout, Bug, Microscope,
@@ -87,7 +88,13 @@ export function HomeAppView() {
           déjà affichés par le Header global */}
       <div className="px-4 pt-4">
         <div className="relative h-36 rounded-3xl overflow-hidden">
-          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" loading="eager" />
+          <PageHeaderCarousel
+            pageKey="home"
+            fallbackImage={heroImage}
+            fallbackAlt="KILIMO"
+            intervalMs={5000}
+            hideDots
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-black/10" />
           <div className="absolute inset-0 flex flex-col justify-end p-4">
             <h1 className="text-white text-lg font-bold leading-tight mb-0.5">

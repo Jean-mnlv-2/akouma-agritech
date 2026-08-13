@@ -18,6 +18,9 @@ interface Props {
   itemsOverride?: PageHeaderImage[];
   /** Champs à surligner (pour mode comparaison admin). */
   highlightFields?: string[];
+  /** Masque les puces de pagination (bandeaux compacts type app PWA, trop
+   *  petits pour les accueillir sans chevaucher le texte). */
+  hideDots?: boolean;
 }
 
 /**
@@ -39,6 +42,7 @@ export default function PageHeaderCarousel({
   showOverlayContent = false,
   itemsOverride,
   highlightFields = [],
+  hideDots = false,
 }: Props) {
   const { data: images = [] } = usePageHeaderImages(itemsOverride ? '' : pageKey);
   const source = itemsOverride ?? images;
@@ -136,7 +140,7 @@ export default function PageHeaderCarousel({
           </div>
         </div>
       )}
-      {slides.length > 1 && (
+      {slides.length > 1 && !hideDots && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
           {slides.map((_, i) => (
             <button

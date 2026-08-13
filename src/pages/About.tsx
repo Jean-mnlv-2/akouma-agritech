@@ -115,7 +115,7 @@ const About = () => {
       <div className="min-h-screen bg-background">
         {seo}
         <Header />
-        <AppHeroBanner image={heroAgritech} title="À propos" subtitle="Mettre la technologie au service de la terre" />
+        <AppHeroBanner pageKey="about" image={heroAgritech} title="À propos" subtitle="Mettre la technologie au service de la terre" />
         <AppPageHeader title="À propos" backTo="/menu" subtitle="Mettre la technologie au service de la terre" />
         <div className="px-4 pt-4 pb-8 space-y-8">
           <p className="text-sm text-muted-foreground leading-relaxed">

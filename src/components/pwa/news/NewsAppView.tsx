@@ -33,7 +33,7 @@ export function NewsAppView({
 }: NewsAppViewProps) {
   return (
     <div className="pb-8">
-      <AppHeroBanner image={heroImage} title="Actualités" subtitle="L'actualité agricole en continu" />
+      <AppHeroBanner pageKey="news" image={heroImage} title="Actualités" subtitle="L'actualité agricole en continu" />
       <AppPageHeader title="Actualités" subtitle={`${news.length} article${news.length > 1 ? "s" : ""}`}>
         <div className="flex gap-2 overflow-x-auto px-4 pb-3 hide-scrollbar">
           {categories.map((cat) => {

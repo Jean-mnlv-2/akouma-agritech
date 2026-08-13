@@ -59,6 +59,17 @@ import AdminRoute from "@/components/auth/AdminRoute";
 import SupervisorRoute from "@/components/auth/SupervisorRoute";
 import CookieConsent from "@/components/CookieConsent";
 import ChatBubble from "@/components/chat/ChatBubble";
+import { usePwaOnboarding } from "@/hooks/use-pwa-onboarding";
+import AppOnboarding from "@/components/pwa/onboarding/AppOnboarding";
+
+// Affiché une seule fois à la première ouverture de l'app PWA installée
+// (voir usePwaOnboarding) — doit vivre à l'intérieur du BrowserRouter car
+// AppOnboarding navigue vers /auth via useNavigate.
+const PwaOnboardingGate = () => {
+  const { show, complete } = usePwaOnboarding();
+  if (!show) return null;
+  return <AppOnboarding onComplete={complete} />;
+};
 
 // Lazy-loaded route components (per-route code splitting)
 const Index = lazy(() => import("./pages/Index"));
@@ -129,6 +140,7 @@ const App = () => (
             <MobileMenuProvider>
             <ScrollToTop />
             <AnalyticsPageview />
+            <PwaOnboardingGate />
             <CookieConsent />
             <ChatBubble />
             {/* Nav mobile fixe (Actus/E-Learning/Accueil/Boutique/Menu) — masquée
