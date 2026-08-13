@@ -56,11 +56,16 @@
       backend (domaine Railway séparé du frontend) — sans ce hint, le
       navigateur ne découvre cette origine qu'une fois le CSS/JS parsé,
       ajoutant une négociation DNS+TLS complète au chemin critique.
+      Pas de `crossorigin` : la ressource LCP est une balise <img> sans
+      cet attribut (mode "no-cors"), et Chrome n'ouvre pas la même
+      connexion pour une préconnexion anonyme-CORS et une requête
+      no-cors — avec crossorigin, Lighthouse signalait justement la
+      préconnexion comme inutilisée.
       %VITE_API_BASE_URL% substitué au build comme %VITE_SITE_URL%
       ci-dessus ; vide en local (même origine), donc ce lien est inerte
       en dev.
     -->
-    <link rel="preconnect" href="%VITE_API_BASE_URL%" crossorigin />
+    <link rel="preconnect" href="%VITE_API_BASE_URL%" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="shortcut icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />

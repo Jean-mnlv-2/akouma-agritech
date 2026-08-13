@@ -191,8 +191,9 @@ const NewsSection = () => {
                       {news[0].author}
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <Link to={`/news/${news[0].slug}`} aria-label={`${t('news.read_more')} : ${news[0].title}`}>
+                      <Link to={`/news/${news[0].slug}`}>
                         {t('news.read_more')}
+                        <span className="sr-only">: {news[0].title}</span>
                         <ArrowRight className="w-4 h-4 ml-1" />
                       </Link>
                     </Button>
@@ -252,8 +253,9 @@ const NewsSection = () => {
                           {item.author}
                         </div>
                         <Button variant="ghost" size="sm" asChild className="group-hover:bg-primary group-hover:text-primary-foreground">
-                          <Link to={`/news/${item.slug}`} aria-label={`${t('news.read_more')} : ${item.title}`}>
+                          <Link to={`/news/${item.slug}`}>
                             {t('news.read_more')}
+                            <span className="sr-only">: {item.title}</span>
                             <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                           </Link>
                         </Button>
