@@ -36,29 +36,41 @@ const chatMessageRateLimiter = createRateLimiter({
   }
 });
 
-// Simple content moderation function
+// Modération de contenu — volontairement restreinte aux signaux d'abus qui
+// n'ont AUCUN cas d'usage agricole légitime plausible. La version précédente
+// bloquait aussi kill/violence, scam, "credit card" et password par simple
+// mot-clé : ça rejetait de vraies questions agricoles/support ("comment tuer
+// les pucerons", "éviter les arnaques sur les semences", "mon paiement par
+// carte a échoué", "mot de passe oublié"). Un filtre qui bloque le cœur de
+// son propre domaine est pire qu'inutile — retiré plutôt que rafistolé.
 function isContentMalicious(content: string): { isMalicious: boolean; reason?: string } {
   const normalizedContent = content.toLowerCase();
-  
-  // Blocked keywords/phrases
+
+  // Formes FR/EN les plus courantes de chaque racine — "hack" seul (comme
+  // dans l'ancienne version) ne matchait pas "hacker"/"hackeur", et
+  // "racist" ne matchait pas l'orthographe française "raciste"/"racisme".
   const blockedPatterns = [
-    /\b(hack|hacked|hacking)\b/i,
+    /\b(hack(e[rd]?|ing|eur)?)\b/i,
     /\b(sql injection|xss|cross-site scripting)\b/i,
-    /\b(phish|phishing)\b/i,
-    /\b(scam|scammer)\b/i,
-    /\b(password|pwd|passwd)\b.*\b\w{8,}\b/i,
-    /\b(credit card|card number|cvv|ccv)\b/i,
-    /\b(nude|porn|explicit)\b/i,
-    /\b(violent|violence|kill|murder)\b/i,
-    /\b(hate|hateful|racist|racism)\b/i,
+    /\b(phish(ing)?|hame[çc]onnage)\b/i,
+    /\b(nude|porn\w*|explicit)\b/i,
+    /\b(hate|hateful|haine\w*|racis(t|te|m|me)\w*)\b/i,
   ];
-  
+
   for (const pattern of blockedPatterns) {
     if (pattern.test(normalizedContent)) {
       return { isMalicious: true, reason: "Ce contenu est bloqué par nos filtres de sécurité." };
     }
   }
-  
+
+  // Ciblé sur la FORME (13-19 chiffres contigus, la longueur d'un vrai
+  // numéro de carte), pas sur le thème du paiement — une question de support
+  // ("mon paiement a échoué") passe, un numéro de carte réellement collé
+  // dans le chat est bloqué avant de finir dans l'historique de conversation.
+  if (/\b(?:\d[ -]?){13,19}\b/.test(content)) {
+    return { isMalicious: true, reason: "Merci de ne pas partager de numéro de carte bancaire dans ce chat." };
+  }
+
   return { isMalicious: false };
 }
 

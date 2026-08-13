@@ -37,6 +37,34 @@ export class DocumentIndexer implements IKnowledgeIndexer {
     source: KnowledgeSource,
     progressCallback?: IndexProgressCallback
   ): Promise<void> {
+    // indexAllContent() (cron 6h + sync manuel) repasse sur TOUT le contenu
+    // publié à chaque appel, y compris ce qui n'a pas changé depuis la
+    // dernière passe — sans ce garde-fou, chaque cycle régénère un embedding
+    // Ollama pour chaque chunk de chaque source, systématiquement, même
+    // quand le texte est identique au mot près. Le texte est ce qui
+    // détermine l'embedding : si `content` n'a pas bougé, les chunks/vecteurs
+    // existants restent valides et on se contente de rafraîchir les
+    // métadonnées légères (prix, titre...) qui, elles, peuvent changer sans
+    // que le contenu indexé change.
+    const existing = await this.prisma.knowledgeSource.findUnique({ where: { id: source.id } });
+    if (existing && existing.content === source.content) {
+      await this.prisma.knowledgeSource.update({
+        where: { id: source.id },
+        data: {
+          title: source.title,
+          sourceType: source.sourceType,
+          metadata: source.metadata as Prisma.InputJsonObject,
+        },
+      });
+      progressCallback?.({
+        current: 1,
+        total: 1,
+        sourceId: source.id,
+        status: 'completed',
+      });
+      return;
+    }
+
     // Delete existing source and chunks if they exist
     await this.vectorStore.deleteChunks(source.id);
     await this.prisma.knowledgeSource.deleteMany({

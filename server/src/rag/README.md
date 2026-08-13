@@ -13,7 +13,7 @@ src/rag/
 │   ├── embedding/          # Services d'embeddings (Ollama)
 │   ├── vector-store/       # Stockage vectoriel (PostgreSQL + pgvector)
 │   ├── indexer/            # Indexation des connaissances
-│   ├── retriever/          # Recherche sémantique + reranking
+│   ├── retriever/          # Recherche sémantique (similarité cosinus)
 │   └── workflow/           # Orchestrateur RAG
 ├── types/
 │   └── index.ts            # Interfaces TypeScript publiques
@@ -28,8 +28,8 @@ src/rag/
 ✅ **Configuration injectable** - Adaptable à différents environnements  
 ✅ **Embeddings via Ollama** - Compatible avec les modèles locaux  
 ✅ **Stockage vectoriel pgvector** - Intégré à PostgreSQL existant  
-✅ **Indexation automatisée** - Seeds, formations, actualités  
-✅ **Recherche sémantique + reranking** - Recherche par similarité cosine avec reranking pour améliorer la pertinence  
+✅ **Indexation automatisée** - Seeds, formations, actualités (+ ré-indexation ciblée immédiate à la publication pour les actualités, sans attendre le cron)  
+✅ **Recherche sémantique** - Similarité cosinus via pgvector, sur-échantillonnage puis filtrage par seuil de score (pas de reranking séparé : testé et retiré, pgvector trie déjà par similarité — voir KnowledgeRetriever.ts)  
 ✅ **Workflow RAG complet** - Récupération → Augmentation → Génération  
 ✅ **Streaming de réponse** - Intégré à l'API chat existante  
 ✅ **Containerisé** - Ollama ajouté à docker-compose.yml avec persistence GPU support et healthcheck  
