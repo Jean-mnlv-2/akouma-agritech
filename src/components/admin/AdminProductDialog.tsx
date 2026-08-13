@@ -16,22 +16,21 @@ interface Product {
   name: string;
   category?: string;
   description?: string;
+  price?: number;
   price_fcfa?: number;
-  original_price_fcfa?: number;
+  stock?: number;
   stock_quantity?: number;
+  isActive?: boolean;
   in_stock?: boolean;
+  isPublished?: boolean;
   is_published?: boolean;
+  isFeatured?: boolean;
   is_featured?: boolean;
-  is_bestseller?: boolean;
+  isNew?: boolean;
   is_new?: boolean;
+  isCopyProtected?: boolean;
   is_copy_protected?: boolean;
-  rating?: number;
-  total_reviews?: number;
   gallery?: string[];
-  dimensions?: string;
-  weight_kg?: number;
-  warranty_info?: string;
-  shipping_info?: string;
   imageUrl?: string;
   image_url?: string;
   features?: string[] | string;
@@ -52,12 +51,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
     description: '',
     category: '',
     price_fcfa: 0,
-    original_price_fcfa: 0,
     stock_quantity: 0,
-    dimensions: '',
-    weight_kg: 0,
-    warranty_info: '',
-    shipping_info: '',
     image_url: '',
     gallery_urls: '',
     features: '',
@@ -65,7 +59,6 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
     in_stock: true,
     is_published: true,
     is_featured: false,
-    is_bestseller: false,
     is_new: false,
     is_copy_protected: false,
     slug: ''
@@ -86,23 +79,22 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         name: product.name || '',
         description: product.description || '',
         category: product.category || '',
-        price_fcfa: product.price_fcfa || 0,
-        original_price_fcfa: product.original_price_fcfa || 0,
-        stock_quantity: product.stock_quantity || 0,
-        dimensions: product.dimensions || '',
-        weight_kg: product.weight_kg || 0,
-        warranty_info: product.warranty_info || '',
-        shipping_info: product.shipping_info || '',
+        // Le back-office lisait des clés snake_case (price_fcfa, stock_quantity,
+        // in_stock) qui n'existent pas dans la réponse API (Prisma renvoie du
+        // camelCase) — le formulaire d'édition affichait donc 0/désactivé pour
+        // ces champs, et enregistrer réécrasait silencieusement les vraies
+        // valeurs. Corrigé pour lire price/stock/isActive en priorité.
+        price_fcfa: product.price ?? product.price_fcfa ?? 0,
+        stock_quantity: product.stock ?? product.stock_quantity ?? 0,
         image_url: product.imageUrl || product.image_url || '',
         gallery_urls: Array.isArray(product.gallery) ? product.gallery.join(',') : (product.image_url || ''),
         features: Array.isArray(product.features) ? product.features.join(',') : (product.features || ''),
         specifications: typeof product.specifications === 'object' ? JSON.stringify(product.specifications) : (product.specifications || ''),
-        in_stock: !!product.in_stock,
-        is_published: !!product.is_published,
-        is_featured: !!product.is_featured,
-        is_bestseller: !!product.is_bestseller,
-        is_new: !!product.is_new,
-        is_copy_protected: !!product.is_copy_protected,
+        in_stock: product.isActive ?? product.in_stock ?? false,
+        is_published: product.isPublished ?? product.is_published ?? false,
+        is_featured: product.isFeatured ?? product.is_featured ?? false,
+        is_new: product.isNew ?? product.is_new ?? false,
+        is_copy_protected: product.isCopyProtected ?? product.is_copy_protected ?? false,
         slug: product.slug || slugify(product.name || '')
       });
       setGalleryUrls(Array.isArray(product.gallery) ? product.gallery : []);
@@ -113,12 +105,7 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         description: '',
         category: '',
         price_fcfa: 0,
-        original_price_fcfa: 0,
         stock_quantity: 0,
-        dimensions: '',
-        weight_kg: 0,
-        warranty_info: '',
-        shipping_info: '',
         image_url: '',
         gallery_urls: '',
         features: '',
@@ -126,7 +113,6 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
         in_stock: false,
         is_published: false,
         is_featured: false,
-        is_bestseller: false,
         is_new: false,
         is_copy_protected: false,
         slug: ''
@@ -286,25 +272,9 @@ export function AdminProductDialog({ open, onOpenChange, product, onSave }: Admi
               <Input id="stock_quantity" type="number" value={formData.stock_quantity} onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })} />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price_fcfa">Prix (FCFA) *</Label>
-              <Input id="price_fcfa" type="number" value={formData.price_fcfa} onChange={(e) => setFormData({ ...formData, price_fcfa: parseInt(e.target.value) || 0 })} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="original_price_fcfa">Prix original (FCFA)</Label>
-              <Input id="original_price_fcfa" type="number" value={formData.original_price_fcfa} onChange={(e) => setFormData({ ...formData, original_price_fcfa: parseInt(e.target.value) || 0 })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="dimensions">Dimensions</Label>
-              <Input id="dimensions" value={formData.dimensions} onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })} placeholder="ex: 50x30x20 cm" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="weight_kg">Poids (kg)</Label>
-              <Input id="weight_kg" type="number" step="0.1" value={formData.weight_kg} onChange={(e) => setFormData({ ...formData, weight_kg: parseFloat(e.target.value) || 0 })} />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="price_fcfa">Prix (FCFA) *</Label>
+            <Input id="price_fcfa" type="number" value={formData.price_fcfa} onChange={(e) => setFormData({ ...formData, price_fcfa: parseInt(e.target.value) || 0 })} required />
           </div>
 
           {/* Image principale */}

@@ -21,6 +21,7 @@ interface NewsArticle {
   category?: string | null;
   isPublished?: boolean;
   is_published?: boolean;
+  isFeatured?: boolean;
   is_featured?: boolean;
   isCopyProtected?: boolean;
   is_copy_protected?: boolean;
@@ -75,7 +76,7 @@ export function AdminNewsDialog({ open, onOpenChange, news, onSave }: AdminNewsD
         category: news.category || '',
         image_url: news.imageUrl || news.image_url || '',
         is_published: news.isPublished ?? news.is_published ?? false,
-        is_featured: news.is_featured || false,
+        is_featured: news.isFeatured ?? news.is_featured ?? false,
         is_copy_protected: news.isCopyProtected ?? news.is_copy_protected ?? false,
         slug: news.slug || slugify(news.title || '')
       });

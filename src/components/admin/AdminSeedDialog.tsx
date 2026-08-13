@@ -17,17 +17,28 @@ interface Seed {
   description: string;
   category: string;
   variety: string;
-  price_fcfa: number;
+  // Le modèle Prisma Seed est en camelCase (price, stock, imageUrl,
+  // plantingInstructions, careInstructions, harvestTime, yield) — les clés
+  // snake_case ci-dessous sont conservées pour compat mais ne sont jamais
+  // ce que l'API renvoie réellement.
+  price?: number;
+  price_fcfa?: number;
   unit: string;
-  stock_quantity: number;
+  stock?: number;
+  stock_quantity?: number;
   availability: string;
-  image_url: string;
+  imageUrl?: string;
+  image_url?: string;
   gallery?: string[];
   gallery_urls?: string;
-  planting_instructions: string;
-  care_instructions: string;
-  harvest_time: string;
-  yield_info: string;
+  plantingInstructions?: string;
+  planting_instructions?: string;
+  careInstructions?: string;
+  care_instructions?: string;
+  harvestTime?: string;
+  harvest_time?: string;
+  yield?: string;
+  yield_info?: string;
   features: string | string[];
   fullDescription: string;
   origin: string;
@@ -44,11 +55,12 @@ interface Seed {
   isPublished?: boolean;
   isFeatured?: boolean;
   isCopyProtected?: boolean;
-  is_published: boolean;
-  is_featured: boolean;
-  is_copy_protected: boolean;
+  is_published?: boolean;
+  is_featured?: boolean;
+  is_copy_protected?: boolean;
   rating: number;
-  total_reviews: number;
+  totalReviews?: number;
+  total_reviews?: number;
   slug: string;
 }
 
@@ -110,16 +122,21 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         description: seed.description || '',
         category: seed.category || '',
         variety: seed.variety || '',
-        price_fcfa: seed.price_fcfa || 0,
+        // Idem : l'API renvoie price/stock/imageUrl/plantingInstructions/
+        // careInstructions/harvestTime/yield en camelCase — lire uniquement
+        // les clés snake_case ici affichait 0/vide sur un enregistrement
+        // existant, et enregistrer écrasait silencieusement les vraies
+        // valeurs avec ces zéros/vides.
+        price_fcfa: seed.price ?? seed.price_fcfa ?? 0,
         unit: seed.unit || '',
-        stock_quantity: seed.stock_quantity || 0,
+        stock_quantity: seed.stock ?? seed.stock_quantity ?? 0,
         availability: seed.availability || 'En stock',
-        image_url: seed.image_url || '',
+        image_url: seed.imageUrl || seed.image_url || '',
         gallery_urls: seed.gallery_urls || (Array.isArray(seed.gallery) ? seed.gallery.join(',') : ''),
-        planting_instructions: seed.planting_instructions || '',
-        care_instructions: seed.care_instructions || '',
-        harvest_time: seed.harvest_time || '',
-        yield_info: seed.yield_info || '',
+        planting_instructions: seed.plantingInstructions || seed.planting_instructions || '',
+        care_instructions: seed.careInstructions || seed.care_instructions || '',
+        harvest_time: seed.harvestTime || seed.harvest_time || '',
+        yield_info: seed.yield || seed.yield_info || '',
         features: Array.isArray(seed.features) ? seed.features.join(', ') : (seed.features || ''),
         fullDescription: seed.fullDescription || '',
         origin: seed.origin || '',
@@ -139,7 +156,7 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
         slug: seed.slug || slugify(seed.name || '')
       });
       setGalleryUrls(Array.isArray(seed.gallery) ? seed.gallery : []);
-      setPreviewUrl(seed.image_url || null);
+      setPreviewUrl(seed.imageUrl || seed.image_url || null);
     } else {
       setFormData({
         name: '',
@@ -184,14 +201,44 @@ export function AdminSeedDialog({ open, onOpenChange, seed, onSave }: AdminSeedD
     const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const features = formData.features ? formData.features.split(',').map(f => f.trim()) : [];
     const diseases = formData.diseases ? formData.diseases.split(',').map(d => d.trim()) : [];
-    
+
+    // POST/PUT /api/seeds ne lisent que du camelCase (price, stock, imageUrl,
+    // harvestTime, yield, plantingInstructions, careInstructions...) —
+    // envoyer les clés snake_case du formulaire les laissait undefined côté
+    // serveur, donc Prisma ignorait ces champs (ou remettait stock à 0) à
+    // chaque enregistrement, même quand le formulaire avait l'air correct.
     onSave({
-      ...formData,
-      slug,
-      features,
-      diseases,
-      image_url: formData.image_url || galleryUrls[0] || '',
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      variety: formData.variety,
+      price: formData.price_fcfa,
+      unit: formData.unit,
+      stock: formData.stock_quantity,
+      availability: formData.availability,
+      imageUrl: formData.image_url || galleryUrls[0] || '',
       gallery: galleryUrls,
+      plantingInstructions: formData.planting_instructions,
+      careInstructions: formData.care_instructions,
+      harvestTime: formData.harvest_time,
+      yield: formData.yield_info,
+      features,
+      fullDescription: formData.fullDescription,
+      origin: formData.origin,
+      purity: formData.purity,
+      germination: formData.germination,
+      moisture: formData.moisture,
+      packaging: formData.packaging,
+      soilType: formData.soilType,
+      plantingDepth: formData.plantingDepth,
+      spacing: formData.spacing,
+      watering: formData.watering,
+      fertilizer: formData.fertilizer,
+      diseases,
+      isPublished: formData.is_published,
+      isFeatured: formData.is_featured,
+      isCopyProtected: formData.is_copy_protected,
+      slug,
     });
   };
 
