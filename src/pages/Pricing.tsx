@@ -414,10 +414,10 @@ export default function Pricing() {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-6 py-10">
-        <section className="mx-auto mb-10 max-w-4xl text-center">
-          <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/10">Assistant Agriconsulting KILIMO</Badge>
-          <h1 className="mb-4 text-4xl font-bold text-foreground">Le bon niveau d'accompagnement pour votre exploitation</h1>
-          <p className="text-lg text-muted-foreground">
+        <section className="mx-auto mb-6 sm:mb-10 max-w-4xl text-center">
+          <Badge className="mb-2 sm:mb-4 text-xs sm:text-sm bg-primary/10 text-primary hover:bg-primary/10">Assistant Agriconsulting KILIMO</Badge>
+          <h1 className="mb-2 sm:mb-4 text-2xl sm:text-4xl font-bold text-foreground">Le bon niveau d'accompagnement pour votre exploitation</h1>
+          <p className="text-sm sm:text-lg text-muted-foreground">
             Les contenus vitrine KILIMO (semences, cours, actualités, boutique) restent gratuits pour tous.
             Les forfaits ci-dessous débloquent l'expertise agronomique de notre assistant IA : itinéraires
             techniques, fiches sanitaires, et pour Premium, un véritable accompagnement de planification

@@ -305,14 +305,14 @@ const Careers = () => {
     <div className="min-h-screen">
       <Header />
 
-      <section className="pt-8 pb-16">
+      <section className="pt-6 sm:pt-8 pb-8 sm:pb-16">
         <div className="container mx-auto px-6">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+            <div className="text-center mb-6 sm:mb-12">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-foreground mb-3 sm:mb-6">
                 Rejoignez <span className="text-primary">KILIMO</span>
               </h1>
-              <p className="text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
+              <p className="text-sm sm:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
                 Participez à la révolution agricole africaine. Construisons ensemble l'avenir
                 de l'agriculture connectée et durable.
               </p>

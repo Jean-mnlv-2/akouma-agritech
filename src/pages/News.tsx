@@ -236,7 +236,7 @@ export default function News() {
       {seo}
       <Header />
       {/* Hero Section - Modern Design */}
-      <section className="relative pt-8 pb-20 overflow-hidden">
+      <section className="relative pt-8 pb-10 sm:pb-16 md:pb-20 overflow-hidden">
         <PageHeaderCarousel
           pageKey="news"
           fallbackImage="/kilimo-logo.png"
@@ -245,20 +245,20 @@ export default function News() {
         />
         <div className="relative container mx-auto px-6 z-10">
           <div className="max-w-4xl">
-            <Badge className="mb-6 bg-primary/20 backdrop-blur-sm text-white border-2 border-primary/30 hover:scale-105 transition-transform">
+            <Badge className="mb-3 sm:mb-6 bg-primary/20 backdrop-blur-sm text-white border-2 border-primary/30 hover:scale-105 transition-transform text-xs sm:text-sm">
               <Calendar className="w-4 h-4 mr-2" />
               Actualités Agricoles
             </Badge>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-3 sm:mb-6 leading-tight">
               <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">{t('news.hero.title1')}</span> {t('news.hero.title2')}
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">{t('news.hero.desc')}</p>
-            <div className="flex flex-wrap gap-4">
-              <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 hover:scale-105 transition-transform">
+            <p className="text-sm sm:text-xl md:text-2xl text-white/90 mb-4 sm:mb-10 leading-relaxed">{t('news.hero.desc')}</p>
+            <div className="flex flex-wrap gap-2 sm:gap-4">
+              <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 hover:scale-105 transition-transform text-xs sm:text-sm">
                 <Calendar className="w-4 h-4 mr-2" />
                 {t('news.badge.daily')}
               </Badge>
-              <Badge variant="secondary" className="bg-green-500/20 backdrop-blur-sm text-green-300 border-2 border-green-500/30 hover:scale-105 transition-transform">
+              <Badge variant="secondary" className="bg-green-500/20 backdrop-blur-sm text-green-300 border-2 border-green-500/30 hover:scale-105 transition-transform text-xs sm:text-sm">
                 <Star className="w-4 h-4 mr-2" />
                 {t('news.badge.premium')}
               </Badge>

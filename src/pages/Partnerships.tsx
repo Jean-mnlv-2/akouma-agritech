@@ -477,36 +477,36 @@ const Partnerships = () => {
       <Header />
 
       {/* Hero Section - Modern Design */}
-      <section className="relative pt-8 pb-20 overflow-hidden">
+      <section className="relative pt-8 pb-10 sm:pb-16 md:pb-20 overflow-hidden">
         <div className="absolute inset-0">
-          <img 
-            src={heroAgritech} 
-            alt="Agriculture intelligente" 
+          <img
+            src={heroAgritech}
+            alt="Agriculture intelligente"
             className="w-full h-full object-cover opacity-20"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background"></div>
           {/* Animated background decorations */}
-          <div className="absolute top-20 right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="hidden sm:block absolute top-20 right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="hidden sm:block absolute bottom-32 left-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
-        
+
         <div className="relative container mx-auto px-6 text-center z-10">
           <div className="max-w-4xl mx-auto">
-            <Badge variant="secondary" className="mb-6 text-sm bg-primary/10 text-primary border-2 border-primary/20 hover:scale-105 transition-transform">
+            <Badge variant="secondary" className="mb-3 sm:mb-6 text-xs sm:text-sm bg-primary/10 text-primary border-2 border-primary/20 hover:scale-105 transition-transform">
               <Handshake className="w-4 h-4 mr-2" />
               Partenariats Stratégiques
             </Badge>
-            
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight">
+
+            <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-3 sm:mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight">
               Ensemble pour l'Agriculture de Demain
             </h1>
-            
-            <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
-              Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner 
+
+            <p className="text-sm sm:text-xl md:text-2xl text-muted-foreground mb-4 sm:mb-10 max-w-3xl mx-auto leading-relaxed">
+              Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner
               l'agriculture africaine avec des solutions technologiques durables.
             </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <Button
                 size="lg"
                 className="group transition-all duration-300 hover:scale-105 hover:shadow-xl"

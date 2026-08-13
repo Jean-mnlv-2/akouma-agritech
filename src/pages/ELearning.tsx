@@ -460,7 +460,7 @@ const ELearning = () => {
       <Header />
 
       {/* Hero Section */}
-      <section className="relative py-24 md:py-32 overflow-hidden">
+      <section className="relative py-12 sm:py-20 md:py-32 overflow-hidden">
         <PageHeaderCarousel
           pageKey="elearning"
           fallbackImage={elearningHero}
@@ -473,11 +473,11 @@ const ELearning = () => {
 
         <div className="relative container mx-auto px-4 sm:px-6 z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-8 bg-primary/20 backdrop-blur-md text-white border border-white/20 px-6 py-2 text-sm font-medium animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <GraduationCap className="w-5 h-5 mr-2 text-primary-foreground" />
+            <Badge className="mb-4 sm:mb-8 bg-primary/20 backdrop-blur-md text-white border border-white/20 px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary-foreground" />
               {t("elearning.hero.badge")}
             </Badge>
-            <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-white mb-8 leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200">
+            <h1 className="text-2xl sm:text-6xl md:text-7xl font-extrabold text-white mb-4 sm:mb-8 leading-[1.15] sm:leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200">
               {t("elearning.hero.title").split("E-Learning")[0]}
               <span className="relative">
                 <span className="bg-gradient-to-r from-primary via-green-400 to-accent bg-clip-text text-transparent">E-Learning</span>
@@ -485,25 +485,25 @@ const ELearning = () => {
               </span>
               {t("elearning.hero.title").split("E-Learning")[1] || ""}
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-12 leading-relaxed max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 font-medium">
+            <p className="text-sm sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-12 leading-relaxed max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 font-medium">
               {t("elearning.hero.desc")}
             </p>
-            <div className="flex flex-col sm:flex-row gap-5 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-700">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-700">
               {currentUser ? (
-                <Button size="xl" variant="nature" className="text-lg px-10 h-16 shadow-2xl shadow-primary/20 group" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
-                  <BookOpen className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                <Button size="xl" variant="nature" className="text-sm sm:text-lg px-6 sm:px-10 h-11 sm:h-16 shadow-2xl shadow-primary/20 group" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:scale-110 transition-transform" />
                   {t("elearning.browse")}
                 </Button>
               ) : (
                 <>
-                  <Button size="xl" variant="nature" className="text-lg px-10 h-16 shadow-2xl shadow-primary/20 group" asChild>
+                  <Button size="xl" variant="nature" className="text-sm sm:text-lg px-6 sm:px-10 h-11 sm:h-16 shadow-2xl shadow-primary/20 group" asChild>
                     <Link to="/auth">
-                      <UserPlus className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:scale-110 transition-transform" />
                       {t("elearning.register")}
                     </Link>
                   </Button>
-                  <Button size="xl" variant="outline" className="text-lg px-10 h-16 bg-white/5 backdrop-blur-xl border-2 border-white/20 text-white hover:bg-white/10 transition-all duration-300" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
-                    <PlayCircle className="w-6 h-6 mr-3 text-primary" />
+                  <Button size="xl" variant="outline" className="text-sm sm:text-lg px-6 sm:px-10 h-11 sm:h-16 bg-white/5 backdrop-blur-xl border-2 border-white/20 text-white hover:bg-white/10 transition-all duration-300" onClick={() => document.getElementById('courses-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                    <PlayCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-primary" />
                     {t("elearning.browse")}
                   </Button>
                 </>

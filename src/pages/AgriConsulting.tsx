@@ -260,27 +260,27 @@ const AgriConsulting = () => {
       <Header />
 
       {/* Hero Section - Modern Design */}
-      <section className="pt-28 pb-20 bg-gradient-hero relative overflow-hidden">
+      <section className="pt-16 sm:pt-28 pb-10 sm:pb-16 md:pb-20 bg-gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         {/* Animated background decorations */}
-        <div className="absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-32 left-16 w-32 h-32 bg-accent/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
-        
+        <div className="hidden sm:block absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="hidden sm:block absolute bottom-32 left-16 w-32 h-32 bg-accent/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="hidden sm:block absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
+
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 hover:scale-105 transition-transform">
+            <Badge className="mb-3 sm:mb-6 bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 hover:scale-105 transition-transform text-xs sm:text-sm">
               <Target className="w-4 h-4 mr-2" />
               Services de Conseil Agricole
             </Badge>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight">
+            <h1 className="text-2xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-3 sm:mb-6 text-white leading-tight">
               Agri-<span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">Consulting</span>
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
-              Expertise et accompagnement stratégique pour transformer votre agriculture 
+            <p className="text-sm sm:text-xl md:text-2xl text-white/90 mb-4 sm:mb-10 leading-relaxed">
+              Expertise et accompagnement stratégique pour transformer votre agriculture
               et maximiser votre rentabilité
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <Button 
                 size="lg" 
                 variant="secondary"

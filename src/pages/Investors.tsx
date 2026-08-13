@@ -69,9 +69,9 @@ const Investors = () => {
       {seo}
       <Header />
       <main className="container mx-auto px-4 sm:px-6 py-12 max-w-5xl">
-        <header className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4">Investir dans l'agritech africaine</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <header className="text-center mb-6 sm:mb-12">
+          <h1 className="text-2xl sm:text-5xl font-bold mb-2 sm:mb-4">Investir dans l'agritech africaine</h1>
+          <p className="text-sm sm:text-lg text-muted-foreground max-w-2xl mx-auto">
             KILIMO accélère la transformation digitale de l'agriculture en Afrique grâce à la formation,
             aux semences certifiées et à l'agroconseil. Rejoignez-nous pour bâtir un avenir durable.
           </p>

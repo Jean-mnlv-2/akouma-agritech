@@ -19,7 +19,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[52vh] sm:min-h-[70vh] md:min-h-[85vh] flex items-center justify-center overflow-hidden py-10 sm:py-0">
       {/* Background carousel (admin-managed) */}
       <PageHeaderCarousel
         pageKey="home"
@@ -29,50 +29,50 @@ const Hero = () => {
         fallbackAlt="Hero KILIMO"
         overlayClassName="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80"
       />
-      
-      {/* Animated floating elements */}
-      <div className="absolute top-20 left-10 w-40 h-40 bg-primary/15 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-32 right-16 w-32 h-32 bg-secondary/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      <div className="absolute top-1/3 right-1/4 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '2s' }} />
-      
+
+      {/* Animated floating elements — masqués sur mobile (décor superflu quand le hero est déjà court) */}
+      <div className="hidden sm:block absolute top-20 left-10 w-40 h-40 bg-primary/15 rounded-full blur-3xl animate-pulse" />
+      <div className="hidden sm:block absolute bottom-32 right-16 w-32 h-32 bg-secondary/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="hidden sm:block absolute top-1/3 right-1/4 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '2s' }} />
+
       <div className="relative z-10 container mx-auto px-4 sm:px-6 text-center">
         <div className="max-w-5xl mx-auto">
           {/* Main title */}
-          <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-4 text-white leading-tight tracking-tight transition-all duration-1000 ${
+          <h1 className={`text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-3 sm:mb-4 text-white leading-tight tracking-tight transition-all duration-1000 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             KIL<span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">IMO</span>
             <br />
-            <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold text-white/90">
+            <span className="text-lg sm:text-3xl md:text-4xl lg:text-5xl font-semibold text-white/90">
               L'avenir de l'agriculture intelligente
             </span>
           </h1>
-          
-          <h2 className={`text-lg sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-white/90 mb-6 leading-relaxed transition-all duration-1000 delay-100 ${
+
+          <h2 className={`text-base sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-white/90 mb-3 sm:mb-6 leading-relaxed transition-all duration-1000 delay-100 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}>
             {t("hero.subtitle")}
           </h2>
-          
-          <p className={`text-base sm:text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed transition-all duration-1000 delay-200 ${
+
+          <p className={`text-sm sm:text-lg md:text-xl text-white/70 mb-6 sm:mb-10 max-w-2xl mx-auto leading-relaxed transition-all duration-1000 delay-200 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}>
             {t("hero.desc")}
           </p>
-          
+
           {/* CTA Buttons */}
-          <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 transition-all duration-1000 delay-300 ${
+          <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-6 sm:mb-16 transition-all duration-1000 delay-300 ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}>
-            <Link to="/about">
-              <Button size="lg" className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white text-lg px-8 py-6 rounded-xl shadow-lg shadow-green-900/30 hover:shadow-xl hover:scale-105 transition-all">
+            <Link to="/about" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white text-sm sm:text-lg px-6 py-4 sm:px-8 sm:py-6 rounded-xl shadow-lg shadow-green-900/30 hover:shadow-xl hover:scale-105 transition-all">
                 {t("hero.cta.solutions")}
-                <ArrowRight className="ml-2 w-5 h-5" />
+                <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </Link>
-            <Link to="/demo">
-              <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white/20 text-lg px-8 py-6 rounded-xl hover:scale-105 transition-all">
-                <Play className="mr-2 w-5 h-5" />
+            <Link to="/demo" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 backdrop-blur-md border-2 border-white/30 text-white hover:bg-white/20 text-sm sm:text-lg px-6 py-4 sm:px-8 sm:py-6 rounded-xl hover:scale-105 transition-all">
+                <Play className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
                 {t("hero.cta.demo")}
               </Button>
             </Link>

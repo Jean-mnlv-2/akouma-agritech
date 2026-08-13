@@ -9,6 +9,8 @@ import { api } from "@/integrations/api/client";
 import { useI18n } from "@/i18n";
 import { usePublicStats } from "@/hooks/use-public-stats";
 import ekoloLogo from "@/assets/ekolo-logo.png";
+import kilimoLogo from "@/assets/kilimo-logo.png";
+import heroImage from "@/assets/hero-agritech.jpg?format=webp&quality=75";
 
 const ICONS: Record<string, typeof Lightbulb> = {
   Droplets, BoxSelect, ScanSearch, Leaf, Cpu, Smartphone, Zap, CloudRain, BarChart3, Sprout, Bug, Microscope,
@@ -31,6 +33,15 @@ interface NewsItem {
   category?: string;
 }
 
+interface BoutiquePreviewItem {
+  id: number | string;
+  slug: string;
+  name: string;
+  price: number;
+  unit?: string;
+  image: string;
+}
+
 const QUICK_ACTIONS = [
   { icon: GraduationCap, label: "E-Learning", to: "/elearning", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
   { icon: ShoppingBag, label: "Boutique", to: "/boutique", color: "bg-orange-500/10 text-orange-600 dark:text-orange-400" },
@@ -38,11 +49,16 @@ const QUICK_ACTIONS = [
   { icon: Heart, label: "Faire un don", to: "/donations", color: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
 ];
 
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("fr-CF", { style: "currency", currency: "XAF", minimumFractionDigits: 0 }).format(price);
+
 export function HomeAppView() {
   const { t } = useI18n();
   const { data: stats } = usePublicStats();
   const [solutions, setSolutions] = useState<InnovativeSolution[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [seeds, setSeeds] = useState<BoutiquePreviewItem[]>([]);
+  const [products, setProducts] = useState<BoutiquePreviewItem[]>([]);
 
   useEffect(() => {
     api.request("GET", "/api/innovative_solutions")
@@ -51,21 +67,39 @@ export function HomeAppView() {
     api.request("GET", "/api/news?is_published=true&pageSize=5")
       .then((body: any) => setNews(body?.data || []))
       .catch(() => setNews([]));
+    api.request("GET", "/api/seeds")
+      .then((body: any) => setSeeds(((Array.isArray(body) ? body : body?.data) || []).slice(0, 6).map((s: any) => ({
+        id: s.id, slug: s.slug || String(s.id), name: s.name, price: Number(s.price) || 0,
+        unit: s.unit || "kg", image: s.imageUrl || s.image_url || kilimoLogo,
+      }))))
+      .catch(() => setSeeds([]));
+    api.request("GET", "/api/shop_products")
+      .then((body: any) => setProducts(((Array.isArray(body) ? body : body?.data) || []).slice(0, 6).map((p: any) => ({
+        id: p.id, slug: p.slug || String(p.id), name: p.name, price: Number(p.price ?? p.price_fcfa) || 0,
+        image: p.imageUrl || p.image_url || kilimoLogo,
+      }))))
+      .catch(() => setProducts([]));
   }, []);
 
   return (
     <div className="pb-8">
-      {/* Header compact — remplace le hero plein écran */}
-      <div className="px-4 pt-5 pb-4">
-        <div className="flex items-center gap-3 mb-5">
-          <img src="/kilimo-logo.png" alt="KILIMO" className="h-10 w-auto" />
-          <div>
-            <h1 className="text-lg font-bold leading-tight">KILIMO</h1>
-            <p className="text-sm text-muted-foreground">L'agriculture intelligente, dans ta poche</p>
+      {/* Hero compact — image + accroche, sans répéter le logo/nom KILIMO
+          déjà affichés par le Header global */}
+      <div className="px-4 pt-4">
+        <div className="relative h-36 rounded-3xl overflow-hidden">
+          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" loading="eager" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-black/10" />
+          <div className="absolute inset-0 flex flex-col justify-end p-4">
+            <h1 className="text-white text-lg font-bold leading-tight mb-0.5">
+              L'agriculture intelligente, dans ta poche
+            </h1>
+            <p className="text-white/80 text-xs">Formations, semences certifiées & agroconseil</p>
           </div>
         </div>
+      </div>
 
-        {/* Actions rapides */}
+      {/* Actions rapides */}
+      <div className="px-4 pt-4 pb-4">
         <div className="grid grid-cols-4 gap-2.5">
           {QUICK_ACTIONS.map((a) => (
             <Link key={a.to} to={a.to} className="flex flex-col items-center gap-1.5">
@@ -166,21 +200,55 @@ export function HomeAppView() {
         </section>
       )}
 
-      {/* Boutique — bannière teaser */}
-      <div className="px-4">
-        <Link
-          to="/boutique"
-          className="block rounded-2xl bg-gradient-to-br from-primary to-accent p-5 text-primary-foreground relative overflow-hidden"
-        >
-          <ShoppingBag className="absolute -right-3 -bottom-3 w-24 h-24 opacity-15" />
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1">Boutique unifiée</p>
-          <h3 className="text-lg font-black mb-1">Semences & équipements</h3>
-          <p className="text-sm opacity-90 mb-3">Tout ce qu'il faut pour ton exploitation, au même endroit.</p>
-          <span className="inline-flex items-center gap-1 text-sm font-bold">
-            Découvrir <ArrowRight className="w-4 h-4" />
-          </span>
-        </Link>
-      </div>
+      {/* Semences */}
+      {seeds.length > 0 && (
+        <section className="mb-7">
+          <div className="flex items-center justify-between px-4 mb-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Semences</h2>
+            <Link to="/boutique?type=semences" className="text-xs font-semibold text-primary inline-flex items-center gap-0.5">
+              Voir tout <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1 px-4 snap-x snap-mandatory hide-scrollbar">
+            {seeds.map((s) => (
+              <Link key={s.id} to={`/seeds/${s.slug}`} className="shrink-0 w-36 snap-start rounded-2xl border border-border/60 bg-card overflow-hidden">
+                <div className="h-24 bg-muted/30 overflow-hidden">
+                  <img src={s.image} alt={s.name} className="w-full h-full object-contain p-2" loading="lazy" />
+                </div>
+                <div className="p-2.5">
+                  <p className="text-sm font-semibold line-clamp-2 leading-snug mb-1">{s.name}</p>
+                  <p className="text-sm font-bold text-primary">{formatPrice(s.price)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Équipements */}
+      {products.length > 0 && (
+        <section className="mb-7">
+          <div className="flex items-center justify-between px-4 mb-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Équipements</h2>
+            <Link to="/boutique?type=equipements" className="text-xs font-semibold text-primary inline-flex items-center gap-0.5">
+              Voir tout <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1 px-4 snap-x snap-mandatory hide-scrollbar">
+            {products.map((p) => (
+              <Link key={p.id} to={`/shop/${p.slug}`} className="shrink-0 w-36 snap-start rounded-2xl border border-border/60 bg-card overflow-hidden">
+                <div className="h-24 bg-muted/30 overflow-hidden">
+                  <img src={p.image} alt={p.name} className="w-full h-full object-contain p-2" loading="lazy" />
+                </div>
+                <div className="p-2.5">
+                  <p className="text-sm font-semibold line-clamp-2 leading-snug mb-1">{p.name}</p>
+                  <p className="text-sm font-bold text-primary">{formatPrice(p.price)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

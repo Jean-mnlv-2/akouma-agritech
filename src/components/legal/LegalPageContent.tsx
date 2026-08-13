@@ -132,16 +132,16 @@ export function LegalPageContent({ slug, icon: Icon, fallbackTitle, subtitle, se
       <Header />
 
       {/* En-tête */}
-      <section className="relative pt-16 pb-12 bg-gradient-to-br from-primary/5 via-background to-accent/5 border-b border-border/50">
+      <section className="relative pt-8 sm:pt-16 pb-6 sm:pb-12 bg-gradient-to-br from-primary/5 via-background to-accent/5 border-b border-border/50">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 text-primary mb-6">
-              <Icon className="w-8 h-8" />
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 text-primary mb-3 sm:mb-6">
+              <Icon className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-xl sm:text-3xl md:text-5xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               {page?.title || fallbackTitle}
             </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-4">
+            <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed mb-3 sm:mb-4">
               {subtitle}
             </p>
             {lastUpdated && (
