@@ -106,6 +106,31 @@ function isAllowedExtension(ext: string): boolean {
   return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.docx', '.xlsx'].includes(ext);
 }
 
+// Certains navigateurs mobiles (partage depuis la galerie/appareil photo,
+// content:// URIs Android...) fournissent un File dont le nom n'a pas
+// d'extension exploitable, même si son type MIME est bien une image
+// autorisée. On retombe alors sur une extension déduite du MIME plutôt que
+// de rejeter le fichier — la vérification des magic bytes plus bas reste la
+// vraie garantie de sécurité, l'extension ne sert qu'au nom de fichier.
+function extFromMime(mime: string): string {
+  const map: Record<string, string> = {
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/jpg': '.jpg',
+    'image/gif': '.gif',
+    'image/webp': '.webp',
+    'application/pdf': '.pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  };
+  return map[mime] || '';
+}
+
+function resolveExtension(originalName: string, mime: string): string {
+  const ext = path.extname(originalName).toLowerCase();
+  return isAllowedExtension(ext) ? ext : extFromMime(mime);
+}
+
 function looksLikeMagic(magic: Buffer, type: 'png' | 'jpg' | 'gif' | 'webp' | 'pdf' | 'zip'): boolean {
   if (type === 'png') return magic.length >= 8 && magic.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]));
   if (type === 'jpg') return magic.length >= 3 && magic.subarray(0, 3).equals(Buffer.from([0xFF, 0xD8, 0xFF]));
@@ -116,8 +141,8 @@ function looksLikeMagic(magic: Buffer, type: 'png' | 'jpg' | 'gif' | 'webp' | 'p
 }
 
 async function validateUploadedFile(filePath: string, originalName: string, mime: string): Promise<void> {
-  const ext = path.extname(originalName).toLowerCase();
-  if (!isAllowedExtension(ext)) {
+  const ext = resolveExtension(originalName, mime);
+  if (!ext) {
     throw new Error('Extension de fichier non autorisée');
   }
 
@@ -152,11 +177,11 @@ const storage = multer.diskStorage({
   },
   filename: (_req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + resolveExtension(file.originalname, file.mimetype));
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
@@ -289,7 +314,7 @@ const publicUploadStorage = multer.diskStorage({
   },
   filename: (_req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + resolveExtension(file.originalname, file.mimetype));
   },
 });
 const publicUpload = multer({
