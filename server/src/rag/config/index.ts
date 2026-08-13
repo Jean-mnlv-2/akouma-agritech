@@ -31,21 +31,11 @@ export const DEFAULT_RAG_CONFIG: RagConfig = {
   },
   retriever: {
     topK: parseInt(process.env.RAG_RETRIEVER_TOP_K || '5', 10),
-    // 0.7 était calibré pour un embedding sans préfixe search_query:/search_document:
-    // (scores structurellement plus hauts) — avec les préfixes désormais
-    // appliqués (OllamaEmbedding.ts), un seuil aussi strict rejetait une
-    // large part des requêtes légitimes (aucun résultat retourné alors que
-    // l'information existe). 0.5 est un point de départ plus réaliste pour
-    // nomic-embed-text ; à ajuster empiriquement selon le corpus réel.
     scoreThreshold: parseFloat(process.env.RAG_RETRIEVER_SCORE_THRESHOLD || '0.5'),
   },
   llm: (() => {
     const raw = process.env.AI_PROVIDER;
     const provider = raw === 'gemini' ? 'gemini' : raw === 'deepseek' ? 'deepseek' : 'ollama';
-    // Le nom de modèle ET la clé API viennent des variables dédiées au
-    // provider actif — un modèle Ollama (ex: "qwen2.5:3b") envoyé tel quel à
-    // l'API Gemini/DeepSeek échouerait (aucun modèle de ce nom côté
-    // fournisseur cloud), et inversement.
     const model = provider === 'gemini'
       ? (process.env.GEMINI_MODEL || 'gemini-2.0-flash')
       : provider === 'deepseek'
