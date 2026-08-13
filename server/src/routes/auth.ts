@@ -181,7 +181,16 @@ authRouter.get('/session', async (req: Request, res: Response) => {
       select: { id: true, email: true, fullName: true, phone: true, role: true, isActive: true }
     });
     if (!user || !user.isActive) return res.json({ user: null });
-    const csrfToken = issueCsrfToken(res);
+    // Ne PAS régénérer le csrf_token à chaque vérification de session : cet
+    // endpoint est appelé très souvent (montage de composants, changement de
+    // route, plusieurs onglets...). Le réémettre à chaque fois écrase le
+    // cookie partagé du navigateur en continu, ce qui désynchronise le
+    // cachedCsrfToken d'un onglet dès qu'un autre appel (autre onglet, appel
+    // concurrent) régénère un token différent en dernier — d'où des 403
+    // "csrf invalid" aléatoires. On ne réémet que si aucun cookie n'existe
+    // encore, sinon on renvoie simplement la valeur déjà en place.
+    const existingCsrf = req.cookies?.csrf_token as string | undefined;
+    const csrfToken = existingCsrf || issueCsrfToken(res);
     res.json({ user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, role: user.role, isActive: user.isActive }, csrfToken });
   } catch (error) {
     if (env.isDevelopment()) {
