@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import multer from 'multer';
+import sharp from 'sharp';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { env } from './utils/env';
@@ -171,6 +172,39 @@ async function validateUploadedFile(filePath: string, originalName: string, mime
   throw new Error('Type de fichier non autorisé');
 }
 
+// Les admins uploadent souvent des photos brutes (plusieurs Mo, résolution
+// pleine capture) — sans retraitement, une seule image de semence peut peser
+// 1-2,5 Mo et plomber le LCP de la page. On recompresse donc systématiquement
+// en WebP et on plafonne la résolution après la validation magic-bytes
+// ci-dessus (qui reste la seule garantie de sécurité — ceci n'est qu'une
+// optimisation de poids). Si sharp échoue à lire le fichier (format exotique
+// non couvert par l'allowlist), on conserve l'original tel quel plutôt que
+// de faire échouer tout l'upload.
+async function optimizeIfImage(file: Express.Multer.File): Promise<string> {
+  if (!file.mimetype.startsWith('image/')) return file.filename;
+
+  const base = file.filename.replace(/\.[^.]+$/, '');
+  const targetFilename = `${base}.webp`;
+  const targetPath = path.join(uploadDir, targetFilename);
+  const tmpPath = path.join(uploadDir, `${base}.tmp.webp`);
+
+  try {
+    await sharp(file.path, { animated: file.mimetype === 'image/gif' })
+      .rotate() // réoriente selon l'EXIF avant de le perdre à la conversion
+      .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toFile(tmpPath);
+  } catch {
+    return file.filename;
+  }
+
+  await fs.promises.rename(tmpPath, targetPath);
+  if (file.path !== targetPath) {
+    await fs.promises.unlink(file.path).catch(() => void 0);
+  }
+  return targetFilename;
+}
+
 const storage = multer.diskStorage({
   destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
     cb(null, uploadDir);
@@ -286,7 +320,8 @@ app.post('/api/upload', uploadLimiter, authRequired, adminOnly, csrfRequired, up
   }
   try {
     await validateUploadedFile(file.path, file.originalname, file.mimetype);
-    const relative = `/uploads/${file.filename}`;
+    const finalFilename = await optimizeIfImage(file);
+    const relative = `/uploads/${finalFilename}`;
     // URL absolue : quand frontend et backend vivent sur des domaines
     // différents (Railway, Render...), un chemin relatif comme "/uploads/x"
     // stocké en base se résout contre l'origine de la page qui l'affiche
