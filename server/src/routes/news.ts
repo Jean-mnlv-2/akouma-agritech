@@ -7,6 +7,21 @@ import { RagSystem } from '../rag';
 import { prisma } from '../db';
 export const newsRouter = Router();
 
+// Réindexation RAG ciblée (un seul article), déclenchée juste après une
+// création/modification côté admin — voir KilimoKnowledgeAdapter.indexOneNews
+// pour la logique complète (indexe si publié, purge sinon). Fire-and-forget :
+// on ne fait pas attendre l'admin le temps d'un appel embedding Ollama, mais
+// une vraie erreur reste loggée (contrairement au best-effort deleteSource
+// ci-dessous, où "rien à supprimer" est un cas normal attendu).
+function reindexNewsAsync(id: number): void {
+  import('../rag/adapters/KilimoKnowledgeAdapter')
+    .then(({ KilimoKnowledgeAdapter }) => {
+      const adapter = new KilimoKnowledgeAdapter(prisma, RagSystem.getInstance(prisma).indexer);
+      return adapter.indexOneNews(id);
+    })
+    .catch((e) => logger.error(`[RAG] Échec réindexation news-${id}`, e));
+}
+
 newsRouter.get('/', async (req: Request, res: Response) => {
   const isPublishedParam = req.query.is_published as string | undefined;
   const category = req.query.category as string | undefined;
@@ -96,6 +111,7 @@ newsRouter.post('/', authRequired, moduleAccess('news'), csrfRequired, async (re
         sourceType: "manual"
       } as any,
     });
+    if (created.isPublished) reindexNewsAsync(created.id);
     res.status(201).json({ data: created });
   } catch (e) {
     handlePrismaWriteError(e, res);
@@ -116,6 +132,11 @@ newsRouter.put('/:id', authRequired, moduleAccess('news'), csrfRequired, async (
         // Don't change sourceType when editing
       } as any,
     });
+    // Toujours déclenché (pas seulement quand isPublished passe à true) :
+    // couvre aussi bien la dépublication (purge immédiate) que l'édition de
+    // contenu d'un article déjà publié (les embeddings doivent refléter le
+    // nouveau texte, pas rester périmés jusqu'au prochain cron).
+    reindexNewsAsync(id);
     res.json({ data: updated });
   } catch (e) {
     handlePrismaWriteError(e, res);

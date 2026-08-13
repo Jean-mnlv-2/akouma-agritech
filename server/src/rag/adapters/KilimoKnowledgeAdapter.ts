@@ -161,6 +161,34 @@ export class KilimoKnowledgeAdapter {
   }
 
   /**
+   * Réindexe (ou purge) UN SEUL article, immédiatement après publication/
+   * modification/dépublication depuis l'admin — sans attendre le cron 6h
+   * (server/src/utils/cron.ts) ni repasser sur l'intégralité des actualités
+   * publiées comme le ferait indexNews(). `indexer.indexSource()` régénère
+   * les embeddings via Ollama (coût réseau réel), donc on ne veut le payer
+   * que pour l'article qui vient effectivement de changer.
+   */
+  async indexOneNews(id: number): Promise<void> {
+    const article = await this.prisma.news.findUnique({ where: { id } });
+    if (!article || !article.isPublished) {
+      await this.indexer.deleteSource(`news-${id}`);
+      return;
+    }
+    await this.indexer.indexSource({
+      id: `news-${article.id}`,
+      title: article.title,
+      content: this.formatNewsContent(article),
+      sourceType: 'news',
+      metadata: {
+        newsId: article.id,
+        category: article.category,
+        slug: article.slug,
+      },
+      createdAt: article.createdAt,
+    });
+  }
+
+  /**
    * Index news articles
    */
   async indexNews(): Promise<void> {
