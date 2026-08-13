@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -18,112 +18,82 @@ interface UseRecaptchaOptions {
   useEnterprise?: boolean;
 }
 
-export function useRecaptcha(options: UseRecaptchaOptions = {}) {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const scriptLoadedRef = useRef(false);
-  const siteKey = options.siteKey || import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-  const useEnterprise = options.useEnterprise ?? false;
+// Le script reCAPTCHA (~335 Ko, 1-2s de CPU pour l'initialiser) est
+// partagé par plusieurs formulaires (newsletter, contact, dons,
+// candidature...) qui vivent tous dans des composants montés en
+// permanence (ex: NewsletterForm dans le Footer, présent sur chaque
+// page). Le charger au montage pénalisait donc CHAQUE chargement de
+// page, même pour les visiteurs qui ne soumettent jamais un formulaire.
+// On ne l'injecte désormais qu'au premier appel réel de execute() —
+// c'est-à-dire au moment de la soumission, le seul moment où il sert.
+let scriptLoadPromise: Promise<boolean> | null = null;
 
-  useEffect(() => {
-    console.log('[reCAPTCHA] Initializing hook...');
-    console.log('[reCAPTCHA] Site key:', siteKey ? '***' : 'not set');
-    console.log('[reCAPTCHA] Use Enterprise:', useEnterprise);
+function loadRecaptchaScript(siteKey: string, useEnterprise: boolean): Promise<boolean> {
+  if (scriptLoadPromise) return scriptLoadPromise;
 
-    // Don't load recaptcha if site key not provided
-    if (!siteKey) {
-      console.warn('[reCAPTCHA] VITE_RECAPTCHA_SITE_KEY not set, skipping');
-      setIsLoaded(true);
+  scriptLoadPromise = new Promise((resolve) => {
+    const existing = useEnterprise ? window.grecaptcha?.enterprise : window.grecaptcha;
+    if (existing) {
+      existing.ready(() => resolve(true));
       return;
     }
 
-    // Check if script is already loaded
-    if (scriptLoadedRef.current) {
-      console.log('[reCAPTCHA] Script already loaded');
-      return;
-    }
-
-    console.log('[reCAPTCHA] Loading script...');
-
-    // Load the appropriate reCAPTCHA script
     const script = document.createElement('script');
-    script.src = useEnterprise 
+    script.src = useEnterprise
       ? `https://www.google.com/recaptcha/enterprise.js?render=${siteKey}`
       : `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
     script.async = true;
     script.defer = true;
 
     script.onload = () => {
-      console.log('[reCAPTCHA] Script loaded');
       const recaptchaInstance = useEnterprise ? window.grecaptcha?.enterprise : window.grecaptcha;
-      
       if (recaptchaInstance) {
-        recaptchaInstance.ready(() => {
-          console.log('[reCAPTCHA] Ready');
-          scriptLoadedRef.current = true;
-          setIsLoaded(true);
-        });
+        recaptchaInstance.ready(() => resolve(true));
+      } else if (window.grecaptcha) {
+        window.grecaptcha.ready(() => resolve(true));
       } else {
-        console.warn('[reCAPTCHA] Enterprise not found, trying regular v3');
-        if (window.grecaptcha) {
-          window.grecaptcha.ready(() => {
-            console.log('[reCAPTCHA] v3 Ready');
-            scriptLoadedRef.current = true;
-            setIsLoaded(true);
-          });
-        } else {
-          console.error('[reCAPTCHA] grecaptcha not found after script load');
-          setHasError(true);
-          setIsLoaded(true);
-        }
+        console.error('[reCAPTCHA] grecaptcha not found after script load');
+        resolve(false);
       }
     };
-
     script.onerror = () => {
       console.error('[reCAPTCHA] Failed to load script, continuing without reCAPTCHA');
-      setHasError(true);
-      setIsLoaded(true);
+      resolve(false);
     };
 
     document.body.appendChild(script);
+  });
 
-    return () => {
-      // Don't remove the script, since other components might use it
-    };
-  }, [siteKey, useEnterprise]);
+  return scriptLoadPromise;
+}
+
+export function useRecaptcha(options: UseRecaptchaOptions = {}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const siteKey = options.siteKey || import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+  const useEnterprise = options.useEnterprise ?? false;
+  const siteKeyRef = useRef(siteKey);
+  siteKeyRef.current = siteKey;
 
   const execute = async (action: string): Promise<string | null> => {
-    console.log('[reCAPTCHA] Executing with action:', action);
-    
-    // If no site key or we had an error, return null
-    if (!siteKey || hasError) {
-      console.log('[reCAPTCHA] No site key or error, skipping execution');
-      return null;
-    }
-
-    if (!isLoaded) {
-      console.error('[reCAPTCHA] Not loaded yet');
-      return null;
-    }
-
-    // Try enterprise first, then regular v3
-    let recaptchaInstance = useEnterprise ? window.grecaptcha?.enterprise : null;
-    if (!recaptchaInstance) {
-      recaptchaInstance = window.grecaptcha;
-    }
-    
-    if (!recaptchaInstance) {
-      console.error('[reCAPTCHA] grecaptcha not available');
-      return null;
-    }
+    const key = siteKeyRef.current;
+    if (!key || hasError) return null;
 
     setIsExecuting(true);
     try {
-      console.log('[reCAPTCHA] Calling execute...');
-      const token = await recaptchaInstance.execute(siteKey, { action });
-      console.log('[reCAPTCHA] Token received');
-      return token;
+      const loaded = await loadRecaptchaScript(key, useEnterprise);
+      setIsLoaded(loaded);
+      if (!loaded) {
+        setHasError(true);
+        return null;
+      }
+      const recaptchaInstance = (useEnterprise ? window.grecaptcha?.enterprise : null) || window.grecaptcha;
+      if (!recaptchaInstance) {
+        console.error('[reCAPTCHA] grecaptcha not available');
+        return null;
+      }
+      return await recaptchaInstance.execute(key, { action });
     } catch (error) {
       console.error('[reCAPTCHA] Execution error, continuing without token:', error);
       return null;

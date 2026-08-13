@@ -51,6 +51,16 @@
     -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob: http://localhost:4000; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: ws: wss: http://localhost:4000 http://127.0.0.1:4000; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://www.google.com https://www.googletagmanager.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
 
+    <!--
+      Le LCP de la page d'accueil est l'image du hero, servie par le
+      backend (domaine Railway séparé du frontend) — sans ce hint, le
+      navigateur ne découvre cette origine qu'une fois le CSS/JS parsé,
+      ajoutant une négociation DNS+TLS complète au chemin critique.
+      %VITE_API_BASE_URL% substitué au build comme %VITE_SITE_URL%
+      ci-dessus ; vide en local (même origine), donc ce lien est inerte
+      en dev.
+    -->
+    <link rel="preconnect" href="%VITE_API_BASE_URL%" crossorigin />
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="shortcut icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
