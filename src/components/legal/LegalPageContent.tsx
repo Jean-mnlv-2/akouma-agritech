@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SEO } from "@/components/SEO";
 import { Link } from "react-router-dom";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 interface LegalPage {
   id: number;
@@ -40,6 +42,7 @@ interface LegalPageContentProps {
 }
 
 export function LegalPageContent({ slug, icon: Icon, fallbackTitle, subtitle, seoDescription, loadingText }: LegalPageContentProps) {
+  const isStandalone = useStandalonePwa();
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState<LegalPage | null>(null);
 
@@ -72,14 +75,60 @@ export function LegalPageContent({ slug, icon: Icon, fallbackTitle, subtitle, se
 
   const lastUpdated = page?.effectiveDate || page?.updatedAt;
 
+  const seo = (
+    <SEO
+      title={page?.title || fallbackTitle}
+      description={seoDescription}
+      path={window.location.origin + `/${slug}`}
+      image="/kilimo-logo.png"
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <AppPageHeader title={page?.title || fallbackTitle} backTo="/menu" subtitle={subtitle} />
+        <div className="px-4 pt-4 pb-8 space-y-5">
+          {lastUpdated && (
+            <Badge variant="outline" className="text-xs font-normal">
+              Mise à jour : {new Date(lastUpdated).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" })}
+              {page?.version ? ` · v${page.version}` : ""}
+            </Badge>
+          )}
+          {page ? (
+            <div
+              className="prose prose-sm max-w-none dark:prose-invert
+                prose-headings:font-semibold prose-headings:text-foreground
+                prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 first:prose-h2:mt-0
+                prose-p:text-foreground/85 prose-p:leading-relaxed
+                prose-li:text-foreground/85 prose-strong:text-foreground
+                prose-a:text-primary"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <FileQuestion className="w-10 h-10 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Cette page n'est pas encore disponible. Contactez-nous si vous avez besoin de cette information.
+              </p>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground pt-2 border-t border-border">
+            <span className="w-full text-xs text-muted-foreground/70 uppercase tracking-wide mb-1">Voir aussi</span>
+            {OTHER_LEGAL_LINKS.filter((l) => l.slug !== slug).map((l) => (
+              <Link key={l.slug} to={l.href} className="text-primary hover:underline">{l.label}</Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title={page?.title || fallbackTitle}
-        description={seoDescription}
-        path={window.location.origin + `/${slug}`}
-        image="/kilimo-logo.png"
-      />
+      {seo}
       <Header />
 
       {/* En-tête */}

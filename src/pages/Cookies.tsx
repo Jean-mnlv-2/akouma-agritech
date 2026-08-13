@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { openCookiePreferences } from "@/lib/cookieConsent";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 type CookieRow = {
   name: string;
@@ -80,13 +82,110 @@ const CATEGORIES: Category[] = [
 ];
 
 const Cookies = () => {
+  const isStandalone = useStandalonePwa();
+
+  const seo = (
+    <SEO
+      title="Politique de cookies"
+      description="Politique de cookies KILIMO : finalités, durée et fournisseurs pour chaque catégorie. Gérez librement vos préférences, à tout moment."
+      path="/cookies"
+    />
+  );
+
+  const actions = (
+    <div className="flex flex-wrap gap-3 mb-10">
+      <Button onClick={() => openCookiePreferences()}>
+        <ShieldCheck className="w-4 h-4 mr-2" aria-hidden />
+        Gérer mes préférences
+      </Button>
+      <Button asChild variant="outline">
+        <Link to="/privacy">Politique de confidentialité</Link>
+      </Button>
+    </div>
+  );
+
+  const categoriesList = (
+    <div className="space-y-6">
+      {CATEGORIES.map((cat) => (
+        <Card key={cat.id} id={cat.id} className="scroll-mt-24">
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-md bg-primary/10 text-primary">{cat.icon}</div>
+              <div className="flex-1">
+                <CardTitle className="flex flex-wrap items-center gap-2">
+                  {cat.title}
+                  <Badge variant="secondary" className="font-normal">{cat.legalBasis}</Badge>
+                </CardTitle>
+                <CardDescription className="mt-2 leading-relaxed">{cat.purpose}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Fournisseur</TableHead>
+                    <TableHead>Finalité</TableHead>
+                    <TableHead>Durée</TableHead>
+                    <TableHead>Type</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cat.cookies.map((c) => (
+                    <TableRow key={c.name}>
+                      <TableCell className="font-mono text-xs">{c.name}</TableCell>
+                      <TableCell className="text-sm">{c.provider}</TableCell>
+                      <TableCell className="text-sm">{c.purpose}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{c.duration}</TableCell>
+                      <TableCell className="text-xs">{c.type}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <AppPageHeader title="Politique de cookies" backTo="/menu" subtitle="Finalités, durée et fournisseurs" />
+        <div className="px-4 pt-4 pb-8 space-y-6">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Quels cookies et technologies similaires sont utilisés sur KILIMO, pour quelle durée, et par quels
+            fournisseurs. Refuser est aussi simple qu'accepter, et vos préférences sont modifiables à tout moment.
+          </p>
+          {actions}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Qu'est-ce qu'un cookie ?</CardTitle></CardHeader>
+            <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-3">
+              <p>Un petit fichier déposé sur votre appareil lorsque vous visitez un site, pour mémoriser des informations sur votre visite (langue, session, préférences).</p>
+              <p>Certains sont strictement nécessaires ; les autres — mesure d'audience, préférences, marketing — nécessitent votre consentement préalable et explicite.</p>
+            </CardContent>
+          </Card>
+          {categoriesList}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Vos droits</CardTitle></CardHeader>
+            <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-3">
+              <p>Retirez votre consentement à tout moment via « Gérer mes préférences » ci-dessus — la révocation est immédiate.</p>
+              <p>Question sur vos données : <a href="mailto:dpo@kilimo.africa" className="text-primary hover:underline">dpo@kilimo.africa</a>.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <SEO
-        title="Politique de cookies"
-        description="Politique de cookies KILIMO : finalités, durée et fournisseurs pour chaque catégorie. Gérez librement vos préférences, à tout moment."
-        path="/cookies"
-      />
+      {seo}
       <Header />
       <main className="container mx-auto px-4 py-12 max-w-5xl">
         <div className="flex items-center gap-3 mb-4">
@@ -105,15 +204,7 @@ const Cookies = () => {
           tout moment.
         </p>
 
-        <div className="flex flex-wrap gap-3 mb-10">
-          <Button onClick={() => openCookiePreferences()}>
-            <ShieldCheck className="w-4 h-4 mr-2" aria-hidden />
-            Gérer mes préférences
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/privacy">Politique de confidentialité</Link>
-          </Button>
-        </div>
+        {actions}
 
         <Card className="mb-8">
           <CardHeader>
@@ -132,50 +223,7 @@ const Cookies = () => {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          {CATEGORIES.map((cat) => (
-            <Card key={cat.id} id={cat.id} className="scroll-mt-24">
-              <CardHeader>
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-md bg-primary/10 text-primary">{cat.icon}</div>
-                  <div className="flex-1">
-                    <CardTitle className="flex flex-wrap items-center gap-2">
-                      {cat.title}
-                      <Badge variant="secondary" className="font-normal">{cat.legalBasis}</Badge>
-                    </CardTitle>
-                    <CardDescription className="mt-2 leading-relaxed">{cat.purpose}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Fournisseur</TableHead>
-                        <TableHead>Finalité</TableHead>
-                        <TableHead>Durée</TableHead>
-                        <TableHead>Type</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {cat.cookies.map((c) => (
-                        <TableRow key={c.name}>
-                          <TableCell className="font-mono text-xs">{c.name}</TableCell>
-                          <TableCell className="text-sm">{c.provider}</TableCell>
-                          <TableCell className="text-sm">{c.purpose}</TableCell>
-                          <TableCell className="text-sm whitespace-nowrap">{c.duration}</TableCell>
-                          <TableCell className="text-xs">{c.type}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {categoriesList}
 
         <Card className="mt-10">
           <CardHeader>

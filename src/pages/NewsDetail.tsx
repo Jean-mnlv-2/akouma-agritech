@@ -12,8 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { SEO } from "@/components/SEO";
 import { RelatedArticleSkeleton } from "@/components/news/CardSkeletons";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import NewsDetailAppView from "@/components/pwa/news/NewsDetailAppView";
 
-interface Article {
+export interface Article {
   id: string;
   title: string;
   excerpt: string;
@@ -27,7 +29,7 @@ interface Article {
   relatedArticles: RelatedArticle[];
 }
 
-interface RelatedArticle {
+export interface RelatedArticle {
   id: string;
   slug: string;
   title: string;
@@ -39,6 +41,7 @@ interface RelatedArticle {
 
 const NewsDetail = () => {
   const { slug } = useParams<{ slug: string }>();
+  const isStandalone = useStandalonePwa();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [relatedLoading, setRelatedLoading] = useState(true);
@@ -195,58 +198,78 @@ const NewsDetail = () => {
     );
   }
 
+  const seo = (
+    <SEO
+      title={article.title}
+      description={article.excerpt}
+      image={article.image}
+      type="article"
+      jsonLd={[
+        {
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          "headline": article.title,
+          "description": article.excerpt,
+          "image": article.image.startsWith('http') ? article.image : `${window.location.origin}${article.image}`,
+          "author": { "@type": "Person", "name": article.author },
+          "publisher": {
+            "@type": "Organization",
+            "name": "KILIMO Agritech",
+            "logo": { "@type": "ImageObject", "url": `${window.location.origin}/kilimo-logo.png` }
+          },
+          "datePublished": article.date,
+          "dateModified": article.date,
+          "mainEntityOfPage": window.location.href,
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
+            { "@type": "ListItem", position: 2, name: "Actualités", item: window.location.origin + "/news" },
+            { "@type": "ListItem", position: 3, name: article.title, item: window.location.href },
+          ],
+        },
+      ]}
+    />
+  );
+
+  const copyProtectionDialog = (
+    <CopyProtectionDialog
+      isOpen={isDialogOpen}
+      onClose={closeDialog}
+      item={{
+        title: article.title,
+        imageUrl: article.image,
+        excerpt: article.excerpt,
+        date: formatDate(article.date),
+        url: window.location.href,
+      }}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        {copyProtectionDialog}
+        <NewsDetailAppView
+          article={article}
+          relatedLoading={relatedLoading}
+          onShare={handleShare}
+          isSharing={isSharing}
+          formatDate={formatDate}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {article && (
-        <SEO
-          title={article.title}
-          description={article.excerpt}
-          image={article.image}
-          type="article"
-          jsonLd={[
-            {
-              "@context": "https://schema.org",
-              "@type": "NewsArticle",
-              "headline": article.title,
-              "description": article.excerpt,
-              "image": article.image.startsWith('http') ? article.image : `${window.location.origin}${article.image}`,
-              "author": { "@type": "Person", "name": article.author },
-              "publisher": {
-                "@type": "Organization",
-                "name": "KILIMO Agritech",
-                "logo": { "@type": "ImageObject", "url": `${window.location.origin}/kilimo-logo.png` }
-              },
-              "datePublished": article.date,
-              "dateModified": article.date,
-              "mainEntityOfPage": window.location.href,
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "BreadcrumbList",
-              itemListElement: [
-                { "@type": "ListItem", position: 1, name: "Accueil", item: window.location.origin + "/" },
-                { "@type": "ListItem", position: 2, name: "Actualités", item: window.location.origin + "/news" },
-                { "@type": "ListItem", position: 3, name: article.title, item: window.location.href },
-              ],
-            },
-          ]}
-        />
-      )}
+      {seo}
       <Header />
-
-      {article && (
-        <CopyProtectionDialog
-          isOpen={isDialogOpen}
-          onClose={closeDialog}
-          item={{
-            title: article.title,
-            imageUrl: article.image,
-            excerpt: article.excerpt,
-            date: formatDate(article.date),
-            url: window.location.href,
-          }}
-        />
-      )}
+      {copyProtectionDialog}
 
       <main>
         {/* Breadcrumb + back */}

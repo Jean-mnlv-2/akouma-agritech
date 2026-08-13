@@ -11,6 +11,8 @@ import PageHeaderCarousel from '@/components/PageHeaderCarousel';
 import { NewsCard } from '@/components/news/NewsCard';
 import { NewsCardSkeleton } from '@/components/news/CardSkeletons';
 import { UpcomingEventsStrip } from '@/components/news/UpcomingEventsStrip';
+import { useStandalonePwa } from '@/hooks/use-standalone-pwa';
+import NewsAppView from '@/components/pwa/news/NewsAppView';
 
 interface NewsItem {
   id: string;
@@ -37,6 +39,7 @@ interface EventItem {
 }
 
 export default function News() {
+  const isStandalone = useStandalonePwa();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,39 +173,67 @@ export default function News() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const seo = (
+    <SEO
+      title={t('nav.news')}
+      description={t('news.meta.desc')}
+      image="/kilimo-logo.png"
+      type="website"
+      jsonLd={[
+        {
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": t('nav.news'),
+          "description": t('news.meta.desc'),
+          "url": window.location.href,
+          "publisher": {
+            "@type": "Organization",
+            "name": "KILIMO Agritech",
+            "logo": {
+              "@type": "ImageObject",
+              "url": `${window.location.origin}/kilimo-logo.png`
+            }
+          }
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Accueil", "item": window.location.origin + "/" },
+            { "@type": "ListItem", "position": 2, "name": "Actualités & Événements", "item": window.location.href }
+          ]
+        }
+      ]}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <NewsAppView
+          news={news}
+          featuredNews={featuredNews}
+          regularNews={regularNews}
+          loading={loading}
+          events={events}
+          eventsLoading={eventsLoading}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          readTimeLabel={t('news.read_time')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title={t('nav.news')}
-        description={t('news.meta.desc')}
-        image="/kilimo-logo.png"
-        type="website"
-        jsonLd={[
-          {
-            "@context": "https://schema.org",
-            "@type": "WebPage",
-            "name": t('nav.news'),
-            "description": t('news.meta.desc'),
-            "url": window.location.href,
-            "publisher": {
-              "@type": "Organization",
-              "name": "KILIMO Agritech",
-              "logo": {
-                "@type": "ImageObject",
-                "url": `${window.location.origin}/kilimo-logo.png`
-              }
-            }
-          },
-          {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Accueil", "item": window.location.origin + "/" },
-              { "@type": "ListItem", "position": 2, "name": "Actualités & Événements", "item": window.location.href }
-            ]
-          }
-        ]}
-      />
+      {seo}
       <Header />
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">

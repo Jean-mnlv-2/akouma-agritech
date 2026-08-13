@@ -20,8 +20,11 @@ import heroAgritech from "@/assets/hero-agritech.jpg";
 import PageHeaderCarousel from "@/components/PageHeaderCarousel";
 import { usePublicStats } from "@/hooks/use-public-stats";
 import { SEO } from "@/components/SEO";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 const About = () => {
+  const isStandalone = useStandalonePwa();
   const { data: publicStats } = usePublicStats();
   const sectors = [
     {
@@ -97,16 +100,113 @@ const About = () => {
     { value: publicStats ? `${publicStats.totalCertificates}` : "—", label: "Certificats délivrés" },
   ];
 
+  const seo = (
+    <SEO
+      title="À propos"
+      description="KILIMO accompagne les producteurs, coopératives et territoires dans la transition vers une agriculture moderne, résiliente et connectée."
+      path={window.location.origin + "/about"}
+      image="/kilimo-logo.png"
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <AppPageHeader title="À propos" backTo="/menu" subtitle="Mettre la technologie au service de la terre" />
+        <div className="px-4 pt-4 pb-8 space-y-8">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            KILIMO accompagne les producteurs, coopératives et territoires dans la transition vers une agriculture
+            moderne, résiliente et connectée.
+          </p>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {stats.map((stat, index) => (
+              <div key={`about-stat-${index}-${stat.label}`} className="rounded-2xl border border-border/60 p-3 text-center">
+                <p className="text-xl font-black text-primary leading-none">{stat.value}</p>
+                <p className="text-xs text-muted-foreground mt-1.5">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <section className="rounded-2xl bg-primary/5 border border-primary/20 p-4 text-center">
+            <h2 className="text-base font-bold mb-1.5">Notre mission</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Créer une interface entre le terrain et la technologie, entre tradition et innovation, entre ruralité
+              et modernité. Une agriculture africaine productive, verte et connectée.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Nos secteurs d'activités</h2>
+            <div className="space-y-2.5">
+              {sectors.map((sector, index) => (
+                <div key={`about-sector-${index}-${sector.title}`} className="rounded-2xl border border-border/60 p-3.5 flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center shrink-0">
+                    <sector.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold mb-0.5">{sector.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{sector.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Nos objectifs</h2>
+            <div className="space-y-2">
+              {objectives.map((objective, index) => (
+                <div key={`objective-${index}-${objective.slice(0, 30)}`} className="flex items-start gap-3 p-3 rounded-xl bg-muted/40">
+                  <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-primary-foreground text-[10px] font-bold">{index + 1}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed">{objective}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Nos solutions</h2>
+            <div className="space-y-2.5">
+              {solutions.map((solution, index) => (
+                <div key={`solution-${index}-${solution.title}`} className="flex items-start gap-3 p-3.5 rounded-2xl border border-border/60">
+                  <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shrink-0">
+                    <solution.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold leading-tight mb-0.5">{solution.title}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{solution.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-gradient-hero p-6 text-center">
+            <Heart className="w-10 h-10 text-primary-foreground mx-auto mb-3" />
+            <h2 className="text-lg font-bold text-primary-foreground mb-2">Rejoignez l'Agriculture du Futur</h2>
+            <p className="text-sm text-primary-foreground/90 mb-4">
+              Découvrez comment KILIMO peut transformer votre exploitation avec nos solutions et notre accompagnement.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <Button asChild variant="secondary" className="w-full"><Link to="/contact">Nous contacter</Link></Button>
+              <Button asChild variant="outline" className="w-full border-white/30 text-white hover:bg-white/20"><Link to="/">Voir nos services</Link></Button>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      <SEO
-        title="À propos"
-        description="KILIMO accompagne les producteurs, coopératives et territoires dans la transition vers une agriculture moderne, résiliente et connectée."
-        path={window.location.origin + "/about"}
-        image="/kilimo-logo.png"
-      />
+      {seo}
       <Header />
-      
+
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <PageHeaderCarousel

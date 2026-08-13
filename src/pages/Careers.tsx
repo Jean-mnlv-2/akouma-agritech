@@ -15,6 +15,8 @@ import { api } from "@/integrations/api/client";
 import { useRecaptcha } from "@/hooks/use-recaptcha";
 import { trackLead } from "@/lib/analyticsEvents";
 import { useToast } from "@/hooks/use-toast";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 interface Career {
   id: number;
@@ -32,6 +34,7 @@ interface Career {
 }
 
 const Careers = () => {
+  const isStandalone = useStandalonePwa();
   const [isLoading, setIsLoading] = useState(true);
   const [careers, setCareers] = useState<Career[]>([]);
   const [loadingCareers, setLoadingCareers] = useState(true);
@@ -157,6 +160,145 @@ const Careers = () => {
 
   if (isLoading) {
     return <LoadingSpinner size="large" text="Chargement des opportunités de carrière..." />;
+  }
+
+  const applyDialog = (
+    <Dialog open={isApplyOpen} onOpenChange={setIsApplyOpen}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Postuler</DialogTitle>
+          <DialogDescription>{applyTitle}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmitApplication} className="space-y-4">
+          <div>
+            <Label htmlFor="apply-name">Nom complet *</Label>
+            <Input id="apply-name" value={applyForm.name} onChange={(e) => setApplyForm(f => ({ ...f, name: e.target.value }))} placeholder="Votre nom complet" required />
+          </div>
+          <div>
+            <Label htmlFor="apply-email">Email *</Label>
+            <Input id="apply-email" type="email" value={applyForm.email} onChange={(e) => setApplyForm(f => ({ ...f, email: e.target.value }))} placeholder="votre@email.com" required />
+          </div>
+          <div>
+            <Label htmlFor="apply-phone">Téléphone</Label>
+            <Input id="apply-phone" value={applyForm.phone} onChange={(e) => setApplyForm(f => ({ ...f, phone: e.target.value }))} placeholder="+226 XX XX XX XX" />
+          </div>
+          <div>
+            <Label>CV / Pièces jointes</Label>
+            <div className="mt-1">
+              <input
+                ref={cvInputRef}
+                type="file"
+                accept=".pdf,.docx"
+                onChange={handleCvUpload}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => cvInputRef.current?.click()}
+                disabled={uploadingCv}
+              >
+                {uploadingCv ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Upload en cours...</>
+                ) : cvFileName ? (
+                  <><FileText className="w-4 h-4 mr-2" />{cvFileName}</>
+                ) : (
+                  <><Upload className="w-4 h-4 mr-2" />Joindre votre CV (PDF, DOCX)</>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">Formats acceptés : PDF, DOCX — Max 10 Mo</p>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="apply-message">Motivation / Message</Label>
+            <Textarea id="apply-message" value={applyForm.message} onChange={(e) => setApplyForm(f => ({ ...f, message: e.target.value }))} placeholder="Parlez-nous de vous et de votre motivation..." rows={4} />
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting || uploadingCv}>
+            {isSubmitting ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours...</>
+            ) : (
+              <><Send className="w-4 h-4 mr-2" />Envoyer ma candidature</>
+            )}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <AppPageHeader title="Carrières" backTo="/menu" subtitle="Rejoignez KILIMO" />
+        <div className="px-4 pt-4 pb-8 space-y-6">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Participez à la révolution agricole africaine. Construisons ensemble l'avenir de l'agriculture connectée et durable.
+          </p>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { icon: Users, label: "Équipe diverse" },
+              { icon: Briefcase, label: "Innovation continue" },
+              { icon: Send, label: "Impact réel" },
+            ].map((v, i) => (
+              <div key={i} className="rounded-2xl border border-border/60 p-3 text-center">
+                <v.icon className="w-5 h-5 text-primary mx-auto mb-1.5" />
+                <p className="text-xs font-medium leading-tight text-muted-foreground">{v.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Postes disponibles</h2>
+            {loadingCareers ? (
+              <div className="space-y-2.5">
+                {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />)}
+              </div>
+            ) : careers.length > 0 ? (
+              <div className="space-y-2.5">
+                {careers.map((career) => (
+                  <div key={career.id} className="rounded-2xl border border-border/60 p-3.5">
+                    <h3 className="text-sm font-bold mb-1.5">{career.title}</h3>
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                      {career.department && <Badge variant="secondary" className="text-xs">{career.department}</Badge>}
+                      <Badge variant="outline" className="text-xs flex items-center gap-1"><MapPin className="w-3 h-3" />{career.location}</Badge>
+                      <Badge variant="outline" className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" />{getEmploymentTypeLabel(career.employmentType)}</Badge>
+                    </div>
+                    {career.applicationDeadline && (
+                      <p className="text-xs text-muted-foreground mb-2.5">
+                        Candidature jusqu'au {formatDeadline(career.applicationDeadline)}
+                      </p>
+                    )}
+                    <div className="text-sm text-muted-foreground line-clamp-3 prose prose-sm max-w-none mb-3" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(career.description) }} />
+                    <Button size="sm" className="w-full" onClick={() => handleApply(career.title, career.id)}>
+                      <Send className="w-3.5 h-3.5 mr-2" />Postuler
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-10 rounded-2xl border border-dashed border-border">
+                <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-sm font-semibold mb-1">Aucune offre disponible</h3>
+                <p className="text-sm text-muted-foreground">Revenez bientôt pour découvrir nos opportunités.</p>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-2xl bg-gradient-to-r from-primary/5 to-secondary/5 border border-border/60 p-4 text-center">
+            <h2 className="text-base font-bold mb-1.5">Candidature spontanée</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Vous ne trouvez pas le poste qui vous correspond ? Envoyez-nous votre candidature.
+            </p>
+            <Button className="w-full" onClick={() => handleApply('Candidature spontanée')}>
+              <Send className="w-4 h-4 mr-2" />Envoyer ma candidature
+            </Button>
+          </section>
+        </div>
+        {applyDialog}
+      </div>
+    );
   }
 
   return (
@@ -301,72 +443,7 @@ const Careers = () => {
         </div>
       </section>
 
-      {/* Application Dialog */}
-      <Dialog open={isApplyOpen} onOpenChange={setIsApplyOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Postuler</DialogTitle>
-            <DialogDescription>{applyTitle}</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitApplication} className="space-y-4">
-            <div>
-              <Label htmlFor="apply-name">Nom complet *</Label>
-              <Input id="apply-name" value={applyForm.name} onChange={(e) => setApplyForm(f => ({ ...f, name: e.target.value }))} placeholder="Votre nom complet" required />
-            </div>
-            <div>
-              <Label htmlFor="apply-email">Email *</Label>
-              <Input id="apply-email" type="email" value={applyForm.email} onChange={(e) => setApplyForm(f => ({ ...f, email: e.target.value }))} placeholder="votre@email.com" required />
-            </div>
-            <div>
-              <Label htmlFor="apply-phone">Téléphone</Label>
-              <Input id="apply-phone" value={applyForm.phone} onChange={(e) => setApplyForm(f => ({ ...f, phone: e.target.value }))} placeholder="+226 XX XX XX XX" />
-            </div>
-            <div>
-              <Label>CV / Pièces jointes</Label>
-              <div className="mt-1">
-                <input
-                  ref={cvInputRef}
-                  type="file"
-                  accept=".pdf,.docx"
-                  onChange={handleCvUpload}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => cvInputRef.current?.click()}
-                  disabled={uploadingCv}
-                >
-                  {uploadingCv ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Upload en cours...</>
-                  ) : cvFileName ? (
-                    <><FileText className="w-4 h-4 mr-2" />{cvFileName}</>
-                  ) : (
-                    <><Upload className="w-4 h-4 mr-2" />Joindre votre CV (PDF, DOCX)</>
-                  )}
-                </Button>
-                {/* Doit rester synchronisé avec les mimetypes acceptés par
-                    POST /api/upload/public (server/src/index.ts) — un écart
-                    ici fait échouer l'upload après coup avec une erreur peu
-                    claire pour le candidat. */}
-                <p className="text-xs text-muted-foreground mt-1">Formats acceptés : PDF, DOCX — Max 10 Mo</p>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="apply-message">Motivation / Message</Label>
-              <Textarea id="apply-message" value={applyForm.message} onChange={(e) => setApplyForm(f => ({ ...f, message: e.target.value }))} placeholder="Parlez-nous de vous et de votre motivation..." rows={4} />
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting || uploadingCv}>
-              {isSubmitting ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours...</>
-              ) : (
-                <><Send className="w-4 h-4 mr-2" />Envoyer ma candidature</>
-              )}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {applyDialog}
 
       <Footer />
     </div>

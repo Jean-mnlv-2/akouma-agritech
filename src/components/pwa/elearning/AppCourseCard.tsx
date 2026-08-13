@@ -45,7 +45,7 @@ export function AppCourseCard({ course, variant = "list", progress, isEnrolled }
         <div className="p-3">
           <h3 className="text-sm font-semibold line-clamp-2 leading-snug mb-2 min-h-[2.5rem]">{course.title}</h3>
           <Progress value={progress ?? 0} className="h-1.5 mb-1" />
-          <p className="text-[11px] text-muted-foreground font-medium">{Math.round(progress ?? 0)}% complété</p>
+          <p className="text-sm text-muted-foreground font-medium">{Math.round(progress ?? 0)}% complété</p>
         </div>
       </Link>
     );
@@ -66,7 +66,7 @@ export function AppCourseCard({ course, variant = "list", progress, isEnrolled }
       </div>
       <div className="min-w-0 flex-1">
         <h3 className="text-sm font-semibold line-clamp-2 leading-snug mb-1">{course.title}</h3>
-        <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground mb-1.5">
+        <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground mb-1.5">
           <span className="px-1.5 py-0.5 rounded-md bg-muted font-medium">{course.level}</span>
           <span className="inline-flex items-center gap-0.5"><Clock className="w-3 h-3" />{course.duration}</span>
           {course.rating != null && (
@@ -79,7 +79,7 @@ export function AppCourseCard({ course, variant = "list", progress, isEnrolled }
           ) : (
             <span className="text-sm font-bold text-primary">{course.price === "Gratuit" ? "Gratuit" : formatCoursePrice(course.price)}</span>
           )}
-          <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground"><Users className="w-3 h-3" />{course.students}</span>
+          <span className="inline-flex items-center gap-0.5 text-sm text-muted-foreground"><Users className="w-3 h-3" />{course.students}</span>
         </div>
       </div>
     </Link>

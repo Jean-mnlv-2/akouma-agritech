@@ -135,7 +135,7 @@ const Menu = () => {
                 </Avatar>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate">{userName || "Mon compte"}</p>
-                  <p className="text-xs text-muted-foreground">Connecté</p>
+                  <p className="text-sm text-muted-foreground">Connecté</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -200,7 +200,7 @@ const Menu = () => {
               <div className="flex-1">
                 <p className="text-sm font-medium">Notifications</p>
                 {push.permission === "denied" && (
-                  <p className="text-xs text-muted-foreground">Bloquées dans les réglages de l'appareil</p>
+                  <p className="text-sm text-muted-foreground">Bloquées dans les réglages de l'appareil</p>
                 )}
               </div>
               <Switch

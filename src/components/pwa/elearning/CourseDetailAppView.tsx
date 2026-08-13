@@ -62,8 +62,8 @@ export function CourseDetailAppView({
       <div className="px-4 pt-4 space-y-6">
         <div>
           <h1 className="text-xl font-bold leading-tight mb-2">{course.title}</h1>
-          <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground mb-3">
-            <Badge className={`${getLevelColor(course.level)} border text-[11px]`}>{course.level}</Badge>
+          <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground mb-3">
+            <Badge className={`${getLevelColor(course.level)} border text-xs`}>{course.level}</Badge>
             <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{course.duration}</span>
             <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5" />{course.students} étudiants</span>
             {course.rating > 0 && (
@@ -86,7 +86,7 @@ export function CourseDetailAppView({
             <Award className="w-8 h-8 text-yellow-600 shrink-0" />
             <div>
               <p className="text-sm font-bold">Certification incluse</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Certificat officiel KILIMO vérifiable en ligne (Sertifier).</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Certificat officiel KILIMO vérifiable en ligne (Sertifier).</p>
             </div>
           </div>
         )}
@@ -95,7 +95,7 @@ export function CourseDetailAppView({
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Programme</h2>
-            {modules.length > 0 && <span className="text-xs text-muted-foreground">{modules.length} modules</span>}
+            {modules.length > 0 && <span className="text-sm text-muted-foreground">{modules.length} modules</span>}
           </div>
           {modulesLoading ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
@@ -115,7 +115,7 @@ export function CourseDetailAppView({
                           <ModuleIcon className="w-4 h-4 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Module {idx + 1}</p>
+                          <p className="text-xs font-bold text-muted-foreground uppercase">Module {idx + 1}</p>
                           <p className="text-sm font-semibold truncate">{m.title}</p>
                         </div>
                         {!enrolled && course.price > 0 ? (
@@ -125,7 +125,7 @@ export function CourseDetailAppView({
                         )}
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pb-3 pl-11 text-xs text-muted-foreground">
+                    <AccordionContent className="pb-3 pl-11 text-sm text-muted-foreground">
                       {m.content ? <p className="line-clamp-3">{m.content}</p> : "Contenu disponible après inscription."}
                     </AccordionContent>
                   </AccordionItem>
@@ -142,7 +142,7 @@ export function CourseDetailAppView({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold">{course.instructor}</p>
-            {course.instructorBio && <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{course.instructorBio}</p>}
+            {course.instructorBio && <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{course.instructorBio}</p>}
           </div>
         </section>
 
@@ -172,7 +172,7 @@ export function CourseDetailAppView({
       <StickyActionBar>
         {!enrolled && (
           <div className="shrink-0">
-            <p className="text-[10px] text-muted-foreground uppercase font-semibold">Prix</p>
+            <p className="text-sm text-muted-foreground uppercase font-semibold">Prix</p>
             <p className="text-lg font-black text-primary leading-none">{formatPrice(course.price)}</p>
           </div>
         )}

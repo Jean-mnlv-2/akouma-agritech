@@ -56,7 +56,7 @@ export function CourseLearnAppShell({
             <DrawerContent className="max-h-[80vh]">
               <DrawerHeader className="text-left">
                 <DrawerTitle>Sommaire</DrawerTitle>
-                <p className="text-xs text-muted-foreground">{completedCount}/{modules.length} modules complétés</p>
+                <p className="text-sm text-muted-foreground">{completedCount}/{modules.length} modules complétés</p>
               </DrawerHeader>
               <div className="px-4 pb-8 overflow-y-auto space-y-1.5">
                 {modules.map((mod) => {
@@ -81,7 +81,7 @@ export function CourseLearnAppShell({
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm font-medium truncate ${isActive ? "text-primary" : ""}`}>{mod.title}</p>
                           {mod.locked && (
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                            <p className="text-sm text-muted-foreground mt-0.5">
                               {mod.type === "synthesis_exam" ? "Terminez tous les quiz pour y accéder" : "Terminez le module précédent"}
                             </p>
                           )}

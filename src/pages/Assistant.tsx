@@ -2,20 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Plus, Send, Trash2, Loader2, MessageSquare, Bot, User as UserIcon, ArrowLeft, Search, Download, Zap, Crown, Shield } from "lucide-react";
+import { Plus, Send, Trash2, Loader2, MessageSquare, Bot, User as UserIcon, ArrowLeft, Search, Download, Zap, Crown, History } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { api } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import { trackAssistantConversationStarted, trackAssistantMessageSent } from "@/lib/analyticsEvents";
 import Footer from "@/components/Footer";
 import { cn } from "@/lib/utils";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
 
 type ThreadSummary = { id: string; title: string; updatedAt: string };
 type ChatSource = { title: string; score: number; sourceType: string };
@@ -66,6 +67,7 @@ function csrfCookie(): string | null {
 export default function Assistant() {
   const { threadId } = useParams<{ threadId: string }>();
   const navigate = useNavigate();
+  const isStandalone = useStandalonePwa();
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
@@ -434,6 +436,230 @@ export default function Assistant() {
 
   const empty = useMemo(() => messages.length === 0 && !loadingThread, [messages, loadingThread]);
 
+  const messagesBody = loadingThread ? (
+    <div className="flex h-full items-center justify-center">
+      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+    </div>
+  ) : empty ? (
+    <EmptyState onPick={(p) => { setInput(p); setTimeout(() => inputRef.current?.focus(), 0); }} />
+  ) : (
+    <ul className="space-y-4">
+      {messages.map(m => (
+        <li key={m.id} className={cn("flex gap-3", m.role === "user" ? "justify-end" : "justify-start")}>
+          {m.role === "assistant" && (
+            <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Bot className="h-4 w-4" />
+            </div>
+          )}
+          <div className={cn(
+            "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm md:max-w-[70%]",
+            m.role === "user"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-foreground"
+          )}>
+            {m.role === "assistant" ? (
+              m.pending && !m.content ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="flex gap-1">
+                    <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "0ms" }} />
+                    <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "150ms" }} />
+                    <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "300ms" }} />
+                  </div>
+                  <span className="text-sm font-medium">Assistant écrit...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-2 prose-ol:my-2 prose-pre:my-2">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                  </div>
+                  {m.sources && m.sources.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
+                      <span className="text-xs text-muted-foreground">Sources :</span>
+                      {m.sources.map((s, i) => (
+                        <span
+                          key={`${s.title}-${i}`}
+                          className="rounded-full bg-background/60 px-2 py-0.5 text-xs text-muted-foreground border border-border/50"
+                          title={`Pertinence : ${Math.round((s.score ?? 0) * 100)}%`}
+                        >
+                          {s.title}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )
+            ) : (
+              <p className="whitespace-pre-wrap">{m.content}</p>
+            )}
+            {m.role === "assistant" && m.upsellCode && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-2"
+                onClick={() => navigate("/pricing")}
+              >
+                <Crown className="h-3.5 w-3.5 mr-1.5" />
+                Voir les forfaits
+              </Button>
+            )}
+          </div>
+          {m.role === "user" && (
+            <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/20 text-secondary">
+              <UserIcon className="h-4 w-4" />
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+
+  const threadListItems = (
+    <ul className="p-2">
+      {threads.length === 0 && (
+        <li className="px-2 py-4 text-sm text-muted-foreground">
+          {searchQuery ? "Aucune conversation trouvée" : "Aucune conversation"}
+        </li>
+      )}
+      {threads.map(t => (
+        <li key={t.id}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/assistant/${t.id}`)}
+            onKeyDown={(e) => { if (e.key === "Enter") navigate(`/assistant/${t.id}`); }}
+            className={cn(
+              "group flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-accent",
+              t.id === threadId && "bg-accent font-medium"
+            )}
+          >
+            <span className="line-clamp-1 flex-1">{t.title}</span>
+            <button
+              type="button"
+              onClick={(e) => deleteThread(t.id, e)}
+              className="opacity-0 transition group-hover:opacity-100"
+              aria-label="Supprimer"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (isStandalone) {
+    if (!authReady) {
+      return (
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      );
+    }
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div
+          className="flex flex-col"
+          style={{ height: "calc(100vh - 4rem - 4rem - env(safe-area-inset-bottom))" }}
+        >
+          {/* Barre compacte */}
+          <div className="shrink-0 flex items-center gap-2 border-b border-border px-3 py-2.5">
+            <Button size="icon" variant="ghost" onClick={() => navigate("/menu")} aria-label="Retour">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+              <Bot className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">KILIMO Assistant</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {currentSubscription?.plan?.displayName ? `Forfait ${currentSubscription.plan.displayName}` : "En ligne · Réponses IA"}
+              </div>
+            </div>
+            <Drawer onOpenChange={(open) => { if (open) refreshThreads(); }}>
+              <DrawerTrigger asChild>
+                <Button size="icon" variant="ghost" aria-label="Conversations">
+                  <History className="h-4 w-4" />
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent className="max-h-[75vh]">
+                <DrawerHeader className="text-left">
+                  <DrawerTitle>Conversations</DrawerTitle>
+                </DrawerHeader>
+                <div className="px-4 pb-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                {usage && (
+                  <div className="px-4 pb-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+                      {usage.isUnlimited ? (
+                        <span className="flex items-center gap-1 text-green-600"><Crown className="h-3 w-3" />Messages PRO illimités</span>
+                      ) : (
+                        <span>Messages PRO : {usage.proUsage}/{usage.proLimit}</span>
+                      )}
+                    </div>
+                    {!usage.isUnlimited && <Progress value={(usage.proUsage / usage.proLimit) * 100} className="h-1.5" />}
+                  </div>
+                )}
+                <div className="overflow-y-auto flex-1">
+                  <DrawerClose asChild>
+                    <div>{threadListItems}</div>
+                  </DrawerClose>
+                </div>
+              </DrawerContent>
+            </Drawer>
+            <Button size="icon" variant="outline" onClick={createThread} aria-label="Nouvelle conversation">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Messages */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4">
+            {messagesBody}
+          </div>
+
+          {/* Saisie */}
+          <div className="shrink-0 border-t border-border p-3">
+            <div className="flex items-end gap-2">
+              <Textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKey}
+                placeholder="Posez votre question…"
+                rows={1}
+                className="max-h-32 min-h-[44px] resize-none"
+                disabled={streaming || !threadId}
+              />
+              {streaming ? (
+                <Button type="button" variant="outline" onClick={stopStream} aria-label="Arrêter">Stop</Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={sendMessage}
+                  disabled={!input.trim() || !threadId}
+                  aria-label="Envoyer"
+                  size="icon"
+                  className="h-11 w-11 shrink-0"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!authReady) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -505,37 +731,7 @@ export default function Assistant() {
             </div>
 
             <ScrollArea className="flex-1">
-              <ul className="p-2">
-                {threads.length === 0 && (
-                  <li className="px-2 py-4 text-sm text-muted-foreground">
-                    {searchQuery ? "Aucune conversation trouvée" : "Aucune conversation"}
-                  </li>
-                )}
-                {threads.map(t => (
-                  <li key={t.id}>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => navigate(`/assistant/${t.id}`)}
-                      onKeyDown={(e) => { if (e.key === "Enter") navigate(`/assistant/${t.id}`); }}
-                      className={cn(
-                        "group flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-accent",
-                        t.id === threadId && "bg-accent font-medium"
-                      )}
-                    >
-                      <span className="line-clamp-1 flex-1">{t.title}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => deleteThread(t.id, e)}
-                        className="opacity-0 transition group-hover:opacity-100"
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {threadListItems}
             </ScrollArea>
           </aside>
 
@@ -580,82 +776,7 @@ export default function Assistant() {
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 md:px-6">
-              {loadingThread ? (
-                <div className="flex h-full items-center justify-center">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                </div>
-              ) : empty ? (
-                <EmptyState onPick={(p) => { setInput(p); setTimeout(() => inputRef.current?.focus(), 0); }} />
-              ) : (
-                <ul className="space-y-4">
-                  {messages.map(m => (
-                    <li key={m.id} className={cn("flex gap-3", m.role === "user" ? "justify-end" : "justify-start")}>
-                      {m.role === "assistant" && (
-                        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <Bot className="h-4 w-4" />
-                        </div>
-                      )}
-                      <div className={cn(
-                        "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm md:max-w-[70%]",
-                        m.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-foreground"
-                      )}>
-                        {m.role === "assistant" ? (
-                          m.pending && !m.content ? (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <div className="flex gap-1">
-                                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "0ms" }} />
-                                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "150ms" }} />
-                                <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: "300ms" }} />
-                              </div>
-                              <span className="text-sm font-medium">Assistant écrit...</span>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-headings:mt-3 prose-headings:mb-1 prose-ul:my-2 prose-ol:my-2 prose-pre:my-2">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                              </div>
-                              {m.sources && m.sources.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
-                                  <span className="text-[11px] text-muted-foreground">Sources :</span>
-                                  {m.sources.map((s, i) => (
-                                    <span
-                                      key={`${s.title}-${i}`}
-                                      className="rounded-full bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground border border-border/50"
-                                      title={`Pertinence : ${Math.round((s.score ?? 0) * 100)}%`}
-                                    >
-                                      {s.title}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )
-                        ) : (
-                          <p className="whitespace-pre-wrap">{m.content}</p>
-                        )}
-                        {m.role === "assistant" && m.upsellCode && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="mt-2"
-                            onClick={() => navigate("/pricing")}
-                          >
-                            <Crown className="h-3.5 w-3.5 mr-1.5" />
-                            Voir les forfaits
-                          </Button>
-                        )}
-                      </div>
-                      {m.role === "user" && (
-                        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/20 text-secondary">
-                          <UserIcon className="h-4 w-4" />
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {messagesBody}
             </div>
 
             <div className="border-t p-3 md:p-4">

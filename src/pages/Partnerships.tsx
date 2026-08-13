@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import ContactForm from "@/components/forms/ContactForm";
 import { trackLead } from "@/lib/analyticsEvents";
@@ -33,6 +33,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 interface PartnerRow {
   id: number;
@@ -49,6 +51,7 @@ interface PartnerRow {
 }
 
 const Partnerships = () => {
+  const isStandalone = useStandalonePwa();
   const { toast } = useToast();
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isPartnershipOpen, setIsPartnershipOpen] = useState(false);
@@ -201,15 +204,278 @@ const Partnerships = () => {
     });
   };
 
+  const seo = (
+    <SEO
+      title="Partenariats"
+      description="Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner l'agriculture africaine avec des solutions technologiques durables."
+      image="/kilimo-logo.png"
+    />
+  );
+
+  const partnershipDialog = (
+    <Dialog open={isPartnershipOpen} onOpenChange={setIsPartnershipOpen}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Demande de Partenariat</DialogTitle>
+          <DialogDescription>
+            Remplissez ce formulaire pour nous présenter votre projet de partenariat.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handlePartnershipSubmit} className="space-y-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Nom complet *</Label>
+              <Input
+                id="name"
+                value={partnershipForm.name}
+                onChange={(e) => handlePartnershipInputChange("name", e.target.value)}
+                placeholder="Votre nom complet"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={partnershipForm.email}
+                onChange={(e) => handlePartnershipInputChange("email", e.target.value)}
+                placeholder="votre@email.com"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="company">Entreprise/Organisation</Label>
+              <Input
+                id="company"
+                value={partnershipForm.company}
+                onChange={(e) => handlePartnershipInputChange("company", e.target.value)}
+                placeholder="Nom de votre organisation"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Téléphone</Label>
+              <Input
+                id="phone"
+                value={partnershipForm.phone}
+                onChange={(e) => handlePartnershipInputChange("phone", e.target.value)}
+                placeholder="+237 XXX XXX XXX"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="country">Pays</Label>
+              <Select value={partnershipForm.country_id} onValueChange={(value) => handlePartnershipInputChange("country_id", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez votre pays" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {countries.map((c) => (
+                    <SelectItem key={c.code || c.id} value={c.id?.toString() || c.name}>
+                      {c.name} ({c.phoneCode})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="partnershipType">Type de Partenariat *</Label>
+              <Select value={partnershipForm.partnershipType} onValueChange={(value) => handlePartnershipInputChange("partnershipType", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="strategic">Partenariat Stratégique</SelectItem>
+                  <SelectItem value="international">Partenariat International</SelectItem>
+                  <SelectItem value="commercial">Partenariat Commercial</SelectItem>
+                  <SelectItem value="rd">Partenariat R&D</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description du Projet *</Label>
+            <Textarea
+              id="description"
+              value={partnershipForm.description}
+              onChange={(e) => handlePartnershipInputChange("description", e.target.value)}
+              placeholder="Décrivez votre projet de partenariat..."
+              rows={4}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="budget">Budget Estimé</Label>
+              <Select value={partnershipForm.budget} onValueChange={(value) => handlePartnershipInputChange("budget", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une fourchette" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0-10k">0 - 10K €</SelectItem>
+                  <SelectItem value="10k-50k">10K - 50K €</SelectItem>
+                  <SelectItem value="50k-100k">50K - 100K €</SelectItem>
+                  <SelectItem value="100k+">100K+ €</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="timeline">Délai de Réalisation</Label>
+              <Select value={partnershipForm.timeline} onValueChange={(value) => handlePartnershipInputChange("timeline", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un délai" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0-6m">0 - 6 mois</SelectItem>
+                  <SelectItem value="6m-1y">6 mois - 1 an</SelectItem>
+                  <SelectItem value="1y-2y">1 - 2 ans</SelectItem>
+                  <SelectItem value="2y+">2+ ans</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" className="flex-1">
+              <Send className="w-4 h-4 mr-2" />
+              Envoyer la Demande
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setIsPartnershipOpen(false)}>
+              Annuler
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const contactDialog = (
+    <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
+      <DialogContent className="max-w-lg">
+        <ContactForm source="partnerships" onSuccess={() => setIsContactOpen(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <AppPageHeader title="Partenariats" backTo="/menu" subtitle="Ensemble pour l'agriculture de demain" />
+        <div className="px-4 pt-4 pb-8 space-y-8">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner l'agriculture africaine.
+          </p>
+          <div className="flex flex-col gap-2.5">
+            <Button className="w-full" onClick={() => setIsPartnershipOpen(true)}>
+              <Handshake className="w-4 h-4 mr-2" />Devenir partenaire
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => setIsContactOpen(true)}>Nous contacter</Button>
+          </div>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Types de partenariats</h2>
+            <div className="space-y-2.5">
+              {partnershipTypes.map((type, index) => (
+                <button
+                  key={`partnership-type-${index}-${type.title}`}
+                  onClick={() => setIsPartnershipOpen(true)}
+                  className="w-full text-left rounded-2xl border border-border/60 p-3.5"
+                >
+                  <div className="flex items-start gap-3 mb-2.5">
+                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-r ${type.color} flex items-center justify-center text-white shrink-0`}>
+                      <type.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold mb-0.5">{type.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{type.description}</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1.5 pl-1">
+                    {type.benefits.map((benefit, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" /><span>{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {partners.length > 0 && (
+            <section>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Nos partenaires actuels</h2>
+              <div className="grid grid-cols-2 gap-2.5">
+                {partners.map((partner, index) => (
+                  <div key={`partner-${index}-${partner.name}`} className="rounded-2xl border border-border/60 p-3 text-center">
+                    <div className="w-12 h-12 mx-auto mb-2 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-2xl">
+                      {partner.logoUrl || partner.imageUrl ? (
+                        <img src={partner.logoUrl || partner.imageUrl} alt={partner.name} className="w-full h-full object-cover" />
+                      ) : partner.logo ? (
+                        <span>{partner.logo}</span>
+                      ) : (
+                        <Handshake className="w-6 h-6 text-primary" />
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold line-clamp-1">{partner.name}</p>
+                    {partner.type && <Badge variant="outline" className="text-xs mt-1">{partner.type}</Badge>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Pourquoi partenarier avec KILIMO</h2>
+            <div className="grid grid-cols-2 gap-2.5">
+              {partnershipBenefits.map((benefit, index) => (
+                <div key={`benefit-${index}-${benefit.title}`} className="rounded-2xl border border-border/60 p-3 text-center">
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10 flex items-center justify-center">
+                    <benefit.icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-sm font-semibold mb-0.5">{benefit.title}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{benefit.description}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-gradient-to-r from-primary to-accent text-white p-5 text-center">
+            <h2 className="text-lg font-bold mb-2">Prêt à rejoindre l'aventure ?</h2>
+            <p className="text-sm opacity-90 mb-4">
+              Ensemble, créons l'avenir de l'agriculture africaine.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <Button variant="secondary" className="w-full" onClick={() => setIsPartnershipOpen(true)}>
+                <Handshake className="w-4 h-4 mr-2" />Devenir partenaire
+              </Button>
+              <Button variant="outline" className="w-full border-white text-white hover:bg-white hover:text-primary" onClick={() => setIsContactOpen(true)}>
+                Nous contacter
+              </Button>
+            </div>
+          </section>
+        </div>
+        {partnershipDialog}
+        {contactDialog}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      <SEO
-        title="Partenariats"
-        description="Rejoignez notre réseau de partenaires innovants et contribuez à révolutionner l'agriculture africaine avec des solutions technologiques durables."
-        image="/kilimo-logo.png"
-      />
+      {seo}
       <Header />
-      
+
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
@@ -241,165 +507,22 @@ const Partnerships = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Dialog open={isPartnershipOpen} onOpenChange={setIsPartnershipOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" className="group transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                    Devenir Partenaire
-                    <Handshake className="ml-2 transition-transform group-hover:scale-110" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold">Demande de Partenariat</DialogTitle>
-                    <DialogDescription>
-                      Remplissez ce formulaire pour nous présenter votre projet de partenariat.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <form onSubmit={handlePartnershipSubmit} className="space-y-6 mt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name">Nom complet *</Label>
-                        <Input
-                          id="name"
-                          value={partnershipForm.name}
-                          onChange={(e) => handlePartnershipInputChange("name", e.target.value)}
-                          placeholder="Votre nom complet"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Email *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={partnershipForm.email}
-                          onChange={(e) => handlePartnershipInputChange("email", e.target.value)}
-                          placeholder="votre@email.com"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="company">Entreprise/Organisation</Label>
-                        <Input
-                          id="company"
-                          value={partnershipForm.company}
-                          onChange={(e) => handlePartnershipInputChange("company", e.target.value)}
-                          placeholder="Nom de votre organisation"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Téléphone</Label>
-                        <Input
-                          id="phone"
-                          value={partnershipForm.phone}
-                          onChange={(e) => handlePartnershipInputChange("phone", e.target.value)}
-                          placeholder="+237 XXX XXX XXX"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="country">Pays</Label>
-                        <Select value={partnershipForm.country_id} onValueChange={(value) => handlePartnershipInputChange("country_id", value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez votre pays" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            {countries.map((c) => (
-                              <SelectItem key={c.code || c.id} value={c.id?.toString() || c.name}>
-                                {c.name} ({c.phoneCode})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="partnershipType">Type de Partenariat *</Label>
-                        <Select value={partnershipForm.partnershipType} onValueChange={(value) => handlePartnershipInputChange("partnershipType", value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez un type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="strategic">Partenariat Stratégique</SelectItem>
-                            <SelectItem value="international">Partenariat International</SelectItem>
-                            <SelectItem value="commercial">Partenariat Commercial</SelectItem>
-                            <SelectItem value="rd">Partenariat R&D</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="description">Description du Projet *</Label>
-                      <Textarea
-                        id="description"
-                        value={partnershipForm.description}
-                        onChange={(e) => handlePartnershipInputChange("description", e.target.value)}
-                        placeholder="Décrivez votre projet de partenariat..."
-                        rows={4}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="budget">Budget Estimé</Label>
-                        <Select value={partnershipForm.budget} onValueChange={(value) => handlePartnershipInputChange("budget", value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez une fourchette" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0-10k">0 - 10K €</SelectItem>
-                            <SelectItem value="10k-50k">10K - 50K €</SelectItem>
-                            <SelectItem value="50k-100k">50K - 100K €</SelectItem>
-                            <SelectItem value="100k+">100K+ €</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="timeline">Délai de Réalisation</Label>
-                        <Select value={partnershipForm.timeline} onValueChange={(value) => handlePartnershipInputChange("timeline", value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez un délai" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0-6m">0 - 6 mois</SelectItem>
-                            <SelectItem value="6m-1y">6 mois - 1 an</SelectItem>
-                            <SelectItem value="1y-2y">1 - 2 ans</SelectItem>
-                            <SelectItem value="2y+">2+ ans</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1">
-                        <Send className="w-4 h-4 mr-2" />
-                        Envoyer la Demande
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => setIsPartnershipOpen(false)}>
-                        Annuler
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              
-              <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="lg" className="border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-                    Nous Contacter
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <ContactForm source="partnerships" onSuccess={() => setIsContactOpen(false)} />
-                </DialogContent>
-              </Dialog>
+              <Button
+                size="lg"
+                className="group transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                onClick={() => setIsPartnershipOpen(true)}
+              >
+                Devenir Partenaire
+                <Handshake className="ml-2 transition-transform group-hover:scale-110" />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                onClick={() => setIsContactOpen(true)}
+              >
+                Nous Contacter
+              </Button>
             </div>
           </div>
         </div>
@@ -568,6 +691,8 @@ const Partnerships = () => {
         </div>
       </section>
 
+      {partnershipDialog}
+      {contactDialog}
       <Footer />
     </div>
   );

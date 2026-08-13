@@ -21,6 +21,8 @@ import { Separator } from "@/components/ui/separator";
 import { api } from "@/integrations/api/client";
 import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 // Contenu métier par palier — la source de vérité pour ce que chaque forfait
 // donne concrètement (à tenir synchronisé avec RagWorkflow.FREE_SOURCE_TYPES
@@ -127,6 +129,7 @@ function formatMoney(value: number | string): string {
 
 export default function Pricing() {
   const navigate = useNavigate();
+  const isStandalone = useStandalonePwa();
   const [loading, setLoading] = useState(true);
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -258,6 +261,155 @@ export default function Pricing() {
     );
   }
 
+  const plansCards = sortedPlans.map((plan) => {
+    const isCurrent = currentPlanId === plan.id;
+    const isProcessing = processingPlanId === plan.id;
+    const isPopular = plan.name === "pro";
+    const tier = TIER_CONTENT[plan.name] || DEFAULT_TIER_CONTENT;
+    const TierIcon = tier.icon;
+
+    return (
+      <Card
+        key={plan.id}
+        className={`flex flex-col ${isPopular ? "border-primary shadow-lg ring-1 ring-primary/20" : ""}`}
+      >
+        <CardHeader>
+          <div className="mb-1 flex items-center justify-between">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 ${tier.accent}`}>
+              <TierIcon className="h-5 w-5" />
+            </div>
+            {isPopular ? <Badge>Recommandé</Badge> : null}
+          </div>
+          <CardTitle>{plan.displayName}</CardTitle>
+          <p className={`text-sm font-medium ${tier.accent}`}>{tier.tagline}</p>
+          <div className="text-3xl font-bold">
+            {Number(plan.price) > 0 ? `${formatMoney(plan.price)} FCFA` : "Gratuit"}
+            {Number(plan.price) > 0 && <span className="text-sm font-normal text-muted-foreground">/mois</span>}
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-1 flex-col space-y-4">
+          <ul className="space-y-2.5 text-sm">
+            {tier.highlights.map((highlight, i) => {
+              const isSubHeading = highlight.endsWith(":");
+              return (
+                <li key={i} className={`flex items-start gap-2 ${isSubHeading ? "font-medium text-foreground" : ""}`}>
+                  {!isSubHeading && <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+                  <span>{highlight}</span>
+                </li>
+              );
+            })}
+            {plan.trialDays > 0 ? (
+              <li className="flex items-start gap-2 text-primary">
+                <Zap className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{plan.trialDays} jours d'essai inclus</span>
+              </li>
+            ) : null}
+          </ul>
+
+          <Separator />
+
+          <ul className="space-y-2 text-xs text-muted-foreground">
+            <li>
+              {plan.dailyProMessageLimit === 0
+                ? "Requêtes illimitées"
+                : `${plan.dailyProMessageLimit} requêtes Standard/Premium par jour`}
+            </li>
+            <li>
+              {plan.maxCustomDocuments === 0 && plan.hasCustomDocuments
+                ? "Base de connaissances illimitée"
+                : plan.hasCustomDocuments
+                  ? `Jusqu'à ${plan.maxCustomDocuments} documents dédiés`
+                  : "Sans documents dédiés"}
+            </li>
+            <li>{plan.hasPrioritySupport ? "Support prioritaire" : "Support standard"}</li>
+            {plan.hasApiAccess ? <li>Accès API dédié</li> : null}
+          </ul>
+
+          <div className="flex-1" />
+
+          <Button
+            className="w-full"
+            variant={isCurrent ? "secondary" : "default"}
+            disabled={isCurrent || isProcessing}
+            onClick={() => handlePlanSelection(plan)}
+          >
+            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isCurrent ? "Forfait actif" : Number(plan.price) > 0 && plan.trialDays === 0 ? "Payer ce forfait" : "Activer ce forfait"}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  });
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <AppPageHeader title="Abonnements" backTo="/menu" subtitle="Le bon niveau d'accompagnement" />
+        <div className="px-4 pt-4 pb-8 space-y-6">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Les contenus vitrine KILIMO restent gratuits pour tous. Les forfaits débloquent l'expertise agronomique
+            de notre assistant IA.
+          </p>
+
+          {subscription && (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold">Abonnement actuel</span>
+                </div>
+                <div>
+                  <p className="font-semibold">{subscription.plan.displayName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Statut: {subscription.status}
+                    {subscription.isTrial && subscription.trialEndDate
+                      ? ` · Essai jusqu'au ${new Date(subscription.trialEndDate).toLocaleDateString("fr-FR")}`
+                      : subscription.currentPeriodEnd
+                        ? ` · Échéance ${new Date(subscription.currentPeriodEnd).toLocaleDateString("fr-FR")}`
+                        : ""}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate("/assistant")}>Ouvrir le chatbot</Button>
+                  <Button size="sm" variant="destructive" className="flex-1" onClick={handleCancelSubscription} disabled={processingPlanId === "cancel"}>
+                    {processingPlanId === "cancel" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Annuler
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="space-y-4">{plansCards}</div>
+
+          {isAuthed && invoices.length > 0 && (
+            <section>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" /> Mes factures
+              </h2>
+              <div className="space-y-2.5">
+                {invoices.map((invoice) => (
+                  <div key={invoice.id} className="rounded-2xl border border-border/60 p-3.5">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium">{invoice.invoiceNumber}</p>
+                      <Badge variant={invoice.status === "paid" ? "default" : "secondary"} className="text-xs">{invoice.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2.5">
+                      {new Date(invoice.createdAt).toLocaleDateString("fr-FR")} · {formatMoney(invoice.amount)} {invoice.currency}
+                    </p>
+                    <Button size="sm" variant="outline" className="w-full" onClick={() => window.open(`${getApiBase()}/api/subscriptions/invoices/${invoice.id}/pdf`, "_blank")}>
+                      Télécharger PDF
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -314,87 +466,7 @@ export default function Pricing() {
             3 colonnes pour que les cartes se centrent, au lieu de rester
             calées à gauche dans une 4ᵉ colonne vide. */}
         <section className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sortedPlans.map((plan) => {
-            const isCurrent = currentPlanId === plan.id;
-            const isProcessing = processingPlanId === plan.id;
-            const isPopular = plan.name === "pro";
-            const tier = TIER_CONTENT[plan.name] || DEFAULT_TIER_CONTENT;
-            const TierIcon = tier.icon;
-
-            return (
-              <Card
-                key={plan.id}
-                className={`flex flex-col ${isPopular ? "border-primary shadow-lg ring-1 ring-primary/20" : ""}`}
-              >
-                <CardHeader>
-                  <div className="mb-1 flex items-center justify-between">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 ${tier.accent}`}>
-                      <TierIcon className="h-5 w-5" />
-                    </div>
-                    {isPopular ? <Badge>Recommandé</Badge> : null}
-                  </div>
-                  <CardTitle>{plan.displayName}</CardTitle>
-                  <p className={`text-sm font-medium ${tier.accent}`}>{tier.tagline}</p>
-                  <div className="text-3xl font-bold">
-                    {Number(plan.price) > 0 ? `${formatMoney(plan.price)} FCFA` : "Gratuit"}
-                    {Number(plan.price) > 0 && <span className="text-sm font-normal text-muted-foreground">/mois</span>}
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col space-y-4">
-                  {/* Ce que le client obtient concrètement — la valeur agronomique du forfait */}
-                  <ul className="space-y-2.5 text-sm">
-                    {tier.highlights.map((highlight, i) => {
-                      const isSubHeading = highlight.endsWith(":");
-                      return (
-                        <li key={i} className={`flex items-start gap-2 ${isSubHeading ? "font-medium text-foreground" : ""}`}>
-                          {!isSubHeading && <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
-                          <span>{highlight}</span>
-                        </li>
-                      );
-                    })}
-                    {plan.trialDays > 0 ? (
-                      <li className="flex items-start gap-2 text-primary">
-                        <Zap className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>{plan.trialDays} jours d'essai inclus</span>
-                      </li>
-                    ) : null}
-                  </ul>
-
-                  <Separator />
-
-                  {/* Détails techniques du forfait — quota, capacité, support */}
-                  <ul className="space-y-2 text-xs text-muted-foreground">
-                    <li>
-                      {plan.dailyProMessageLimit === 0
-                        ? "Requêtes illimitées"
-                        : `${plan.dailyProMessageLimit} requêtes Standard/Premium par jour`}
-                    </li>
-                    <li>
-                      {plan.maxCustomDocuments === 0 && plan.hasCustomDocuments
-                        ? "Base de connaissances illimitée"
-                        : plan.hasCustomDocuments
-                          ? `Jusqu'à ${plan.maxCustomDocuments} documents dédiés`
-                          : "Sans documents dédiés"}
-                    </li>
-                    <li>{plan.hasPrioritySupport ? "Support prioritaire" : "Support standard"}</li>
-                    {plan.hasApiAccess ? <li>Accès API dédié</li> : null}
-                  </ul>
-
-                  <div className="flex-1" />
-
-                  <Button
-                    className="w-full"
-                    variant={isCurrent ? "secondary" : "default"}
-                    disabled={isCurrent || isProcessing}
-                    onClick={() => handlePlanSelection(plan)}
-                  >
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {isCurrent ? "Forfait actif" : Number(plan.price) > 0 && plan.trialDays === 0 ? "Payer ce forfait" : "Activer ce forfait"}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {plansCards}
         </section>
 
         {isAuthed && invoices.length > 0 ? (

@@ -26,6 +26,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useContactSettings } from "@/hooks/use-contact-settings";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 const services = [
   {
@@ -121,18 +123,142 @@ const sectors = [
 ];
 
 const AgriConsulting = () => {
+  const isStandalone = useStandalonePwa();
   const [showContactForm, setShowContactForm] = useState(false);
   const { data: contact } = useContactSettings();
 
+  const seo = (
+    <SEO
+      title="Agri-Consulting - Conseil agricole expert | KILIMO Agritech"
+      description="Diagnostic, conseil technique, formation et accompagnement agronomique sur mesure pour exploitations et coopératives partout en Afrique."
+      path={typeof window !== 'undefined' ? `${window.location.origin}/agri-consulting` : undefined}
+    />
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <AppPageHeader title="Agri-Consulting" backTo="/menu" subtitle="Conseil agricole expert" />
+        <div className="px-4 pt-4 pb-8 space-y-8">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Expertise et accompagnement stratégique pour transformer votre agriculture et maximiser votre rentabilité.
+          </p>
+
+          <section className="rounded-2xl bg-primary/5 border border-primary/20 p-4">
+            <Badge className="mb-3 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
+              <Sparkles className="w-3 h-3 mr-1.5" /> Accès immédiat
+            </Badge>
+            <h2 className="text-base font-bold mb-1.5">Besoin d'une réponse tout de suite ?</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Notre assistant IA donne un accès instantané à une partie de cette expertise, 24h/24 — sans rendez-vous.
+            </p>
+            <Button asChild size="sm" className="w-full">
+              <Link to="/pricing"><MessageSquare className="w-3.5 h-3.5 mr-2" />Voir les forfaits de l'assistant IA</Link>
+            </Button>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Nos services de conseil</h2>
+            <div className="space-y-2.5">
+              {services.map((service, index) => (
+                <div key={`service-${index}-${service.title}`} className="rounded-2xl border border-border/60 p-3.5">
+                  <div className="flex items-start gap-3 mb-2.5">
+                    <div className="w-10 h-10 bg-gradient-tech rounded-xl flex items-center justify-center shrink-0">
+                      <service.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold mb-0.5">{service.title}</h3>
+                      <p className="text-sm text-muted-foreground">{service.description}</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1.5 pl-1">
+                    {service.features.map((feature, fi) => (
+                      <li key={fi} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Transformation numérique</h2>
+            {digitalServices.map((service, index) => (
+              <div key={`digital-${index}-${service.title}`} className="rounded-2xl border border-border/60 p-3.5">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="w-10 h-10 bg-gradient-hero rounded-xl flex items-center justify-center shrink-0">
+                    <service.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold">{service.title}</h3>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {service.features.map((feature, fi) => (
+                    <div key={fi} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" /><span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Nos clients</h2>
+            <div className="flex flex-wrap gap-2">
+              {sectors.map((sector, index) => (
+                <span key={`sector-${index}-${sector}`} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-muted text-xs font-medium">
+                  <Users className="w-3 h-3 text-primary" />{sector}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-muted/50 p-4">
+            {showContactForm ? (
+              <>
+                <h2 className="text-base font-bold mb-3">Demande de consultation</h2>
+                <div className="space-y-2.5 mb-4">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <Phone className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">{contact?.phone || '+237 233 XX XX XX'}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <Mail className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">{contact?.email || 'contact@kilimo.cm'}</span>
+                  </div>
+                </div>
+                <ContactForm />
+              </>
+            ) : (
+              <div className="text-center">
+                <h2 className="text-base font-bold mb-2">Prêt à transformer votre agriculture ?</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Bénéficiez de l'expertise de nos consultants pour maximiser vos rendements.
+                </p>
+                <Button className="w-full" onClick={() => setShowContactForm(true)}>
+                  Demander une consultation<ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <SEO
-        title="Agri-Consulting - Conseil agricole expert | KILIMO Agritech"
-        description="Diagnostic, conseil technique, formation et accompagnement agronomique sur mesure pour exploitations et coopératives partout en Afrique."
-        path={typeof window !== 'undefined' ? `${window.location.origin}/agri-consulting` : undefined}
-      />
+      {seo}
       <Header />
-      
+
       {/* Hero Section - Modern Design */}
       <section className="pt-28 pb-20 bg-gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>

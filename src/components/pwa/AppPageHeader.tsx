@@ -35,7 +35,7 @@ export function AppPageHeader({ title, subtitle, onBack, backTo, right, children
         )}
         <div className="min-w-0 flex-1">
           <h1 className="text-base font-bold truncate leading-tight">{title}</h1>
-          {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
         </div>
         {right && <div className="shrink-0 flex items-center gap-1">{right}</div>}
       </div>

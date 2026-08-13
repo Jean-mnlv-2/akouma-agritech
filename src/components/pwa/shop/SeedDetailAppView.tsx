@@ -60,7 +60,7 @@ export function SeedDetailAppView({
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5">{product.category}</Badge>
             {product.rating > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />{product.rating.toFixed(1)} ({product.reviews})
               </span>
             )}
@@ -77,15 +77,15 @@ export function SeedDetailAppView({
         <div className="grid grid-cols-3 gap-2.5">
           <div className="rounded-xl border border-border/60 p-2.5 text-center">
             <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
-            <p className="text-[11px] font-semibold leading-tight">{product.availability}</p>
+            <p className="text-xs font-semibold leading-tight">{product.availability}</p>
           </div>
           <div className="rounded-xl border border-border/60 p-2.5 text-center">
             <Calendar className="w-4 h-4 text-primary mx-auto mb-1" />
-            <p className="text-[11px] font-semibold leading-tight">{product.harvestTime}</p>
+            <p className="text-xs font-semibold leading-tight">{product.harvestTime}</p>
           </div>
           <div className="rounded-xl border border-border/60 p-2.5 text-center">
             <TrendingUp className="w-4 h-4 text-primary mx-auto mb-1" />
-            <p className="text-[11px] font-semibold leading-tight">{product.yield}</p>
+            <p className="text-xs font-semibold leading-tight">{product.yield}</p>
           </div>
         </div>
 
@@ -166,7 +166,7 @@ export function SeedDetailAppView({
               {product.growingGuide.diseases.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {product.growingGuide.diseases.map((d, i) => (
-                    <Badge key={i} variant="secondary" className="text-[10px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400">{d}</Badge>
+                    <Badge key={i} variant="secondary" className="text-xs bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400">{d}</Badge>
                   ))}
                 </div>
               )}
@@ -186,7 +186,7 @@ export function SeedDetailAppView({
                           {[...Array(5)].map((_, i) => <Star key={i} className={`w-3 h-3 ${i < r.rating ? "fill-current" : "text-muted-foreground/30"}`} />)}
                         </div>
                       </div>
-                      {r.comment && <p className="text-xs text-muted-foreground">{r.comment}</p>}
+                      {r.comment && <p className="text-sm text-muted-foreground">{r.comment}</p>}
                     </div>
                   ))}
                 </div>
@@ -218,7 +218,7 @@ export function SeedDetailAppView({
 
       <StickyActionBar>
         <div className="shrink-0">
-          <p className="text-[10px] text-muted-foreground uppercase font-semibold">Prix</p>
+          <p className="text-sm text-muted-foreground uppercase font-semibold">Prix</p>
           <p className="text-lg font-black text-primary leading-none">{product.price.toLocaleString()} F</p>
         </div>
         <Button className="flex-1 h-12 rounded-xl font-bold" disabled={outOfStock} onClick={onAddToCart}>

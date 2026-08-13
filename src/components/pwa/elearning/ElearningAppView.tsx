@@ -190,12 +190,12 @@ export function ElearningAppView({
                   <div className="relative h-32 bg-muted overflow-hidden">
                     {s.thumbnailUrl && <img src={s.thumbnailUrl} alt={s.title} className="w-full h-full object-cover" />}
                     {s.isLive && (
-                      <Badge className="absolute top-2 left-2 bg-red-600 border-none animate-pulse text-[10px]">● LIVE</Badge>
+                      <Badge className="absolute top-2 left-2 bg-red-600 border-none animate-pulse text-xs">● LIVE</Badge>
                     )}
                   </div>
                   <div className="p-3">
                     <h3 className="text-sm font-semibold line-clamp-2 mb-1">{s.title}</h3>
-                    <p className="text-[11px] text-muted-foreground">{s.instructorName || "KILIMO"}</p>
+                    <p className="text-sm text-muted-foreground">{s.instructorName || "KILIMO"}</p>
                   </div>
                 </div>
               ))}
@@ -220,7 +220,7 @@ export function ElearningAppView({
                         </div>
                         <div className="p-2.5">
                           <p className="text-xs font-semibold line-clamp-2 leading-snug">{item.title}</p>
-                          {item.duration && <p className="text-[10px] text-muted-foreground mt-1">{item.duration}</p>}
+                          {item.duration && <p className="text-sm text-muted-foreground mt-1">{item.duration}</p>}
                         </div>
                       </button>
                     </DialogTrigger>
@@ -284,7 +284,7 @@ export function ElearningAppView({
             <GraduationCap className="w-8 h-8 text-primary shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">Crée ton compte pour t'inscrire</p>
-              <p className="text-xs text-muted-foreground">Suis ta progression et obtiens tes certificats.</p>
+              <p className="text-sm text-muted-foreground">Suis ta progression et obtiens tes certificats.</p>
             </div>
             <Button size="sm" asChild><Link to="/auth">Rejoindre</Link></Button>
           </div>

@@ -61,7 +61,7 @@ export function HomeAppView() {
           <img src="/kilimo-logo.png" alt="KILIMO" className="h-10 w-auto" />
           <div>
             <h1 className="text-lg font-bold leading-tight">KILIMO</h1>
-            <p className="text-xs text-muted-foreground">L'agriculture intelligente, dans ta poche</p>
+            <p className="text-sm text-muted-foreground">L'agriculture intelligente, dans ta poche</p>
           </div>
         </div>
 
@@ -72,7 +72,7 @@ export function HomeAppView() {
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${a.color}`}>
                 <a.icon className="w-5 h-5" />
               </div>
-              <span className="text-[11px] font-medium text-center leading-tight">{a.label}</span>
+              <span className="text-xs font-medium text-center leading-tight">{a.label}</span>
             </Link>
           ))}
         </div>
@@ -83,17 +83,17 @@ export function HomeAppView() {
         <div className="mx-4 mb-7 rounded-2xl bg-primary/5 border border-primary/10 px-4 py-3 flex items-center justify-around text-center">
           <div>
             <p className="text-base font-black text-primary leading-none">{stats.totalLearners}+</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Apprenants</p>
+            <p className="text-sm text-muted-foreground mt-1">Apprenants</p>
           </div>
           <div className="w-px h-8 bg-border" />
           <div>
             <p className="text-base font-black text-primary leading-none">{stats.totalCourses}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Formations</p>
+            <p className="text-sm text-muted-foreground mt-1">Formations</p>
           </div>
           <div className="w-px h-8 bg-border" />
           <div>
             <p className="text-base font-black text-primary leading-none">{stats.totalCertificates}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Certificats</p>
+            <p className="text-sm text-muted-foreground mt-1">Certificats</p>
           </div>
         </div>
       )}
@@ -109,7 +109,7 @@ export function HomeAppView() {
           <img src={ekoloLogo} alt="Ekolo" className="w-11 h-11 rounded-xl bg-white/90 p-1 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold">Ekolo</p>
-            <p className="text-xs text-muted-foreground line-clamp-1">{t("home.innovation.ekolo.tagline")}</p>
+            <p className="text-sm text-muted-foreground line-clamp-1">{t("home.innovation.ekolo.tagline")}</p>
           </div>
           <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
         </a>
@@ -130,7 +130,7 @@ export function HomeAppView() {
                     <Icon className="w-5 h-5 text-accent-foreground" />
                   </div>
                   <h3 className="text-sm font-bold mb-1.5 line-clamp-1">{s.title}</h3>
-                  <p className="text-xs text-muted-foreground line-clamp-3">{s.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{s.description}</p>
                 </div>
               );
             })}
@@ -155,7 +155,7 @@ export function HomeAppView() {
                 </div>
                 <div className="p-3">
                   <p className="text-sm font-semibold line-clamp-2 leading-snug mb-1.5">{n.title}</p>
-                  <p className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                  <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     {new Date(n.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                   </p>

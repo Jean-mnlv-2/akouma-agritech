@@ -32,8 +32,11 @@ import {
   Trophy,
 } from "lucide-react";
 import heroAgritech from "@/assets/hero-agritech.jpg";
+import { useStandalonePwa } from "@/hooks/use-standalone-pwa";
+import { AppPageHeader } from "@/components/pwa/AppPageHeader";
 
 const Donations = () => {
+  const isStandalone = useStandalonePwa();
   const { toast } = useToast();
   const { data: publicStats } = usePublicStats();
   const [searchParams] = useSearchParams();
@@ -246,15 +249,382 @@ const Donations = () => {
     setIsDonationOpen(true);
   };
 
+  const seo = (
+    <SEO
+      title="Dons"
+      description="Votre don contribue directement à révolutionner l'agriculture africaine. Chaque contribution fait une différence réelle dans la vie des agriculteurs."
+      image="/kilimo-logo.png"
+    />
+  );
+
+  const donationDialog = (
+    <Dialog open={isDonationOpen} onOpenChange={setIsDonationOpen}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Faire un Don</DialogTitle>
+          <DialogDescription>
+            Remplissez ce formulaire pour soutenir notre mission. Tous les dons sont sécurisés et tracés.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleDonationSubmit} className="space-y-6 mt-6">
+          <div>
+            <Label className="text-base font-medium">Niveau de Don</Label>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {donationTiers.map((tier) => (
+                <div
+                  key={tier.id}
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                    selectedTier === tier.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => handleTierSelect(tier.id)}
+                >
+                  <div className="font-medium">{tier.name}</div>
+                  <div className="text-lg font-bold text-primary">{tier.amount}€</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="donationImpact" className="text-base font-medium">Projet soutenu (optionnel)</Label>
+            <Select
+              value={donationForm.donationImpactId}
+              onValueChange={(value) => handleInputChange("donationImpactId", value)}
+            >
+              <SelectTrigger id="donationImpact" className="mt-2">
+                <SelectValue placeholder="Don général — sans projet spécifique" />
+              </SelectTrigger>
+              <SelectContent>
+                {impacts.map((impact) => (
+                  <SelectItem key={impact.id} value={String(impact.id)}>
+                    {impact.icon || '🎯'} {impact.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Nom complet *</Label>
+              <Input
+                id="name"
+                value={donationForm.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                placeholder="Votre nom complet"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={donationForm.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                placeholder="votre@email.com"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="country">Pays</Label>
+              <Select value={donationForm.country_id} onValueChange={(value) => handleInputChange("country_id", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez votre pays" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {countries.map((country) => (
+                    <SelectItem key={country.code || country.id} value={country.id?.toString() || country.name}>
+                      {country.name} ({country.phoneCode})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="phone">Téléphone</Label>
+              <Input
+                id="phone"
+                value={donationForm.phone}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
+                placeholder="+237 XXX XXX XXX"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="company">Entreprise/Organisation</Label>
+              <Input
+                id="company"
+                value={donationForm.company}
+                onChange={(e) => handleInputChange("company", e.target.value)}
+                placeholder="Nom de votre organisation"
+              />
+            </div>
+            <div>
+              <Label htmlFor="amount">Montant du Don *</Label>
+              <Input
+                id="amount"
+                value={donationForm.amount}
+                onChange={(e) => handleInputChange("amount", e.target.value)}
+                placeholder="Montant en euros"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-base font-medium">Méthode de Paiement</Label>
+            <RadioGroup
+              value={donationForm.paymentMethod}
+              onValueChange={(value) => handleInputChange("paymentMethod", value)}
+              className="grid grid-cols-2 gap-4 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="card" id="card" />
+                <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
+                  <CreditCard className="w-4 h-4" />
+                  Carte bancaire
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="transfer" id="transfer" />
+                <Label htmlFor="transfer" className="flex items-center gap-2 cursor-pointer">
+                  <Building className="w-4 h-4" />
+                  Virement bancaire
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="anonymous"
+                checked={donationForm.anonymous}
+                onCheckedChange={(checked) => handleInputChange("anonymous", checked as boolean)}
+              />
+              <Label htmlFor="anonymous" className="cursor-pointer">
+                Don anonyme
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="newsletter"
+                checked={donationForm.newsletter}
+                onCheckedChange={(checked) => handleInputChange("newsletter", checked as boolean)}
+              />
+              <Label htmlFor="newsletter" className="cursor-pointer">
+                Recevoir notre newsletter
+              </Label>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="message">Message (optionnel)</Label>
+            <Textarea
+              id="message"
+              value={donationForm.message}
+              onChange={(e) => handleInputChange("message", e.target.value)}
+              placeholder="Un message pour notre équipe..."
+              rows={3}
+            />
+          </div>
+
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Lock className="w-4 h-4" />
+              Vos informations sont protégées et sécurisées
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" className="flex-1">
+              <Heart className="w-4 h-4 mr-2" />
+              Procéder au Paiement
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setIsDonationOpen(false)}>
+              Annuler
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const contactDialog = (
+    <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
+      <DialogContent className="max-w-lg">
+        <ContactForm source="donations" onSuccess={() => setIsContactOpen(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (isStandalone) {
+    return (
+      <div className="min-h-screen bg-background">
+        {seo}
+        <Header />
+        <AppPageHeader title="Faire un don" backTo="/menu" subtitle="Ensemble, cultivons l'avenir" />
+        <div className="px-4 pt-4 pb-8 space-y-8">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Votre don contribue directement à révolutionner l'agriculture africaine. Chaque contribution fait une différence réelle.
+          </p>
+
+          <Button className="w-full bg-gradient-to-r from-primary to-accent" onClick={() => openDonationModal()}>
+            <Heart className="w-4 h-4 mr-2" />Faire un don
+          </Button>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {donationStats.map((stat, index) => (
+              <div key={`donation-stat-${index}-${stat.label}`} className="rounded-2xl border border-border/60 p-3 text-center">
+                <p className="text-xl font-black text-primary leading-none">{stat.value}</p>
+                <p className="text-xs text-muted-foreground mt-1.5">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Choisissez votre niveau de soutien</h2>
+            <div className="space-y-2.5">
+              {donationTiers.map((tier, index) => (
+                <button
+                  key={`tier-${index}-${tier.id}`}
+                  onClick={() => openDonationModal(tier.id)}
+                  className={`w-full text-left rounded-2xl border p-3.5 relative ${tier.popular ? "border-primary ring-1 ring-primary/30" : "border-border/60"}`}
+                >
+                  {tier.popular && <Badge className="absolute -top-2.5 right-3 bg-primary text-white text-xs">Populaire</Badge>}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-r ${tier.color} flex items-center justify-center text-white shrink-0`}>
+                      <Gift className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">{tier.name}</p>
+                      <p className="text-lg font-black text-primary leading-none">{tier.amount}€</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">{tier.description}</p>
+                  <ul className="space-y-1">
+                    {tier.benefits.slice(0, 2).map((benefit, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" /><span>{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {impacts.length > 0 && (
+            <section>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Votre don en action</h2>
+              <div className="space-y-2.5">
+                {impacts.map((area, index) => {
+                  const isFunded = area.targetAmount != null;
+                  const isLinked = linkedProject?.id === area.id;
+                  return (
+                    <div
+                      key={`impact-${index}-${area.title}`}
+                      id={`impact-${area.slug}`}
+                      className={`rounded-2xl border p-3.5 ${isLinked ? "border-primary ring-1 ring-primary/30" : "border-border/60"}`}
+                    >
+                      <div className="flex items-start gap-3 mb-2.5">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-base">{area.icon || '🎯'}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-bold mb-1">{area.title}</h3>
+                          <p
+                            className="text-sm text-muted-foreground line-clamp-2"
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(area.description || "") }}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          {isFunded ? (
+                            <>
+                              <span>{formatEuros(area.raisedAmount ?? 0)} collectés</span>
+                              <span className="text-primary font-medium">Objectif : {formatEuros(Number(area.targetAmount))}</span>
+                            </>
+                          ) : (
+                            <span>{area.target || ''}</span>
+                          )}
+                        </div>
+                        <Progress value={area.progress ?? 0} className="h-1.5" />
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">{area.progress ?? 0}% atteint</span>
+                          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => openDonationModal(undefined, area.id)}>
+                            <Heart className="w-3 h-3 mr-1.5" />Faire un don
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {stories.length > 0 && (
+            <section>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Histoires de succès</h2>
+              <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory hide-scrollbar">
+                {stories.map((story, index) => (
+                  <div key={`story-${index}-${story.title}`} className="shrink-0 w-56 snap-start rounded-2xl border border-border/60 bg-card p-3.5">
+                    <div className="w-12 h-12 mx-auto mb-2.5 rounded-full overflow-hidden bg-green-100 flex items-center justify-center">
+                      {story.imageUrl ? (
+                        <img src={story.imageUrl} alt={story.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <Trophy className="w-6 h-6 text-green-600" />
+                      )}
+                    </div>
+                    <p className="text-sm font-bold text-center mb-1">{story.title}</p>
+                    <p
+                      className="text-xs text-muted-foreground text-center line-clamp-3 mb-2"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(story.description || "") }}
+                    />
+                    <p className="text-xs font-medium text-primary text-center">Impact : {story.impact}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="rounded-2xl bg-gradient-to-r from-primary to-accent text-white p-5 text-center">
+            <h2 className="text-lg font-bold mb-2">Prêt à faire la différence ?</h2>
+            <p className="text-sm opacity-90 mb-4">
+              Chaque don contribue à créer un avenir meilleur pour l'agriculture africaine.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <Button variant="secondary" className="w-full" onClick={() => openDonationModal()}>
+                <Heart className="w-4 h-4 mr-2" />Faire un don maintenant
+              </Button>
+              <Button variant="outline" className="w-full border-white text-white hover:bg-white hover:text-primary" onClick={() => setIsContactOpen(true)}>
+                Nous contacter
+              </Button>
+            </div>
+          </section>
+        </div>
+        {donationDialog}
+        {contactDialog}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      <SEO
-        title="Dons"
-        description="Votre don contribue directement à révolutionner l'agriculture africaine. Chaque contribution fait une différence réelle dans la vie des agriculteurs."
-        image="/kilimo-logo.png"
-      />
+      {seo}
       <Header />
-      
+
       {/* Hero Section - Modern Design */}
       <section className="relative pt-8 pb-20 overflow-hidden">
         <div className="absolute inset-0">
@@ -530,221 +900,8 @@ const Donations = () => {
         </div>
       </section>
 
-      {/* Donation Modal */}
-      <Dialog open={isDonationOpen} onOpenChange={setIsDonationOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Faire un Don</DialogTitle>
-            <DialogDescription>
-              Remplissez ce formulaire pour soutenir notre mission. Tous les dons sont sécurisés et tracés.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleDonationSubmit} className="space-y-6 mt-6">
-            {/* Sélection du niveau */}
-            <div>
-              <Label className="text-base font-medium">Niveau de Don</Label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                {donationTiers.map((tier) => (
-                  <div
-                    key={tier.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                      selectedTier === tier.id
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                    onClick={() => handleTierSelect(tier.id)}
-                  >
-                    <div className="font-medium">{tier.name}</div>
-                    <div className="text-lg font-bold text-primary">{tier.amount}€</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Projet soutenu */}
-            <div>
-              <Label htmlFor="donationImpact" className="text-base font-medium">Projet soutenu (optionnel)</Label>
-              <Select
-                value={donationForm.donationImpactId}
-                onValueChange={(value) => handleInputChange("donationImpactId", value)}
-              >
-                <SelectTrigger id="donationImpact" className="mt-2">
-                  <SelectValue placeholder="Don général — sans projet spécifique" />
-                </SelectTrigger>
-                <SelectContent>
-                  {impacts.map((impact) => (
-                    <SelectItem key={impact.id} value={String(impact.id)}>
-                      {impact.icon || '🎯'} {impact.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Informations personnelles */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Nom complet *</Label>
-                <Input
-                  id="name"
-                  value={donationForm.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Votre nom complet"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={donationForm.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="votre@email.com"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="country">Pays</Label>
-                <Select value={donationForm.country_id} onValueChange={(value) => handleInputChange("country_id", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez votre pays" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {countries.map((country) => (
-                      <SelectItem key={country.code || country.id} value={country.id?.toString() || country.name}>
-                        {country.name} ({country.phoneCode})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="phone">Téléphone</Label>
-                <Input
-                  id="phone"
-                  value={donationForm.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="+237 XXX XXX XXX"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="company">Entreprise/Organisation</Label>
-                <Input
-                  id="company"
-                  value={donationForm.company}
-                  onChange={(e) => handleInputChange("company", e.target.value)}
-                  placeholder="Nom de votre organisation"
-                />
-              </div>
-              <div>
-                <Label htmlFor="amount">Montant du Don *</Label>
-                <Input
-                  id="amount"
-                  value={donationForm.amount}
-                  onChange={(e) => handleInputChange("amount", e.target.value)}
-                  placeholder="Montant en euros"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Méthode de paiement */}
-            <div>
-              <Label className="text-base font-medium">Méthode de Paiement</Label>
-              <RadioGroup
-                value={donationForm.paymentMethod}
-                onValueChange={(value) => handleInputChange("paymentMethod", value)}
-                className="grid grid-cols-2 gap-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="card" id="card" />
-                  <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
-                    <CreditCard className="w-4 h-4" />
-                    Carte bancaire
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="transfer" id="transfer" />
-                  <Label htmlFor="transfer" className="flex items-center gap-2 cursor-pointer">
-                    <Building className="w-4 h-4" />
-                    Virement bancaire
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Options */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="anonymous"
-                  checked={donationForm.anonymous}
-                  onCheckedChange={(checked) => handleInputChange("anonymous", checked as boolean)}
-                />
-                <Label htmlFor="anonymous" className="cursor-pointer">
-                  Don anonyme
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="newsletter"
-                  checked={donationForm.newsletter}
-                  onCheckedChange={(checked) => handleInputChange("newsletter", checked as boolean)}
-                />
-                <Label htmlFor="newsletter" className="cursor-pointer">
-                  Recevoir notre newsletter
-                </Label>
-              </div>
-            </div>
-
-            {/* Message */}
-            <div>
-              <Label htmlFor="message">Message (optionnel)</Label>
-              <Textarea
-                id="message"
-                value={donationForm.message}
-                onChange={(e) => handleInputChange("message", e.target.value)}
-                placeholder="Un message pour notre équipe..."
-                rows={3}
-              />
-            </div>
-
-            {/* Sécurité */}
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Lock className="w-4 h-4" />
-                Vos informations sont protégées et sécurisées
-              </div>
-            </div>
-
-            {/* Boutons */}
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1">
-                <Heart className="w-4 h-4 mr-2" />
-                Procéder au Paiement
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setIsDonationOpen(false)}>
-                Annuler
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Contact Modal */}
-      <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
-        <DialogContent className="max-w-lg">
-          <ContactForm source="donations" onSuccess={() => setIsContactOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      {donationDialog}
+      {contactDialog}
 
       <Footer />
     </div>

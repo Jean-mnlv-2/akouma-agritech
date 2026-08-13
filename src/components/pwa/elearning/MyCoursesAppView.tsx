@@ -49,7 +49,7 @@ export function MyCoursesAppView({
             <div key={i} className="rounded-2xl border border-border/60 p-3 text-center">
               <s.icon className="w-4 h-4 text-primary mx-auto mb-1.5" />
               <p className="text-lg font-black leading-none">{s.value}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">{s.label}</p>
+              <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
             </div>
           ))}
         </div>
@@ -77,7 +77,7 @@ export function MyCoursesAppView({
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold line-clamp-1 mb-1.5">{e.course?.title}</h3>
                     <Progress value={e.progress} className="h-1.5 mb-1" />
-                    <p className="text-[11px] text-muted-foreground">{Math.round(e.progress)}% complété</p>
+                    <p className="text-sm text-muted-foreground">{Math.round(e.progress)}% complété</p>
                   </div>
                   <Play className="w-5 h-5 text-primary shrink-0" />
                 </Link>
@@ -101,7 +101,7 @@ export function MyCoursesAppView({
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-bold line-clamp-1">{e.course?.title}</h3>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           {e.completedAt ? `Terminé le ${new Date(e.completedAt).toLocaleDateString('fr-FR')}` : "Terminé"}
                         </p>
                       </div>
@@ -124,7 +124,7 @@ export function MyCoursesAppView({
                           )}
                         </>
                       ) : (
-                        <span className="inline-flex items-center text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Émission en cours</span>
+                        <span className="inline-flex items-center text-sm text-muted-foreground"><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Émission en cours</span>
                       )}
                     </div>
                   </div>
@@ -151,15 +151,15 @@ export function MyCoursesAppView({
             <div className="grid grid-cols-3 gap-2.5">
               <div className="rounded-xl border border-border/60 p-2.5 text-center">
                 <p className="text-base font-black text-green-600">{totalAttended}</p>
-                <p className="text-[10px] text-muted-foreground">Présent</p>
+                <p className="text-sm text-muted-foreground">Présent</p>
               </div>
               <div className="rounded-xl border border-border/60 p-2.5 text-center">
                 <p className="text-base font-black text-destructive">{totalAbsent}</p>
-                <p className="text-[10px] text-muted-foreground">Absent</p>
+                <p className="text-sm text-muted-foreground">Absent</p>
               </div>
               <div className="rounded-xl border border-border/60 p-2.5 text-center">
                 <p className="text-base font-black text-muted-foreground">{totalScheduled}</p>
-                <p className="text-[10px] text-muted-foreground">À venir</p>
+                <p className="text-sm text-muted-foreground">À venir</p>
               </div>
             </div>
           </section>
@@ -173,14 +173,14 @@ export function MyCoursesAppView({
                 <div key={c.id} className="flex items-center justify-between rounded-xl border border-border/60 p-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold line-clamp-1">{c.course?.title}</p>
-                    <p className="text-[11px] font-mono text-muted-foreground">N° {c.certificateNumber}</p>
+                    <p className="text-xs font-mono text-muted-foreground">N° {c.certificateNumber}</p>
                   </div>
                   {c.status === 'sent' ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 shrink-0"><ShieldCheck className="w-3.5 h-3.5" />Émis</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 shrink-0"><ShieldCheck className="w-3.5 h-3.5" />Émis</span>
                   ) : c.status === 'failed' ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-destructive shrink-0"><ShieldAlert className="w-3.5 h-3.5" />Échec</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-destructive shrink-0"><ShieldAlert className="w-3.5 h-3.5" />Échec</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0"><Loader2 className="w-3.5 h-3.5 animate-spin" />En cours</span>
+                    <span className="inline-flex items-center gap-1 text-sm text-muted-foreground shrink-0"><Loader2 className="w-3.5 h-3.5 animate-spin" />En cours</span>
                   )}
                 </div>
               ))}

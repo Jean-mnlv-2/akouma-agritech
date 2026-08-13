@@ -42,7 +42,7 @@ const MobileBottomNav = () => {
           <Link
             key={item.key}
             to={item.to}
-            className={`flex flex-col items-center justify-center gap-1 h-full text-[11px] font-medium transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 h-full text-xs font-medium transition-colors ${
               item.active ? "text-primary" : "text-muted-foreground"
             }`}
           >
@@ -68,7 +68,7 @@ const MobileBottomNav = () => {
           <Link
             key={item.key}
             to={item.to}
-            className={`flex flex-col items-center justify-center gap-1 h-full text-[11px] font-medium transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 h-full text-xs font-medium transition-colors ${
               item.active ? "text-primary" : "text-muted-foreground"
             }`}
           >
@@ -79,7 +79,7 @@ const MobileBottomNav = () => {
 
         <Link
           to="/menu"
-          className={`flex flex-col items-center justify-center gap-1 h-full text-[11px] font-medium transition-colors ${
+          className={`flex flex-col items-center justify-center gap-1 h-full text-xs font-medium transition-colors ${
             isActive(["/menu"]) ? "text-primary" : "text-muted-foreground"
           }`}
         >

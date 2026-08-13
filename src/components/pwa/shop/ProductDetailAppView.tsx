@@ -48,16 +48,16 @@ export function ProductDetailAppView({
       <div className="px-4 pt-4 space-y-6">
         <div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            {product.isNew && <Badge variant="secondary" className="text-[11px]">Nouveau</Badge>}
-            {product.isBestSeller && <Badge variant="destructive" className="text-[11px]">Bestseller</Badge>}
-            <Badge variant="outline" className="text-[11px]">{product.category}</Badge>
+            {product.isNew && <Badge variant="secondary" className="text-xs">Nouveau</Badge>}
+            {product.isBestSeller && <Badge variant="destructive" className="text-xs">Bestseller</Badge>}
+            <Badge variant="outline" className="text-xs">{product.category}</Badge>
           </div>
           <h1 className="text-xl font-bold leading-tight mb-1.5">{product.name}</h1>
           <div className="flex items-center gap-1 mb-3">
             {[...Array(5)].map((_, i) => (
               <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(product.rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
             ))}
-            <span className="text-xs text-muted-foreground ml-1">{product.rating} ({product.reviews} avis)</span>
+            <span className="text-sm text-muted-foreground ml-1">{product.rating} ({product.reviews} avis)</span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-primary">{formatPrice(product.price)}</span>
@@ -102,7 +102,7 @@ export function ProductDetailAppView({
           ].map((b, i) => (
             <div key={i} className="rounded-xl border border-border/60 p-2.5 text-center">
               <b.icon className="w-4 h-4 text-primary mx-auto mb-1" />
-              <p className="text-[10px] font-medium leading-tight text-muted-foreground">{b.label}</p>
+              <p className="text-xs font-medium leading-tight text-muted-foreground">{b.label}</p>
             </div>
           ))}
         </div>
@@ -145,7 +145,7 @@ export function ProductDetailAppView({
 
       <StickyActionBar>
         <div className="shrink-0">
-          <p className="text-[10px] text-muted-foreground uppercase font-semibold">Total</p>
+          <p className="text-sm text-muted-foreground uppercase font-semibold">Total</p>
           <p className="text-lg font-black text-primary leading-none">{formatPrice(product.price * quantity)}</p>
         </div>
         <Button className="flex-1 h-12 rounded-xl font-bold" disabled={!product.inStock} onClick={onAddToCart}>
